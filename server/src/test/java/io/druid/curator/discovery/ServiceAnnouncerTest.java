@@ -94,7 +94,7 @@ public class ServiceAnnouncerTest extends CuratorTestBase
                                .basePath("/test")
                                .client(curator)
                                .build();
-    for (String serviceName: serviceNames) {
+    for (String serviceName : serviceNames) {
       String serviceNameToUse = CuratorServiceUtils.makeCanonicalServiceName(serviceName);
       ServiceInstance instance = ServiceInstance.<Void>builder()
                                                 .name(serviceNameToUse)

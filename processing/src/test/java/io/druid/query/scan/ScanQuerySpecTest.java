@@ -57,7 +57,8 @@ public class ScanQuerySpecTest
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
         + "\"legacy\":null,"
         + "\"context\":null,"
-        + "\"descending\":false}";
+        + "\"descending\":false,"
+        + "\"granularity\":{\"type\":\"all\"}}";
 
     ScanQuery query = new ScanQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),

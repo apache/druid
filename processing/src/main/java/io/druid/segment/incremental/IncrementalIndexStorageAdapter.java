@@ -169,7 +169,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
   @Override
   public Sequence<Cursor> makeCursors(
-      final Filter filter,
+      @Nullable final Filter filter,
       final Interval interval,
       final VirtualColumns virtualColumns,
       final Granularity gran,

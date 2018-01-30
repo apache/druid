@@ -30,7 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.DirectDruidClient;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Json;

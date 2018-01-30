@@ -32,7 +32,7 @@ import java.util.Map;
  */
 public class NoneShardSpec implements ShardSpec
 {
-  private final static NoneShardSpec INSTANCE = new NoneShardSpec();
+  private static final NoneShardSpec INSTANCE = new NoneShardSpec();
 
   @JsonCreator
   public static NoneShardSpec instance()

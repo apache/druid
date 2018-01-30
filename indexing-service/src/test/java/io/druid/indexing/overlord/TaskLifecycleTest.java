@@ -34,10 +34,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.Monitor;
-import com.metamx.metrics.MonitorScheduler;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.Monitor;
+import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -485,7 +485,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment) throws IOException
+      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
       {
         pushedSegments++;
         return segment;
@@ -1034,7 +1034,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment dataSegment) throws IOException
+      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting) throws IOException
       {
         throw new RuntimeException("FAILURE");
       }

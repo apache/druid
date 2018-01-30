@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.core.NoopEmitter;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -201,7 +201,7 @@ public class QueryRunnerTestHelper
       qualityUniques
   );
 
-  public final static List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
+  public static final List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
       new FloatSumAggregatorFactory("index", "indexFloat"),
       new CountAggregatorFactory("rows"),
       new HyperUniquesAggregatorFactory(

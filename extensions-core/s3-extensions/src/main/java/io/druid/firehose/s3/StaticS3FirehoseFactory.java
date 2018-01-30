@@ -23,10 +23,12 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.storage.s3.S3Utils;
 import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageObjectsChunk;
@@ -189,6 +191,28 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
+  protected InputStream openObjectStream(S3Object object, long start) throws IOException
+  {
+    try {
+      final S3Object result = s3Client.getObject(
+          object.getBucketName(),
+          object.getKey(),
+          null,
+          null,
+          null,
+          null,
+          start,
+          null
+      );
+
+      return result.getDataInputStream();
+    }
+    catch (ServiceException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
   protected InputStream wrapObjectStream(S3Object object, InputStream stream) throws IOException
   {
     return object.getKey().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
@@ -227,5 +251,11 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return S3Utils.S3RETRY;
   }
 }

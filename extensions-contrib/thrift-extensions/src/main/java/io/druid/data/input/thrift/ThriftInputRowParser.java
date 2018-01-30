@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.metamx.common.IAE;
+import io.druid.java.util.common.IAE;
 import com.twitter.elephantbird.mapreduce.io.ThriftWritable;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -54,7 +54,7 @@ public class ThriftInputRowParser implements InputRowParser<Object>
   private final String thriftClassName;
 
   private Parser<String, Object> parser;
-  volatile private Class<TBase> thriftClass = null;
+  private volatile Class<TBase> thriftClass = null;
 
   @JsonCreator
   public ThriftInputRowParser(

@@ -31,7 +31,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -174,8 +174,8 @@ public class IngestSegmentFirehoseFactoryTest
 
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
-      final private Set<DataSegment> published = Sets.newHashSet();
-      final private Set<DataSegment> nuked = Sets.newHashSet();
+      private final Set<DataSegment> published = Sets.newHashSet();
+      private final Set<DataSegment> nuked = Sets.newHashSet();
 
       @Override
       public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException
@@ -249,7 +249,7 @@ public class IngestSegmentFirehoseFactoryTest
           }
 
           @Override
-          public DataSegment push(File file, DataSegment segment) throws IOException
+          public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
           {
             return segment;
           }

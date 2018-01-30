@@ -312,7 +312,7 @@ public class ConditionalMultibindTest
     Assert.assertEquals(ImmutableSet.of(zoo1, zoo2), actualZooSet);
   }
 
-  static abstract class Animal
+  abstract static class Animal
   {
     private final String type;
 

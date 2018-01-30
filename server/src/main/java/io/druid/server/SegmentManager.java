@@ -22,7 +22,7 @@ package io.druid.server;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;

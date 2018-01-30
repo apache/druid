@@ -39,7 +39,30 @@ public interface DataSegmentPusher
   @Deprecated
   String getPathForHadoop(String dataSource);
   String getPathForHadoop();
-  DataSegment push(File file, DataSegment segment) throws IOException;
+
+  /**
+   * Pushes index files and segment descriptor to deep storage.
+   * @param file directory containing index files
+   * @param segment segment descriptor
+   * @param replaceExisting overwrites existing objects if true, else leaves existing objects unchanged on conflict.
+   *                        The behavior of the indexer determines whether this should be true or false. For example,
+   *                        since Tranquility does not guarantee that replica tasks will generate indexes with the same
+   *                        data, the first segment pushed should be favored since otherwise multiple historicals may
+   *                        load segments with the same identifier but different contents which is a bad situation. On
+   *                        the other hand, indexers that maintain exactly-once semantics by storing checkpoint data can
+   *                        lose or repeat data if it fails to write a segment because it already exists and overwriting
+   *                        is not permitted. This situation can occur if a task fails after pushing to deep storage but
+   *                        before writing to the metadata storage, see: https://github.com/druid-io/druid/issues/5161.
+   *
+   *                        If replaceExisting is true, existing objects MUST be overwritten, since failure to do so
+   *                        will break exactly-once semantics. If replaceExisting is false, existing objects SHOULD be
+   *                        prioritized but it is acceptable if they are overwritten (deep storages may be eventually
+   *                        consistent or otherwise unable to support transactional writes).
+   * @return segment descriptor
+   * @throws IOException
+   */
+  DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException;
+
   //use map instead of LoadSpec class to avoid dependency pollution.
   Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath);
 

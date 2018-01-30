@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
@@ -69,126 +68,11 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
   IntSet difference(IntSet other);
 
   /**
-   * Generates the symmetric difference set
-   *
-   * @param other {@link IntSet} instance that represents the right
-   *              operand
-   *
-   * @return the result of the operation
-   *
-   * @see #flip(int)
-   */
-  IntSet symmetricDifference(IntSet other);
-
-  /**
-   * Generates the complement set. The returned set is represented by all the
-   * elements strictly less than {@link #last()} that do not exist in the
-   * current set.
-   *
-   * @return the complement set
-   *
-   * @see IntSet#complement()
-   */
-  IntSet complemented();
-
-  /**
    * Complements the current set. The modified set is represented by all the
    * elements strictly less than {@link #last()} that do not exist in the
    * current set.
-   *
-   * @see IntSet#complemented()
    */
   void complement();
-
-  /**
-   * Returns <code>true</code> if the specified {@link IntSet}
-   * instance contains any elements that are also contained within this
-   * {@link IntSet} instance
-   *
-   * @param other {@link IntSet} to intersect with
-   *
-   * @return a boolean indicating whether this {@link IntSet}
-   * intersects the specified {@link IntSet}.
-   */
-  boolean containsAny(IntSet other);
-
-  /**
-   * Returns <code>true</code> if the specified {@link IntSet}
-   * instance contains at least <code>minElements</code> elements that are
-   * also contained within this {@link IntSet} instance
-   *
-   * @param other       {@link IntSet} instance to intersect with
-   * @param minElements minimum number of elements to be contained within this
-   *                    {@link IntSet} instance
-   *
-   * @return a boolean indicating whether this {@link IntSet}
-   * intersects the specified {@link IntSet}.
-   *
-   * @throws IllegalArgumentException if <code>minElements &lt; 1</code>
-   */
-  boolean containsAtLeast(IntSet other, int minElements);
-
-  /**
-   * Computes the intersection set size.
-   * <p>
-   * This is faster than calling {@link #intersection(IntSet)} and
-   * then {@link #size()}
-   *
-   * @param other {@link IntSet} instance that represents the right
-   *              operand
-   *
-   * @return the size
-   */
-  int intersectionSize(IntSet other);
-
-  /**
-   * Computes the union set size.
-   * <p>
-   * This is faster than calling {@link #union(IntSet)} and then
-   * {@link #size()}
-   *
-   * @param other {@link IntSet} instance that represents the right
-   *              operand
-   *
-   * @return the size
-   */
-  int unionSize(IntSet other);
-
-  /**
-   * Computes the symmetric difference set size.
-   * <p>
-   * This is faster than calling {@link #symmetricDifference(IntSet)}
-   * and then {@link #size()}
-   *
-   * @param other {@link IntSet} instance that represents the right
-   *              operand
-   *
-   * @return the size
-   */
-  int symmetricDifferenceSize(IntSet other);
-
-  /**
-   * Computes the difference set size.
-   * <p>
-   * This is faster than calling {@link #difference(IntSet)} and then
-   * {@link #size()}
-   *
-   * @param other {@link IntSet} instance that represents the right
-   *              operand
-   *
-   * @return the size
-   */
-  int differenceSize(IntSet other);
-
-  /**
-   * Computes the complement set size.
-   * <p>
-   * This is faster than calling {@link #complemented()} and then
-   * {@link #size()}
-   *
-   * @return the size
-   */
-  int complementSize();
 
   /**
    * Generates an empty set
@@ -263,8 +147,6 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
    * Adds the element if it not existing, or removes it if existing
    *
    * @param e element to flip
-   *
-   * @see #symmetricDifference(IntSet)
    */
   void flip(int e);
 
@@ -372,22 +254,6 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
   boolean remove(int i);
 
   /**
-   * Returns <tt>true</tt> if this set contains all of the elements of the
-   * specified collection.
-   *
-   * @param c collection to be checked for containment in this set
-   *
-   * @return <tt>true</tt> if this set contains all of the elements of the
-   * specified collection
-   *
-   * @throws NullPointerException if the specified collection contains one or more null
-   *                              elements and this set does not permit null elements
-   *                              (optional), or if the specified collection is null
-   * @see #contains(int)
-   */
-  boolean containsAll(IntSet c);
-
-  /**
    * Adds all of the elements in the specified collection to this set if
    * they're not already present.
    *
@@ -466,120 +332,6 @@ public interface IntSet extends Cloneable, Comparable<IntSet>
    * @throws IllegalArgumentException if this set does not fit in the specified array
    */
   int[] toArray(int[] a);
-
-  /**
-   * Computes the power-set of the current set.
-   * <p>
-   * It is a particular implementation of the algorithm <i>Apriori</i> (see:
-   * Rakesh Agrawal, Ramakrishnan Srikant, <i>Fast Algorithms for Mining
-   * Association Rules in Large Databases</i>, in Proceedings of the
-   * 20<sup>th</sup> International Conference on Very Large Data Bases,
-   * p.487-499, 1994). The returned power-set does <i>not</i> contain the
-   * empty set.
-   * <p>
-   * The subsets composing the powerset are returned in a list that is sorted
-   * according to the lexicographical order provided by the integer set.
-   *
-   * @return the power-set
-   *
-   * @see #powerSet(int, int)
-   * @see #powerSetSize()
-   */
-  List<? extends IntSet> powerSet();
-
-  /**
-   * Computes a subset of the power-set of the current set, composed by those
-   * subsets that have cardinality between <code>min</code> and
-   * <code>max</code>.
-   * <p>
-   * It is a particular implementation of the algorithm <i>Apriori</i> (see:
-   * Rakesh Agrawal, Ramakrishnan Srikant, <i>Fast Algorithms for Mining
-   * Association Rules in Large Databases</i>, in Proceedings of the
-   * 20<sup>th</sup> International Conference on Very Large Data Bases,
-   * p.487-499, 1994). The power-set does <i>not</i> contains the empty set.
-   * <p>
-   * The subsets composing the powerset are returned in a list that is sorted
-   * according to the lexicographical order provided by the integer set.
-   *
-   * @param min minimum subset size (greater than zero)
-   * @param max maximum subset size
-   *
-   * @return the power-set
-   *
-   * @see #powerSet()
-   * @see #powerSetSize(int, int)
-   */
-  List<? extends IntSet> powerSet(int min, int max);
-
-  /**
-   * Computes the power-set size of the current set.
-   * <p>
-   * The power-set does <i>not</i> contains the empty set.
-   *
-   * @return the power-set size
-   *
-   * @see #powerSet()
-   */
-  int powerSetSize();
-
-  /**
-   * Computes the Jaccard similarity coefficient between this set and the
-   * given set.
-   * <p>
-   * The coefficient is defined as
-   * <code>|A intersection B| / |A union B|</code>.
-   *
-   * @param other the other set
-   *
-   * @return the Jaccard similarity coefficient
-   *
-   * @see #jaccardDistance(IntSet)
-   */
-  double jaccardSimilarity(IntSet other);
-
-  /**
-   * Computes the Jaccard distance between this set and the given set.
-   * <p>
-   * The coefficient is defined as
-   * <code>1 - </code> {@link #jaccardSimilarity(IntSet)}.
-   *
-   * @param other the other set
-   *
-   * @return the Jaccard distance
-   *
-   * @see #jaccardSimilarity(IntSet)
-   */
-  double jaccardDistance(IntSet other);
-
-  /**
-   * Computes the weighted version of the Jaccard similarity coefficient
-   * between this set and the given set.
-   * <p>
-   * The coefficient is defined as
-   * <code>sum of min(A_i, B_i) / sum of max(A_i, B_i)</code>.
-   *
-   * @param other the other set
-   *
-   * @return the weighted Jaccard similarity coefficient
-   *
-   * @see #weightedJaccardDistance(IntSet)
-   */
-  double weightedJaccardSimilarity(IntSet other);
-
-  /**
-   * Computes the weighted version of the Jaccard distance between this set
-   * and the given set.
-   * <p>
-   * The coefficient is defined as <code>1 - </code>
-   * {@link #weightedJaccardSimilarity(IntSet)}.
-   *
-   * @param other the other set
-   *
-   * @return the weighted Jaccard distance
-   *
-   * @see #weightedJaccardSimilarity(IntSet)
-   */
-  double weightedJaccardDistance(IntSet other);
 
   /**
    * An {@link Iterator}-like interface that allows to "skip" some elements of

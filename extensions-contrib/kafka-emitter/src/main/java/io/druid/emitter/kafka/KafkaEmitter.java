@@ -22,10 +22,10 @@ package io.druid.emitter.kafka;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.Event;
-import com.metamx.emitter.service.AlertEvent;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.AlertEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
@@ -50,7 +50,7 @@ public class KafkaEmitter implements Emitter
 {
   private static Logger log = new Logger(KafkaEmitter.class);
 
-  private final static int DEFAULT_RETRIES = 3;
+  private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
   private final AtomicLong invalidLost;

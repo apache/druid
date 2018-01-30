@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.ISE;

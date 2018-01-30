@@ -221,6 +221,8 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 - [Multi-value dimensions](multi-value-dimensions.html).
 - [DataSketches aggregators](../development/extensions-core/datasketches-aggregators.html).
+- [Spatial filters](../development/geo.html).
+- [Query cancellation](querying.html#query-cancellation).
 
 ## Data types and casts
 

@@ -84,7 +84,7 @@ public class CloudFilesDataSegmentPusherTest
         size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush);
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, true);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
 

@@ -75,7 +75,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -337,7 +336,7 @@ public abstract class BaseFilterTest
           }
         }
     );
-    return Sequences.toList(seq, new ArrayList<List<String>>()).get(0);
+    return seq.toList().get(0);
   }
 
   private long selectCountUsingFilteredAggregator(final DimFilter filter)
@@ -363,7 +362,7 @@ public abstract class BaseFilterTest
           }
         }
     );
-    return Sequences.toList(aggSeq, new ArrayList<Aggregator>()).get(0).getLong();
+    return aggSeq.toList().get(0).getLong();
   }
 
   private List<String> selectColumnValuesMatchingFilterUsingPostFiltering(
@@ -432,7 +431,7 @@ public abstract class BaseFilterTest
           }
         }
     );
-    return Sequences.toList(seq, new ArrayList<List<String>>()).get(0);
+    return seq.toList().get(0);
   }
 
   private List<String> selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(

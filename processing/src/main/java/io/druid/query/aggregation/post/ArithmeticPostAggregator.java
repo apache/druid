@@ -268,7 +268,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     /**
      * Ensures the following order: numeric > NaN > Infinite.
      *
-     * The name may be referenced via {@link #valueOf(String)} in the constructor {@link
+     * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
      * ArithmeticPostAggregator#ArithmeticPostAggregator(String, String, List, String)}.
      */
     @SuppressWarnings("unused")

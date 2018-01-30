@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
@@ -446,7 +446,7 @@ public class ServerManagerTest
           {
             Map<String, Object> context = new HashMap<String, Object>();
             Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query), context);
-            Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
+            seq.toList();
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
             while (expectedIter.hasNext() && adaptersIter.hasNext()) {

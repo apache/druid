@@ -145,6 +145,27 @@ public class TaskStatus
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskStatus that = (TaskStatus) o;
+    return duration == that.duration &&
+           java.util.Objects.equals(id, that.id) &&
+           status == that.status;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return java.util.Objects.hash(id, status, duration);
+  }
+
+  @Override
   public String toString()
   {
     return Objects.toStringHelper(this)

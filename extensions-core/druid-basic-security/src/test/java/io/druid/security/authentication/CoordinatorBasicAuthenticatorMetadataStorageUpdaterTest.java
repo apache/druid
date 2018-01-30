@@ -56,7 +56,7 @@ import java.util.Map;
 
 public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
 {
-  private final static String AUTHENTICATOR_NAME = "test";
+  private static final String AUTHENTICATOR_NAME = "test";
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 

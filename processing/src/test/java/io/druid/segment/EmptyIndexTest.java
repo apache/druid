@@ -94,7 +94,7 @@ public class EmptyIndexTest
       QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(tmpDir);
 
       Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
-      Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));
+      Assert.assertEquals("getMetricNames", 0, emptyQueryableIndex.getColumnNames().size());
       Assert.assertEquals("getDataInterval", Intervals.of("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
       Assert.assertEquals(
           "getReadOnlyTimestamps",

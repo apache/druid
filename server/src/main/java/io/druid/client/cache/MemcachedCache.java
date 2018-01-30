@@ -32,9 +32,9 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Ints;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.logger.Logger;
@@ -80,7 +80,7 @@ public class MemcachedCache implements Cache
    * If some other algorithms are considered as the default algorithm instead of this one, the cache distribution for
    * those hash algorithms should be checked and compared using {@code CacheDistributionTest}.
    */
-  final static HashAlgorithm MURMUR3_128 = new HashAlgorithm()
+  static final HashAlgorithm MURMUR3_128 = new HashAlgorithm()
   {
     final HashFunction fn = Hashing.murmur3_128();
 

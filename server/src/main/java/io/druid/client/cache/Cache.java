@@ -21,7 +21,7 @@ package io.druid.client.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -59,8 +59,8 @@ public interface Cache
 
   class NamedKey
   {
-    final public String namespace;
-    final public byte[] key;
+    public final String namespace;
+    public final byte[] key;
 
     public NamedKey(String namespace, byte[] key)
     {

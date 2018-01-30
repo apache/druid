@@ -19,13 +19,10 @@
 
 package io.druid.segment.realtime.appenderator;
 
-import com.google.common.base.Supplier;
-import io.druid.data.input.InputRow;
-
 import javax.annotation.Nullable;
 
 /**
- * Result of {@link AppenderatorDriver#add(InputRow, String, Supplier, boolean)}.  It contains the identifier of the
+ * Result of {@link AppenderatorDriver#add}.  It contains the identifier of the
  * segment which the InputRow is added to, the number of rows in that segment and if persist is required because either
  * maxRowsInMemory or intermediate persist period threshold is hit.
  */

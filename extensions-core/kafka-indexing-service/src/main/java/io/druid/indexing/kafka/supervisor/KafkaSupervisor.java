@@ -43,9 +43,9 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -670,7 +670,7 @@ public class KafkaSupervisor implements Supervisor
         // as when the task starts they are sent existing checkpoints
         Preconditions.checkState(
             checkpoints.size() <= 1,
-            "Got checkpoint request with null as previous check point, however found more than one checkpoints in metadata store"
+            "Got checkpoint request with null as previous check point, however found more than one checkpoints"
         );
         if (checkpoints.size() == 1) {
           log.info("Already checkpointed with dataSourceMetadata [%s]", checkpoints.get(0));

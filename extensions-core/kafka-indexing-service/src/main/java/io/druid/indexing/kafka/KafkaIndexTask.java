@@ -44,7 +44,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
@@ -65,6 +65,7 @@ import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.collect.Utils;
 import io.druid.java.util.common.concurrent.Execs;
@@ -511,13 +512,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
         // no persist has happened so far
+        // so either this is a brand new task or replacement of a failed task
         Preconditions.checkState(sequences.get(0).startOffsets.entrySet().stream().allMatch(
             partitionOffsetEntry -> Longs.compare(
                 partitionOffsetEntry.getValue(),
                 ioConfig.getStartPartitions()
                         .getPartitionOffsetMap()
                         .get(partitionOffsetEntry.getKey())
-            ) == 0
+            ) >= 0
         ), "Sequence offsets are not compatible with start offsets of task");
         nextOffsets.putAll(sequences.get(0).startOffsets);
       } else {
@@ -544,7 +546,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               ioConfig.getStartPartitions().getPartitionOffsetMap().keySet()
           );
         }
-        // sequences size can 0 only when all sequences got published and task stopped before it could finish
+        // sequences size can be 0 only when all sequences got published and task stopped before it could finish
         // which is super rare
         if (sequences.size() == 0 || sequences.get(sequences.size() - 1).isCheckpointed()) {
           this.endOffsets.putAll(sequences.size() == 0
@@ -2014,6 +2016,19 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
                                             && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
+
+    if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
+      final String errorMsg = StringUtils.format(
+          "Encountered row with timestamp that cannot be represented as a long: [%s]",
+          row
+      );
+      log.debug(errorMsg);
+      if (tuningConfig.isReportParseExceptions()) {
+        throw new ParseException(errorMsg);
+      } else {
+        return false;
+      }
+    }
 
     if (log.isDebugEnabled()) {
       if (beforeMinimumMessageTime) {

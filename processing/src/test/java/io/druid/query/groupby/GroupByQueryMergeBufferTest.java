@@ -176,11 +176,11 @@ public class GroupByQueryMergeBufferTest
     );
   }
 
-  private final static TestBlockingPool mergeBufferPool = new TestBlockingPool(
+  private static final TestBlockingPool mergeBufferPool = new TestBlockingPool(
       new Supplier<ByteBuffer>()
       {
         @Override
-        public ByteBuffer get ()
+        public ByteBuffer get()
         {
           return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
         }

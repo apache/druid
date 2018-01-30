@@ -27,11 +27,11 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 //CHECKSTYLE.OFF: Regexp
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.logger.Logger;
 //CHECKSTYLE.ON: Regexp
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.LoggingEmitter;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.core.LoggingEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
@@ -280,7 +280,7 @@ public class LoadRuleTest
   }
 
   @Test
-  public void testDrop() throws Exception
+  public void testDrop()
   {
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -543,7 +543,7 @@ public class LoadRuleTest
             .withBalancerStrategy(mockBalancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
             .withAvailableSegments(Arrays.asList(dataSegment1, dataSegment2, dataSegment3))
-            .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsInNodeLoadingQueue(2).build())
+            .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
             .build();
 
     CoordinatorStats stats1 = rule.run(null, params, dataSegment1);

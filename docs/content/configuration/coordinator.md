@@ -24,7 +24,7 @@ The coordinator node uses several of the global configs in [Configuration](../co
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.coordinator.period`|The run period for the coordinator. The coordinator’s operates by maintaining the current state of the world in memory and periodically looking at the set of segments available and segments being served to make decisions about whether any changes need to be made to the data topology. This property sets the delay between each of these runs.|PT60S|
-|`druid.coordinator.period.indexingPeriod`|How often to send indexing tasks to the indexing service. Only applies if merge or conversion is turned on.|PT1800S (30 mins)|
+|`druid.coordinator.period.indexingPeriod`|How often to send compact/merge/conversion tasks to the indexing service. It's recommended to be longer than `druid.manager.segments.pollDuration`|PT1800S (30 mins)|
 |`druid.coordinator.startDelay`|The operation of the Coordinator works on the assumption that it has an up-to-date view of the state of the world when it runs, the current ZK interaction code, however, is written in a way that doesn’t allow the Coordinator to know for a fact that it’s done loading the current state of the world. This delay is a hack to give it enough time to believe that it has all the data.|PT300S|
 |`druid.coordinator.merge.on`|Boolean flag for whether or not the coordinator should try and merge small segments into a more optimal segment size.|false|
 |`druid.coordinator.conversion.on`|Boolean flag for converting old segment indexing versions to the latest segment indexing version.|false|
@@ -106,6 +106,9 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`killDataSourceWhitelist`|List of dataSources for which kill tasks are sent if property `druid.coordinator.kill.on` is true.|none|
 |`killAllDataSources`|Send kill tasks for ALL dataSources if property `druid.coordinator.kill.on` is true. If this is set to true then `killDataSourceWhitelist` must not be specified or be empty list.|false|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 0 (loading queue is unbounded) |0|
+|`compactionConfigs`|Compaction config list. See the below [Compaction Config](#compaction-config)|none|
+|`compactionTaskSlotRatio`|The ratio of the total task slots to the copmaction task slots. The actual max number of compaction tasks is `min(maxCompactionTaskSlots, compactionTaskSlotRatio * total task slots)`.|0.1|
+|`maxCompactionTaskSlots`|The maximum number of task slots for compaction task. The actual max number of compaction tasks is `min(maxCompactionTaskSlots, compactionTaskSlotRatio * total task slots)`.|Unbounded|
 
 To view the audit history of coordinator dynamic config issue a GET request to the URL -
 
@@ -121,6 +124,41 @@ To view last <n> entries of the audit history of coordinator dynamic config issu
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
 
+# Compaction Config
+
+|Property|Description|Required|
+|--------|-----------|--------|
+|`dataSource`|dataSource name to be compacted.|yes|
+|`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compact task.|no (default = 25)|
+|`targetCompactionSizeBytes`|The target segment size of compaction. The actual size of a compact segment might be slightly larger or smaller than this value.|no (default = 838860800)|
+|`numTargetCompactionSegments`|Max number of segments to compact together.|no (default = 150)|
+|`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
+|`tuningConfig`|Tuning config for compact tasks. See below [Compact Task TuningConfig](#compact-task-tuningconfig).|no|
+|`taskContext`|[Task context](../ingestion/tasks.html#task-context) for compact tasks.|no|
+
+An example of compaction config is:
+
+```json
+{
+  "dataSource": "wikiticker",
+  "targetCompactionSizeBytes": 800000000,
+  "skipOffsetFromLatest": "P1D"
+}
+```
+
+For the realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large values to avoid frequent compact task failures.
+
+## Compact Task TuningConfig
+
+Compact task tuning config is a subset of the tuningConfig of IndexTask. See [TuningConfig](../ingestion/tasks.html#tuningconfig) for more details.
+
+|Property|Required|
+|--------|--------|
+|`maxRowsInMemory`|no|
+|`maxTotalRows`|no|
+|`indexSpec`|no|
+|`maxPendingPersists`|no|
+|`publishTimeout`|no|
 
 # Lookups Dynamic Config (EXPERIMENTAL)
 These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.html)

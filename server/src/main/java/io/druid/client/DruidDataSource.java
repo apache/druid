@@ -70,6 +70,12 @@ public class DruidDataSource
     return this;
   }
 
+  public DruidDataSource addSegments(Map<String, DataSegment> partitionMap)
+  {
+    idToSegmentMap.putAll(partitionMap);
+    return this;
+  }
+
   public DruidDataSource removePartition(String segmentId)
   {
     idToSegmentMap.remove(segmentId);

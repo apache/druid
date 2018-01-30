@@ -35,7 +35,7 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
@@ -753,8 +753,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     private final STATE state;
     private final String failureCause;
 
-    public final static Status SUCCESS = new Status(STATE.SUCCESS, null);
-    public final static Status PENDING = new Status(STATE.PENDING, null);
+    public static final Status SUCCESS = new Status(STATE.SUCCESS, null);
+    public static final Status PENDING = new Status(STATE.PENDING, null);
 
     @JsonCreator
     Status(

@@ -23,7 +23,7 @@ import io.druid.java.util.common.StringUtils;
 
 public class Access
 {
-  public final static Access OK = new Access(true);
+  public static final Access OK = new Access(true);
 
   private final boolean allowed;
   private final String message;

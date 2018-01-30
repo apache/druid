@@ -32,7 +32,6 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
@@ -169,10 +168,7 @@ public class SelectQueryRunnerTest
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -213,10 +209,7 @@ public class SelectQueryRunnerTest
 
     SelectQuery query = newTestQuery().intervals(I_0112_0114).build();
     for (int offset : expected) {
-      List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
-          Lists.<Result<SelectResultValue>>newArrayList()
-      );
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
       Assert.assertEquals(1, results.size());
 
@@ -230,10 +223,7 @@ public class SelectQueryRunnerTest
 
     query = newTestQuery().intervals(I_0112_0114).build();
     for (int offset : expected) {
-      List<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(QueryPlus.wrap(query), ImmutableMap.of()),
-          Lists.<Result<SelectResultValue>>newArrayList()
-      );
+      List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
 
       Assert.assertEquals(1, results.size());
 
@@ -275,10 +265,7 @@ public class SelectQueryRunnerTest
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
         new Result<SelectResultValue>(
@@ -385,10 +372,7 @@ public class SelectQueryRunnerTest
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -424,10 +408,7 @@ public class SelectQueryRunnerTest
         .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -462,10 +443,7 @@ public class SelectQueryRunnerTest
           .build();
 
       HashMap<String, Object> context = new HashMap<String, Object>();
-      Iterable<Result<SelectResultValue>> results = Sequences.toList(
-          runner.run(QueryPlus.wrap(query), context),
-          Lists.<Result<SelectResultValue>>newArrayList()
-      );
+      Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
       final List<List<Map<String, Object>>> events = toEvents(
           new String[]{
@@ -536,10 +514,7 @@ public class SelectQueryRunnerTest
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
@@ -584,15 +559,11 @@ public class SelectQueryRunnerTest
         .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
-    Iterable<Result<SelectResultValue>> resultsOptimize = Sequences.toList(
-        toolChest
-            .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-            .run(QueryPlus.wrap(query), Maps.newHashMap()), Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<Result<SelectResultValue>> resultsOptimize = toolChest
+        .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
+        .run(QueryPlus.wrap(query), Maps.newHashMap())
+        .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
@@ -642,10 +613,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
 
     List<Result<SelectResultValue>> expectedResults = Arrays.asList(
         new Result<SelectResultValue>(
@@ -690,10 +658,7 @@ public class SelectQueryRunnerTest
         .metrics(Lists.<String>newArrayList("foo2"))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), Maps.newHashMap()),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
@@ -730,10 +695,7 @@ public class SelectQueryRunnerTest
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
         new Result<SelectResultValue>(
@@ -848,10 +810,7 @@ public class SelectQueryRunnerTest
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
         new Result<SelectResultValue>(

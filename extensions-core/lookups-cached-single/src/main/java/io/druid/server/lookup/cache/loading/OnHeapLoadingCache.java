@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OnHeapLoadingCache<K, V> implements LoadingCache<K, V>
 {
-  private final static Logger log = new Logger(OnHeapLoadingCache.class);
+  private static final Logger log = new Logger(OnHeapLoadingCache.class);
   private static final int DEFAULT_INITIAL_CAPACITY = 16;
   //See com.google.common.cache.CacheBuilder#DEFAULT_CONCURRENCY_LEVEL
   private static final int DEFAULT_CONCURRENCY_LEVEL = 4;

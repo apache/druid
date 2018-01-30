@@ -21,7 +21,6 @@ package io.druid.segment.data;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Shorts;
 import io.druid.collections.ResourceHolder;
@@ -270,7 +269,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     @Override
     protected int _get(int index)
     {
-      return intBuffer.get(intBuffer.position() + index);
+      return intBuffer.get(index);
     }
   }
 
@@ -289,7 +288,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     protected int _get(int index)
     {
       // removes the need for padding
-      return shortBuffer.get(shortBuffer.position() + index) & 0xFFFF;
+      return shortBuffer.get(index) & 0xFFFF;
     }
   }
 
@@ -299,7 +298,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     protected int _get(int index)
     {
       // removes the need for padding
-      return buffer.get(buffer.position() + index) & 0xFF;
+      return buffer.get(index) & 0xFF;
     }
   }
 
@@ -310,8 +309,9 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
 
-    int currIndex = -1;
+    int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
+    /** buffer's position must be 0 */
     ByteBuffer buffer;
     boolean bigEndian;
 
@@ -336,7 +336,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
       // assumes the number of entries in each buffer is a power of 2
       final int bufferNum = index >> div;
 
-      if (bufferNum != currIndex) {
+      if (bufferNum != currBufferNum) {
         loadBuffer(bufferNum);
       }
 
@@ -352,7 +352,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
      */
     protected int _get(final int index)
     {
-      final int pos = buffer.position() + index * numBytes;
+      final int pos = index * numBytes;
       // example for numBytes = 3
       // big-endian:    0x000c0b0a stored 0c 0b 0a XX, read 0x0c0b0aXX >>> 8
       // little-endian: 0x000c0b0a stored 0a 0b 0c XX, read 0xXX0c0b0a & 0x00FFFFFF
@@ -365,26 +365,31 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     {
       CloseQuietly.close(holder);
       holder = singleThreadedBuffers.get(bufferNum);
-      buffer = holder.get();
-      currIndex = bufferNum;
-      bigEndian = buffer.order().equals(ByteOrder.BIG_ENDIAN);
+      ByteBuffer bb = holder.get();
+      ByteOrder byteOrder = bb.order();
+      // slice() makes the buffer's position = 0
+      buffer = bb.slice().order(byteOrder);
+      currBufferNum = bufferNum;
+      bigEndian = byteOrder.equals(ByteOrder.BIG_ENDIAN);
+    }
+
+    @Override
+    public void close()
+    {
+      if (holder != null) {
+        holder.close();
+      }
     }
 
     @Override
     public String toString()
     {
       return "CompressedVSizedIntsIndexedSupplier{" +
-             "currIndex=" + currIndex +
+             "currBufferNum=" + currBufferNum +
              ", sizePer=" + sizePer +
              ", numChunks=" + singleThreadedBuffers.size() +
              ", totalSize=" + totalSize +
              '}';
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      Closeables.close(holder, false);
     }
 
     @Override
