@@ -89,7 +89,9 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
                                     ? DEFAULT_RESET_OFFSET_AUTOMATICALLY
                                     : resetOffsetAutomatically;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
-    this.intermediateHandoffPeriod = intermediateHandoffPeriod == null ? new Period().withDays(Integer.MAX_VALUE) : intermediateHandoffPeriod;
+    this.intermediateHandoffPeriod = intermediateHandoffPeriod == null
+                                     ? new Period().withDays(Integer.MAX_VALUE)
+                                     : intermediateHandoffPeriod;
   }
 
   public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
