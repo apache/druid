@@ -517,7 +517,10 @@ public class OverlordResource
             } else {
               workItems = taskRunner.getRunningTasks()
                                     .stream()
-                                    .filter(workitem -> workitem.getTaskType().equals(taskType))
+                                    .filter(workitem -> {
+                                      final String itemType = workitem.getTaskType();
+                                      return itemType != null && itemType.equals(taskType);
+                                    })
                                     .collect(Collectors.toList());
             }
 

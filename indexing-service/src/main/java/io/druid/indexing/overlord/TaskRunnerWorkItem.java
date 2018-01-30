@@ -27,6 +27,8 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+
 /**
  * A holder for a task and different components associated with the task
  */
@@ -85,6 +87,11 @@ public abstract class TaskRunnerWorkItem
   }
 
   public abstract TaskLocation getLocation();
+
+  /**
+   * Returns the type of task. The return value can be null for backward compatibility.
+   */
+  @Nullable
   public abstract String getTaskType();
 
   @Override
