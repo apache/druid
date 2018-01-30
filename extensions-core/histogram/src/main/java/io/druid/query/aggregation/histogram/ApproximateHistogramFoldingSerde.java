@@ -21,7 +21,7 @@ package io.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Ordering;
 import io.druid.data.input.InputRow;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.data.input.Rows;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
@@ -30,10 +30,10 @@ import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.List;
+import java.util.Collection;
 
 public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
 {
@@ -70,23 +70,24 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       {
         Object rawValue = inputRow.getRaw(metricName);
 
-        if (rawValue instanceof ApproximateHistogram) {
+        if (rawValue == null) {
+          return new ApproximateHistogram(0);
+        } else if (rawValue instanceof ApproximateHistogram) {
           return (ApproximateHistogram) rawValue;
         } else {
-          List<String> dimValues = inputRow.getDimension(metricName);
-          if (dimValues != null && dimValues.size() > 0) {
-            Iterator<String> values = dimValues.iterator();
+          ApproximateHistogram h = new ApproximateHistogram();
 
-            ApproximateHistogram h = new ApproximateHistogram();
-
-            while (values.hasNext()) {
-              float value = Float.parseFloat(values.next());
-              h.offer(value);
+          if (rawValue instanceof Collection) {
+            for (final Object next : ((Collection) rawValue)) {
+              if (next != null) {
+                h.offer(Rows.objectToNumber(metricName, next).floatValue());
+              }
             }
-            return h;
           } else {
-            return new ApproximateHistogram(0);
+            h.offer(Rows.objectToNumber(metricName, rawValue).floatValue());
           }
+
+          return h;
         }
       }
     };
