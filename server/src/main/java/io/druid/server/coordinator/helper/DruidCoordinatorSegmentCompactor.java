@@ -72,7 +72,14 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         final int numRunningCompactTasks = indexingServiceClient
             .getRunningTasks()
             .stream()
-            .filter(status -> status.getType().equals(COMPACT_TASK_TYPE))
+            .filter(status -> {
+              final String taskType = status.getType();
+              // taskType can be null if middleManagers are running with an older version. Here, we consevatively regard
+              // the tasks of the unknown taskType as the compactionTask. This is because it's important to not run
+              // compactionTasks more than the configured limit at any time which might impact to the ingestion
+              // performance.
+              return taskType == null || taskType.equals(COMPACT_TASK_TYPE);
+            })
             .collect(Collectors.toList())
             .size();
         final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
