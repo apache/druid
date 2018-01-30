@@ -546,8 +546,7 @@ public class KafkaIndexTaskTest
     consumerProps.put("max.poll.records", "1");
 
     final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
-    // Checkpointing will happen at either checkpoint1 or checkpoint2 depending on ordering
-    // of events fetched across two partitions from Kafka
+    // Checkpointing will happen at checkpoint
     final KafkaPartitions checkpoint = new KafkaPartitions(topic, ImmutableMap.of(0, 1L, 1, 0L));
     final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L));
     final KafkaIndexTask task = createTask(
@@ -566,6 +565,7 @@ public class KafkaIndexTaskTest
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
 
+    // task will pause for checkpointing
     while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
       Thread.sleep(10);
     }
@@ -580,7 +580,7 @@ public class KafkaIndexTaskTest
             DATA_SCHEMA.getDataSource(),
             baseSequenceName,
             new KafkaDataSourceMetadata(startPartitions),
-            new KafkaDataSourceMetadata(new KafkaPartitions(topic, currentOffsets))
+            new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoint.getPartitionOffsetMap()))
         )
     ));
 
