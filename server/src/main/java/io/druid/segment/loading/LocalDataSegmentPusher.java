@@ -73,9 +73,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(File dataSegmentFile, DataSegment segment, boolean replaceExisting) throws IOException
   {
-    final String storageDir = this.getStorageDir(segment);
     final File baseStorageDir = config.getStorageDirectory();
-    final File outDir = new File(baseStorageDir, storageDir);
+    final File outDir = new File(baseStorageDir, this.getStorageDir(segment));
 
     log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getIdentifier(), outDir.toString());
 
@@ -93,7 +92,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       );
     }
 
-    final File tmpOutDir = new File(baseStorageDir, intermediateDirFor(storageDir));
+    final File tmpOutDir = new File(baseStorageDir, makeIntermediateDir());
     log.info("Creating intermediate directory[%s] for segment[%s]", tmpOutDir.toString(), segment.getIdentifier());
     FileUtils.forceMkdir(tmpOutDir);
 
@@ -150,9 +149,9 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     return ImmutableMap.<String, Object>of("type", "local", "path", finalIndexZipFilePath.getPath());
   }
 
-  private String intermediateDirFor(String storageDir)
+  private String makeIntermediateDir()
   {
-    return "intermediate_pushes/" + storageDir + "." + UUID.randomUUID().toString();
+    return "intermediate_pushes/" + UUID.randomUUID().toString();
   }
 
   private long compressSegment(File dataSegmentFile, File dest) throws IOException
