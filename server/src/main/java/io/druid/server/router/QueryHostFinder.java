@@ -20,7 +20,7 @@
 package io.druid.server.router;
 
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.selector.Server;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;

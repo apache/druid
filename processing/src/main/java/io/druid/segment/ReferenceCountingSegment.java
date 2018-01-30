@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.Interval;
 
 import java.io.Closeable;

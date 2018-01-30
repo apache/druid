@@ -229,12 +229,12 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public ImmutableRTree getSpatialIndex(String dimension)
   {
     if (isVirtualColumn(dimension)) {
-      return new ImmutableRTree();
+      return ImmutableRTree.empty();
     }
 
     final Column column = index.getColumn(dimension);
     if (column == null || !column.getCapabilities().hasSpatialIndexes()) {
-      return new ImmutableRTree();
+      return ImmutableRTree.empty();
     }
 
     return column.getSpatialIndex().getRTree();

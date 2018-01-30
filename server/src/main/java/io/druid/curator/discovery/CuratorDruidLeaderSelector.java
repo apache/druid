@@ -21,7 +21,7 @@ package io.druid.curator.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.annotations.Self;

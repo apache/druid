@@ -46,8 +46,9 @@
             <version>0.0.2</version>
         </dependency>
         <dependency>
-            <groupId>com.metamx</groupId>
+            <groupId>io.druid</groupId>
             <artifactId>java-util</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-cli</groupId>

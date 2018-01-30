@@ -21,7 +21,7 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.curator.CuratorTestBase;
 import io.druid.java.util.common.Intervals;
 import io.druid.segment.IndexIO;

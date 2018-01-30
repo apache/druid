@@ -21,7 +21,7 @@ package io.druid.segment.serde;
 
 import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.segment.writeout.SegmentWriteOutMedium;

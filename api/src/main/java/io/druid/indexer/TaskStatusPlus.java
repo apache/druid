@@ -39,7 +39,7 @@ public class TaskStatusPlus
   @JsonCreator
   public TaskStatusPlus(
       @JsonProperty("id") String id,
-      @JsonProperty("type") String type,
+      @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
       @JsonProperty("state") @Nullable TaskState state,
@@ -65,6 +65,7 @@ public class TaskStatusPlus
     return id;
   }
 
+  @Nullable
   @JsonProperty
   public String getType()
   {
@@ -83,12 +84,14 @@ public class TaskStatusPlus
     return queueInsertionTime;
   }
 
+  @Nullable
   @JsonProperty
   public TaskState getState()
   {
     return state;
   }
 
+  @Nullable
   @JsonProperty
   public Long getDuration()
   {

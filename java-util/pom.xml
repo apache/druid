@@ -38,6 +38,12 @@
         </license>
     </licenses>
 
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <sigar.base.version>1.6.5</sigar.base.version>
+        <sigar.version>${sigar.base.version}.132</sigar.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -86,12 +92,49 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>net.thisptr</groupId>
+            <artifactId>jackson-jq</artifactId>
+        </dependency>
+
+        <!-- Extra dependencies for emitter -->
+        <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.asynchttpclient</groupId>
+            <artifactId>async-http-client</artifactId>
+        </dependency>
+
+        <!-- Extra dependencies for server-metrics -->
+        <dependency>
+            <groupId>org.hyperic</groupId>
+            <artifactId>sigar</artifactId>
+            <version>${sigar.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.hyperic</groupId>
+            <artifactId>sigar-dist</artifactId>
+            <version>${sigar.version}</version>
+            <type>zip</type>
+            <!-- "Provided" because this dependency is used only during the build itself: some files from this
+            dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.gridkit.lab</groupId>
+            <artifactId>jvm-attach-api</artifactId>
+        </dependency>
+
+        <!-- Extra dependency for http-client -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty</artifactId>
         </dependency>
 
         <!-- Tests -->
@@ -111,10 +154,46 @@
             <scope>test</scope>
             <optional>true</optional>
         </dependency>
-      <dependency>
-        <groupId>net.thisptr</groupId>
-        <artifactId>jackson-jq</artifactId>
-      </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-1.2-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-jul</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -141,7 +220,56 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-sigar-lib-to-resources</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeGroupIds>org.hyperic</includeGroupIds>
+                            <includeArtifactIds>sigar-dist</includeArtifactIds>
+                            <includes>**/sigar-bin/lib/*</includes>
+                            <excludes>**/sigar-bin/lib/*jar</excludes>
+                            <outputDirectory>
+                                ${project.build.directory}
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemProperties>
+                        <property>
+                            <name>java.library.path</name>
+                            <value>${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib/</value>
+                        </property>
+                    </systemProperties>
+                </configuration>
+            </plugin>
         </plugins>
+
+        <resources>
+            <resource>
+                <directory>
+                    ${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib
+                </directory>
+            </resource>
+        </resources>
     </build>
+
+    <repositories>
+        <repository>
+            <id>sigar</id>
+            <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+        </repository>
+    </repositories>
 
 </project>

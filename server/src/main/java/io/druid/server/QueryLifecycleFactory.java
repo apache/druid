@@ -20,7 +20,7 @@
 package io.druid.server;
 
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.guice.LazySingleton;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QuerySegmentWalker;

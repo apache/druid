@@ -21,7 +21,7 @@ package io.druid.server;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.DirectDruidClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;

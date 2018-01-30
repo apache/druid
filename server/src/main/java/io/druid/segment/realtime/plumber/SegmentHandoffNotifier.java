@@ -41,7 +41,7 @@ public interface SegmentHandoffNotifier extends Closeable
 
   /**
    * Perform any initial setup. Should be called before using any other methods, and should be paired
-   * with a corresponding call to {@link #stop()}.
+   * with a corresponding call to {@link #close()}.
    */
   void start();
 

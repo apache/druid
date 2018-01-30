@@ -20,8 +20,8 @@
 package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
