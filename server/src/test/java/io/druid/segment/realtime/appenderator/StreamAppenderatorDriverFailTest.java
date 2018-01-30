@@ -40,9 +40,9 @@ import io.druid.query.QueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.appenderator.InfiniteAppenderatorDriverTest.TestCommitterSupplier;
-import io.druid.segment.realtime.appenderator.InfiniteAppenderatorDriverTest.TestSegmentAllocator;
-import io.druid.segment.realtime.appenderator.InfiniteAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestCommitterSupplier;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class InfiniteAppenderatorDriverFailTest
+public class StreamAppenderatorDriverFailTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
@@ -91,7 +91,7 @@ public class InfiniteAppenderatorDriverFailTest
 
   SegmentAllocator allocator;
   TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
-  InfiniteAppenderatorDriver driver;
+  StreamAppenderatorDriver driver;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -121,7 +121,7 @@ public class InfiniteAppenderatorDriverFailTest
                                     + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
                                     + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
-    driver = new InfiniteAppenderatorDriver(
+    driver = new StreamAppenderatorDriver(
         createPersistFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -143,7 +143,7 @@ public class InfiniteAppenderatorDriverFailTest
     }
 
     driver.publish(
-        InfiniteAppenderatorDriverTest.makeOkPublisher(),
+        StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -158,7 +158,7 @@ public class InfiniteAppenderatorDriverFailTest
                                     + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
                                     + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
-    driver = new InfiniteAppenderatorDriver(
+    driver = new StreamAppenderatorDriver(
         createPushFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -180,7 +180,7 @@ public class InfiniteAppenderatorDriverFailTest
     }
 
     driver.publish(
-        InfiniteAppenderatorDriverTest.makeOkPublisher(),
+        StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -195,7 +195,7 @@ public class InfiniteAppenderatorDriverFailTest
         "Fail test while dropping segment[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123]"
     );
 
-    driver = new InfiniteAppenderatorDriver(
+    driver = new StreamAppenderatorDriver(
         createDropFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -217,7 +217,7 @@ public class InfiniteAppenderatorDriverFailTest
     }
 
     final SegmentsAndMetadata published = driver.publish(
-        InfiniteAppenderatorDriverTest.makeOkPublisher(),
+        StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);

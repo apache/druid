@@ -66,9 +66,9 @@ import java.util.stream.Collectors;
  * dropped from local storage</li>
  * </ul>
  */
-public class InfiniteAppenderatorDriver extends AppenderatorDriver
+public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 {
-  private static final Logger log = new Logger(InfiniteAppenderatorDriver.class);
+  private static final Logger log = new Logger(StreamAppenderatorDriver.class);
 
   private final SegmentHandoffNotifier handoffNotifier;
   private final FireDepartmentMetrics metrics;
@@ -84,7 +84,7 @@ public class InfiniteAppenderatorDriver extends AppenderatorDriver
    * @param objectMapper           object mapper, used for serde of commit metadata
    * @param metrics                Firedepartment metrics
    */
-  public InfiniteAppenderatorDriver(
+  public StreamAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
@@ -398,6 +398,7 @@ public class InfiniteAppenderatorDriver extends AppenderatorDriver
           identifier.getInterval().getStartMillis(),
           k -> new LinkedList<>()
       );
+      // always keep APPENDING segments for an interval start millis in the front
       if (segmentWithState.getState() == SegmentState.APPENDING) {
         segmentsInInterval.addFirst(segmentWithState);
       } else {

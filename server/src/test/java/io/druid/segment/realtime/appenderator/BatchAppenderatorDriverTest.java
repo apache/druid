@@ -27,8 +27,8 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.segment.realtime.appenderator.AppenderatorDriver.SegmentsForSequence;
-import io.druid.segment.realtime.appenderator.InfiniteAppenderatorDriverTest.TestSegmentAllocator;
+import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver.SegmentsForSequence;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.junit.After;
@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class FiniteAppenderatorDriverTest
+public class BatchAppenderatorDriverTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
@@ -68,14 +68,14 @@ public class FiniteAppenderatorDriverTest
 
   private SegmentAllocator allocator;
   private AppenderatorTester appenderatorTester;
-  private FiniteAppenderatorDriver driver;
+  private BatchAppenderatorDriver driver;
 
   @Before
   public void setup()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
-    driver = new FiniteAppenderatorDriver(
+    driver = new BatchAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
         new TestUsedSegmentChecker(appenderatorTester)

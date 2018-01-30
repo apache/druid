@@ -84,7 +84,7 @@ import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
-import io.druid.segment.realtime.appenderator.InfiniteAppenderatorDriver;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -186,7 +186,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private TaskToolbox toolbox;
 
   private volatile Appenderator appenderator = null;
-  private volatile InfiniteAppenderatorDriver driver = null;
+  private volatile StreamAppenderatorDriver driver = null;
   private volatile FireDepartmentMetrics fireDepartmentMetrics = null;
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -710,7 +710,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
-                      // move the segment out from the active segments of AppenderatorDriver to make a new segment.
+                      // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                       if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
                         if (!sequenceToUse.isCheckpointed()) {
                           sequenceToCheckpoint = sequenceToUse;
@@ -940,9 +940,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
 
     try (
-        final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final InfiniteAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
-        final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
+            final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
+            final StreamAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
+            final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -1104,7 +1104,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
-                      // move the segment out from the active segments of AppenderatorDriver to make a new segment.
+                      // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                       if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
                         segmentsToMoveOut.computeIfAbsent(sequenceName, k -> new HashSet<>())
                                          .add(addResult.getSegmentIdentifier());
@@ -1793,13 +1793,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  private InfiniteAppenderatorDriver newDriver(
+  private StreamAppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
       final FireDepartmentMetrics metrics
   )
   {
-    return new InfiniteAppenderatorDriver(
+    return new StreamAppenderatorDriver(
         appenderator,
         new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),

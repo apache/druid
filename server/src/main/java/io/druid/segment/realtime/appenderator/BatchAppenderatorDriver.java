@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
  * <li>PUBLISHED: Segment's metadata is published to metastore.</li>
  * </ul>
  */
-public class FiniteAppenderatorDriver extends AppenderatorDriver
+public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 {
   /**
    * Create a driver.
@@ -61,7 +61,7 @@ public class FiniteAppenderatorDriver extends AppenderatorDriver
    * @param segmentAllocator       segment allocator
    * @param usedSegmentChecker     used segment checker
    */
-  public FiniteAppenderatorDriver(
+  public BatchAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       UsedSegmentChecker usedSegmentChecker
@@ -168,7 +168,7 @@ public class FiniteAppenderatorDriver extends AppenderatorDriver
     // State transition
     requestedSegmentIdsForSequences.forEach(
         (segmentId, segmentWithState) -> {
-          segmentWithState.push(pushedSegmentIdToSegmentMap.get(segmentId));
+          segmentWithState.pushAndDrop(pushedSegmentIdToSegmentMap.get(segmentId));
         }
     );
 

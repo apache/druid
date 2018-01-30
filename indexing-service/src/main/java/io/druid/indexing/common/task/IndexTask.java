@@ -67,10 +67,10 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
-import io.druid.segment.realtime.appenderator.AppenderatorDriver;
+import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
-import io.druid.segment.realtime.appenderator.FiniteAppenderatorDriver;
+import io.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
@@ -542,7 +542,7 @@ public class IndexTask extends AbstractTask
   }
 
   /**
-   * This method reads input data row by row and adds the read row to a proper segment using {@link AppenderatorDriver}.
+   * This method reads input data row by row and adds the read row to a proper segment using {@link BaseAppenderatorDriver}.
    * If there is no segment for the row, a new one is created.  Segments can be published in the middle of reading inputs
    * if one of below conditions are satisfied.
    *
@@ -551,7 +551,7 @@ public class IndexTask extends AbstractTask
    * If the number of rows in a segment exceeds {@link IndexTuningConfig#targetPartitionSize}
    * </li>
    * <li>
-   * If the number of rows added to {@link AppenderatorDriver} so far exceeds {@link IndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link IndexTuningConfig#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -651,9 +651,9 @@ public class IndexTask extends AbstractTask
     };
 
     try (
-        final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
-        final FiniteAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
-        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
+            final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
+            final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
+            final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
       driver.startJob();
 
@@ -790,13 +790,13 @@ public class IndexTask extends AbstractTask
     );
   }
 
-  private static FiniteAppenderatorDriver newDriver(
+  private static BatchAppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
       final SegmentAllocator segmentAllocator
   )
   {
-    return new FiniteAppenderatorDriver(
+    return new BatchAppenderatorDriver(
         appenderator,
         segmentAllocator,
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient())

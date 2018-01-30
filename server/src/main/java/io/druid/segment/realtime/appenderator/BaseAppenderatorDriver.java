@@ -58,13 +58,13 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * A AppenderatorDriver drives an Appenderator to index a finite stream of data. This class does not help you
+ * A BaseAppenderatorDriver drives an Appenderator to index a finite stream of data. This class does not help you
  * index unbounded streams. All handoff is done at the end of indexing.
  * <p/>
  * This class helps with doing things that Appenderators don't, including deciding which segments to use (with a
  * SegmentAllocator), publishing segments to the metadata store (with a SegmentPublisher).
  * <p/>
- * This class has two child classes, i.e., {@link FiniteAppenderatorDriver} and {@link InfiniteAppenderatorDriver},
+ * This class has two child classes, i.e., {@link BatchAppenderatorDriver} and {@link StreamAppenderatorDriver},
  * which are for batch and streaming ingestion, respectively. This class provides some fundamental methods for making
  * the child classes' life easier like {@link #pushInBackground}, {@link #dropInBackground}, or
  * {@link #publishInBackground}. The child classes can use these methods to achieve their goal.
@@ -72,7 +72,7 @@ import java.util.stream.Stream;
  * Note that the commit metadata stored by this class via the underlying Appenderator is not the same metadata as
  * you pass in. It's wrapped in some extra metadata needed by the driver.
  */
-public abstract class AppenderatorDriver implements Closeable
+public abstract class BaseAppenderatorDriver implements Closeable
 {
   /**
    * Allocated segments for a sequence
@@ -124,7 +124,7 @@ public abstract class AppenderatorDriver implements Closeable
     }
   }
 
-  private static final Logger log = new Logger(AppenderatorDriver.class);
+  private static final Logger log = new Logger(BaseAppenderatorDriver.class);
 
   private final SegmentAllocator segmentAllocator;
   private final UsedSegmentChecker usedSegmentChecker;
@@ -132,13 +132,13 @@ public abstract class AppenderatorDriver implements Closeable
   protected final Appenderator appenderator;
   // sequenceName -> segmentsForSequence
   // This map should be locked with itself before accessing it.
-  // Note: FiniteAppenderatorDriver currently doesn't need to lock this map because it doens't do anything concurrently.
-  // However, it's desried to do some operations like indexing and pushing at the same time. Lockig this map is also
-  // required in FiniteAppenderatorDriver once this feature is supported.
+  // Note: BatchAppenderatorDriver currently doesn't need to lock this map because it doesn't do anything concurrently.
+  // However, it's desired to do some operations like indexing and pushing at the same time. Locking this map is also
+  // required in BatchAppenderatorDriver once this feature is supported.
   protected final Map<String, SegmentsForSequence> segments = new TreeMap<>();
   protected final ListeningExecutorService executor;
 
-  AppenderatorDriver(
+  BaseAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       UsedSegmentChecker usedSegmentChecker
@@ -372,7 +372,7 @@ public abstract class AppenderatorDriver implements Closeable
    */
   ListenableFuture<SegmentsAndMetadata> dropInBackground(SegmentsAndMetadata segmentsAndMetadata)
   {
-    log.info("dropping segments[%s]", segmentsAndMetadata.getSegments());
+    log.info("Dropping segments[%s]", segmentsAndMetadata.getSegments());
     final ListenableFuture<?> dropFuture = Futures.allAsList(
         segmentsAndMetadata
             .getSegments()
@@ -473,7 +473,7 @@ public abstract class AppenderatorDriver implements Closeable
   }
 
   /**
-   * Wrapped committer for AppenderatorDriver. Used in only {@link InfiniteAppenderatorDriver} because batch ingestion
+   * Wrapped committer for BaseAppenderatorDriver. Used in only {@link StreamAppenderatorDriver} because batch ingestion
    * doesn't need committing intermediate states.
    */
   static class WrappedCommitter implements Committer

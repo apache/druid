@@ -31,28 +31,33 @@ import java.util.List;
 public class SegmentWithState
 {
   /**
-   * Segment state transition is different in {@link FiniteAppenderatorDriver} and {@link InfiniteAppenderatorDriver}.
+   * Segment state transition is different in {@link BatchAppenderatorDriver} and {@link StreamAppenderatorDriver}.
    * When a new segment is created, its state is {@link #APPENDING}.
    *
-   * - In realtime ingestion, the state of some segments can be changed to the {@link #APPEND_FINISHED} state. Data is
+   * - In stream ingestion, the state of some segments can be changed to the {@link #APPEND_FINISHED} state. Data is
    * not appended to these segments anymore, and they are waiting for beging published.
-   * See {@link InfiniteAppenderatorDriver#moveSegmentOut(String, List)}.
+   * See {@link StreamAppenderatorDriver#moveSegmentOut(String, List)}.
    * - In batch ingestion, the state of some segments can be changed to the {@link #PUSHED_AND_DROPPED} state. These
    * segments are pushed and dropped from the local storage, but not published yet.
-   * See {@link FiniteAppenderatorDriver#pushAndClear(Collection, long)}.
+   * See {@link BatchAppenderatorDriver#pushAndClear(Collection, long)}.
    *
    * Note: If you need to add more states which are used differently in batch and streaming ingestion, consider moving
-   * SegmentState to {@link FiniteAppenderatorDriver} and {@link InfiniteAppenderatorDriver}.
+   * SegmentState to {@link BatchAppenderatorDriver} and {@link StreamAppenderatorDriver}.
    */
   public enum SegmentState
   {
     APPENDING,
-    APPEND_FINISHED,   // only used in InfiniteAppenderatorDriver
-    PUSHED_AND_DROPPED // only used in FiniteAppenderatorDriver
+    APPEND_FINISHED,   // only used in StreamAppenderatorDriver
+    PUSHED_AND_DROPPED // only used in BatchAppenderatorDriver
   }
 
   private final SegmentIdentifier segmentIdentifier;
   private SegmentState state;
+
+  /**
+   * This is to keep what dataSegment object was created for {@link #segmentIdentifier} when
+   * {@link BaseAppenderatorDriver#pushInBackground} is called.
+   */
   @Nullable private DataSegment dataSegment;
 
   static SegmentWithState newSegment(SegmentIdentifier segmentIdentifier)
@@ -81,13 +86,24 @@ public class SegmentWithState
     this.state = state;
   }
 
+  /**
+   * Change the segment state to {@link SegmentState#APPEND_FINISHED}. The current state should be
+   * {@link SegmentState#APPENDING}.
+   */
   public void finishAppending()
   {
     checkStateTransition(this.state, SegmentState.APPENDING, SegmentState.APPEND_FINISHED);
     this.state = SegmentState.APPEND_FINISHED;
   }
 
-  public void push(DataSegment dataSegment)
+  /**
+   * Change the segment state to {@link SegmentState#PUSHED_AND_DROPPED}. The current state should be
+   * {@link SegmentState#APPENDING}. This method should be called after the segment of {@link #segmentIdentifier} is
+   * completely pushed and dropped.
+   *
+   * @param dataSegment pushed {@link DataSegment}
+   */
+  public void pushAndDrop(DataSegment dataSegment)
   {
     checkStateTransition(this.state, SegmentState.APPENDING, SegmentState.PUSHED_AND_DROPPED);
     this.state = SegmentState.PUSHED_AND_DROPPED;
