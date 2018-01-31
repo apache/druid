@@ -178,7 +178,8 @@ The format of the query JSON is as follows:
   ...
   "aggregations" : [
     { "type" : "count", "name" : "rows" },
-    { "type" : "doubleSum", "name" : "tot", "fieldName" : "total" }
+    { "type" : "doubleSum", "name" : "tot", "fieldName" : "total" },
+    { "type" : "doubleSum", "name" : "part", "fieldName" : "part" }
   ],
   "postAggregations" : [{
     "type"   : "arithmetic",
