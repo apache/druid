@@ -54,7 +54,7 @@ public class HttpEmitterModule implements Module
   {
     JsonConfigProvider.bind(binder, "druid.emitter.http", HttpEmitterConfig.class);
 
-    configureSsl(binder);
+    //configureSsl(binder);
   }
 
   static void configureSsl(Binder binder)
