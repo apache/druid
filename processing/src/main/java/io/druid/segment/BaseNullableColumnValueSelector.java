@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import io.druid.guice.annotations.PublicApi;
+import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 
 /**
  * Null value checking polymorphic "part" of the {@link ColumnValueSelector} interface for primitive values.
@@ -34,5 +35,6 @@ public interface BaseNullableColumnValueSelector
    * returns true if selected primitive value is null for {@link BaseFloatColumnValueSelector},
    * {@link BaseLongColumnValueSelector} and {@link BaseDoubleColumnValueSelector} otherwise false.
    */
+  @CalledFromHotLoop
   boolean isNull();
 }
