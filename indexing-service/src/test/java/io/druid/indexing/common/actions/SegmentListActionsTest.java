@@ -19,10 +19,13 @@
 
 package io.druid.indexing.common.actions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -111,5 +114,21 @@ public class SegmentListActionsTest
     final SegmentListUnusedAction action = new SegmentListUnusedAction(task.getDataSource(), INTERVAL, null);
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUnusedSegments, resultSegments);
+  }
+
+  @Test
+  public void testSegmentListUnusedActionSerde() throws Exception
+  {
+    SegmentListUnusedAction expected = new SegmentListUnusedAction(task.getDataSource(), INTERVAL, DateTimes.nowUtc());
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+    SegmentListUnusedAction actual = (SegmentListUnusedAction) mapper.readValue(
+        mapper.writeValueAsString(expected),
+        TaskAction.class
+    );
+
+    Assert.assertEquals(expected.getDataSource(), actual.getDataSource());
+    Assert.assertEquals(expected.getInterval(), actual.getInterval());
+    Assert.assertEquals(expected.getUnusedMarkThreshold(), actual.getUnusedMarkThreshold());
   }
 }

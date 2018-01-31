@@ -33,6 +33,7 @@ import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -380,7 +381,7 @@ public class TaskSerdeTest
         null,
         "foo",
         Intervals.of("2010-01-01/P1D"),
-        null,
+        DateTimes.nowUtc(),
         null
     );
 
@@ -396,19 +397,21 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assert.assertEquals(task.getUnusedMarkThreshold(), task2.getUnusedMarkThreshold());
 
     final KillTask task3 = (KillTask) jsonMapper.readValue(
         jsonMapper.writeValueAsString(
             new ClientKillQuery(
                 "foo",
                 Intervals.of("2010-01-01/P1D"),
-                null
+                task.getUnusedMarkThreshold()
             )
         ), Task.class
     );
 
     Assert.assertEquals("foo", task3.getDataSource());
     Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task3.getInterval());
+    Assert.assertEquals(task.getUnusedMarkThreshold(), task3.getUnusedMarkThreshold());
   }
 
   @Test

@@ -96,6 +96,7 @@ public class SegmentListUnusedAction implements TaskAction<List<DataSegment>>
     return "SegmentListUnusedAction{" +
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
+           ", unusedMarkThreshold=" + unusedMarkThreshold +
            '}';
   }
 }
