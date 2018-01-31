@@ -71,6 +71,11 @@ public abstract class DruidCoordinatorConfig
   @Default("PT-1s")
   public abstract Duration getCoordinatorKillDurationToRetain();
 
+
+  @Config("druid.coordinator.kill.unusedMarkWaitDuration")
+  @Default("PT-1s")
+  public abstract Duration getCoordinatorUnusedMarkWaitDuration();
+
   @Config("druid.coordinator.kill.maxSegments")
   @Default("0")
   public abstract int getCoordinatorKillMaxSegments();

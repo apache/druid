@@ -37,7 +37,7 @@ public class ClientKillQueryTest
   @Before
   public void setUp()
   {
-    clientKillQuery = new ClientKillQuery(DATA_SOURCE, INTERVAL);
+    clientKillQuery = new ClientKillQuery(DATA_SOURCE, INTERVAL, null);
   }
 
   @After

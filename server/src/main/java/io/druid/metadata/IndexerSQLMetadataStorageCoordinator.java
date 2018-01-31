@@ -50,6 +50,7 @@ import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -961,7 +962,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
+  public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval, final DateTime unusedMarkThreshold)
   {
     List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
@@ -972,18 +973,28 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
             // Some databases can only use an index on one of the columns. An additional condition provides
             // explicit knowledge that 'start' cannot be greater than 'end'.
-            return handle
+            StringBuilder querySb = new StringBuilder("SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start and start <= :end and %2$send%2$s <= :end and used = false");
+            if (unusedMarkThreshold != null) {
+              querySb.append( "and (used_update_date IS NULL OR used_update_date <= :unusedMarkThreshold)");
+            }
+
+            Query<Map<String, Object>> query = handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start "
-                        + "and start <= :end and %2$send%2$s <= :end and used = false",
+                        querySb.toString(),
                         dbTables.getSegmentsTable(), connector.getQuoteString()
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
-                .bind("end", interval.getEnd().toString())
+                .bind("end", interval.getEnd().toString());
+
+            if (unusedMarkThreshold != null) {
+              query = query.bind("unusedMarkThreshold", unusedMarkThreshold.toString());
+            }
+
+            return query
                 .map(ByteArrayMapper.FIRST)
                 .fold(
                     Lists.<DataSegment>newArrayList(),

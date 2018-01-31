@@ -20,6 +20,7 @@
 package io.druid.metadata;
 
 import io.druid.client.ImmutableDruidDataSource;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -58,6 +59,7 @@ public interface MetadataSegmentManager
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,
       Interval interval,
+      DateTime unusedMarkThreshold,
       int limit
   );
 

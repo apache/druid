@@ -82,7 +82,12 @@ public class IndexingServiceClient
 
   public void killSegments(String dataSource, Interval interval)
   {
-    runQuery(new ClientKillQuery(dataSource, interval));
+    killSegments(dataSource, interval, null);
+  }
+
+  public void killSegments(String dataSource, Interval interval, DateTime unusedMarkThreshold)
+  {
+    runQuery(new ClientKillQuery(dataSource, interval, unusedMarkThreshold));
   }
 
   public void upgradeSegment(DataSegment dataSegment)

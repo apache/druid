@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -38,14 +39,19 @@ public class SegmentListUnusedAction implements TaskAction<List<DataSegment>>
   @JsonIgnore
   private final Interval interval;
 
+  @JsonIgnore
+  private final DateTime unusedMarkThreshold;
+
   @JsonCreator
   public SegmentListUnusedAction(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("unusedMarkThreshold") DateTime unusedMarkThreshold
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
+    this.unusedMarkThreshold = unusedMarkThreshold;
   }
 
   @JsonProperty
@@ -60,6 +66,12 @@ public class SegmentListUnusedAction implements TaskAction<List<DataSegment>>
     return interval;
   }
 
+  @JsonProperty
+  public DateTime getUnusedMarkThreshold()
+  {
+    return unusedMarkThreshold;
+  }
+
   @Override
   public TypeReference<List<DataSegment>> getReturnTypeReference()
   {
@@ -69,7 +81,7 @@ public class SegmentListUnusedAction implements TaskAction<List<DataSegment>>
   @Override
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    return toolbox.getIndexerMetadataStorageCoordinator().getUnusedSegmentsForInterval(dataSource, interval);
+    return toolbox.getIndexerMetadataStorageCoordinator().getUnusedSegmentsForInterval(dataSource, interval, unusedMarkThreshold);
   }
 
   @Override

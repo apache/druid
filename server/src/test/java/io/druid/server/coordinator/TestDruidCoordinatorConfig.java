@@ -108,6 +108,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public Duration getCoordinatorUnusedMarkWaitDuration()
+  {
+    return Duration.ZERO;
+  }
+
+  @Override
   public int getCoordinatorKillMaxSegments()
   {
     return coordinatorKillMaxSegments;

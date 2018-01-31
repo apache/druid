@@ -43,6 +43,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
 
   private final long period;
   private final long retainDuration;
+  private final long unusedMarkWaitDuration;
   private final int maxSegmentsToKill;
   private long lastKillTime = 0;
 
@@ -65,6 +66,9 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
 
     this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "coordinator kill retainDuration must be >= 0");
+
+    this.unusedMarkWaitDuration = config.getCoordinatorKillDurationToRetain().getMillis();
+    Preconditions.checkArgument(this.unusedMarkWaitDuration >= 0, "coordinator kill unusedMarkWaitDuration must be >= 0");
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
@@ -123,6 +127,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
     List<Interval> unusedSegmentIntervals = segmentManager.getUnusedSegmentIntervals(
         dataSource,
         new Interval(DateTimes.EPOCH, DateTimes.nowUtc().minus(retainDuration)),
+        DateTimes.nowUtc().minus(unusedMarkWaitDuration),
         limit
     );
 

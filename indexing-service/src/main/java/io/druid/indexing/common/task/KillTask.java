@@ -32,6 +32,7 @@ import io.druid.indexing.common.actions.SegmentNukeAction;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -43,11 +44,14 @@ public class KillTask extends AbstractFixedIntervalTask
 {
   private static final Logger log = new Logger(KillTask.class);
 
+  private final DateTime unusedMarkThreshold;
+
   @JsonCreator
   public KillTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("unusedMarkThreshold") DateTime unusedMarkThreshold,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -57,12 +61,20 @@ public class KillTask extends AbstractFixedIntervalTask
         interval,
         context
     );
+
+    this.unusedMarkThreshold = unusedMarkThreshold;
   }
 
   @Override
   public String getType()
   {
     return "kill";
+  }
+
+  @JsonProperty
+  public DateTime getUnusedMarkThreshold()
+  {
+    return unusedMarkThreshold;
   }
 
   @Override
@@ -82,7 +94,7 @@ public class KillTask extends AbstractFixedIntervalTask
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval(), unusedMarkThreshold));
 
     // Verify none of these segments have versions > lock version
     for (final DataSegment unusedSegment : unusedSegments) {

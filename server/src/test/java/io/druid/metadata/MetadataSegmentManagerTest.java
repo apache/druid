@@ -32,6 +32,7 @@ import io.druid.segment.TestHelper;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -164,12 +165,12 @@ public class MetadataSegmentManagerTest
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), 1)
+        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), DateTime.now(), 1)
     );
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), 5)
+        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), DateTime.now(), 5)
     );
   }
 

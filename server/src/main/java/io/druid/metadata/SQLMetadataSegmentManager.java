@@ -33,7 +33,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.concurrent.LifecycleLock;
@@ -45,10 +44,12 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
@@ -312,8 +313,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     try {
       final int removed = connector.getDBI().withHandle(
           handle -> handle.createStatement(
-              StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
-          ).bind("dataSource", ds).execute()
+              StringUtils.format("UPDATE %s SET used=false, used_update_date = :now WHERE dataSource = :dataSource", getSegmentsTable())
+          ).bind("dataSource", ds).bind("now", DateTimes.nowUtc().toString()).execute()
       );
 
       dataSourcesRef.get().remove(ds);
@@ -336,8 +337,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     try {
       final int removed = connector.getDBI().withHandle(
           handle -> handle.createStatement(
-              StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
-          ).bind("segmentID", segmentID).execute()
+              StringUtils.format("UPDATE %s SET used=false, used_update_date = :now WHERE id = :segmentID", getSegmentsTable())
+          ).bind("segmentID", segmentID).bind("now", DateTimes.nowUtc().toString()).execute()
       );
 
       ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSourcesRef.get();
@@ -525,6 +526,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public List<Interval> getUnusedSegmentIntervals(
       final String dataSource,
       final Interval interval,
+      final DateTime unusedMarkThreshold,
       final int limit
   )
   {
@@ -537,7 +539,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             Iterator<Interval> iter = handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false ORDER BY start, %2$send%2$s",
+                        "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND start >= :start AND %2$send%2$s <= :end AND "
+                        + "used = false AND (used_update_date IS NULL OR used_update_date <= :unusedMarkThreshold) ORDER BY start, %2$send%2$s",
                         getSegmentsTable(), connector.getQuoteString()
                     )
                 )
@@ -546,6 +549,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())
+                .bind("unusedMarkThreshold", unusedMarkThreshold.toString())
                 .map(
                     new BaseResultSetMapper<Interval>()
                     {

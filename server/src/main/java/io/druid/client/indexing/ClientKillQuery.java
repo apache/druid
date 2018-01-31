@@ -21,6 +21,7 @@ package io.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 /**
@@ -29,15 +30,18 @@ public class ClientKillQuery
 {
   private final String dataSource;
   private final Interval interval;
+  private final DateTime unusedMarkThreshold;
 
   @JsonCreator
   public ClientKillQuery(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+      @JsonProperty("interval") Interval interval,
+      @JsonProperty("unusedMarkThreshold") DateTime unusedMarkThreshold
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
+    this.unusedMarkThreshold = unusedMarkThreshold;
   }
 
   @JsonProperty
@@ -56,5 +60,11 @@ public class ClientKillQuery
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @JsonProperty
+  public DateTime getUnusedMarkThreshold()
+  {
+    return unusedMarkThreshold;
   }
 }

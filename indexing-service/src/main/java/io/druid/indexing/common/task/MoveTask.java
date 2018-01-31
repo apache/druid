@@ -86,7 +86,7 @@ public class MoveTask extends AbstractFixedIntervalTask
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval(), null));
 
     // Verify none of these segments have versions > lock version
     for (final DataSegment unusedSegment : unusedSegments) {

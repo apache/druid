@@ -21,8 +21,10 @@ package io.druid.indexing.overlord;
 
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -168,5 +170,5 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return DataSegments which include ONLY data within the requested interval and are not flagged as used. Data segments NOT returned here may include data in the interval
    */
-  List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval);
+  List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval, @Nullable DateTime unusedMarkThreshold);
 }

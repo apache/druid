@@ -550,7 +550,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval()
+                defaultSegment.getInterval(),
+                null
             )
         )
     );
@@ -656,7 +657,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             new Interval(
                 defaultSegment.getInterval().getStart().minus(1),
                 defaultSegment.getInterval().getStart().plus(1)
-            )
+            ),
+            null
         ).isEmpty()
     );
   }
@@ -669,7 +671,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.getUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            new Interval(defaultSegment.getInterval().getStart().plus(1), defaultSegment.getInterval().getEnd())
+            new Interval(defaultSegment.getInterval().getStart().plus(1), defaultSegment.getInterval().getEnd()),
+            null
         ).isEmpty()
     );
   }
@@ -683,7 +686,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.getUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            new Interval(defaultSegment.getInterval().getStart(), defaultSegment.getInterval().getEnd().minus(1))
+            new Interval(defaultSegment.getInterval().getStart(), defaultSegment.getInterval().getEnd().minus(1)),
+            null
         ).isEmpty()
     );
   }
@@ -696,7 +700,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.getUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            defaultSegment.getInterval().withStart(defaultSegment.getInterval().getEnd().minus(1))
+            defaultSegment.getInterval().withStart(defaultSegment.getInterval().getEnd().minus(1)),
+            null
         ).isEmpty()
     );
   }
@@ -711,7 +716,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Intervals.of("2000/2999")
+                Intervals.of("2000/2999"),
+                null
             )
         )
     );
@@ -727,7 +733,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minus(1))
+                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minus(1)),
+                null
             )
         )
     );
@@ -736,7 +743,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minusYears(1))
+                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minusYears(1)),
+                null
             )
         )
     );
@@ -752,7 +760,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plus(1))
+                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plus(1)),
+                null
             )
         )
     );
@@ -761,7 +770,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plusYears(1))
+                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plusYears(1)),
+                null
             )
         )
     );
