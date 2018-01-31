@@ -58,7 +58,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
     final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-
+    // If using default values for null use LongColumnSerializer to allow rollback to previous versions.
     this.serializer = IndexMergerV9.createLongColumnSerializer(
         segmentWriteOutMedium,
         dimensionName,

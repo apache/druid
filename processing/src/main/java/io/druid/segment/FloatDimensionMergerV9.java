@@ -55,6 +55,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
+    // If using default values for null use FloatColumnSerializer to allow rollback to previous versions.
     this.serializer = IndexMergerV9.createFloatColumnSerializer(
         segmentWriteOutMedium,
         dimensionName,

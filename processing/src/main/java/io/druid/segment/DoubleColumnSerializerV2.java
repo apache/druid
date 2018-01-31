@@ -19,9 +19,9 @@
 
 package io.druid.segment;
 
-import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.data.BitmapSerdeFactory;
@@ -33,10 +33,15 @@ import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Column Serializer for double column.
+ * The column is serialized in two parts, first a bitmap indicating the nullability of row values
+ * and second the actual row values.
+ * This class is Unsafe for concurrent use from multiple threads.
+ */
 public class DoubleColumnSerializerV2 implements GenericColumnSerializer
 {
   public static DoubleColumnSerializerV2 create(
@@ -124,7 +129,7 @@ public class DoubleColumnSerializerV2 implements GenericColumnSerializer
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    channel.write(ByteBuffer.wrap(Ints.toByteArray((int) writer.getSerializedSize())));
+    SerializerUtils.writeInt(channel, (int) writer.getSerializedSize());
     writer.writeTo(channel, smoosher);
     if (!nullRowsBitmap.isEmpty()) {
       nullValueBitmapWriter.writeTo(channel, smoosher);

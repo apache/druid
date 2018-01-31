@@ -36,7 +36,7 @@ import java.util.Objects;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
-  public static final Comparator DOUBLE_COMPARATOR = Comparators.<Double>naturalNullsFirst();
+  public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.<Double>naturalNullsFirst();
 
   @Override
   public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
@@ -115,6 +115,9 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          if (NullHandling.sqlCompatible()) {
+            throw new IllegalStateException("Cannot return double for Null Value");
+          }
           return 0.0;
         }
         return (Double) dims[dimIndex];

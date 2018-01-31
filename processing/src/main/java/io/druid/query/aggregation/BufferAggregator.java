@@ -189,10 +189,9 @@ public interface BufferAggregator extends HotLoopCallee
    * @param buf      byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
    *
-   * @return true if the aggrgeated value is null otherwise false.
-   * The default implementation always return false to enable smooth backward compatibility,
-   * re-implement if your aggregator is nullable.
+   * @return true if the aggregated value is primitive long/double/float and aggregated value is null otherwise false.
    */
+  @CalledFromHotLoop
   default boolean isNull(ByteBuffer buf, int position)
   {
     return false;

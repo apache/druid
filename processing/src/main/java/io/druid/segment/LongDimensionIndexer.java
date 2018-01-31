@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -98,23 +99,30 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
     final int dimIndex = desc.getIndex();
     class IndexerLongColumnSelector implements LongColumnSelector
     {
+
+      @Override
+      public boolean isNull()
+      {
+        if (NullHandling.replaceWithDefault()) {
+          return false;
+        }
+        final Object[] dims = currEntry.get().getDims();
+        return dimIndex >= dims.length || dims[dimIndex] == null;
+      }
+
       @Override
       public long getLong()
       {
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          if (NullHandling.sqlCompatible()) {
+            throw new IllegalStateException("Cannot return long for Null Value");
+          }
           return 0;
         }
 
         return (Long) dims[dimIndex];
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
       }
 
       @SuppressWarnings("deprecation")

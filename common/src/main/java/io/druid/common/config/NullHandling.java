@@ -105,7 +105,7 @@ public class NullHandling
 
   public static boolean isNullOrEquivalent(@Nullable String value)
   {
-    return INSTANCE.isUseDefaultValuesForNull() ? Strings.isNullOrEmpty(value) : value == null;
+    return replaceWithDefault() ? Strings.isNullOrEmpty(value) : value == null;
   }
 
 }

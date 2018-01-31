@@ -149,7 +149,6 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
     return 0L;
   }
 
-  @Deprecated
   @Override
   default boolean isNull()
   {
