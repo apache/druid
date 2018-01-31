@@ -247,6 +247,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return false;
       }
 
+      String now = DateTimes.nowUtc().toString();
       dbi.withHandle(
           new HandleCallback<Void>()
           {
@@ -258,8 +259,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               for (DataSegment segment : segments) {
                 batch.add(
                     StringUtils.format(
-                        "UPDATE %s SET used=true WHERE id = '%s'",
+                        "UPDATE %s SET used=true, used_update_date = '%s' WHERE id = '%s'",
                         getSegmentsTable(),
+                        now,
                         segment.getIdentifier()
                     )
                 );
@@ -290,9 +292,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             public Void withHandle(Handle handle) throws Exception
             {
               handle.createStatement(
-                  StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
+                  StringUtils.format("UPDATE %s SET used=true, used_update_date = :now WHERE id = :id", getSegmentsTable())
               )
                     .bind("id", segmentId)
+                    .bind("now", DateTimes.nowUtc().toString())
                     .execute();
               return null;
             }

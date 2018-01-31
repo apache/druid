@@ -656,8 +656,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
       handle.createStatement(
           StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, used_update_date, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :created_date, :payload)",
               dbTables.getSegmentsTable(), connector.getQuoteString()
           )
       )

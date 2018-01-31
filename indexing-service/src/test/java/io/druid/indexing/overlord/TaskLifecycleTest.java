@@ -795,13 +795,13 @@ public class TaskLifecycleTest
 
     // manually create local segments files
     List<File> segmentFiles = Lists.newArrayList();
-    for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
+    for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"), null)) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       file.mkdirs();
       segmentFiles.add(file);
     }
 
-    final Task killTask = new KillTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null);
+    final Task killTask = new KillTask(null, "test_kill_task", Intervals.of("2011-04-01/P4D"), null, null);
 
     final TaskStatus status = runTask(killTask);
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());

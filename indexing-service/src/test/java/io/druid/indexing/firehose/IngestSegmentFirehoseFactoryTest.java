@@ -95,6 +95,7 @@ import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -190,7 +191,7 @@ public class IngestSegmentFirehoseFactoryTest
       }
 
       @Override
-      public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+      public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval, DateTime unusedMarkedThreshold)
       {
         return ImmutableList.of();
       }

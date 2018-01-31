@@ -380,6 +380,7 @@ public class TaskSerdeTest
         null,
         "foo",
         Intervals.of("2010-01-01/P1D"),
+        null,
         null
     );
 
@@ -400,7 +401,8 @@ public class TaskSerdeTest
         jsonMapper.writeValueAsString(
             new ClientKillQuery(
                 "foo",
-                Intervals.of("2010-01-01/P1D")
+                Intervals.of("2010-01-01/P1D"),
+                null
             )
         ), Task.class
     );

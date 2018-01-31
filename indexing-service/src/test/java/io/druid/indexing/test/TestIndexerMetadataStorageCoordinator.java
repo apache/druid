@@ -28,6 +28,7 @@ import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -80,7 +81,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+  public List<DataSegment> getUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      DateTime unusedMarkThreshold
+  )
   {
     synchronized (unusedSegments) {
       return ImmutableList.copyOf(unusedSegments);
