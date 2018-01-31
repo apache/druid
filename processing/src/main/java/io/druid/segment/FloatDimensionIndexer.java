@@ -40,7 +40,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToFloat(dimValues);
+    return DimensionHandlerUtils.convertObjectToFloat(dimValues, true);
   }
 
   @Override

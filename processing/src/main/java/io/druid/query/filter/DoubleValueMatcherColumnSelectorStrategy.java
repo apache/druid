@@ -31,7 +31,7 @@ public class DoubleValueMatcherColumnSelectorStrategy
   @Override
   public ValueMatcher makeValueMatcher(final BaseDoubleColumnValueSelector selector, final String value)
   {
-    final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value);
+    final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value, false);
     if (matchVal == null) {
       return BooleanValueMatcher.of(false);
     }

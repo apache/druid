@@ -238,7 +238,7 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Long convertObjectToLong(@Nullable Object valObj)
+  public static Long convertObjectToLong(@Nullable Object valObj, boolean throwOnUnparseableString)
   {
     if (valObj == null) {
       return ZERO_LONG;
@@ -249,14 +249,19 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).longValue();
     } else if (valObj instanceof String) {
-      return DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
+      Long ret = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
+      // reject unparseable strings during indexing, treat them as nulls in query paths
+      if (throwOnUnparseableString && ret == null) {
+        throw new ParseException("could not convert value [%s] to long", valObj);
+      }
+      return ret;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
   }
 
   @Nullable
-  public static Float convertObjectToFloat(@Nullable Object valObj)
+  public static Float convertObjectToFloat(@Nullable Object valObj, boolean throwOnUnparseableString)
   {
     if (valObj == null) {
       return ZERO_FLOAT;
@@ -267,14 +272,19 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).floatValue();
     } else if (valObj instanceof String) {
-      return Floats.tryParse((String) valObj);
+      Float ret = Floats.tryParse((String) valObj);
+      // reject unparseable strings during indexing, treat them as nulls in query paths
+      if (throwOnUnparseableString && ret == null) {
+        throw new ParseException("could not convert value [%s] to float", valObj);
+      }
+      return ret;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
   }
 
   @Nullable
-  public static Double convertObjectToDouble(@Nullable Object valObj)
+  public static Double convertObjectToDouble(@Nullable Object valObj, boolean throwOnUnparseableString)
   {
     if (valObj == null) {
       return ZERO_DOUBLE;
@@ -285,7 +295,12 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Number) {
       return ((Number) valObj).doubleValue();
     } else if (valObj instanceof String) {
-      return Doubles.tryParse((String) valObj);
+      Double ret = Doubles.tryParse((String) valObj);
+      // reject unparseable strings during indexing, treat them as nulls in query paths
+      if (throwOnUnparseableString && ret == null) {
+        throw new ParseException("could not convert value [%s] to double", valObj);
+      }
+      return ret;
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }

@@ -40,7 +40,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToLong(dimValues);
+    return DimensionHandlerUtils.convertObjectToLong(dimValues, true);
   }
 
   @Override

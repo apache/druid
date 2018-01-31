@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
@@ -144,6 +145,17 @@ public class IndexGeneratorCombinerTest
     );
     BytesWritable key = keySortableBytes.toBytesWritable();
 
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("host"),
+            new StringDimensionSchema("keywords")
+        ),
+        null,
+        null
+    );
+
+    Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap = InputRowSerde.getTypeHelperMap(dimensionsSpec);
+
     InputRow row1 = new MapBasedInputRow(
         timestamp,
         ImmutableList.<String>of("keywords"),
@@ -163,8 +175,8 @@ public class IndexGeneratorCombinerTest
         )
     );
     List<BytesWritable> rows = Lists.newArrayList(
-        new BytesWritable(InputRowSerde.toBytes(row1, aggregators, true)),
-        new BytesWritable(InputRowSerde.toBytes(row2, aggregators, true))
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators, true)),
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators, true))
     );
 
     Reducer.Context context = EasyMock.createNiceMock(Reducer.Context.class);
@@ -228,9 +240,21 @@ public class IndexGeneratorCombinerTest
             "visited", 5
         )
     );
+
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("host"),
+            new StringDimensionSchema("keywords")
+        ),
+        null,
+        null
+    );
+
+    Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap = InputRowSerde.getTypeHelperMap(dimensionsSpec);
+
     List<BytesWritable> rows = Lists.newArrayList(
-        new BytesWritable(InputRowSerde.toBytes(row1, aggregators, true)),
-        new BytesWritable(InputRowSerde.toBytes(row2, aggregators, true))
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators, true)),
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators, true))
     );
 
     Reducer.Context context = EasyMock.createNiceMock(Reducer.Context.class);

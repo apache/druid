@@ -30,7 +30,7 @@ public class LongValueMatcherColumnSelectorStrategy
   @Override
   public ValueMatcher makeValueMatcher(final BaseLongColumnValueSelector selector, final String value)
   {
-    final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
+    final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value, false);
     if (matchVal == null) {
       return BooleanValueMatcher.of(false);
     }

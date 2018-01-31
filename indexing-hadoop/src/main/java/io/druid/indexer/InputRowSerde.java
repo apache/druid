@@ -22,17 +22,25 @@ package io.druid.indexer;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.Rows;
+import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -49,7 +57,166 @@ public class InputRowSerde
 {
   private static final Logger log = new Logger(InputRowSerde.class);
 
-  public static final byte[] toBytes(final InputRow row, AggregatorFactory[] aggs, boolean reportParseExceptions)
+  private static final IndexSerdeTypeHelper STRING_HELPER = new StringIndexSerdeTypeHelper();
+  private static final IndexSerdeTypeHelper LONG_HELPER = new LongIndexSerdeTypeHelper();
+  private static final IndexSerdeTypeHelper FLOAT_HELPER = new FloatIndexSerdeTypeHelper();
+  private static final IndexSerdeTypeHelper DOUBLE_HELPER = new DoubleIndexSerdeTypeHelper();
+
+  public interface IndexSerdeTypeHelper<T>
+  {
+    ValueType getType();
+
+    byte[] serialize(Object value);
+
+    T deserialize(byte[] bytes);
+  }
+
+  private static final IndexSerdeTypeHelper[] VALUE_TYPE_HELPER_ARRAY =
+      new IndexSerdeTypeHelper[ValueType.values().length];
+  static {
+    VALUE_TYPE_HELPER_ARRAY[ValueType.STRING.ordinal()] = STRING_HELPER;
+    VALUE_TYPE_HELPER_ARRAY[ValueType.LONG.ordinal()] = LONG_HELPER;
+    VALUE_TYPE_HELPER_ARRAY[ValueType.FLOAT.ordinal()] = FLOAT_HELPER;
+    VALUE_TYPE_HELPER_ARRAY[ValueType.DOUBLE.ordinal()] = DOUBLE_HELPER;
+  }
+
+  public static Map<String, IndexSerdeTypeHelper> getTypeHelperMap(DimensionsSpec dimensionsSpec)
+  {
+    Map<String, IndexSerdeTypeHelper> typeHelperMap = Maps.newHashMap();
+    for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
+      IndexSerdeTypeHelper typeHelper;
+      switch (dimensionSchema.getValueType()) {
+        case STRING:
+          typeHelper = STRING_HELPER;
+          break;
+        case LONG:
+          typeHelper = LONG_HELPER;
+          break;
+        case FLOAT:
+          typeHelper = FLOAT_HELPER;
+          break;
+        case DOUBLE:
+          typeHelper = DOUBLE_HELPER;
+          break;
+        default:
+          throw new IAE("Invalid type: [%s]", dimensionSchema.getValueType());
+      }
+      typeHelperMap.put(dimensionSchema.getName(), typeHelper);
+    }
+    return typeHelperMap;
+  }
+
+  public static class StringIndexSerdeTypeHelper implements IndexSerdeTypeHelper<List<String>>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.STRING;
+    }
+
+    @Override
+    public byte[] serialize(Object value)
+    {
+      List<String> values = Rows.objectToStrings(value);
+      ByteArrayDataOutput out = ByteStreams.newDataOutput();
+      try {
+        writeStringArray(values, out);
+        return out.toByteArray();
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+
+    @Override
+    public List<String> deserialize(byte[] bytes)
+    {
+      ByteArrayDataInput input = ByteStreams.newDataInput(bytes);
+      try {
+        return readStringArray(input);
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+  }
+
+  public static class LongIndexSerdeTypeHelper implements IndexSerdeTypeHelper<Long>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.LONG;
+    }
+
+    @Override
+    public byte[] serialize(Object value)
+    {
+      return Longs.toByteArray(
+          DimensionHandlerUtils.convertObjectToLong(value, true)
+      );
+    }
+
+    @Override
+    public Long deserialize(byte[] bytes)
+    {
+      return Longs.fromByteArray(bytes);
+    }
+  }
+
+  public static class FloatIndexSerdeTypeHelper implements IndexSerdeTypeHelper<Float>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.FLOAT;
+    }
+
+    @Override
+    public byte[] serialize(Object value)
+    {
+      return Ints.toByteArray(
+          Float.floatToIntBits(DimensionHandlerUtils.convertObjectToFloat(value, true))
+      );
+    }
+
+    @Override
+    public Float deserialize(byte[] bytes)
+    {
+      return Float.intBitsToFloat(Ints.fromByteArray(bytes));
+    }
+  }
+
+  public static class DoubleIndexSerdeTypeHelper implements IndexSerdeTypeHelper<Double>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.DOUBLE;
+    }
+
+
+    @Override
+    public byte[] serialize(Object value)
+    {
+      return Longs.toByteArray(
+          Double.doubleToLongBits(DimensionHandlerUtils.convertObjectToDouble(value, true))
+      );
+    }
+
+    @Override
+    public Double deserialize(byte[] bytes)
+    {
+      return Double.longBitsToDouble(Longs.fromByteArray(bytes));
+    }
+  }
+
+  public static final byte[] toBytes(
+      final Map<String, IndexSerdeTypeHelper> typeHelperMap,
+      final InputRow row,
+      AggregatorFactory[] aggs,
+      boolean reportParseExceptions
+  )
   {
     try {
       ByteArrayDataOutput out = ByteStreams.newDataOutput();
@@ -63,9 +230,25 @@ public class InputRowSerde
       WritableUtils.writeVInt(out, dimList.size());
       if (dimList != null) {
         for (String dim : dimList) {
-          List<String> dimValues = row.getDimension(dim);
-          writeString(dim, out);
-          writeStringArray(dimValues, out);
+          IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dim);
+          if (typeHelper == null) {
+            typeHelper = STRING_HELPER;
+          }
+          try {
+            byte[] value = typeHelper.serialize(row.getRaw(dim));
+
+            writeString(dim, out);
+            WritableUtils.writeVInt(out, typeHelper.getType().ordinal());
+            writeBytes(value, out);
+          }
+          catch (ParseException pe) {
+            if (reportParseExceptions) {
+              throw pe;
+            } else {
+              // discard the row if there was a parse error in a dimension
+              return null;
+            }
+          }
         }
       }
 
@@ -192,14 +375,25 @@ public class InputRowSerde
       for (int i = 0; i < dimNum; i++) {
         String dimension = readString(in);
         dimensions.add(dimension);
-        List<String> dimensionValues = readStringArray(in);
-        if (dimensionValues == null) {
+
+        int type = WritableUtils.readVInt(in);
+        byte[] value = readBytes(in);
+        IndexSerdeTypeHelper typeHelper = VALUE_TYPE_HELPER_ARRAY[type];
+        Object dimValues = typeHelper.deserialize(value);
+
+        if (dimValues == null) {
           continue;
         }
-        if (dimensionValues.size() == 1) {
-          event.put(dimension, dimensionValues.get(0));
+
+        if (type == ValueType.STRING.ordinal()) {
+          List<String> dimensionValues = (List<String>) dimValues;
+          if (dimensionValues.size() == 1) {
+            event.put(dimension, dimensionValues.get(0));
+          } else {
+            event.put(dimension, dimensionValues);
+          }
         } else {
-          event.put(dimension, dimensionValues);
+          event.put(dimension, dimValues);
         }
       }
 
