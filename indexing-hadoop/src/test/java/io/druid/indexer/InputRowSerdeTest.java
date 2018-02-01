@@ -125,7 +125,7 @@ public class InputRowSerdeTest
     );
 
     byte[] data = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, false); // Ignore Unparseable aggregator
-    InputRow out = InputRowSerde.fromBytes(data, aggregatorFactories);
+    InputRow out = InputRowSerde.fromBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), data, aggregatorFactories);
 
     Assert.assertEquals(timestamp, out.getTimestampFromEpoch());
     Assert.assertEquals(dims, out.getDimensions());

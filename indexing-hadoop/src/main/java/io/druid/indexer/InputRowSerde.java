@@ -25,8 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Rows;
@@ -66,18 +65,9 @@ public class InputRowSerde
   {
     ValueType getType();
 
-    byte[] serialize(Object value);
+    void serialize(ByteArrayDataOutput out, Object value);
 
-    T deserialize(byte[] bytes);
-  }
-
-  private static final IndexSerdeTypeHelper[] VALUE_TYPE_HELPER_ARRAY =
-      new IndexSerdeTypeHelper[ValueType.values().length];
-  static {
-    VALUE_TYPE_HELPER_ARRAY[ValueType.STRING.ordinal()] = STRING_HELPER;
-    VALUE_TYPE_HELPER_ARRAY[ValueType.LONG.ordinal()] = LONG_HELPER;
-    VALUE_TYPE_HELPER_ARRAY[ValueType.FLOAT.ordinal()] = FLOAT_HELPER;
-    VALUE_TYPE_HELPER_ARRAY[ValueType.DOUBLE.ordinal()] = DOUBLE_HELPER;
+    T deserialize(ByteArrayDataInput in);
   }
 
   public static Map<String, IndexSerdeTypeHelper> getTypeHelperMap(DimensionsSpec dimensionsSpec)
@@ -115,13 +105,11 @@ public class InputRowSerde
     }
 
     @Override
-    public byte[] serialize(Object value)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
       List<String> values = Rows.objectToStrings(value);
-      ByteArrayDataOutput out = ByteStreams.newDataOutput();
       try {
         writeStringArray(values, out);
-        return out.toByteArray();
       }
       catch (IOException ioe) {
         throw new RuntimeException(ioe);
@@ -129,11 +117,10 @@ public class InputRowSerde
     }
 
     @Override
-    public List<String> deserialize(byte[] bytes)
+    public List<String> deserialize(ByteArrayDataInput in)
     {
-      ByteArrayDataInput input = ByteStreams.newDataInput(bytes);
       try {
-        return readStringArray(input);
+        return readStringArray(in);
       }
       catch (IOException ioe) {
         throw new RuntimeException(ioe);
@@ -150,17 +137,15 @@ public class InputRowSerde
     }
 
     @Override
-    public byte[] serialize(Object value)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
-      return Longs.toByteArray(
-          DimensionHandlerUtils.convertObjectToLong(value, true)
-      );
+      out.writeLong(DimensionHandlerUtils.convertObjectToLong(value, true));
     }
 
     @Override
-    public Long deserialize(byte[] bytes)
+    public Long deserialize(ByteArrayDataInput in)
     {
-      return Longs.fromByteArray(bytes);
+      return in.readLong();
     }
   }
 
@@ -173,17 +158,15 @@ public class InputRowSerde
     }
 
     @Override
-    public byte[] serialize(Object value)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
-      return Ints.toByteArray(
-          Float.floatToIntBits(DimensionHandlerUtils.convertObjectToFloat(value, true))
-      );
+      out.writeFloat(DimensionHandlerUtils.convertObjectToFloat(value, true));
     }
 
     @Override
-    public Float deserialize(byte[] bytes)
+    public Float deserialize(ByteArrayDataInput in)
     {
-      return Float.intBitsToFloat(Ints.fromByteArray(bytes));
+      return in.readFloat();
     }
   }
 
@@ -195,19 +178,16 @@ public class InputRowSerde
       return ValueType.DOUBLE;
     }
 
-
     @Override
-    public byte[] serialize(Object value)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
-      return Longs.toByteArray(
-          Double.doubleToLongBits(DimensionHandlerUtils.convertObjectToDouble(value, true))
-      );
+      out.writeDouble(DimensionHandlerUtils.convertObjectToDouble(value, true));
     }
 
     @Override
-    public Double deserialize(byte[] bytes)
+    public Double deserialize(ByteArrayDataInput in)
     {
-      return Double.longBitsToDouble(Longs.fromByteArray(bytes));
+      return in.readDouble();
     }
   }
 
@@ -235,11 +215,8 @@ public class InputRowSerde
             typeHelper = STRING_HELPER;
           }
           try {
-            byte[] value = typeHelper.serialize(row.getRaw(dim));
-
             writeString(dim, out);
-            WritableUtils.writeVInt(out, typeHelper.getType().ordinal());
-            writeBytes(value, out);
+            typeHelper.serialize(out, row.getRaw(dim));
           }
           catch (ParseException pe) {
             if (reportParseExceptions) {
@@ -359,10 +336,14 @@ public class InputRowSerde
     return values;
   }
 
-  public static final InputRow fromBytes(byte[] data, AggregatorFactory[] aggs)
+  public static final InputRow fromBytes(
+      final Map<String, IndexSerdeTypeHelper> typeHelperMap,
+      byte[] data,
+      AggregatorFactory[] aggs
+  )
   {
     try {
-      DataInput in = ByteStreams.newDataInput(data);
+      ByteArrayDataInput in = ByteStreams.newDataInput(data);
 
       //Read timestamp
       long timestamp = in.readLong();
@@ -376,16 +357,16 @@ public class InputRowSerde
         String dimension = readString(in);
         dimensions.add(dimension);
 
-        int type = WritableUtils.readVInt(in);
-        byte[] value = readBytes(in);
-        IndexSerdeTypeHelper typeHelper = VALUE_TYPE_HELPER_ARRAY[type];
-        Object dimValues = typeHelper.deserialize(value);
-
+        IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dimension);
+        if (typeHelper == null) {
+          typeHelper = STRING_HELPER;
+        }
+        Object dimValues = typeHelper.deserialize(in);
         if (dimValues == null) {
           continue;
         }
 
-        if (type == ValueType.STRING.ordinal()) {
+        if (typeHelper.getType() == ValueType.STRING) {
           List<String> dimensionValues = (List<String>) dimValues;
           if (dimensionValues.size() == 1) {
             event.put(dimension, dimensionValues.get(0));

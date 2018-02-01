@@ -261,8 +261,6 @@ public class IndexGeneratorJob implements Jobby
     return newIndex;
   }
 
-
-
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
   {
     private static final HashFunction hashFunction = Hashing.murmur3_128();
@@ -321,6 +319,8 @@ public class IndexGeneratorJob implements Jobby
                                   InputRowSerde.toBytes(typeHelperMap, inputRow, aggregators, reportParseExceptions);
 
       if (serializedInputRow == null) {
+        log.debug("Ignoring invalid row [%s] due to parsing error", inputRow);
+        context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
         return;
       }
 
@@ -344,7 +344,6 @@ public class IndexGeneratorJob implements Jobby
     private AggregatorFactory[] aggregators;
     private AggregatorFactory[] combiningAggs;
     private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
-
 
     @Override
     protected void setup(Context context)
@@ -378,11 +377,11 @@ public class IndexGeneratorJob implements Jobby
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
         IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null, null);
-        index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
+        index.add(InputRowSerde.fromBytes(typeHelperMap, first.getBytes(), aggregators));
 
         while (iter.hasNext()) {
           context.progress();
-          InputRow value = InputRowSerde.fromBytes(iter.next().getBytes(), aggregators);
+          InputRow value = InputRowSerde.fromBytes(typeHelperMap, iter.next().getBytes(), aggregators);
 
           if (!index.canAppendRow()) {
             dimOrder.addAll(index.getDimensionOrder());
@@ -410,10 +409,10 @@ public class IndexGeneratorJob implements Jobby
         Row row = rows.next();
         InputRow inputRow = getInputRowFromRow(row, dimensions);
 
+        // reportParseExceptions is true as any unparseable data is already handled by the mapper.
         byte[] serializedRow = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, true);
 
         if (serializedRow != null) {
-          // reportParseExceptions is true as any unparseable data is already handled by the mapper.
           context.write(
               key,
               new BytesWritable(serializedRow)
@@ -512,6 +511,7 @@ public class IndexGeneratorJob implements Jobby
     private List<String> metricNames = Lists.newArrayList();
     private AggregatorFactory[] aggregators;
     private AggregatorFactory[] combiningAggs;
+    private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
 
     protected ProgressIndicator makeProgressIndicator(final Context context)
     {
@@ -563,6 +563,11 @@ public class IndexGeneratorJob implements Jobby
         metricNames.add(aggregators[i].getName());
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
+                                                           .getDataSchema()
+                                                           .getParser()
+                                                           .getParseSpec()
+                                                           .getDimensionsSpec());
     }
 
     @Override
@@ -630,7 +635,7 @@ public class IndexGeneratorJob implements Jobby
         for (final BytesWritable bw : values) {
           context.progress();
 
-          final InputRow inputRow = index.formatRow(InputRowSerde.fromBytes(bw.getBytes(), aggregators));
+          final InputRow inputRow = index.formatRow(InputRowSerde.fromBytes(typeHelperMap, bw.getBytes(), aggregators));
           int numRows = index.add(inputRow);
 
           ++lineCount;
