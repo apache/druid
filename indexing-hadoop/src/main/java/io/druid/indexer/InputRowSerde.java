@@ -65,7 +65,7 @@ public class InputRowSerde
   {
     ValueType getType();
 
-    void serialize(ByteArrayDataOutput out, Object value);
+    void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions);
 
     T deserialize(ByteArrayDataInput in);
   }
@@ -105,7 +105,7 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value)
+    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
       List<String> values = Rows.objectToStrings(value);
       try {
@@ -137,9 +137,15 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value)
+    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
-      out.writeLong(DimensionHandlerUtils.convertObjectToLong(value, true));
+      Long ret = DimensionHandlerUtils.convertObjectToLong(value, reportParseExceptions);
+      if (ret == null) {
+        // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+        // we'll also need to change the serialized encoding so that it can represent numeric nulls
+        ret = DimensionHandlerUtils.ZERO_LONG;
+      }
+      out.writeLong(ret);
     }
 
     @Override
@@ -158,9 +164,15 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value)
+    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
-      out.writeFloat(DimensionHandlerUtils.convertObjectToFloat(value, true));
+      Float ret = DimensionHandlerUtils.convertObjectToFloat(value, reportParseExceptions);
+      if (ret == null) {
+        // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+        // we'll also need to change the serialized encoding so that it can represent numeric nulls
+        ret = DimensionHandlerUtils.ZERO_FLOAT;
+      }
+      out.writeFloat(ret);
     }
 
     @Override
@@ -179,9 +191,15 @@ public class InputRowSerde
     }
 
     @Override
-    public void serialize(ByteArrayDataOutput out, Object value)
+    public void serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
     {
-      out.writeDouble(DimensionHandlerUtils.convertObjectToDouble(value, true));
+      Double ret = DimensionHandlerUtils.convertObjectToDouble(value, reportParseExceptions);
+      if (ret == null) {
+        // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+        // we'll also need to change the serialized encoding so that it can represent numeric nulls
+        ret = DimensionHandlerUtils.ZERO_DOUBLE;
+      }
+      out.writeDouble(ret);
     }
 
     @Override
@@ -214,18 +232,8 @@ public class InputRowSerde
           if (typeHelper == null) {
             typeHelper = STRING_HELPER;
           }
-          try {
-            writeString(dim, out);
-            typeHelper.serialize(out, row.getRaw(dim));
-          }
-          catch (ParseException pe) {
-            if (reportParseExceptions) {
-              throw pe;
-            } else {
-              // discard the row if there was a parse error in a dimension
-              return null;
-            }
-          }
+          writeString(dim, out);
+          typeHelper.serialize(out, row.getRaw(dim), reportParseExceptions);
         }
       }
 

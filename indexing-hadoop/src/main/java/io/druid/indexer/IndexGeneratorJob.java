@@ -318,12 +318,6 @@ public class IndexGeneratorJob implements Jobby
                                                                       :
                                   InputRowSerde.toBytes(typeHelperMap, inputRow, aggregators, reportParseExceptions);
 
-      if (serializedInputRow == null) {
-        log.debug("Ignoring invalid row [%s] due to parsing error", inputRow);
-        context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
-        return;
-      }
-
       context.write(
           new SortableBytes(
               bucket.get().toGroupKey(),
@@ -412,12 +406,10 @@ public class IndexGeneratorJob implements Jobby
         // reportParseExceptions is true as any unparseable data is already handled by the mapper.
         byte[] serializedRow = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, true);
 
-        if (serializedRow != null) {
-          context.write(
-              key,
-              new BytesWritable(serializedRow)
-          );
-        }
+        context.write(
+            key,
+            new BytesWritable(serializedRow)
+        );
       }
       index.close();
     }
