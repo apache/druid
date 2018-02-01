@@ -975,7 +975,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             // explicit knowledge that 'start' cannot be greater than 'end'.
             StringBuilder querySb = new StringBuilder("SELECT payload FROM %1$s WHERE dataSource = :dataSource and start >= :start and start <= :end and %2$send%2$s <= :end and used = false");
             if (unusedMarkThreshold != null) {
-              querySb.append( "and (used_update_date IS NULL OR used_update_date <= :unusedMarkThreshold)");
+              querySb.append("and (used_update_date IS NULL OR used_update_date <= :unusedMarkThreshold)");
             }
 
             Query<Map<String, Object>> query = handle
