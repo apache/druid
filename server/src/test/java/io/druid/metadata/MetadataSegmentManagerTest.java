@@ -25,14 +25,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.TestHelper;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -165,12 +165,12 @@ public class MetadataSegmentManagerTest
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), DateTime.now(), 1)
+        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), DateTimes.nowUtc(), 1)
     );
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), DateTime.now(), 5)
+        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), DateTimes.nowUtc(), 5)
     );
   }
 
