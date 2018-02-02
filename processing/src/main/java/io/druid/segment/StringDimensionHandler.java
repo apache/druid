@@ -77,7 +77,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return retVal;
   }
 
-  private boolean isNUllRow(int[] row, Indexed<String> encodings)
+  private boolean isNullRow(int[] row, Indexed<String> encodings)
   {
     if (row == null) {
       return true;
@@ -100,7 +100,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   ) throws SegmentValidationException
   {
     if (lhs == null || rhs == null) {
-      if (!isNUllRow(lhs, lhsEncodings) || !isNUllRow(rhs, rhsEncodings)) {
+      if (!isNullRow(lhs, lhsEncodings) || !isNullRow(rhs, rhsEncodings)) {
         throw new SegmentValidationException(
             "Expected nulls, found %s and %s",
             Arrays.toString(lhs),

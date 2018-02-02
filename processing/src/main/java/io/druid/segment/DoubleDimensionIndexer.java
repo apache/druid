@@ -116,7 +116,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           if (NullHandling.sqlCompatible()) {
-            throw new IllegalStateException("Cannot return double for Null Value");
+            throw new IllegalStateException("Cannot return null value as double");
           }
           return 0.0;
         }

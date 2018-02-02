@@ -117,7 +117,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           if (NullHandling.sqlCompatible()) {
-            throw new IllegalStateException("Cannot return float for Null Value");
+            throw new IllegalStateException("Cannot return null value as float");
           }
           return 0.0f;
         }

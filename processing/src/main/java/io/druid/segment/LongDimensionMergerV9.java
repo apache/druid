@@ -22,8 +22,6 @@ package io.druid.segment;
 import com.google.common.base.Throwables;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -56,14 +54,9 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
 
   protected void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-    // If using default values for null use LongColumnSerializer to allow rollback to previous versions.
     this.serializer = IndexMergerV9.createLongColumnSerializer(
         segmentWriteOutMedium,
         dimensionName,
-        metCompression,
-        longEncoding,
         indexSpec
     );
     serializer.open();

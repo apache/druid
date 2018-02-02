@@ -52,7 +52,7 @@ import java.util.Iterator;
  * <p>
  * byte 1: version (0x1)
  * byte 2 == 0x1 =>; allowReverseLookup
- * bytes 3-6 =>; numBytesUsed
+ * bytes 3-6 =>; numBytesUsed, It will be -1 for null values.
  * bytes 7-10 =>; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes
@@ -80,6 +80,8 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
   static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
   static final byte REVERSE_LOOKUP_DISALLOWED = 0x0;
 
+  static final int NULL_VALUE_SIZE_MARKER = -1;
+
   private static final MetaSerdeHelper<GenericIndexed> metaSerdeHelper = MetaSerdeHelper
       .firstWriteByte((GenericIndexed x) -> VERSION_ONE)
       .writeByte(x -> x.allowReverseLookup ? REVERSE_LOOKUP_ALLOWED : REVERSE_LOOKUP_DISALLOWED)
@@ -96,12 +98,14 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
       return String.class;
     }
 
+    /**
+     * numBytes will be {@link NULL_VALUE_SIZE_MARKER} for null values.
+     */
     @Override
     @Nullable
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
       if (numBytes < 0) {
-        // nulBytes will be -1 for null values.
         return null;
       }
       return NullHandling.emptyToNullIfNeeded(StringUtils.fromUtf8Nullable(buffer, numBytes));
@@ -492,7 +496,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
           allowReverseLookup = false;
         }
 
-        valuesOut.writeInt(next == null ? -1 : 0);
+        valuesOut.writeInt(next == null ? NULL_VALUE_SIZE_MARKER : 0);
         if (next != null) {
           strategy.writeTo(next, valuesOut);
         }

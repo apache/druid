@@ -52,8 +52,6 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -547,8 +545,6 @@ public class IndexMergerV9 implements IndexMerger
     GenericColumnSerializer timeWriter = createLongColumnSerializer(
         segmentWriteOutMedium,
         "little_end_time",
-        CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY,
-        indexSpec.getLongEncoding(),
         indexSpec
     );
     // we will close this writer after we added all the timestamps
@@ -565,20 +561,19 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
+
     for (String metric : mergedMetrics) {
       ValueType type = metricsValueTypes.get(metric);
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = createLongColumnSerializer(segmentWriteOutMedium, metric, metCompression, longEncoding, indexSpec);
+          writer = createLongColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         case FLOAT:
-          writer = createFloatColumnSerializer(segmentWriteOutMedium, metric, metCompression, indexSpec);
+          writer = createFloatColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         case DOUBLE:
-          writer = createDoubleColumnSerializer(segmentWriteOutMedium, metric, metCompression, indexSpec);
+          writer = createDoubleColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
@@ -601,8 +596,6 @@ public class IndexMergerV9 implements IndexMerger
   static GenericColumnSerializer createLongColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String columnName,
-      CompressionStrategy metCompression,
-      CompressionFactory.LongEncodingStrategy longEncoding,
       IndexSpec indexSpec
   )
   {
@@ -611,15 +604,15 @@ public class IndexMergerV9 implements IndexMerger
       return LongColumnSerializer.create(
           segmentWriteOutMedium,
           columnName,
-          metCompression,
-          longEncoding
+          indexSpec.getMetricCompression(),
+          indexSpec.getLongEncoding()
       );
     } else {
       return LongColumnSerializerV2.create(
           segmentWriteOutMedium,
           columnName,
-          metCompression,
-          longEncoding,
+          indexSpec.getMetricCompression(),
+          indexSpec.getLongEncoding(),
           indexSpec.getBitmapSerdeFactory()
       );
     }
@@ -628,7 +621,6 @@ public class IndexMergerV9 implements IndexMerger
   static GenericColumnSerializer createDoubleColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String columnName,
-      CompressionStrategy metCompression,
       IndexSpec indexSpec
   )
   {
@@ -637,13 +629,13 @@ public class IndexMergerV9 implements IndexMerger
       return DoubleColumnSerializer.create(
           segmentWriteOutMedium,
           columnName,
-          metCompression
+          indexSpec.getMetricCompression()
       );
     } else {
       return DoubleColumnSerializerV2.create(
           segmentWriteOutMedium,
           columnName,
-          metCompression,
+          indexSpec.getMetricCompression(),
           indexSpec.getBitmapSerdeFactory()
       );
     }
@@ -652,7 +644,6 @@ public class IndexMergerV9 implements IndexMerger
   static GenericColumnSerializer createFloatColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String columnName,
-      CompressionStrategy metCompression,
       IndexSpec indexSpec
   )
   {
@@ -661,13 +652,13 @@ public class IndexMergerV9 implements IndexMerger
       return FloatColumnSerializer.create(
           segmentWriteOutMedium,
           columnName,
-          metCompression
+          indexSpec.getMetricCompression()
       );
     } else {
       return FloatColumnSerializerV2.create(
           segmentWriteOutMedium,
           columnName,
-          metCompression,
+          indexSpec.getMetricCompression(),
           indexSpec.getBitmapSerdeFactory()
       );
     }

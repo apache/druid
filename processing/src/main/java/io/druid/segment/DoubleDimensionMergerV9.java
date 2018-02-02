@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -54,12 +53,9 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
 
   private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    // If using default values for null use DoubleColumnSerializer to allow rollback to previous versions.
     this.serializer = IndexMergerV9.createDoubleColumnSerializer(
         segmentWriteOutMedium,
         dimensionName,
-        metCompression,
         indexSpec
     );
 

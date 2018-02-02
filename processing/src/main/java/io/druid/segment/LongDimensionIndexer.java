@@ -117,7 +117,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           if (NullHandling.sqlCompatible()) {
-            throw new IllegalStateException("Cannot return long for Null Value");
+            throw new IllegalStateException("Cannot return null value as long");
           }
           return 0;
         }
