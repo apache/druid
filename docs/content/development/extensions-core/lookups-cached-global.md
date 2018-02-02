@@ -71,7 +71,7 @@ The parameters are as follows
 |--------|-----------|--------|-------|
 |`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
 |`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`0` (do not wait)|
-|`injective`|If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
+|`injective`|If the underlying map is [injective](../../querying/lookups.html#query-execution) (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
 If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the lookup nodes should be monitored for repeated failures.
 
