@@ -86,7 +86,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
       existingResultSetId = existingResultSetId == null ? "" : existingResultSetId;
-      String userEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
       query = query.withOverriddenContext(
           ImmutableMap.of(QueryResource.HEADER_IF_NONE_MATCH, existingResultSetId));
 
@@ -96,9 +95,6 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       );
       String newResultSetId = (String) responseContext.get(QueryResource.HEADER_ETAG);
 
-      if (newResultSetId.equals(userEtag)) {
-        return Sequences.empty();
-      }
       if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
         return deserializeResults(cachedResultSet, strategy, existingResultSetId);
@@ -282,7 +278,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         gen.writeObject(cacheFn.apply(resultEntry));
         if (cacheLimit > 0 && resultLevelCachePopulator.cacheObjectStream.size() > cacheLimit) {
           shouldPopulate = false;
-          resultLevelCachePopulator.cacheObjectStream.reset();
+          resultLevelCachePopulator.cacheObjectStream.close();
           return;
         }
       }
