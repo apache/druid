@@ -79,25 +79,27 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(QueryPlus queryPlus, Map responseContext)
   {
-    if (useResultCache) {
+    if (useResultCache || populateResultCache) {
 
       final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeCacheKey(query));
       final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
       existingResultSetId = existingResultSetId == null ? "" : existingResultSetId;
+      String userEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+      query = query.withOverriddenContext(
+          ImmutableMap.of(QueryResource.HEADER_IF_NONE_MATCH, existingResultSetId));
 
-      if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) == null) {
-        query = query.withOverriddenContext(
-            ImmutableMap.of(QueryResource.HEADER_IF_NONE_MATCH, existingResultSetId));
-      }
       Sequence<T> resultFromClient = baseRunner.run(
           QueryPlus.wrap(query),
           responseContext
       );
       String newResultSetId = (String) responseContext.get(QueryResource.HEADER_ETAG);
 
-      if (newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
+      if (newResultSetId.equals(userEtag)) {
+        return Sequences.empty();
+      }
+      if (useResultCache && newResultSetId != null && newResultSetId.equals(existingResultSetId)) {
         log.debug("Return cached result set as there is no change in identifiers for query %s ", query.getId());
         return deserializeResults(cachedResultSet, strategy, existingResultSetId);
       } else {
@@ -276,12 +278,12 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     {
 
       int cacheLimit = cacheConfig.getResultLevelCacheLimit();
-      if (cacheLimit > 0 && resultLevelCachePopulator.cacheObjectStream.size() > cacheLimit) {
-        shouldPopulate = false;
-        return;
-      }
       try (JsonGenerator gen = mapper.getFactory().createGenerator(resultLevelCachePopulator.cacheObjectStream)) {
         gen.writeObject(cacheFn.apply(resultEntry));
+        if (cacheLimit > 0 && resultLevelCachePopulator.cacheObjectStream.size() > cacheLimit) {
+          shouldPopulate = false;
+          return;
+        }
       }
       catch (IOException ex) {
         log.error("Failed to retrieve entry to be cached. Result Level caching will not be performed!");
