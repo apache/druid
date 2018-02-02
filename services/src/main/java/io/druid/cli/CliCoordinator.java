@@ -28,7 +28,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import io.druid.java.util.http.client.HttpClient;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
@@ -44,9 +43,10 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
-import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
 import io.druid.metadata.MetadataRuleManagerProvider;
@@ -232,7 +232,7 @@ public class CliCoordinator extends ServerRunnable
               ObjectMapper jsonMapper,
               ScheduledExecutorFactory factory,
               DruidCoordinatorConfig config,
-              @Global HttpClient httpClient,
+              @EscalatedGlobal HttpClient httpClient,
               ZkPathsConfig zkPaths
           )
           {
