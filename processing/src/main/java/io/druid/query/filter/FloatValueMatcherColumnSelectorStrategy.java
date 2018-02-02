@@ -30,7 +30,7 @@ public class FloatValueMatcherColumnSelectorStrategy
   @Override
   public ValueMatcher makeValueMatcher(final BaseFloatColumnValueSelector selector, final String value)
   {
-    final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value, false);
+    final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
     if (matchVal == null) {
       return BooleanValueMatcher.of(false);
     }

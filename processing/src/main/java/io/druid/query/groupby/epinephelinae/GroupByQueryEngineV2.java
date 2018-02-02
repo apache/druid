@@ -688,15 +688,15 @@ public class GroupByQueryEngineV2
                 baseVal = baseVal == null ? "" : baseVal.toString();
                 break;
               case LONG:
-                baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal, false);
+                baseVal = DimensionHandlerUtils.convertObjectToLong(baseVal);
                 baseVal = baseVal == null ? 0L : baseVal;
                 break;
               case FLOAT:
-                baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal, false);
+                baseVal = DimensionHandlerUtils.convertObjectToFloat(baseVal);
                 baseVal = baseVal == null ? 0.f : baseVal;
                 break;
               case DOUBLE:
-                baseVal = DimensionHandlerUtils.convertObjectToDouble(baseVal, false);
+                baseVal = DimensionHandlerUtils.convertObjectToDouble(baseVal);
                 baseVal = baseVal == null ? 0.d : baseVal;
                 break;
               default:

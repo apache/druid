@@ -35,6 +35,7 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.Null;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -238,6 +239,12 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
+  public static Long convertObjectToLong(@Nullable Object valObj)
+  {
+    return convertObjectToLong(valObj, false);
+  }
+
+  @Nullable
   public static Long convertObjectToLong(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
@@ -260,6 +267,12 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
+  public static Float convertObjectToFloat(@Nullable Object valObj)
+  {
+    return convertObjectToFloat(valObj, false);
+  }
+
+  @Nullable
   public static Float convertObjectToFloat(@Nullable Object valObj, boolean reportParseExceptions)
   {
     if (valObj == null) {
@@ -279,6 +292,12 @@ public final class DimensionHandlerUtils
     } else {
       throw new ParseException("Unknown type[%s]", valObj.getClass());
     }
+  }
+
+  @Nullable
+  public static Double convertObjectToDouble(@Nullable Object valObj)
+  {
+    return convertObjectToDouble(valObj, false);
   }
 
   @Nullable

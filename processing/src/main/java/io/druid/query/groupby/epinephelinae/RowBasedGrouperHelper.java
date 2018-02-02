@@ -613,21 +613,21 @@ public class RowBasedGrouperHelper
 
         case LONG:
           functions[i] = input -> {
-            final Long val = DimensionHandlerUtils.convertObjectToLong(input, false);
+            final Long val = DimensionHandlerUtils.convertObjectToLong(input);
             return val == null ? 0L : val;
           };
           break;
 
         case FLOAT:
           functions[i] = input -> {
-            final Float val = DimensionHandlerUtils.convertObjectToFloat(input, false);
+            final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
             return val == null ? 0.f : val;
           };
           break;
 
         case DOUBLE:
           functions[i] = input -> {
-            Double val = DimensionHandlerUtils.convertObjectToDouble(input, false);
+            Double val = DimensionHandlerUtils.convertObjectToDouble(input);
             return val == null ? 0.0 : val;
           };
           break;

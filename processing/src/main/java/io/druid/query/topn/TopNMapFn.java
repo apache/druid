@@ -52,16 +52,16 @@ public class TopNMapFn
   private static Function<Object, Object> STRING_TRANSFORMER = input -> Objects.toString(input, null);
 
   private static Function<Object, Object> LONG_TRANSFORMER = input -> {
-    final Long longVal = DimensionHandlerUtils.convertObjectToLong(input, false);
+    final Long longVal = DimensionHandlerUtils.convertObjectToLong(input);
     return longVal == null ? DimensionHandlerUtils.ZERO_LONG : longVal;
   };
 
   private static Function<Object, Object> FLOAT_TRANSFORMER = input -> {
-    final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input, false);
+    final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
     return floatVal == null ? DimensionHandlerUtils.ZERO_FLOAT : floatVal;
   };
   private static Function<Object, Object> DOUBLE_TRANSFORMER = input -> {
-    final Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(input, false);
+    final Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(input);
     return doubleValue == null ? DimensionHandlerUtils.ZERO_DOUBLE : doubleValue;
   };
 
