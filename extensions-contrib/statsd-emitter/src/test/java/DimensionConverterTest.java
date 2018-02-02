@@ -17,7 +17,6 @@
  * under the License.
  */
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.emitter.statsd.DimensionConverter;
@@ -34,7 +33,7 @@ public class DimensionConverterTest
   @Test
   public void testConvert() throws Exception
   {
-    DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+    DimensionConverter dimensionConverter = new DimensionConverter(StatsDEmitterTest.jsonMapper, null);
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "data-source")
         .setDimension("type", "groupBy")

@@ -8,7 +8,7 @@
   "query/wait/time" : { "dimensions" : [], "type" : "timer"},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge"},
   "query/segmentAndCache/time" : { "dimensions" : [], "type" : "timer" },
-  "query/cpu/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer" },
+  "query/cpu/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer", "multiplier" :  0.001 },
 
   "query/cache/delta/numEntries" : { "dimensions" : [], "type" : "count" },
   "query/cache/delta/sizeBytes" : { "dimensions" : [], "type" : "count" },

@@ -22,13 +22,13 @@ package io.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.emitter.core.Emitter;
-import io.druid.java.util.emitter.core.Event;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
 import java.util.Map;
@@ -108,7 +108,10 @@ public class StatsDEmitter implements Emitter
                                 .replaceAll(STATSD_SEPARATOR, config.getSeparator())
                                 .replaceAll(BLANK, config.getBlankHolder());
 
-        long val = statsDMetric.convertRange ? Math.round(value.doubleValue() * 100) : value.longValue();
+        long val = statsDMetric.convertRange
+                   ? Math.round(statsDMetric.multiplier * value.doubleValue() * 100)
+                   : Math.round(statsDMetric.multiplier * value.longValue());
+
         switch (statsDMetric.type) {
           case count:
             statsd.count(fullName, val);

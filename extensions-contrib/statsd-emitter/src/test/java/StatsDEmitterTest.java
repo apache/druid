@@ -18,11 +18,11 @@
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.StatsDClient;
 import io.druid.emitter.statsd.StatsDEmitter;
 import io.druid.emitter.statsd.StatsDEmitterConfig;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Test;
 
 import static org.easymock.EasyMock.createMock;
@@ -33,13 +33,15 @@ import static org.easymock.EasyMock.verify;
  */
 public class StatsDEmitterTest
 {
+  public static final ObjectMapper jsonMapper = new ObjectMapper();
+
   @Test
   public void testConvertRange()
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
         new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
-        new ObjectMapper(),
+        jsonMapper,
         client
     );
     client.gauge("broker.query.cache.total.hitRate", 54);
@@ -58,7 +60,7 @@ public class StatsDEmitterTest
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
         new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
-        new ObjectMapper(),
+        jsonMapper,
         client
     );
     client.time("broker.query.time.data-source.groupBy", 10);
@@ -86,7 +88,7 @@ public class StatsDEmitterTest
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
         new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null),
-        new ObjectMapper(),
+        jsonMapper,
         client
     );
     client.time("brokerHost1#broker#query#time#data-source#groupBy", 10);
@@ -114,7 +116,7 @@ public class StatsDEmitterTest
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
         new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null),
-        new ObjectMapper(),
+        jsonMapper,
         client
     );
     client.count("brokerHost1.broker.jvm.gc.count.G1-GC", 1);
@@ -122,6 +124,34 @@ public class StatsDEmitterTest
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("gcName", "G1 GC")
                      .build(DateTimes.nowUtc(), "jvm/gc/count", 1)
+                     .build("broker", "brokerHost1")
+    );
+    verify(client);
+  }
+
+  @Test
+  public void testUnitConversion()
+  {
+    StatsDClient client = createMock(StatsDClient.class);
+    StatsDEmitter emitter = new StatsDEmitter(
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
+        jsonMapper,
+        client
+    );
+    client.time("broker.query.cpu.time.data-source.groupBy", 10);
+    replay(client);
+    emitter.emit(new ServiceMetricEvent.Builder()
+                     .setDimension("dataSource", "data-source")
+                     .setDimension("type", "groupBy")
+                     .setDimension("interval", "2013/2015")
+                     .setDimension("some_random_dim1", "random_dim_value1")
+                     .setDimension("some_random_dim2", "random_dim_value2")
+                     .setDimension("hasFilters", "no")
+                     .setDimension("duration", "P1D")
+                     .setDimension("remoteAddress", "194.0.90.2")
+                     .setDimension("id", "ID")
+                     .setDimension("context", "{context}")
+                     .build(DateTimes.nowUtc(), "query/cpu/time", 10000)
                      .build("broker", "brokerHost1")
     );
     verify(client);

@@ -31,19 +31,23 @@ public class StatsDMetric
   public final SortedSet<String> dimensions;
   public final Type type;
   public final boolean convertRange;
+  public final double multiplier;
 
+  // multiplier is to take care of cases where unit has to be converted, e.g.StatsDClient#time takes time
+  // value in milliseconds.
   @JsonCreator
   public StatsDMetric(
       @JsonProperty("dimensions") SortedSet<String> dimensions,
       @JsonProperty("type") Type type,
-      @JsonProperty("convertRange") boolean convertRange
+      @JsonProperty("convertRange") boolean convertRange,
+      @JsonProperty("multiplier") Double multiplier
   )
   {
     this.dimensions = dimensions;
     this.type = type;
     this.convertRange = convertRange;
+    this.multiplier = (multiplier == null) ? 1 : multiplier;
   }
-
   public enum Type
   {
     count, gauge, timer
