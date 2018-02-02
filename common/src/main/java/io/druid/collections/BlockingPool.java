@@ -19,6 +19,8 @@
 
 package io.druid.collections;
 
+import io.druid.java.util.common.RE;
+
 import java.util.List;
 
 public interface BlockingPool<T>
@@ -34,6 +36,24 @@ public interface BlockingPool<T>
    * @return a resource, or null if the timeout was reached
    */
   ReferenceCountingResourceHolder<T> take(long timeoutMs);
+
+  /**
+   * Take a resource from the pool, waiting up to the
+   * specified wait time if necessary for an element to become available.
+   *
+   * @param timeoutMs maximum time to wait for a resource, in milliseconds.
+   *
+   * @return a resource, or throw RuntimeException on timeout.
+   */
+  default ReferenceCountingResourceHolder<T> takeOrFailOnTimeout(long timeoutMs)
+  {
+    ReferenceCountingResourceHolder<T> result = take(timeoutMs);
+    if (result == null) {
+      throw new RE("Failed to get buffer in [%s] ms.", timeoutMs);
+    } else {
+      return result;
+    }
+  }
 
   /**
    * Take a resource from the pool, waiting if necessary until an element becomes available.

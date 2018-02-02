@@ -22,7 +22,7 @@ package io.druid.query.topn;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.BlockingPool;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -49,9 +49,9 @@ import java.util.List;
 public class TopNQueryEngine
 {
 
-  private final NonBlockingPool<ByteBuffer> bufferPool;
+  private final BlockingPool<ByteBuffer> bufferPool;
 
-  public TopNQueryEngine(NonBlockingPool<ByteBuffer> bufferPool)
+  public TopNQueryEngine(BlockingPool<ByteBuffer> bufferPool)
   {
     this.bufferPool = bufferPool;
   }

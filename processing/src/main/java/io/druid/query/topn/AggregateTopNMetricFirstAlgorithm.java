@@ -19,7 +19,7 @@
 
 package io.druid.query.topn;
 
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.BlockingPool;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.query.ColumnSelectorPlus;
@@ -41,12 +41,12 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 {
   private final Capabilities capabilities;
   private final TopNQuery query;
-  private final NonBlockingPool<ByteBuffer> bufferPool;
+  private final BlockingPool<ByteBuffer> bufferPool;
 
   public AggregateTopNMetricFirstAlgorithm(
       Capabilities capabilities,
       TopNQuery query,
-      NonBlockingPool<ByteBuffer> bufferPool
+      BlockingPool<ByteBuffer> bufferPool
   )
   {
     this.capabilities = capabilities;

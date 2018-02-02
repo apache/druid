@@ -22,7 +22,7 @@ package io.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.BlockingPool;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
@@ -60,7 +60,7 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool,
+      BlockingPool<ByteBuffer> bufferPool,
       final boolean combine
   )
   {
@@ -189,7 +189,7 @@ public class GroupByQueryHelper
   public static IncrementalIndex makeIncrementalIndex(
       GroupByQuery query,
       GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool,
+      BlockingPool<ByteBuffer> bufferPool,
       Sequence<Row> rows,
       boolean combine
   )

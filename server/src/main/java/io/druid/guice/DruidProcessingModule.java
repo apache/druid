@@ -28,8 +28,6 @@ import com.google.inject.ProvisionException;
 import io.druid.client.cache.CacheConfig;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
-import io.druid.collections.NonBlockingPool;
-import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
@@ -105,14 +103,12 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Global
-  public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
+  public BlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     verifyDirectMemory(config);
-    return new StupidPool<>(
-        "intermediate processing pool",
+    return new DefaultBlockingPool<>(
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
-        config.getNumThreads(),
-        config.poolCacheMaxCount()
+        config.getNumThreads()
     );
   }
 

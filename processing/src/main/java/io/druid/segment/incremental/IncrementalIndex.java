@@ -29,7 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.BlockingPool;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
@@ -398,7 +398,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       );
     }
 
-    public IncrementalIndex buildOffheap(final NonBlockingPool<ByteBuffer> bufferPool)
+    public IncrementalIndex buildOffheap(final BlockingPool<ByteBuffer> bufferPool)
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);

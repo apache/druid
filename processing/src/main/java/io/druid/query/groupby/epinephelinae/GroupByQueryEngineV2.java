@@ -24,7 +24,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.BlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -90,7 +90,7 @@ public class GroupByQueryEngineV2
   public static Sequence<Row> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
-      final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
+      final BlockingPool<ByteBuffer> intermediateResultsBufferPool,
       final GroupByQueryConfig config
   )
   {
@@ -122,7 +122,7 @@ public class GroupByQueryEngineV2
           return columnCapabilities != null && !columnCapabilities.hasMultipleValues();
         });
 
-    final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
+    final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.takeOrFailOnTimeout(60000);
 
     final String fudgeTimestampString = Strings.emptyToNull(
         query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, "")

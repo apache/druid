@@ -20,7 +20,7 @@
 package io.druid.query.topn;
 
 import com.google.inject.Inject;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.BlockingPool;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
@@ -41,13 +41,13 @@ import java.util.concurrent.ExecutorService;
  */
 public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNResultValue>, TopNQuery>
 {
-  private final NonBlockingPool<ByteBuffer> computationBufferPool;
+  private final BlockingPool<ByteBuffer> computationBufferPool;
   private final TopNQueryQueryToolChest toolchest;
   private final QueryWatcher queryWatcher;
 
   @Inject
   public TopNQueryRunnerFactory(
-      @Global NonBlockingPool<ByteBuffer> computationBufferPool,
+      @Global BlockingPool<ByteBuffer> computationBufferPool,
       TopNQueryQueryToolChest toolchest,
       QueryWatcher queryWatcher
   )

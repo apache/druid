@@ -26,7 +26,7 @@ import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
-import io.druid.collections.StupidPool;
+import io.druid.collections.DefaultBlockingPool;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
@@ -273,11 +273,9 @@ public class TopNBenchmark
     }
 
     factory = new TopNQueryRunnerFactory(
-        new StupidPool<>(
-            "TopNBenchmark-compute-bufferPool",
+        new DefaultBlockingPool<>(
             new OffheapBufferGenerator("compute", 250000000),
-            0,
-            Integer.MAX_VALUE
+            1
         ),
         new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER

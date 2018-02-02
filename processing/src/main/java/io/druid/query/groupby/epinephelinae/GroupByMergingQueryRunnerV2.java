@@ -34,7 +34,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
-import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.Releaser;
 import io.druid.collections.ResourceHolder;
@@ -83,7 +82,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   private final ListeningExecutorService exec;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
-  private final NonBlockingPool<ByteBuffer> processingBufferPool;
+  private final BlockingPool<ByteBuffer> processingBufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
@@ -95,7 +94,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<Row>> queryables,
       int concurrencyHint,
-      NonBlockingPool<ByteBuffer> processingBufferPool,
+      BlockingPool<ByteBuffer> processingBufferPool,
       BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
       ObjectMapper spillMapper,
@@ -169,7 +168,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       public ResourceHolder<ByteBuffer> get()
       {
         if (!initialized) {
-          buffer = processingBufferPool.take();
+          buffer = processingBufferPool.takeOrFailOnTimeout(60000);
           initialized = true;
         }
         return buffer;

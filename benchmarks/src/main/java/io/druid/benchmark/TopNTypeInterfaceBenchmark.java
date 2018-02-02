@@ -26,7 +26,7 @@ import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.query.QueryBenchmarkUtil;
-import io.druid.collections.StupidPool;
+import io.druid.collections.DefaultBlockingPool;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
@@ -300,11 +300,9 @@ public class TopNTypeInterfaceBenchmark
     }
 
     factory = new TopNQueryRunnerFactory(
-        new StupidPool<>(
-            "TopNBenchmark-compute-bufferPool",
+        new DefaultBlockingPool<>(
             new OffheapBufferGenerator("compute", 250000000),
-            0,
-            Integer.MAX_VALUE
+            2
         ),
         new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER

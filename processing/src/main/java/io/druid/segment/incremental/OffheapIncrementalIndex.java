@@ -21,7 +21,7 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-import io.druid.collections.NonBlockingPool;
+import io.druid.collections.BlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
@@ -47,7 +47,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
   private static final Logger log = new Logger(OffheapIncrementalIndex.class);
 
-  private final NonBlockingPool<ByteBuffer> bufferPool;
+  private final BlockingPool<ByteBuffer> bufferPool;
 
   private final List<ResourceHolder<ByteBuffer>> aggBuffers = new ArrayList<>();
   private final List<int[]> indexAndOffsets = new ArrayList<>();
@@ -75,7 +75,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       boolean concurrentEventAdd,
       boolean sortFacts,
       int maxRowCount,
-      NonBlockingPool<ByteBuffer> bufferPool
+      BlockingPool<ByteBuffer> bufferPool
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
@@ -85,8 +85,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts);
 
-    //check that stupid pool gives buffers that can hold at least one row's aggregators
-    ResourceHolder<ByteBuffer> bb = bufferPool.take();
+    //check that buffer pool gives buffers that can hold at least one row's aggregators
+    ResourceHolder<ByteBuffer> bb = bufferPool.takeOrFailOnTimeout(60000);
     if (bb.get().capacity() < aggsTotalSize) {
       bb.close();
       throw new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
@@ -188,7 +188,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
             lastBuffer.capacity() - bufferOffset >= aggsTotalSize) {
           aggBuffer = lastBuffer;
         } else {
-          ResourceHolder<ByteBuffer> bb = bufferPool.take();
+          ResourceHolder<ByteBuffer> bb = bufferPool.takeOrFailOnTimeout(60000);
           aggBuffers.add(bb);
           bufferIndex = aggBuffers.size() - 1;
           bufferOffset = 0;
