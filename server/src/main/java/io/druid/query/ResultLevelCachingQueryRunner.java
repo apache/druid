@@ -282,6 +282,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         gen.writeObject(cacheFn.apply(resultEntry));
         if (cacheLimit > 0 && resultLevelCachePopulator.cacheObjectStream.size() > cacheLimit) {
           shouldPopulate = false;
+          resultLevelCachePopulator.cacheObjectStream.reset();
           return;
         }
       }
