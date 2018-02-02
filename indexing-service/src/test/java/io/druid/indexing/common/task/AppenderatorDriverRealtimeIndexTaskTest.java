@@ -312,11 +312,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     // Stop the firehose, this will drain out existing events.
     firehose.close();
 
-    Collection<DataSegment> publishedSegments = awaitSegments();
-
-    Assert.assertEquals(1, task.getMetrics().processed());
-    Assert.assertNotNull(Iterables.getOnlyElement(publishedSegments));
-
     // handoff would timeout, resulting in exception
     statusFuture.get();
   }

@@ -27,10 +27,8 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -76,7 +74,6 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -86,7 +83,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
 {
@@ -101,9 +100,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private final FireDepartment spec;
-
-  @JsonIgnore
-  private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingPublishes;
 
   @JsonIgnore
   private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingHandoffs;
@@ -142,7 +138,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         context
     );
     this.spec = fireDepartment;
-    this.pendingPublishes = new ConcurrentLinkedQueue<>();
     this.pendingHandoffs = new ConcurrentLinkedQueue<>();
   }
 
@@ -188,80 +183,21 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
 
     setupTimeoutAlert();
 
-    boolean normalExit = true;
-
-    // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
-    final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
-    // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, http timeout error can occur while waiting for a
-    // lock to be acquired.
-    final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
-    {
-      @Override
-      public void announceSegment(final DataSegment segment) throws IOException
-      {
-        // Side effect: Calling announceSegment causes a lock to be acquired
-        Preconditions.checkNotNull(
-            toolbox.getTaskActionClient().submit(
-                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
-            ),
-            "Cannot acquire a lock for interval[%s]",
-            segment.getInterval()
-        );
-        toolbox.getSegmentAnnouncer().announceSegment(segment);
-      }
-
-      @Override
-      public void unannounceSegment(final DataSegment segment) throws IOException
-      {
-        try {
-          toolbox.getSegmentAnnouncer().unannounceSegment(segment);
-        }
-        finally {
-          toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
-        }
-      }
-
-      @Override
-      public void announceSegments(Iterable<DataSegment> segments) throws IOException
-      {
-        // Side effect: Calling announceSegments causes locks to be acquired
-        for (DataSegment segment : segments) {
-          Preconditions.checkNotNull(
-              toolbox.getTaskActionClient().submit(
-                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
-              ),
-              "Cannot acquire a lock for interval[%s]",
-              segment.getInterval()
-          );
-        }
-        toolbox.getSegmentAnnouncer().announceSegments(segments);
-      }
-
-      @Override
-      public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
-      {
-        try {
-          toolbox.getSegmentAnnouncer().unannounceSegments(segments);
-        }
-        finally {
-          for (DataSegment segment : segments) {
-            toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
-          }
-        }
-      }
-    };
+    final DataSegmentAnnouncer lockingSegmentAnnouncer = createLockingSegmentAnnouncer(toolbox);
 
     DataSchema dataSchema = spec.getDataSchema();
     RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
     RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
                                             .withBasePersistDirectory(toolbox.getPersistDir());
 
+    logUnusedConfiguration(tuningConfig);
+
     final FireDepartment fireDepartment = new FireDepartment(
         dataSchema,
         realtimeIOConfig,
         tuningConfig
     );
-    this.metrics = fireDepartment.getMetrics();
+
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
         ImmutableList.of(fireDepartment),
         ImmutableMap.of(
@@ -269,20 +205,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         )
     );
 
+    this.metrics = fireDepartment.getMetrics();
+
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
-    LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
-                                          toolbox.getLookupNodeService() :
-                                          new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
-    DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
-        toolbox.getDruidNode(),
-        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
-        ImmutableMap.of(
-            toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
-            lookupNodeService.getName(), lookupNodeService
-        )
-    );
+    DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, fireDepartment.getMetrics(), toolbox, lockingSegmentAnnouncer);
     AppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, fireDepartment.getMetrics());
@@ -303,14 +231,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
       final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
 
-      // Skip connecting firehose if we've been stopped before we got started.
-      synchronized (this) {
-        if (!gracefullyStopped) {
-          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
-          committerSupplier = Committers.supplierFromFirehose(firehose);
-        }
-      }
-
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
@@ -319,8 +239,16 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         return toolbox.getTaskActionClient().submit(action).isSuccess();
       };
 
+      // Skip connecting firehose if we've been stopped before we got started.
+      synchronized (this) {
+        if (!gracefullyStopped) {
+          firehose = firehoseFactory.connect(spec.getDataSchema().getParser(), firehoseTempDir);
+          committerSupplier = Committers.supplierFromFirehose(firehose);
+        }
+      }
+
       // Time to read data!
-      while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
+      while (!gracefullyStopped && firehoseDrainableByClosing && firehose.hasMore()) {
         try {
           InputRow inputRow = firehose.nextRow();
 
@@ -376,90 +304,25 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
           // Publish any remaining segments
           publishSegments(driver, publisher, committerSupplier, sequenceName);
 
-          if (!pendingPublishes.isEmpty()) {
-            ListenableFuture<?> allPublishes = Futures.allAsList(pendingPublishes);
-            log.info("Waiting for segments to publish");
-
-            allPublishes.get();
-          }
-
-          if (!pendingHandoffs.isEmpty()) {
-            ListenableFuture<?> allHandoffs = Futures.allAsList(pendingHandoffs);
-            log.info("Waiting for handoffs");
-
-            long handoffTimeout = tuningConfig.getHandoffConditionTimeout();
-
-            if (handoffTimeout > 0) {
-              allHandoffs.get(handoffTimeout, TimeUnit.MILLISECONDS);
-            } else {
-              allHandoffs.get();
-            }
-          }
+          waitForSegmentHandoff(tuningConfig.getHandoffConditionTimeout());
         }
-      }
+      } else if (firehose != null) {
+        log.info("Task was gracefully stopped, will persist data before exiting");
 
+        persistAndWait(driver, committerSupplier.get());
+      }
     }
     catch (Throwable e) {
-      normalExit = false;
       log.makeAlert(e, "Exception aborted realtime processing[%s]", dataSchema.getDataSource())
          .emit();
       throw e;
     }
     finally {
-      if (normalExit && gracefullyStopped) {
-        try {
-          // Persist if we had actually started.
-          if (firehose != null) {
-            log.info("Persisting remaining data.");
+      CloseQuietly.close(firehose);
+      CloseQuietly.close(appenderator);
+      CloseQuietly.close(driver);
 
-            final Committer committer = committerSupplier.get();
-            final CountDownLatch persistLatch = new CountDownLatch(1);
-            driver.persist(
-                new Committer()
-                {
-                  @Override
-                  public Object getMetadata()
-                  {
-                    return committer.getMetadata();
-                  }
-
-                  @Override
-                  public void run()
-                  {
-                    try {
-                      committer.run();
-                    }
-                    finally {
-                      persistLatch.countDown();
-                    }
-                  }
-                }
-            );
-            persistLatch.await();
-          }
-        }
-        catch (InterruptedException e) {
-          log.debug(e, "Interrupted while finishing the job");
-        }
-        catch (Exception e) {
-          log.makeAlert(e, "Failed to finish realtime task").emit();
-          throw e;
-        }
-        finally {
-          if (firehose != null) {
-            CloseQuietly.close(firehose);
-          }
-          toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
-        }
-      }
-
-      if (appenderator != null) {
-        appenderator.close();
-      }
-
-      if (driver != null) {
-        driver.close();
-      }
+      toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
 
       toolbox.getDataSegmentServerAnnouncer().unannounce();
       toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
@@ -578,33 +441,158 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         Collections.singletonList(sequenceName)
     );
 
-    // Use a separate future to ensure that the publish future is not completed until after
-    // the handoff future is registered in the pending list
-    SettableFuture<SegmentsAndMetadata> publishResultFuture = SettableFuture.create();
+    ListenableFuture<SegmentsAndMetadata> handoffFuture = Futures.transform(publishFuture, driver::registerHandoff);
 
-    pendingPublishes.add(publishResultFuture);
+    pendingHandoffs.add(handoffFuture);
+  }
 
-    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
+  private void waitForSegmentHandoff(long handoffTimeout) throws InterruptedException, ExecutionException,
+                                                                 TimeoutException
+  {
+    if (!pendingHandoffs.isEmpty()) {
+      ListenableFuture<?> allHandoffs = Futures.allAsList(pendingHandoffs);
+      log.info("Waiting for handoffs");
+
+
+      if (handoffTimeout > 0) {
+        allHandoffs.get(handoffTimeout, TimeUnit.MILLISECONDS);
+      } else {
+        allHandoffs.get();
+      }
+    }
+  }
+
+  private void persistAndWait(AppenderatorDriver driver, Committer committer)
+  {
+    try {
+      final CountDownLatch persistLatch = new CountDownLatch(1);
+      driver.persist(
+          new Committer()
+          {
+            @Override
+            public Object getMetadata()
+            {
+              return committer.getMetadata();
+            }
+
+            @Override
+            public void run()
+            {
+              try {
+                committer.run();
+              }
+              finally {
+                persistLatch.countDown();
+              }
+            }
+          }
+      );
+      persistLatch.await();
+    }
+    catch (InterruptedException e) {
+      log.debug(e, "Interrupted while finishing the job");
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Failed to finish realtime task").emit();
+      throw e;
+    }
+  }
+
+  private DiscoveryDruidNode createDiscoveryDruidNode(TaskToolbox toolbox)
+  {
+    LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
+                                          toolbox.getLookupNodeService() :
+                                          new LookupNodeService(getContextValue(CTX_KEY_LOOKUP_TIER));
+    return new DiscoveryDruidNode(
+        toolbox.getDruidNode(),
+        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        ImmutableMap.of(
+            toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
+            lookupNodeService.getName(), lookupNodeService
+        )
+    );
+  }
+
+  private DataSegmentAnnouncer createLockingSegmentAnnouncer(TaskToolbox toolbox)
+  {
+    // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+    // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, http timeout error can occur while waiting for a
+    // lock to be acquired.
+    return new DataSegmentAnnouncer()
     {
       @Override
-      public void onSuccess(@Nullable SegmentsAndMetadata published)
+      public void announceSegment(final DataSegment segment) throws IOException
       {
-        ListenableFuture<SegmentsAndMetadata> handoffFuture = driver.registerHandoff(published);
-
-        log.info("Registering pending handoff for [%s]", published);
-
-        pendingHandoffs.add(handoffFuture);
-
-        publishResultFuture.set(published);
+        // Side effect: Calling announceSegment causes a lock to be acquired
+        Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(
+                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+            ),
+            "Cannot acquire a lock for interval[%s]",
+            segment.getInterval()
+        );
+        toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
       @Override
-      public void onFailure(@Nullable Throwable throwable)
+      public void unannounceSegment(final DataSegment segment) throws IOException
       {
-        log.error(throwable, "Error occurred publishing segments");
-        publishResultFuture.setException(throwable);
+        try {
+          toolbox.getSegmentAnnouncer().unannounceSegment(segment);
+        }
+        finally {
+          toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
+        }
       }
-    });
+
+      @Override
+      public void announceSegments(Iterable<DataSegment> segments) throws IOException
+      {
+        // Side effect: Calling announceSegments causes locks to be acquired
+        for (DataSegment segment : segments) {
+          Preconditions.checkNotNull(
+              toolbox.getTaskActionClient().submit(
+                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+              ),
+              "Cannot acquire a lock for interval[%s]",
+              segment.getInterval()
+          );
+        }
+        toolbox.getSegmentAnnouncer().announceSegments(segments);
+      }
+
+      @Override
+      public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+      {
+        try {
+          toolbox.getSegmentAnnouncer().unannounceSegments(segments);
+        }
+        finally {
+          for (DataSegment segment : segments) {
+            toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
+          }
+        }
+      }
+    };
+  }
+
+  private void logUnusedConfiguration(RealtimeTuningConfig tuningConfig)
+  {
+    warnIfNotNull(tuningConfig.getWindowPeriod(), "windowPeriod is not used by this task");
+    warnIfNotNull(tuningConfig.getVersioningPolicy(), "versioningPolicy is not used by this task");
+    warnIfNotNull(tuningConfig.getRejectionPolicyFactory(), "rejectionPolicyFactory is not used by this task");
+    warnIfNotNull(tuningConfig.getPersistThreadPriority(), "persistThreadPriority is not used by this task");
+    warnIfNotNull(tuningConfig.getMergeThreadPriority(), "mergeThreadPriority is not used by this task");
+  }
+
+  private void warnIfNotNull(Object value, String message)
+  {
+    if (value == null) {
+      return;
+    }
+
+    log.warn(message);
   }
 
   private static Appenderator newAppenderator(
