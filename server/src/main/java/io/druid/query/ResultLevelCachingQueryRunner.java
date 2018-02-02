@@ -142,7 +142,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
               resultLevelCachePopulator.populateResults();
               log.debug("Cache population complete for query %s", query.getId());
             }
-            resultLevelCachePopulator.cacheObjectStream.close();
+            resultLevelCachePopulator.cacheObjectStream = null;
           }
         });
       }
@@ -242,7 +242,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     private final ObjectMapper mapper;
     private final Cache.NamedKey key;
     private final CacheConfig cacheConfig;
-    private final ByteArrayOutputStream cacheObjectStream = new ByteArrayOutputStream();
+    private ByteArrayOutputStream cacheObjectStream = new ByteArrayOutputStream();
 
     public boolean isShouldPopulate()
     {
@@ -278,13 +278,14 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         gen.writeObject(cacheFn.apply(resultEntry));
         if (cacheLimit > 0 && resultLevelCachePopulator.cacheObjectStream.size() > cacheLimit) {
           shouldPopulate = false;
-          resultLevelCachePopulator.cacheObjectStream.close();
+          resultLevelCachePopulator.cacheObjectStream = null;
           return;
         }
       }
       catch (IOException ex) {
         log.error("Failed to retrieve entry to be cached. Result Level caching will not be performed!");
         shouldPopulate = false;
+        resultLevelCachePopulator.cacheObjectStream = null;
       }
     }
 
