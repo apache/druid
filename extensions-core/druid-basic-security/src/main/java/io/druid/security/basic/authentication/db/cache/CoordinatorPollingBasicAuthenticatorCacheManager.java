@@ -24,8 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.Request;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
@@ -38,6 +36,8 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.Request;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
@@ -195,7 +195,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
       );
     }
     catch (Exception e) {
-      LOG.makeAlert(e, "Encountered exception while fetching user map for authenticator [%s]", prefix);
+      LOG.makeAlert(e, "Encountered exception while fetching user map for authenticator [%s]", prefix).emit();
       if (isInit) {
         if (commonCacheConfig.getCacheDirectory() != null) {
           try {
@@ -204,7 +204,8 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
           }
           catch (Exception e2) {
             e2.addSuppressed(e);
-            LOG.makeAlert(e2, "Encountered exception while loading user map snapshot for authenticator [%s]", prefix);
+            LOG.makeAlert(e2, "Encountered exception while loading user map snapshot for authenticator [%s]", prefix)
+               .emit();
           }
         }
       }
