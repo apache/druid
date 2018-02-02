@@ -33,7 +33,6 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 
   private final DimensionSelector keySelector;
   private final List<BaseDoubleColumnValueSelector> valueSelectors;
-  private final int nominalEntries;
 
   private ArrayOfDoublesUpdatableSketch sketch;
 
@@ -43,7 +42,6 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   {
     this.keySelector = keySelector;
     this.valueSelectors = valueSelectors;
-    this.nominalEntries = nominalEntries;
     sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(valueSelectors.size()).build();
   }

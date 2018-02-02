@@ -54,11 +54,21 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
 {
 
+  public static final Comparator<ArrayOfDoublesSketch> COMPARATOR = Comparator.nullsFirst(new Comparator<ArrayOfDoublesSketch>()
+  {
+    @Override
+    public int compare(final ArrayOfDoublesSketch a, final ArrayOfDoublesSketch b)
+    {
+      return Doubles.compare(a.getEstimate(), b.getEstimate());
+    }
+  });
+
   private final String name;
   private final String fieldName;
   private final int nominalEntries;
   private final int numberOfValues;
-  @Nullable private final List<String> metricColumns;
+  // if specified indicates building sketched from raw data, and also implies the number of values
+  @Nullable private final List<String> metricColumns; 
 
   @JsonCreator
   public ArrayOfDoublesSketchAggregatorFactory(
@@ -76,9 +86,9 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     this.numberOfValues = numberOfValues == null ? (metricColumns == null ? 1 : metricColumns.size()) : numberOfValues;
     if (metricColumns != null && metricColumns.size() != this.numberOfValues) {
       throw new IAE(
-        "Number of metricColumns (%d) must agree with numValues (%d)",
-        metricColumns.size(),
-        this.numberOfValues
+          "Number of metricColumns [%d] must agree with numValues [%d]",
+          metricColumns.size(),
+          this.numberOfValues
       );
     }
   }
@@ -86,7 +96,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
-    if (metricColumns == null) {
+    if (metricColumns == null) { // input is sketches, use merge aggregator
       final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector = metricFactory
           .makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
@@ -94,9 +104,10 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       }
       return new ArrayOfDoublesSketchMergeAggregator(selector, nominalEntries, numberOfValues);
     }
+    // input is raw data (key and array of values), use build aggregator
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (keySelector == null || DimensionSelectorUtils.isNilSelector(keySelector)) {
+    if (DimensionSelectorUtils.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
@@ -110,22 +121,23 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
-    if (metricColumns == null) {
+    if (metricColumns == null) { // input is sketches, use merge aggregator
       final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector = metricFactory
           .makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
       }
       return new ArrayOfDoublesSketchMergeBufferAggregator(
-        selector,
-        nominalEntries,
-        numberOfValues,
-        getMaxIntermediateSize()
+          selector,
+          nominalEntries,
+          numberOfValues,
+          getMaxIntermediateSize()
       );
     }
+    // input is raw data (key and array of values), use build aggregator
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (keySelector == null || DimensionSelectorUtils.isNilSelector(keySelector)) {
+    if (DimensionSelectorUtils.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
@@ -134,10 +146,10 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       valueSelectors.add(valueSelector);
     }
     return new ArrayOfDoublesSketchBuildBufferAggregator(
-      keySelector,
-      valueSelectors,
-      nominalEntries,
-      getMaxIntermediateSize()
+        keySelector,
+        valueSelectors,
+        nominalEntries,
+        getMaxIntermediateSize()
     );
   }
 
@@ -158,8 +170,12 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   {
     final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(numberOfValues).buildUnion();
-    updateUnion(union, lhs);
-    updateUnion(union, rhs);
+    if (lhs != null) {
+      union.update((ArrayOfDoublesSketch) lhs);
+    }
+    if (rhs != null) {
+      union.update((ArrayOfDoublesSketch) rhs);
+    }
     return union.getResult();
   }
 
@@ -203,8 +219,12 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_CACHE_TYPE_ID).appendString(name)
-        .appendString(fieldName).appendInt(nominalEntries).appendStrings(metricColumns).appendInt(numberOfValues)
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_CACHE_TYPE_ID)
+        .appendString(name)
+        .appendString(fieldName)
+        .appendInt(nominalEntries)
+        .appendStrings(metricColumns)
+        .appendInt(numberOfValues)
         .build();
   }
 
@@ -214,35 +234,16 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return ArrayOfDoublesUnion.getMaxBytes(nominalEntries, numberOfValues);
   }
 
-  public static final Comparator<ArrayOfDoublesSketch> COMPARATOR = new Comparator<ArrayOfDoublesSketch>()
-  {
-    @Override
-    public int compare(final ArrayOfDoublesSketch a, final ArrayOfDoublesSketch b)
-    {
-      return Doubles.compare(a.getEstimate(), b.getEstimate());
-    }
-  };
-
-  private static void updateUnion(final ArrayOfDoublesUnion union, final Object obj)
-  {
-    if (obj == null) {
-      return;
-    } else if (obj instanceof ArrayOfDoublesSketch) {
-      union.update((ArrayOfDoublesSketch) obj);
-    }
-    throw new IAE("Object of type [%s] can not be unioned", obj.getClass().getName());
-  }
-
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.<AggregatorFactory> singletonList(
       new ArrayOfDoublesSketchAggregatorFactory(
-        fieldName,
-        fieldName,
-        nominalEntries,
-        metricColumns,
-        numberOfValues
+          fieldName,
+          fieldName,
+          nominalEntries,
+          metricColumns,
+          numberOfValues
       )
     );
   }
