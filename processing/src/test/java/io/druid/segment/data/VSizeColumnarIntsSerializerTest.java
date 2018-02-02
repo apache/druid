@@ -21,9 +21,8 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
-import io.druid.segment.writeout.WriteOutBytes;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
+import io.druid.segment.writeout.WriteOutBytes;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -68,12 +67,10 @@ public class VSizeColumnarIntsSerializerTest
     int maxValue = vals.length == 0 ? 0 : Ints.max(vals);
     VSizeColumnarIntsSerializer writer = new VSizeColumnarIntsSerializer(segmentWriteOutMedium, maxValue);
 
-    VSizeColumnarInts intsFromList = VSizeColumnarInts.fromList(
-        IntArrayList.wrap(vals), maxValue
-    );
+    VSizeColumnarInts intsFromList = VSizeColumnarInts.fromIndexedInts(new ArrayBasedIndexedInts(vals), maxValue);
     writer.open();
     for (int val : vals) {
-      writer.add(val);
+      writer.addValue(val);
     }
     long writtenLength = writer.getSerializedSize();
     WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();

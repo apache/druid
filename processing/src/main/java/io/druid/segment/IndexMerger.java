@@ -34,16 +34,12 @@ import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
-import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -52,8 +48,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -305,121 +299,54 @@ public interface IndexMerger
     }
   }
 
-  class MMappedIndexRowIterable implements Iterable<Rowboat>
+  static TransformableRowIterator toMergedIndexRowIterator(
+      TransformableRowIterator sourceRowIterator,
+      int indexNumber,
+      final List<DimensionMerger> mergers
+  )
   {
-    private final Iterable<Rowboat> index;
-    private final List<String> convertedDims;
-    private final int indexNumber;
-    private final List<DimensionMerger> mergers;
+    RowPointer sourceRowPointer = sourceRowIterator.getPointer();
+    boolean anySelectorChanged = false;
+    ColumnValueSelector[] convertedDimensionSelectors = new ColumnValueSelector[mergers.size()];
+    ColumnValueSelector[] convertedMarkedDimensionSelectors = new ColumnValueSelector[mergers.size()];
+    for (int i = 0; i < mergers.size(); i++) {
+      ColumnValueSelector sourceDimensionSelector = sourceRowPointer.getDimensionSelector(i);
+      ColumnValueSelector convertedDimensionSelector =
+          mergers.get(i).convertSegmentRowValuesToMergedRowValues(indexNumber, sourceDimensionSelector);
+      convertedDimensionSelectors[i] = convertedDimensionSelector;
+      //noinspection ObjectEquality
+      anySelectorChanged |= convertedDimensionSelector != sourceDimensionSelector;
 
-
-    MMappedIndexRowIterable(
-        Iterable<Rowboat> index,
-        List<String> convertedDims,
-        int indexNumber,
-        final List<DimensionMerger> mergers
-    )
-    {
-      this.index = index;
-      this.convertedDims = convertedDims;
-      this.indexNumber = indexNumber;
-      this.mergers = mergers;
-    }
-
-    @Override
-    public Iterator<Rowboat> iterator()
-    {
-      return Iterators.transform(
-          index.iterator(),
-          new Function<Rowboat, Rowboat>()
-          {
-            @Override
-            public Rowboat apply(@Nullable Rowboat input)
-            {
-              Object[] dims = input.getDims();
-              Object[] newDims = new Object[convertedDims.size()];
-              for (int i = 0; i < convertedDims.size(); ++i) {
-                if (i >= dims.length) {
-                  continue;
-                }
-                newDims[i] = mergers.get(i).convertSegmentRowValuesToMergedRowValues(dims[i], indexNumber);
-              }
-
-              final Rowboat retVal = new Rowboat(
-                  input.getTimestamp(),
-                  newDims,
-                  input.getMetrics(),
-                  input.getRowNum(),
-                  input.getHandlers()
-              );
-
-              retVal.addRow(indexNumber, input.getRowNum());
-
-              return retVal;
-            }
-          }
+      convertedMarkedDimensionSelectors[i] = mergers.get(i).convertSegmentRowValuesToMergedRowValues(
+          indexNumber,
+          sourceRowIterator.getMarkedPointer().dimensionSelectors[i]
       );
     }
-  }
-
-  class RowboatMergeFunction implements BinaryFn<Rowboat, Rowboat, Rowboat>
-  {
-    private final AggregatorFactory[] metricAggs;
-
-    public RowboatMergeFunction(AggregatorFactory[] metricAggs)
-    {
-      this.metricAggs = metricAggs;
+    if (!anySelectorChanged) {
+      return sourceRowIterator;
     }
-
-    @Override
-    public Rowboat apply(Rowboat lhs, Rowboat rhs)
+    RowPointer convertedRowPointer = sourceRowPointer.withDimensionSelectors(
+        convertedDimensionSelectors,
+        sourceRowPointer.getDimensionHandlers()
+    );
+    RowPointer convertedMarkedRowPointer = sourceRowIterator.getMarkedPointer().withDimensionSelectors(
+        convertedMarkedDimensionSelectors,
+        sourceRowIterator.getMarkedPointer().getDimensionHandlers()
+    );
+    return new ForwardingRowIterator(sourceRowIterator)
     {
-      if (lhs == null) {
-        return rhs;
-      }
-      if (rhs == null) {
-        return lhs;
-      }
-
-      Object[] metrics = new Object[metricAggs.length];
-      Object[] lhsMetrics = lhs.getMetrics();
-      Object[] rhsMetrics = rhs.getMetrics();
-
-      for (int i = 0; i < metrics.length; ++i) {
-        Object lhsMetric = lhsMetrics[i];
-        Object rhsMetric = rhsMetrics[i];
-        if (lhsMetric == null) {
-          metrics[i] = rhsMetric;
-        } else if (rhsMetric == null) {
-          metrics[i] = lhsMetric;
-        } else {
-          metrics[i] = metricAggs[i].combine(lhsMetric, rhsMetric);
-        }
+      @Override
+      public RowPointer getPointer()
+      {
+        return convertedRowPointer;
       }
 
-      final Rowboat retVal = new Rowboat(
-          lhs.getTimestamp(),
-          lhs.getDims(),
-          metrics,
-          lhs.getRowNum(),
-          lhs.getHandlers()
-      );
-
-      for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {
-        Iterator<Int2ObjectMap.Entry<IntSortedSet>> entryIterator =
-            rowboat.getComprisedRows().int2ObjectEntrySet().fastIterator();
-        while (entryIterator.hasNext()) {
-          Int2ObjectMap.Entry<IntSortedSet> entry = entryIterator.next();
-
-          for (IntIterator setIterator = entry.getValue().iterator(); setIterator.hasNext(); /* NOP */) {
-            int rowNum = setIterator.nextInt();
-            retVal.addRow(entry.getIntKey(), rowNum);
-          }
-        }
+      @Override
+      public RowPointer getMarkedPointer()
+      {
+        return convertedMarkedRowPointer;
       }
-
-      return retVal;
-    }
+    };
   }
 
   class DictionaryMergeIterator implements CloseableIterator<String>
@@ -432,16 +359,12 @@ public interface IndexMerger
 
     DictionaryMergeIterator(Indexed<String>[] dimValueLookups, boolean useDirect)
     {
+      //noinspection ComparatorCombinators
       pQueue = new PriorityQueue<>(
           dimValueLookups.length,
-          new Comparator<Pair<Integer, PeekingIterator<String>>>()
-          {
-            @Override
-            public int compare(Pair<Integer, PeekingIterator<String>> lhs, Pair<Integer, PeekingIterator<String>> rhs)
-            {
-              return lhs.rhs.peek().compareTo(rhs.rhs.peek());
-            }
-          }
+          // Don't replace this lambda with Comparator.comparing() because it is hot, so avoiding extra small
+          // indirection.
+          (lhs, rhs) -> lhs.rhs.peek().compareTo(rhs.rhs.peek())
       );
       conversions = new IntBuffer[dimValueLookups.length];
       for (int i = 0; i < conversions.length; i++) {

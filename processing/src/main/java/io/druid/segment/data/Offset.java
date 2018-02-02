@@ -36,7 +36,7 @@ import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
  *
  * This interface is the core "pointer" interface that is used to create {@link io.druid.segment.ColumnValueSelector}s
  * over historical segments. It's counterpart for incremental index is {@link
- * io.druid.segment.incremental.TimeAndDimsHolder}.
+ * io.druid.segment.incremental.IncrementalIndexRowHolder}.
  */
 @SubclassesMustBePublic
 public abstract class Offset implements ReadableOffset, Cloneable

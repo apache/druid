@@ -28,7 +28,7 @@ import java.io.IOException;
  *
  * DimensionMerger subclass to be used with IndexMergerV9.
  */
-public interface DimensionMergerV9<EncodedKeyComponentType> extends DimensionMerger<EncodedKeyComponentType>
+public interface DimensionMergerV9 extends DimensionMerger
 {
   /**
    * Return a ColumnDescriptor containing ColumnPartSerde objects appropriate for

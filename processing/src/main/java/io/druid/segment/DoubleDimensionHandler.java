@@ -19,17 +19,23 @@
 
 package io.druid.segment;
 
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.GenericColumn;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
+import io.druid.segment.selector.settable.SettableDoubleColumnValueSelector;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.Closeable;
-import java.io.IOException;
+import java.util.Comparator;
 
 public class DoubleDimensionHandler implements DimensionHandler<Double, Double, Double>
 {
+  /**
+   * Don't use {@link Comparator#comparingDouble} because this comparator is used in hot code, so avoiding small extra
+   * indirection.
+   */
+  @SuppressWarnings("ComparatorCombinators")
+  private static Comparator<ColumnValueSelector> DOUBLE_COLUMN_COMPARATOR =
+      (s1, s2) -> Double.compare(s1.getDouble(), s2.getDouble());
+
   private final String dimensionName;
 
   public DoubleDimensionHandler(String dimensionName)
@@ -50,12 +56,12 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   }
 
   @Override
-  public DimensionMergerV9<Double> makeMerger(
+  public DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
-  ) throws IOException
+  )
   {
     return new DoubleDimensionMergerV9(
         dimensionName,
@@ -71,35 +77,14 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   }
 
   @Override
-  public int compareSortedEncodedKeyComponents(Double lhs, Double rhs)
+  public Comparator<ColumnValueSelector> getEncodedValueSelectorComparator()
   {
-    return lhs.compareTo(rhs);
+    return DOUBLE_COLUMN_COMPARATOR;
   }
 
   @Override
-  public void validateSortedEncodedKeyComponents(
-      Double lhs, Double rhs, Indexed<Double> lhsEncodings, Indexed<Double> rhsEncodings
-  ) throws SegmentValidationException
+  public SettableColumnValueSelector makeNewSettableEncodedValueSelector()
   {
-    if (!lhs.equals(rhs)) {
-      throw new SegmentValidationException(
-          "Dim [%s] value not equal. Expected [%s] found [%s]",
-          dimensionName,
-          lhs,
-          rhs
-      );
-    }
-  }
-
-  @Override
-  public Closeable getSubColumn(Column column)
-  {
-    return column.getGenericColumn();
-  }
-
-  @Override
-  public Double getEncodedKeyComponentFromColumn(Closeable column, int currRow)
-  {
-    return ((GenericColumn) column).getDoubleSingleValueRow(currRow);
+    return new SettableDoubleColumnValueSelector();
   }
 }

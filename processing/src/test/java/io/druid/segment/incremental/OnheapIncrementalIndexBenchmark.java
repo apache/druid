@@ -172,7 +172,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean reportParseExceptions,
         InputRow row,
         AtomicInteger numEntries,
-        TimeAndDims key,
+        IncrementalIndexRow key,
         ThreadLocal<InputRow> rowContainer,
         Supplier<InputRow> rowSupplier,
         boolean skipMaxRowsInMemoryCheck // ignore for benchmark
@@ -202,11 +202,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
+        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
           throw new IndexSizeExceededException("Maximum number of rows reached");
         }
         final int prev = getFacts().putIfAbsent(key, rowIndex);
-        if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
+        if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
         } else {
           // We lost a race

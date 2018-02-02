@@ -52,8 +52,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       VirtualColumns virtualColumns,
       boolean descending,
       Closer closer,
-      ReadableOffset offset,
-      Map<String, BaseColumn> columnCache
+      ReadableOffset offset, Map<String, BaseColumn> columnCache
   )
   {
     this.index = index;

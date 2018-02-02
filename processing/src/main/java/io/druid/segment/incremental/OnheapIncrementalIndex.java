@@ -107,7 +107,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
-      TimeAndDims key,
+      IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
       boolean skipMaxRowsInMemoryCheck
@@ -117,7 +117,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     Aggregator[] aggs;
 
-    if (TimeAndDims.EMPTY_ROW_INDEX != priorIndex) {
+    if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       doAggregate(metrics, aggs, rowContainer, row, reportParseExceptions);
     } else {
@@ -130,12 +130,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
       // Last ditch sanity checks
       if (numEntries.get() >= maxRowCount
-          && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX
+          && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX
           && !skipMaxRowsInMemoryCheck) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
       final int prev = facts.putIfAbsent(key, rowIndex);
-      if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
+      if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
       } else {
         // We lost a race

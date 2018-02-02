@@ -30,8 +30,8 @@ import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
-import io.druid.segment.writeout.WriteOutBytes;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -128,7 +128,7 @@ public class CompressedColumnarIntsSerializerTest
     );
     writer.open();
     for (int val : vals) {
-      writer.add(val);
+      writer.addValue(val);
     }
     long writtenLength = writer.getSerializedSize();
     final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
@@ -206,7 +206,7 @@ public class CompressedColumnarIntsSerializerTest
 
     writer.open();
     for (int val : vals) {
-      writer.add(val);
+      writer.addValue(val);
     }
     final SmooshedWriter channel = smoosher.addWithSmooshedWriter("test", writer.getSerializedSize());
     writer.writeTo(channel, smoosher);

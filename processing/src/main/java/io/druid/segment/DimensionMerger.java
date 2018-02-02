@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.List;
@@ -27,7 +28,7 @@ import java.util.List;
  * Processing related interface
  *
  * A DimensionMerger is a per-dimension stateful object that encapsulates type-specific operations and data structures
- * used during the segment merging process (i.e., work done by IndexMerger/IndexMergerV9).
+ * used during the segment merging process (i.e., work done by {@link IndexMerger}).
  *
  * This object is responsible for:
  *   - merging any relevant structures from the segments (e.g., encoding dictionaries)
@@ -47,13 +48,8 @@ import java.util.List;
  *
  * A class implementing this interface is expected to be highly stateful, updating its internal state as these
  * functions are called.
- *
- * @param <EncodedKeyComponentType> A row key contains a component for each dimension, this param specifies the
- *                                 class of this dimension's key component. A column type that supports multivalue rows
- *                                 should use an array type (Strings would use int[]). Column types without multivalue
- *                                 row support should use single objects (e.g., Long, Float).
  */
-public interface DimensionMerger<EncodedKeyComponentType>
+public interface DimensionMerger
 {
   /**
    * Given a list of segment adapters:
@@ -64,54 +60,45 @@ public interface DimensionMerger<EncodedKeyComponentType>
    * i.e., the position of each adapter in the input list.
    *
    * This "index number" will be used to refer to specific segments later
-   * in convertSegmentRowValuesToMergedRowValues().
+   * in {@link #convertSegmentRowValuesToMergedRowValues}.
    *
    * Otherwise, the details of how this merging occurs and how to store the merged data is left to the implementer.
    *
    * @param adapters List of adapters to be merged.
-   * @throws IOException
    */
   void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException;
 
-
   /**
-   * Convert a row's key component with per-segment encoding to its equivalent representation
-   * in the merged set of rows.
+   * Creates a value selector, which converts values with per-segment encoding (from the given selector) to their
+   * equivalent representation in the merged set of rows.
    *
-   * This function is used by the index merging process to build the merged sequence of rows.
+   * This method is used by the index merging process to build the merged sequence of rows.
    *
    * The implementing class is expected to use the merged value metadata constructed
-   * during writeMergedValueMetadata, if applicable.
+   * during {@link #writeMergedValueMetadata(List)}, if applicable.
    *
    * For example, an implementation of this function for a dictionary-encoded String column would convert the
    * segment-specific dictionary values within the row to the common merged dictionary values
-   * determined during writeMergedValueMetadata().
+   * determined during {@link #writeMergedValueMetadata(List)}.
    *
-   * @param segmentRow A row's key component for this dimension. The encoding of the key component's
-   *                   values will be converted from per-segment encodings to the combined encodings from
-   *                   the merged sequence of rows.
-   * @param segmentIndexNumber Integer indicating which segment the row originated from.
+   * @param segmentIndex indicates which segment the row originated from, in the order established in
+   * {@link #writeMergedValueMetadata(List)}
+   * @param source the selector from which to take values to convert
+   * @return a selector with converted values
    */
-  EncodedKeyComponentType convertSegmentRowValuesToMergedRowValues(
-      EncodedKeyComponentType segmentRow,
-      int segmentIndexNumber
-  );
-
+  ColumnValueSelector convertSegmentRowValuesToMergedRowValues(int segmentIndex, ColumnValueSelector source);
 
   /**
-   * Process a key component from the merged sequence of rows and update the DimensionMerger's internal state.
+   * Process a column value(s) (potentially multi-value) of a row from the given selector and update the
+   * DimensionMerger's internal state.
    *
-   * After constructing a merged sequence of rows across segments, the index merging process will
-   * iterate through these rows and pass row key components from each dimension to their corresponding DimensionMergers.
+   * After constructing a merged sequence of rows across segments, the index merging process will iterate through these
+   * rows and on each iteration, for each column, pass the column value selector to the corresponding DimensionMerger.
    *
    * This allows each DimensionMerger to build its internal view of the sequence of merged rows, to be
    * written out to a segment later.
-   *
-   * @param rowValues The row values to be added.
-   * @throws IOException
    */
-  void processMergedRow(EncodedKeyComponentType rowValues) throws IOException;
-
+  void processMergedRow(ColumnValueSelector selector) throws IOException;
 
   /**
    * Internally construct any index structures relevant to this DimensionMerger.
@@ -124,17 +111,15 @@ public interface DimensionMerger<EncodedKeyComponentType>
    *
    * The index merger will provide a list of row number conversion IntBuffer objects.
    * Each IntBuffer is associated with one of the segments being merged; the position of the IntBuffer in the list
-   * corresponds to the position of segment adapters within the input list of writeMergedValueMetadata().
+   * corresponds to the position of segment adapters within the input list of {@link #writeMergedValueMetadata(List)}.
    *
    * For example, suppose there are two segments A and B.
    * Row 24 from segment A maps to row 99 in the merged sequence of rows,
    * The IntBuffer for segment A would have a mapping of 24 -> 99.
    *
    * @param segmentRowNumConversions A list of row number conversion IntBuffer objects.
-   * @throws IOException
    */
-  void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException;
-
+  void writeIndexes(@Nullable List<IntBuffer> segmentRowNumConversions) throws IOException;
 
   /**
    * Return true if this dimension's data does not need to be written to the segment.

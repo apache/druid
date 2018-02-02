@@ -73,10 +73,9 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(ColumnValueSelector selector) throws IOException
   {
-    float val = (obj == null) ? 0 : ((Number) obj).floatValue();
-    writer.add(val);
+    writer.add(selector.getFloat());
   }
 
   @Override

@@ -206,6 +206,7 @@ public class GroupByQuery extends BaseQuery<Row>
     return virtualColumns;
   }
 
+  @Nullable
   @JsonProperty("filter")
   public DimFilter getDimFilter()
   {

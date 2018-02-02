@@ -25,9 +25,9 @@ import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

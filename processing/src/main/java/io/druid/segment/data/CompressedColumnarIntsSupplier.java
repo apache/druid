@@ -110,7 +110,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   }
 
   @VisibleForTesting
-  GenericIndexed<?> getBaseIntBuffers()
+  GenericIndexed<ResourceHolder<ByteBuffer>> getBaseIntBuffers()
   {
     return baseIntBuffers;
   }

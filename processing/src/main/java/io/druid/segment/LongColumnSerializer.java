@@ -81,10 +81,9 @@ public class LongColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(ColumnValueSelector selector) throws IOException
   {
-    long val = (obj == null) ? 0 : ((Number) obj).longValue();
-    writer.add(val);
+    writer.add(selector.getLong());
   }
 
   @Override

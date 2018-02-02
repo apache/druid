@@ -24,6 +24,8 @@ import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,13 +37,14 @@ public interface IndexableAdapter
 
   int getNumRows();
 
-  Indexed<String> getDimensionNames();
+  List<String> getDimensionNames();
 
-  Indexed<String> getMetricNames();
+  List<String> getMetricNames();
 
-  Indexed<Comparable> getDimValueLookup(String dimension);
+  @Nullable
+  <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension);
 
-  Iterable<Rowboat> getRows();
+  TransformableRowIterator getRows();
 
   BitmapValues getBitmapValues(String dimension, int dictId);
 

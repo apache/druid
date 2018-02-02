@@ -30,30 +30,28 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 
-import static io.druid.segment.incremental.IncrementalIndex.TimeAndDims;
-
 /**
  */
-public class TimeAndDimsCompTest
+public class IncrementalIndexRowCompTest
 {
   @Test
   public void testBasic() throws IndexSizeExceededException
   {
-    IncrementalIndex index = new IncrementalIndex.Builder()
+    IncrementalIndex<?> index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(1000)
         .buildOnheap();
 
     long time = System.currentTimeMillis();
-    TimeAndDims td1 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));
-    TimeAndDims td2 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
-    TimeAndDims td3 = index.toTimeAndDims(toMapRow(time, "billy", "A"));
+    IncrementalIndexRow td1 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));
+    IncrementalIndexRow td2 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
+    IncrementalIndexRow td3 = index.toTimeAndDims(toMapRow(time, "billy", "A"));
 
-    TimeAndDims td4 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
-    TimeAndDims td5 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
-    TimeAndDims td6 = index.toTimeAndDims(toMapRow(time + 1));
+    IncrementalIndexRow td4 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
+    IncrementalIndexRow td5 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
+    IncrementalIndexRow td6 = index.toTimeAndDims(toMapRow(time + 1));
 
-    Comparator<IncrementalIndex.TimeAndDims> comparator = index.dimsComparator();
+    Comparator<IncrementalIndexRow> comparator = index.dimsComparator();
 
     Assert.assertEquals(0, comparator.compare(td1, td1));
     Assert.assertEquals(0, comparator.compare(td2, td2));

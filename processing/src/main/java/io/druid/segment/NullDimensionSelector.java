@@ -81,6 +81,7 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   }
 
   @Override
+  @Nullable
   public String lookupName(int id)
   {
     assert id == 0 : "id = " + id;

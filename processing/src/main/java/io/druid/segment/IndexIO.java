@@ -55,7 +55,6 @@ import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedColumnarLongsSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ImmutableRTreeObjectStrategy;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.VSizeColumnarMultiInts;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
@@ -75,8 +74,9 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class IndexIO
@@ -147,31 +147,27 @@ public class IndexIO
         throw new SegmentValidationException("Metric names differ. Expected [%s] found [%s]", metNames1, metNames2);
       }
     }
-    final Map<String, DimensionHandler> dimHandlers = adapter1.getDimensionHandlers();
-
-    final Iterator<Rowboat> it1 = adapter1.getRows().iterator();
-    final Iterator<Rowboat> it2 = adapter2.getRows().iterator();
+    final RowIterator it1 = adapter1.getRows();
+    final RowIterator it2 = adapter2.getRows();
     long row = 0L;
-    while (it1.hasNext()) {
-      if (!it2.hasNext()) {
+    while (it1.moveToNext()) {
+      if (!it2.moveToNext()) {
         throw new SegmentValidationException("Unexpected end of second adapter");
       }
-      final Rowboat rb1 = it1.next();
-      final Rowboat rb2 = it2.next();
+      final RowPointer rp1 = it1.getPointer();
+      final RowPointer rp2 = it2.getPointer();
       ++row;
-      if (rb1.getRowNum() != rb2.getRowNum()) {
-        throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rb1.getRowNum(), rb2.getRowNum());
+      if (rp1.getRowNum() != rp2.getRowNum()) {
+        throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rp1.getRowNum(), rp2.getRowNum());
       }
-      if (rb1.compareTo(rb2) != 0) {
-        try {
-          validateRowValues(dimHandlers, rb1, adapter1, rb2, adapter2);
-        }
-        catch (SegmentValidationException ex) {
-          throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2);
-        }
+      try {
+        validateRowValues(rp1, adapter1, rp2, adapter2);
+      }
+      catch (SegmentValidationException ex) {
+        throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rp1, rp2);
       }
     }
-    if (it2.hasNext()) {
+    if (it2.moveToNext()) {
       throw new SegmentValidationException("Unexpected end of first adapter");
     }
     if (row != adapter1.getNumRows()) {
@@ -250,22 +246,21 @@ public class IndexIO
     MMappedIndex mapDir(File inDir) throws IOException;
   }
 
-  public static void validateRowValues(
-      Map<String, DimensionHandler> dimHandlers,
-      Rowboat rb1,
+  private static void validateRowValues(
+      RowPointer rp1,
       IndexableAdapter adapter1,
-      Rowboat rb2,
+      RowPointer rp2,
       IndexableAdapter adapter2
   )
   {
-    if (rb1.getTimestamp() != rb2.getTimestamp()) {
+    if (rp1.getTimestamp() != rp2.getTimestamp()) {
       throw new SegmentValidationException(
           "Timestamp mismatch. Expected %d found %d",
-          rb1.getTimestamp(), rb2.getTimestamp()
+          rp1.getTimestamp(), rp2.getTimestamp()
       );
     }
-    final Object[] dims1 = rb1.getDims();
-    final Object[] dims2 = rb2.getDims();
+    final Object[] dims1 = rp1.getDimensionValuesForDebug();
+    final Object[] dims2 = rp2.getDimensionValuesForDebug();
     if (dims1.length != dims2.length) {
       throw new SegmentValidationException(
           "Dim lengths not equal %s vs %s",
@@ -273,11 +268,9 @@ public class IndexIO
           Arrays.deepToString(dims2)
       );
     }
-    final Indexed<String> dim1Names = adapter1.getDimensionNames();
-    final Indexed<String> dim2Names = adapter2.getDimensionNames();
+    final List<String> dim1Names = adapter1.getDimensionNames();
+    final List<String> dim2Names = adapter2.getDimensionNames();
     for (int i = 0; i < dims1.length; ++i) {
-      final Object dim1Vals = dims1[i];
-      final Object dim2Vals = dims2[i];
       final String dim1Name = dim1Names.get(i);
       final String dim2Name = dim2Names.get(i);
 
@@ -294,14 +287,29 @@ public class IndexIO
         );
       }
 
-      DimensionHandler dimHandler = dimHandlers.get(dim1Name);
-      dimHandler.validateSortedEncodedKeyComponents(
-          dim1Vals,
-          dim2Vals,
-          adapter1.getDimValueLookup(dim1Name),
-          adapter2.getDimValueLookup(dim2Name)
-      );
+      if (dims1[i] instanceof Object[] && dims2[i] instanceof Object[]) {
+        if (!Arrays.equals((Object[]) dims1[i], (Object[]) dims2[i])) {
+          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+        }
+      } else if (dims1[i] instanceof Object[]) {
+        if (((Object[]) dims1[i]).length != 1 || !Objects.equals(((Object[]) dims1[i])[0], dims2[i])) {
+          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+        }
+      } else if (dims2[i] instanceof Object[]) {
+        if (((Object[]) dims2[i]).length != 1 || !Objects.equals(((Object[]) dims2[i])[0], dims1[i])) {
+          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+        }
+      } else {
+        if (!Objects.equals(dims1[i], dims2[i])) {
+          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+        }
+      }
     }
+  }
+
+  private static SegmentValidationException notEqualValidationException(String dimName, Object v1, Object v2)
+  {
+    return new SegmentValidationException("Dim [%s] values not equal. Expected %s found %s", dimName, v1, v2);
   }
 
   public static class DefaultIndexIOHandler implements IndexIOHandler

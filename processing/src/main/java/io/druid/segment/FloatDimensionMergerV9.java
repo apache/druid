@@ -25,15 +25,8 @@ import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.IOException;
-import java.nio.IntBuffer;
-import java.util.List;
-
-public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
+public class FloatDimensionMergerV9 extends NumericDimensionMergerV9<FloatColumnSerializer>
 {
-  protected String dimensionName;
-  protected final IndexSpec indexSpec;
-  private FloatColumnSerializer serializer;
 
   public FloatDimensionMergerV9(
       String dimensionName,
@@ -41,65 +34,27 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
       SegmentWriteOutMedium segmentWriteOutMedium
   )
   {
-    this.dimensionName = dimensionName;
-    this.indexSpec = indexSpec;
-
-    try {
-      setupEncodedValueWriter(segmentWriteOutMedium);
-    }
-    catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
+    super(dimensionName, indexSpec, segmentWriteOutMedium);
   }
 
-  private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
+  @Override
+  FloatColumnSerializer setupEncodedValueWriter()
   {
     final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = FloatColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
-    serializer.open();
+    return FloatColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
   }
 
   @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
-  {
-    // floats have no additional metadata
-  }
-
-  @Override
-  public Float convertSegmentRowValuesToMergedRowValues(Float segmentRow, int segmentIndexNumber)
-  {
-    return segmentRow;
-  }
-
-  @Override
-  public void processMergedRow(Float rowValues) throws IOException
-  {
-    serializer.serialize(rowValues);
-  }
-
-  @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
-  {
-    // floats have no indices to write
-  }
-
-  @Override
-  public boolean canSkip()
-  {
-    // a float column can never be all null
-    return false;
-  }
-
-  @Override
-  public ColumnDescriptor makeColumnDescriptor() throws IOException
+  public ColumnDescriptor makeColumnDescriptor()
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);
     builder.addSerde(
-        FloatGenericColumnPartSerde.serializerBuilder()
-                                  .withByteOrder(IndexIO.BYTE_ORDER)
-                                  .withDelegate(serializer)
-                                  .build()
+        FloatGenericColumnPartSerde
+            .serializerBuilder()
+            .withByteOrder(IndexIO.BYTE_ORDER)
+            .withDelegate(serializer)
+            .build()
     );
     return builder.build();
   }

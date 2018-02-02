@@ -17,32 +17,29 @@
  * under the License.
  */
 
-package io.druid.segment.incremental;
+package io.druid.segment.selector.settable;
 
-/**
- * This interface is the core "pointer" interface that is used to create {@link io.druid.segment.ColumnValueSelector}s
- * over incremental index. It's counterpart for historical segments is {@link io.druid.segment.data.Offset}.
- */
-public class TimeAndDimsHolder
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.LongColumnSelector;
+
+public class SettableLongColumnValueSelector implements SettableColumnValueSelector<Long>, LongColumnSelector
 {
-  IncrementalIndex.TimeAndDims currEntry = null;
+  private long value;
 
-  public IncrementalIndex.TimeAndDims get()
+  @Override
+  public void setValueFrom(ColumnValueSelector selector)
   {
-    return currEntry;
+    value = selector.getLong();
   }
 
-  public void set(IncrementalIndex.TimeAndDims currEntry)
+  public void setValue(long value)
   {
-    this.currEntry = currEntry;
+    this.value = value;
   }
 
-  /**
-   * This method doesn't have well-defined semantics ("value" of what?), should be removed in favor of chaining
-   * get().getRowIndex().
-   */
-  public int getValue()
+  @Override
+  public long getLong()
   {
-    return currEntry.getRowIndex();
+    return value;
   }
 }

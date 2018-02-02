@@ -22,9 +22,9 @@ package io.druid.segment.data;
 import com.google.common.primitives.Ints;
 import io.druid.common.utils.ByteUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.WriteOutBytes;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -62,7 +62,7 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
   }
 
   @Override
-  protected void addValue(int val) throws IOException
+  public void addValue(int val) throws IOException
   {
     if (bufPaddingWritten) {
       throw new IllegalStateException("written out already");
