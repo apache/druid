@@ -28,7 +28,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -45,6 +44,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -89,7 +89,7 @@ public class RealtimeIndexTask extends AbstractTask
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
   private static final Random random = new Random();
 
-  static String makeTaskId(FireDepartment fireDepartment)
+  private static String makeTaskId(FireDepartment fireDepartment)
   {
     return makeTaskId(
         fireDepartment.getDataSchema().getDataSource(),

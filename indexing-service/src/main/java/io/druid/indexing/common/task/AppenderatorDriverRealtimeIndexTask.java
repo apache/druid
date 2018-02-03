@@ -22,11 +22,11 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.Committer;
@@ -38,13 +38,13 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.LockAcquireAction;
-import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
+import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -56,7 +56,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
-import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
@@ -70,15 +69,13 @@ import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
-import io.druid.server.coordination.DataSegmentAnnouncer;
-import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -92,14 +89,25 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
+  private static final Random random = new Random();
 
-  private static String makeDatasource(FireDepartment fireDepartment)
+  private static String makeTaskId(RealtimeAppenderatorIngestionSpec spec)
   {
-    return fireDepartment.getDataSchema().getDataSource();
+    final StringBuilder suffix = new StringBuilder(8);
+    for (int i = 0; i < Ints.BYTES * 2; ++i) {
+      suffix.append((char) ('a' + ((random.nextInt() >>> (i * 4)) & 0x0F)));
+    }
+    return StringUtils.format(
+        "index_realtime_%s_%d_%s_%s",
+        spec.getDataSchema().getDataSource(),
+        spec.getTuningConfig().getShardSpec().getPartitionNum(),
+        DateTimes.nowUtc(),
+        suffix
+    );
   }
 
   @JsonIgnore
-  private final FireDepartment spec;
+  private final RealtimeAppenderatorIngestionSpec spec;
 
   @JsonIgnore
   private final Queue<ListenableFuture<SegmentsAndMetadata>> pendingHandoffs;
@@ -126,18 +134,18 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   public AppenderatorDriverRealtimeIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
-      @JsonProperty("spec") FireDepartment fireDepartment,
+      @JsonProperty("spec") RealtimeAppenderatorIngestionSpec spec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
-        id == null ? RealtimeIndexTask.makeTaskId(fireDepartment) : id,
-        StringUtils.format("index_realtime_appenderator_%s", makeDatasource(fireDepartment)),
+        id == null ? makeTaskId(spec) : id,
+        StringUtils.format("index_realtime_appenderator_%s", spec.getDataSchema().getDataSource()),
         taskResource,
-        makeDatasource(fireDepartment),
+        spec.getDataSchema().getDataSource(),
         context
     );
-    this.spec = fireDepartment;
+    this.spec = spec;
     this.pendingHandoffs = new ConcurrentLinkedQueue<>();
   }
 
@@ -171,7 +179,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
   }
@@ -183,37 +191,30 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
 
     setupTimeoutAlert();
 
-    final DataSegmentAnnouncer lockingSegmentAnnouncer = createLockingSegmentAnnouncer(toolbox);
-
     DataSchema dataSchema = spec.getDataSchema();
-    RealtimeIOConfig realtimeIOConfig = spec.getIOConfig();
-    RealtimeTuningConfig tuningConfig = spec.getTuningConfig()
-                                            .withBasePersistDirectory(toolbox.getPersistDir());
+    RealtimeAppenderatorTuningConfig tuningConfig = spec.getTuningConfig()
+                                                        .withBasePersistDirectory(toolbox.getPersistDir());
 
-    logUnusedConfiguration(tuningConfig);
-
-    final FireDepartment fireDepartment = new FireDepartment(
-        dataSchema,
-        realtimeIOConfig,
-        tuningConfig
+    final FireDepartment fireDepartmentForMetrics = new FireDepartment(
+        dataSchema, new RealtimeIOConfig(null, null, null), null
     );
 
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
-        ImmutableList.of(fireDepartment),
+        ImmutableList.of(fireDepartmentForMetrics),
         ImmutableMap.of(
             DruidMetrics.TASK_ID, new String[]{getId()}
         )
     );
 
-    this.metrics = fireDepartment.getMetrics();
+    this.metrics = fireDepartmentForMetrics.getMetrics();
 
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
-    appenderator = newAppenderator(dataSchema, tuningConfig, fireDepartment.getMetrics(), toolbox, lockingSegmentAnnouncer);
-    AppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, fireDepartment.getMetrics());
+    appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
+    AppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics);
 
     try {
       toolbox.getDataSegmentServerAnnouncer().announce();
@@ -259,10 +260,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {
-              if (addResult.isPersistRequired()) {
-                driver.persist(committerSupplier.get());
-              }
-
               if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
                 publishSegments(driver, publisher, committerSupplier, sequenceName);
 
@@ -304,7 +301,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
           // Publish any remaining segments
           publishSegments(driver, publisher, committerSupplier, sequenceName);
 
-          waitForSegmentHandoff(tuningConfig.getHandoffConditionTimeout());
+          waitForSegmentPublishAndHandoff(tuningConfig.getPublishAndHandoffTimeout());
         }
       } else if (firehose != null) {
         log.info("Task was gracefully stopped, will persist data before exiting");
@@ -384,7 +381,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   }
 
   @JsonProperty("spec")
-  public FireDepartment getRealtimeIngestionSchema()
+  public RealtimeAppenderatorIngestionSpec getSpec()
   {
     return spec;
   }
@@ -446,7 +443,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     pendingHandoffs.add(handoffFuture);
   }
 
-  private void waitForSegmentHandoff(long handoffTimeout) throws InterruptedException, ExecutionException,
+  private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,
                                                                  TimeoutException
   {
     if (!pendingHandoffs.isEmpty()) {
@@ -454,8 +451,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
       log.info("Waiting for handoffs");
 
 
-      if (handoffTimeout > 0) {
-        allHandoffs.get(handoffTimeout, TimeUnit.MILLISECONDS);
+      if (timeout > 0) {
+        allHandoffs.get(timeout, TimeUnit.MILLISECONDS);
       } else {
         allHandoffs.get();
       }
@@ -513,94 +510,11 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     );
   }
 
-  private DataSegmentAnnouncer createLockingSegmentAnnouncer(TaskToolbox toolbox)
-  {
-    // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
-    final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
-    // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, http timeout error can occur while waiting for a
-    // lock to be acquired.
-    return new DataSegmentAnnouncer()
-    {
-      @Override
-      public void announceSegment(final DataSegment segment) throws IOException
-      {
-        // Side effect: Calling announceSegment causes a lock to be acquired
-        Preconditions.checkNotNull(
-            toolbox.getTaskActionClient().submit(
-                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
-            ),
-            "Cannot acquire a lock for interval[%s]",
-            segment.getInterval()
-        );
-        toolbox.getSegmentAnnouncer().announceSegment(segment);
-      }
-
-      @Override
-      public void unannounceSegment(final DataSegment segment) throws IOException
-      {
-        try {
-          toolbox.getSegmentAnnouncer().unannounceSegment(segment);
-        }
-        finally {
-          toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
-        }
-      }
-
-      @Override
-      public void announceSegments(Iterable<DataSegment> segments) throws IOException
-      {
-        // Side effect: Calling announceSegments causes locks to be acquired
-        for (DataSegment segment : segments) {
-          Preconditions.checkNotNull(
-              toolbox.getTaskActionClient().submit(
-                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
-              ),
-              "Cannot acquire a lock for interval[%s]",
-              segment.getInterval()
-          );
-        }
-        toolbox.getSegmentAnnouncer().announceSegments(segments);
-      }
-
-      @Override
-      public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
-      {
-        try {
-          toolbox.getSegmentAnnouncer().unannounceSegments(segments);
-        }
-        finally {
-          for (DataSegment segment : segments) {
-            toolbox.getTaskActionClient().submit(new LockReleaseAction(segment.getInterval()));
-          }
-        }
-      }
-    };
-  }
-
-  private void logUnusedConfiguration(RealtimeTuningConfig tuningConfig)
-  {
-    warnIfNotNull(tuningConfig.getWindowPeriod(), "windowPeriod is not used by this task");
-    warnIfNotNull(tuningConfig.getVersioningPolicy(), "versioningPolicy is not used by this task");
-    warnIfNotNull(tuningConfig.getRejectionPolicyFactory(), "rejectionPolicyFactory is not used by this task");
-    warnIfNotNull(tuningConfig.getPersistThreadPriority(), "persistThreadPriority is not used by this task");
-    warnIfNotNull(tuningConfig.getMergeThreadPriority(), "mergeThreadPriority is not used by this task");
-  }
-
-  private void warnIfNotNull(Object value, String message)
-  {
-    if (value == null) {
-      return;
-    }
-
-    log.warn(message);
-  }
-
   private static Appenderator newAppenderator(
       final DataSchema dataSchema,
-      final RealtimeTuningConfig tuningConfig,
+      final RealtimeAppenderatorTuningConfig tuningConfig,
       final FireDepartmentMetrics metrics,
-      final TaskToolbox toolbox,
-      final DataSegmentAnnouncer segmentAnnouncer
+      final TaskToolbox toolbox
   )
   {
     return Appenderators.createRealtime(
@@ -612,7 +526,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         toolbox.getIndexIO(),
         toolbox.getIndexMergerV9(),
         toolbox.getQueryRunnerFactoryConglomerate(),
-        segmentAnnouncer,
+        toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
         toolbox.getQueryExecutorService(),
         toolbox.getCache(),

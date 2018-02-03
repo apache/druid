@@ -52,6 +52,8 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
+import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.SegmentPublishResult;
@@ -104,15 +106,12 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
-import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
-import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
-import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
 import io.druid.segment.transform.ExpressionTransform;
 import io.druid.segment.transform.TransformSpec;
 import io.druid.server.DruidNode;
@@ -258,9 +257,13 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private Collection<DataSegment> publishedSegments;
   private CountDownLatch segmentLatch;
   private CountDownLatch handoffLatch;
+  private TaskStorage taskStorage;
+  private TaskLockbox taskLockbox;
+  private TaskToolboxFactory taskToolboxFactory;
+  private File baseDir;
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
     EmittingLogger.registerEmitter(emitter);
     emitter.start();
@@ -272,6 +275,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
     derbyConnector.createPendingSegmentsTable();
+
+    baseDir = tempFolder.newFolder();
+    makeToolboxFactory(baseDir);
   }
 
   @After
@@ -293,8 +299,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(1);
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, true, 100L);
-    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -321,8 +326,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(1);
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
-    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -385,8 +389,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(1);
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
-    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -452,8 +455,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     expectPublishedSegments(2);
 
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
-    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -525,8 +527,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         )
     );
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0);
-    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -591,8 +592,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(0);
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, true);
-    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -642,8 +642,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     expectPublishedSegments(1);
 
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, false);
-    final TaskToolbox taskToolbox = makeToolbox(task, tempFolder.newFolder());
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
     while (task.getFirehose() == null) {
@@ -715,14 +714,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(0);
 
-    final File directory = tempFolder.newFolder();
     final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
     final DataSegment publishedSegment;
 
     // First run:
     {
-      final TaskToolbox taskToolbox = makeToolbox(task1, directory);
-      final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
+      final ListenableFuture<TaskStatus> statusFuture = runTask(task1);
 
       // Wait for firehose to show up, it starts off null.
       while (task1.getFirehose() == null) {
@@ -752,8 +749,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     {
       expectPublishedSegments(1);
       final AppenderatorDriverRealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
-      final TaskToolbox taskToolbox = makeToolbox(task2, directory);
-      final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
+      final ListenableFuture<TaskStatus> statusFuture = runTask(task2);
 
       // Wait for firehose to show up, it starts off null.
       while (task2.getFirehose() == null) {
@@ -807,16 +803,13 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testRestoreAfterHandoffAttemptDuringShutdown() throws Exception
   {
-    final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    final File directory = tempFolder.newFolder();
     final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
     final DataSegment publishedSegment;
 
     // First run:
     {
       expectPublishedSegments(1);
-      final TaskToolbox taskToolbox = makeToolbox(task1, taskStorage, directory);
-      final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
+      final ListenableFuture<TaskStatus> statusFuture = runTask(task1);
 
       // Wait for firehose to show up, it starts off null.
       while (task1.getFirehose() == null) {
@@ -854,8 +847,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     {
       expectPublishedSegments(1);
       final AppenderatorDriverRealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
-      final TaskToolbox taskToolbox = makeToolbox(task2, taskStorage, directory);
-      final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
+      final ListenableFuture<TaskStatus> statusFuture = runTask(task2);
 
       // Wait for firehose to show up, it starts off null.
       while (task2.getFirehose() == null) {
@@ -894,15 +886,13 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   @Test(timeout = 60_000L)
   public void testRestoreCorruptData() throws Exception
   {
-    final File directory = tempFolder.newFolder();
     final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
 
     // First run:
     {
       expectPublishedSegments(0);
 
-      final TaskToolbox taskToolbox = makeToolbox(task1, directory);
-      final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
+      final ListenableFuture<TaskStatus> statusFuture = runTask(task1);
 
       // Wait for firehose to show up, it starts off null.
       while (task1.getFirehose() == null) {
@@ -928,7 +918,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Assert.assertTrue(publishedSegments.isEmpty());
     }
 
-    Optional<File> optional = FileUtils.listFiles(directory, null, true).stream()
+    Optional<File> optional = FileUtils.listFiles(baseDir, null, true).stream()
                                        .filter(f -> f.getName().equals("00000.smoosh"))
                                        .findFirst();
 
@@ -944,8 +934,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       expectPublishedSegments(0);
 
       final AppenderatorDriverRealtimeIndexTask task2 = makeRealtimeTask(task1.getId());
-      final TaskToolbox taskToolbox = makeToolbox(task2, directory);
-      final ListenableFuture<TaskStatus> statusFuture = runTask(task2, taskToolbox);
+      final ListenableFuture<TaskStatus> statusFuture = runTask(task2);
 
       // Wait for the task to finish.
       boolean caught = false;
@@ -964,20 +953,26 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(0);
 
-    final File directory = tempFolder.newFolder();
     final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
 
     task1.stopGracefully();
-    final TaskToolbox taskToolbox = makeToolbox(task1, directory);
-    final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task1);
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
-  private ListenableFuture<TaskStatus> runTask(final Task task, final TaskToolbox toolbox)
+  private ListenableFuture<TaskStatus> runTask(final Task task)
   {
+    try {
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
+    }
+    catch (EntryExistsException e) {
+      // suppress
+    }
+    taskLockbox.syncFromStorage();
+    final TaskToolbox toolbox = taskToolboxFactory.build(task);
     return taskExec.submit(
         new Callable<TaskStatus>()
         {
@@ -1043,20 +1038,14 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         null
     );
-    RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
+    RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
         1000,
         1000,
-        new Period("P1Y"),
-        new Period("PT10M"),
-        null,
-        null,
-        new ServerTimeRejectionPolicyFactory(),
         null,
         null,
         null,
-        true,
-        0,
-        0,
+        null,
+        null,
         reportParseExceptions,
         handoffTimeout,
         null,
@@ -1065,7 +1054,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     return new AppenderatorDriverRealtimeIndexTask(
         taskId,
         null,
-        new FireDepartment(dataSchema, realtimeIOConfig, realtimeTuningConfig),
+        new RealtimeAppenderatorIngestionSpec(dataSchema, realtimeIOConfig, tuningConfig),
         null
     )
     {
@@ -1075,18 +1064,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         return true;
       }
     };
-  }
-
-  private TaskToolbox makeToolbox(
-      final Task task,
-      final File directory
-  )
-  {
-    return makeToolbox(
-        task,
-        new HeapMemoryTaskStorage(new TaskStorageConfig(null)),
-        directory
-    );
   }
 
   private void expectPublishedSegments(int count)
@@ -1113,18 +1090,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
   }
 
-  private TaskToolbox makeToolbox(
-      final Task task,
-      final TaskStorage taskStorage,
-      final File directory
-  )
+  private void makeToolboxFactory(final File directory)
   {
-    publishedSegments = new CopyOnWriteArrayList<>();
+    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    taskLockbox = new TaskLockbox(taskStorage);
 
-    Assert.assertFalse(
-        "Segment latch not initialized, did you forget to call expectPublishSegments?",
-        segmentLatch == null
-    );
+    publishedSegments = new CopyOnWriteArrayList<>();
 
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(LinearShardSpec.class);
@@ -1140,6 +1111,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       {
         Set<DataSegment> result = super.announceHistoricalSegments(segments);
 
+        Assert.assertFalse(
+            "Segment latch not initialized, did you forget to call expectPublishSegments?",
+            segmentLatch == null
+        );
+
         publishedSegments.addAll(result);
         segments.forEach(s -> segmentLatch.countDown());
 
@@ -1153,6 +1129,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       {
         SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
 
+        Assert.assertFalse(
+            "Segment latch not initialized, did you forget to call expectPublishSegments?",
+            segmentLatch == null
+        );
+
         publishedSegments.addAll(result.getSegments());
         result.getSegments().forEach(s -> segmentLatch.countDown());
 
@@ -1160,14 +1141,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       }
     };
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
-    try {
-      taskStorage.insert(task, TaskStatus.running(task.getId()));
-    }
-    catch (EntryExistsException e) {
-      // suppress
-    }
-    taskLockbox.syncFromStorage();
+
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         mdc,
@@ -1255,7 +1229,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         return Lists.newArrayList();
       }
     };
-    final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
+
+    taskToolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
         emitter,
@@ -1282,8 +1257,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
     );
-
-    return toolboxFactory.build(task);
   }
 
   public long sumMetric(final Task task, final DimFilter filter, final String metric) throws Exception

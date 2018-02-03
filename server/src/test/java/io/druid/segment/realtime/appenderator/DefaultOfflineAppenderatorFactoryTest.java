@@ -136,7 +136,6 @@ public class DefaultOfflineAppenderatorFactoryTest
         75000,
         null,
         null,
-        null,
         temporaryFolder.newFolder(),
         null,
         null,
