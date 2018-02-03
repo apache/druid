@@ -329,7 +329,7 @@ public interface IndexMerger
         convertedDimensionSelectors,
         sourceRowPointer.getDimensionHandlers()
     );
-    RowPointer convertedMarkedRowPointer = sourceRowIterator.getMarkedPointer().withDimensionSelectors(
+    TimeAndDimsPointer convertedMarkedRowPointer = sourceRowIterator.getMarkedPointer().withDimensionSelectors(
         convertedMarkedDimensionSelectors,
         sourceRowIterator.getMarkedPointer().getDimensionHandlers()
     );
@@ -342,7 +342,7 @@ public interface IndexMerger
       }
 
       @Override
-      public RowPointer getMarkedPointer()
+      public TimeAndDimsPointer getMarkedPointer()
       {
         return convertedMarkedRowPointer;
       }

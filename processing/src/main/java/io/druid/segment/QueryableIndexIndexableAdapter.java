@@ -178,14 +178,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   /**
-   * On {@link #mark()}, this class copies all dimension values into a set of {@link SettableColumnValueSelector}
-   * instances, and they are compared value-by-value with the current row values in {@link
-   * #hasTimeAndDimsChangedSinceMark()}. This is fairly inefficient, given that {@link #mark()} is called often, if not
-   * for every single row.
-   *
-   * When a segment is produced using "rollup", each row is guaranteed to have different dimensions, so {@link #mark()}
-   * implementation could be no-op, and {@link #hasTimeAndDimsChangedSinceMark()} -- "return true;".
-   * TODO keep info in the segment format, if each row has different dims or not, to be able to apply this optimization.
+   * On {@link #moveToNext()} and {@link #mark()}, this class copies all column values into a set of {@link
+   * SettableColumnValueSelector} instances. Alternative approach was to save only offset in column and use they same
+   * column value selectors as in {@link QueryableIndexStorageAdapter}. The approach with "caching" is chosen for two
+   * reasons:
+   *  1) Avoid re-reading column values from serialized format multiple times (because they are accessed multiple times)
+   *     For comparison, it's not a factor for {@link QueryableIndexStorageAdapter} because column values are not
+   *     accessed multiple times, if aggregator or query runner is writter sanely. It's especially important for object
+   *     columns, because object deserialization is potentially expensive.
+   *  2) Because we need to support {@link #mark()}, it is "lookbehind" in compressed columnar format, that causes
+   *     repetitive excessive decompressions on the block boundaries. E. g. see {@link
+   *     io.druid.segment.data.BlockLayoutColumnarDoublesSupplier} and similar classes. A special support for
+   *     "lookbehind" could be added to those classes, but why to do this if complexity could be avoided.
    */
   class RowIteratorImpl implements TransformableRowIterator
   {
@@ -207,8 +211,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     private final SettableLongColumnValueSelector markedTimestampSelector = new SettableLongColumnValueSelector();
     private final SettableColumnValueSelector[] markedDimensionValueSelectors;
     private final SettableColumnValueSelector[] markedMetricSelectors;
-    private final RowNumCounter markedRowNum = new RowNumCounter();
-    private final RowPointer markedRowPointer;
+    private final TimeAndDimsPointer markedRowPointer;
 
     boolean first = true;
     int memoizedOffset = -1;
@@ -268,22 +271,26 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           .stream()
           .map(metric -> input.getColumn(metric).makeSettableColumnValueSelector())
           .toArray(SettableColumnValueSelector[]::new);
-      markedRowPointer = new RowPointer(
+      markedRowPointer = new TimeAndDimsPointer(
           markedTimestampSelector,
           markedDimensionValueSelectors,
           dimensionHandlers,
           markedMetricSelectors,
-          metricNames,
-          markedRowNum
+          metricNames
       );
     }
 
     @Override
-    public RowPointer getMarkedPointer()
+    public TimeAndDimsPointer getMarkedPointer()
     {
       return markedRowPointer;
     }
 
+    /**
+     * When a segment is produced using "rollup", each row is guaranteed to have different dimensions, so this method
+     * could be optimized to have just "return true;" body.
+     * TODO record in the segment metadata if each row has different dims or not, to be able to apply this optimization.
+     */
     @Override
     public boolean hasTimeAndDimsChangedSinceMark()
     {

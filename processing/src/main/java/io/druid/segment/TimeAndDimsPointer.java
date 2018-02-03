@@ -123,6 +123,20 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
     return metricNames;
   }
 
+  TimeAndDimsPointer withDimensionSelectors(
+      ColumnValueSelector[] newDimensionSelectors,
+      List<DimensionHandler> newDimensionHandlers
+  )
+  {
+    return new TimeAndDimsPointer(
+        timestampSelector,
+        newDimensionSelectors,
+        newDimensionHandlers,
+        metricSelectors,
+        getMetricNames()
+    );
+  }
+
   /**
    * Compares time column value and dimension column values, but not metric column values.
    */

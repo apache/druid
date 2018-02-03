@@ -42,11 +42,11 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
   private final MergingRowIterator mergingIterator;
 
   /**
-   * Those iterators are set {@link #currentTimeAndDimsPointer} (and therefore returned from {@link #getPointer()}),
+   * Those pointers are used as {@link #currentTimeAndDimsPointer} (and therefore returned from {@link #getPointer()}),
    * until no points are actually combined. It's an optimization to reduce data movements from pointers of original
    * iterators to {@link #combinedTimeAndDimsPointersByOriginalIteratorIndex} on each iteration.
    */
-  private final RowPointer[] markedRowPointersOfOriginalIterators;
+  private final TimeAndDimsPointer[] markedRowPointersOfOriginalIterators;
 
   private final AggregateCombiner[] combinedMetricSelectors;
 
@@ -65,6 +65,15 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
 
   @Nullable
   private TimeAndDimsPointer currentTimeAndDimsPointer;
+  /**
+   * If this field is soleCurrentPointSourceOriginalIteratorIndex >= 0, it means that no combines are done yet at the
+   * current point, {@link #currentTimeAndDimsPointer} is one of {@link #markedRowPointersOfOriginalIterators}, and the
+   * value of this field is the index of the original iterator which is the source of the sole (uncombined) point.
+   *
+   * If the value of this field is less than 0, it means that some combines are done at the current point, and {@link
+   * #currentTimeAndDimsPointer} is one of {@link #combinedTimeAndDimsPointersByOriginalIteratorIndex}.
+   */
+  private int soleCurrentPointSourceOriginalIteratorIndex;
 
   @Nullable
   private RowPointer nextRowPointer;
@@ -78,7 +87,7 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
     int numIndexes = originalIterators.size();
     mergingIterator = new MergingRowIterator(originalIterators);
 
-    markedRowPointersOfOriginalIterators = new RowPointer[numIndexes];
+    markedRowPointersOfOriginalIterators = new TimeAndDimsPointer[numIndexes];
     Arrays.setAll(
         markedRowPointersOfOriginalIterators,
         i -> {
@@ -107,66 +116,6 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
     currentIndexes.clear();
   }
 
-  private void startNewTimeAndDims(RowPointer rowPointer)
-  {
-    int indexNum = rowPointer.getIndexNum();
-    // Not using combinedTimeAndDimsPointersByOriginalIteratorIndex just yet, see markedRowPointersOfOriginalIterators
-    // javadoc for explanation.
-    currentTimeAndDimsPointer = markedRowPointersOfOriginalIterators[indexNum];
-    currentIndexes.set(indexNum);
-    rowsByIndex[indexNum].add(rowPointer.getRowNum());
-  }
-
-  private void combineToCurrentTimeAndDims(RowPointer rowPointer)
-  {
-    if (currentTimeAndDimsPointer instanceof RowPointer) {
-      // If currentTimeAndDimsPointer is a RowPointer, it means that it is one of markedRowPointersOfOriginalIterators
-      // and no combines are done yet at the current point. Replace with a combined pointer now.
-      RowPointer currentRowPointer = (RowPointer) this.currentTimeAndDimsPointer;
-      initCombinedCurrentPointer(currentRowPointer);
-      resetCombinedMetrics(currentRowPointer);
-    }
-    int indexNum = rowPointer.getIndexNum();
-    currentIndexes.set(indexNum);
-    rowsByIndex[indexNum].add(rowPointer.getRowNum());
-    foldMetrics(rowPointer);
-  }
-
-  private void initCombinedCurrentPointer(RowPointer currentRowPointer)
-  {
-    int indexNum = currentRowPointer.getIndexNum();
-    currentTimeAndDimsPointer = combinedTimeAndDimsPointersByOriginalIteratorIndex[indexNum];
-    if (currentTimeAndDimsPointer == null) {
-      currentTimeAndDimsPointer = makeCombinedPointer(currentRowPointer, indexNum);
-      combinedTimeAndDimsPointersByOriginalIteratorIndex[indexNum] = currentTimeAndDimsPointer;
-    }
-  }
-
-  private TimeAndDimsPointer makeCombinedPointer(RowPointer currentRowPointer, int indexNum)
-  {
-    return new TimeAndDimsPointer(
-        markedRowPointersOfOriginalIterators[indexNum].timestampSelector,
-        markedRowPointersOfOriginalIterators[indexNum].dimensionSelectors,
-        currentRowPointer.getDimensionHandlers(),
-        combinedMetricSelectors,
-        combinedMetricNames
-    );
-  }
-
-  private void resetCombinedMetrics(RowPointer currentRowPointer)
-  {
-    for (int metricIndex = 0; metricIndex < combinedMetricSelectors.length; metricIndex++) {
-      combinedMetricSelectors[metricIndex].reset(currentRowPointer.getMetricSelector(metricIndex));
-    }
-  }
-
-  private void foldMetrics(RowPointer rowPointer)
-  {
-    for (int metricIndex = 0; metricIndex < combinedMetricSelectors.length; metricIndex++) {
-      combinedMetricSelectors[metricIndex].fold(rowPointer.getMetricSelector(metricIndex));
-    }
-  }
-
   @Override
   public boolean moveToNext()
   {
@@ -189,6 +138,76 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
     // No more rows left in mergingIterator
     nextRowPointer = null;
     return true;
+  }
+
+  /**
+   * This method doesn't assign one of {@link #combinedTimeAndDimsPointersByOriginalIteratorIndex} into {@link
+   * #currentTimeAndDimsPointer}, instead it uses one of {@link #markedRowPointersOfOriginalIterators}, see the javadoc
+   * of the latter for explanation.
+   */
+  private void startNewTimeAndDims(RowPointer rowPointer)
+  {
+    int indexNum = rowPointer.getIndexNum();
+    // Note: at the moment when this operation is performed, markedRowPointersOfOriginalIterators[indexNum] doesn't yet
+    // contain the values that it should. startNewTimeAndDims() is called from moveToNext(), see above. Later in the
+    // code of moveToNext(), mergingIterator.mark() is called, and then mergingIterator.moveToNext(). This will make
+    // MergingRowIterator.moveToNext() implementation (see it's code) to call mark() on the current head iteratator,
+    // and only after that markedRowPointersOfOriginalIterators[indexNum] will have correct values. So by the time
+    // when moveToNext() (from where this method is called) exits, and before getPointer() could be called by the user
+    // of this class, it will have correct values.
+    currentTimeAndDimsPointer = markedRowPointersOfOriginalIterators[indexNum];
+    soleCurrentPointSourceOriginalIteratorIndex = indexNum;
+    currentIndexes.set(indexNum);
+    rowsByIndex[indexNum].add(rowPointer.getRowNum());
+  }
+
+  private void combineToCurrentTimeAndDims(RowPointer rowPointer)
+  {
+    int soleCurrentPointSourceOriginalIteratorIndex = this.soleCurrentPointSourceOriginalIteratorIndex;
+    if (soleCurrentPointSourceOriginalIteratorIndex >= 0) {
+      TimeAndDimsPointer currentRowPointer = this.currentTimeAndDimsPointer;
+      initCombinedCurrentPointer(currentRowPointer, soleCurrentPointSourceOriginalIteratorIndex);
+      resetCombinedMetrics(currentRowPointer);
+      this.soleCurrentPointSourceOriginalIteratorIndex = -1;
+    }
+    int indexNum = rowPointer.getIndexNum();
+    currentIndexes.set(indexNum);
+    rowsByIndex[indexNum].add(rowPointer.getRowNum());
+    foldMetrics(rowPointer);
+  }
+
+  private void initCombinedCurrentPointer(TimeAndDimsPointer currentRowPointer, int indexNum)
+  {
+    currentTimeAndDimsPointer = combinedTimeAndDimsPointersByOriginalIteratorIndex[indexNum];
+    if (currentTimeAndDimsPointer == null) {
+      currentTimeAndDimsPointer = makeCombinedPointer(currentRowPointer, indexNum);
+      combinedTimeAndDimsPointersByOriginalIteratorIndex[indexNum] = currentTimeAndDimsPointer;
+    }
+  }
+
+  private TimeAndDimsPointer makeCombinedPointer(TimeAndDimsPointer currentRowPointer, int indexNum)
+  {
+    return new TimeAndDimsPointer(
+        markedRowPointersOfOriginalIterators[indexNum].timestampSelector,
+        markedRowPointersOfOriginalIterators[indexNum].dimensionSelectors,
+        currentRowPointer.getDimensionHandlers(),
+        combinedMetricSelectors,
+        combinedMetricNames
+    );
+  }
+
+  private void resetCombinedMetrics(TimeAndDimsPointer currentRowPointer)
+  {
+    for (int metricIndex = 0; metricIndex < combinedMetricSelectors.length; metricIndex++) {
+      combinedMetricSelectors[metricIndex].reset(currentRowPointer.getMetricSelector(metricIndex));
+    }
+  }
+
+  private void foldMetrics(RowPointer rowPointer)
+  {
+    for (int metricIndex = 0; metricIndex < combinedMetricSelectors.length; metricIndex++) {
+      combinedMetricSelectors[metricIndex].fold(rowPointer.getMetricSelector(metricIndex));
+    }
   }
 
   @Override

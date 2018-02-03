@@ -57,6 +57,7 @@ public final class RowPointer extends TimeAndDimsPointer
     return rowNumPointer.getAsInt();
   }
 
+  @Override
   RowPointer withDimensionSelectors(
       ColumnValueSelector[] newDimensionSelectors,
       List<DimensionHandler> newDimensionHandlers

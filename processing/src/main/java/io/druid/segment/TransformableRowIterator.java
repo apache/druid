@@ -50,5 +50,5 @@ public interface TransformableRowIterator extends RowIterator
    *
    * This method is used in {@link RowCombiningTimeAndDimsIterator} implementation.
    */
-  RowPointer getMarkedPointer();
+  TimeAndDimsPointer getMarkedPointer();
 }

@@ -25,6 +25,7 @@ import io.druid.segment.DimensionHandler;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.RowNumCounter;
 import io.druid.segment.RowPointer;
+import io.druid.segment.TimeAndDimsPointer;
 import io.druid.segment.TransformableRowIterator;
 import io.druid.segment.VirtualColumns;
 
@@ -44,15 +45,16 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   private final IncrementalIndexRowHolder markedRowHolder = new IncrementalIndexRowHolder();
   /** Initially -1 so that after the first call to {@link #moveToNext()} the row number is 0. */
   private final RowNumCounter currentRowNumCounter = new RowNumCounter(-1);
-  private final RowNumCounter markedRowNumCounter = new RowNumCounter();
   private final RowPointer currentRowPointer;
-  private final RowPointer markedRowPointer;
+  private final TimeAndDimsPointer markedRowPointer;
 
   IncrementalIndexRowIterator(IncrementalIndex<?> incrementalIndex)
   {
     this.timeAndDimsIterator = incrementalIndex.getFacts().keySet().iterator();
     this.currentRowPointer = makeRowPointer(incrementalIndex, currentRowHolder, currentRowNumCounter);
-    this.markedRowPointer = makeRowPointer(incrementalIndex, markedRowHolder, markedRowNumCounter);
+    // markedRowPointer doesn't actually need to be RowPointer, but creating a row pointer to reuse makeRowPointer()
+    // method. Passing a dummy RowNumCounter.
+    this.markedRowPointer = makeRowPointer(incrementalIndex, markedRowHolder, new RowNumCounter());
   }
 
   private static RowPointer makeRowPointer(
@@ -114,11 +116,10 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   public void mark()
   {
     markedRowHolder.set(currentRowHolder.get());
-    markedRowNumCounter.setRowNum(currentRowNumCounter.getAsInt());
   }
 
   @Override
-  public RowPointer getMarkedPointer()
+  public TimeAndDimsPointer getMarkedPointer()
   {
     return markedRowPointer;
   }

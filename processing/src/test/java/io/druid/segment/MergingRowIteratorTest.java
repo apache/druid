@@ -157,7 +157,8 @@ public class MergingRowIteratorTest
     private final RowPointer rowPointer;
     private final SettableLongColumnValueSelector currentTimestamp = new SettableLongColumnValueSelector();
     private final RowNumCounter rowNumCounter = new RowNumCounter();
-    private long markedTimestamp;
+    private final SettableLongColumnValueSelector markedTimestamp = new SettableLongColumnValueSelector();
+    private final TimeAndDimsPointer markedRowPointer;
 
     private TestRowIterator(Iterable<Long> timestamps)
     {
@@ -170,18 +171,25 @@ public class MergingRowIteratorTest
           Collections.emptyList(),
           rowNumCounter
       );
+      this.markedRowPointer = new TimeAndDimsPointer(
+          markedTimestamp,
+          ColumnValueSelector.EMPTY_ARRAY,
+          Collections.emptyList(),
+          ColumnValueSelector.EMPTY_ARRAY,
+          Collections.emptyList()
+      );
     }
 
     @Override
     public void mark()
     {
-      markedTimestamp = currentTimestamp.getLong();
+      markedTimestamp.setValueFrom(currentTimestamp);
     }
 
     @Override
     public boolean hasTimeAndDimsChangedSinceMark()
     {
-      return markedTimestamp != currentTimestamp.getLong();
+      return markedTimestamp.getLong() != currentTimestamp.getLong();
     }
 
     @Override
@@ -191,9 +199,9 @@ public class MergingRowIteratorTest
     }
 
     @Override
-    public RowPointer getMarkedPointer()
+    public TimeAndDimsPointer getMarkedPointer()
     {
-      throw new UnsupportedOperationException();
+      return markedRowPointer;
     }
 
     @Override

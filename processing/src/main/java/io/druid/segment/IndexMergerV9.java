@@ -929,7 +929,7 @@ public class IndexMergerV9 implements IndexMerger
         originalAdapter,
         originalIterator.getPointer()
     );
-    RowPointer reorderedMarkedRowPointer = reorderRowPointerColumns(
+    TimeAndDimsPointer reorderedMarkedRowPointer = reorderRowPointerColumns(
         reorderedDimensions,
         reorderedMetrics,
         originalHandlers,
@@ -945,19 +945,19 @@ public class IndexMergerV9 implements IndexMerger
       }
 
       @Override
-      public RowPointer getMarkedPointer()
+      public TimeAndDimsPointer getMarkedPointer()
       {
         return reorderedMarkedRowPointer;
       }
     };
   }
 
-  private static RowPointer reorderRowPointerColumns(
+  private static <T extends TimeAndDimsPointer> T reorderRowPointerColumns(
       List<String> reorderedDimensions,
       List<String> reorderedMetrics,
       Map<String, DimensionHandler> originalHandlers,
       IndexableAdapter originalAdapter,
-      RowPointer originalRowPointer
+      T originalRowPointer
   )
   {
     ColumnValueSelector[] reorderedDimensionSelectors = reorderedDimensions
@@ -984,13 +984,25 @@ public class IndexMergerV9 implements IndexMerger
           }
         })
         .toArray(ColumnValueSelector[]::new);
-    return new RowPointer(
-        originalRowPointer.timestampSelector,
-        reorderedDimensionSelectors,
-        reorderedHandlers,
-        reorderedMetricSelectors,
-        reorderedMetrics,
-        originalRowPointer.rowNumPointer
-    );
+    if (originalRowPointer instanceof RowPointer) {
+      //noinspection unchecked
+      return (T) new RowPointer(
+          originalRowPointer.timestampSelector,
+          reorderedDimensionSelectors,
+          reorderedHandlers,
+          reorderedMetricSelectors,
+          reorderedMetrics,
+          ((RowPointer) originalRowPointer).rowNumPointer
+      );
+    } else {
+      //noinspection unchecked
+      return (T) new TimeAndDimsPointer(
+          originalRowPointer.timestampSelector,
+          reorderedDimensionSelectors,
+          reorderedHandlers,
+          reorderedMetricSelectors,
+          reorderedMetrics
+      );
+    }
   }
 }

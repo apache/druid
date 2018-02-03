@@ -86,7 +86,6 @@ final class MergingRowIterator implements RowIterator
           TransformableRowIterator rowIterator = iterators.get(indexNum);
           // Can call rowIterator.getPointer() only here, after moveToNext() returned true on the filter() step
           rowIterator.getPointer().setIndexNum(indexNum);
-          rowIterator.getMarkedPointer().setIndexNum(indexNum);
           originalIterators[indexNum] = rowIterator;
           return rowIterator;
         })

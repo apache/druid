@@ -39,7 +39,7 @@ public abstract class ForwardingRowIterator implements TransformableRowIterator
   }
 
   @Override
-  public RowPointer getMarkedPointer()
+  public TimeAndDimsPointer getMarkedPointer()
   {
     return baseIterator.getMarkedPointer();
   }
