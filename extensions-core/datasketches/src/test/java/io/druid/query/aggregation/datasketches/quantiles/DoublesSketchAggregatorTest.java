@@ -265,7 +265,8 @@ public class DoublesSketchAggregatorTest
             "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"));
+            "}")
+    );
     List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);

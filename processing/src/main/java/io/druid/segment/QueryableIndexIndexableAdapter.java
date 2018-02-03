@@ -307,7 +307,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     {
       if (first) {
         first = false;
-        return offset.withinBounds();
+        if (offset.withinBounds()) {
+          setRowPointerValues();
+          return true;
+        } else {
+          return false;
+        }
       } else {
         // >= to cover the case when numRows is 0
         if (offset.getOffset() >= lastOffset) {
