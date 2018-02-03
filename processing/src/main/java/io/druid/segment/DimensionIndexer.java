@@ -209,7 +209,10 @@ public interface DimensionIndexer
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  ColumnValueSelector<?> makeColumnValueSelector(IncrementalIndexRowHolder currEntry, IncrementalIndex.DimensionDesc desc);
+  ColumnValueSelector<?> makeColumnValueSelector(
+      IncrementalIndexRowHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  );
 
   /**
    * Compares the row values for this DimensionIndexer's dimension from a Row key.
