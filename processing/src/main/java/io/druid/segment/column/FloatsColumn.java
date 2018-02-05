@@ -31,6 +31,7 @@ public class FloatsColumn implements GenericColumn
 {
   private final ColumnarFloats column;
   private final ImmutableBitmap nullValueBitmap;
+  private final boolean hasNulls;
 
   public FloatsColumn(
       final ColumnarFloats column,
@@ -39,6 +40,7 @@ public class FloatsColumn implements GenericColumn
   {
     this.column = column;
     this.nullValueBitmap = nullValueBitmap;
+    this.hasNulls = !nullValueBitmap.isEmpty();
   }
 
   @Override
@@ -74,7 +76,7 @@ public class FloatsColumn implements GenericColumn
   @Override
   public boolean isNull(int rowNum)
   {
-    return nullValueBitmap.get(rowNum);
+    return hasNulls && nullValueBitmap.get(rowNum);
   }
 
   @Override

@@ -30,11 +30,13 @@ public class DoublesColumn implements GenericColumn
 {
   private final ColumnarDoubles column;
   private final ImmutableBitmap nullValueBitmap;
+  private final boolean hasNulls;
 
   public DoublesColumn(ColumnarDoubles columnarDoubles, ImmutableBitmap nullValueBitmap)
   {
     column = columnarDoubles;
     this.nullValueBitmap = nullValueBitmap;
+    this.hasNulls = !nullValueBitmap.isEmpty();
   }
 
   @Override
@@ -70,7 +72,7 @@ public class DoublesColumn implements GenericColumn
   @Override
   public boolean isNull(int rowNum)
   {
-    return nullValueBitmap.get(rowNum);
+    return hasNulls && nullValueBitmap.get(rowNum);
   }
 
   @Override

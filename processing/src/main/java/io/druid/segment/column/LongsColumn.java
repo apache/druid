@@ -31,6 +31,7 @@ public class LongsColumn implements GenericColumn
 {
   private final ColumnarLongs column;
   private final ImmutableBitmap nullValueBitmap;
+  private final boolean hasNulls;
 
   public LongsColumn(
       final ColumnarLongs column,
@@ -39,6 +40,7 @@ public class LongsColumn implements GenericColumn
   {
     this.column = column;
     this.nullValueBitmap = nullValueBitmap;
+    this.hasNulls = !nullValueBitmap.isEmpty();
   }
 
   @Override
@@ -74,7 +76,7 @@ public class LongsColumn implements GenericColumn
   @Override
   public boolean isNull(int rowNum)
   {
-    return nullValueBitmap.get(rowNum);
+    return hasNulls && nullValueBitmap.get(rowNum);
   }
 
   @Override
