@@ -188,7 +188,7 @@ public class FileUtils
 
   private static void writeAtomically(final File file, final File tmpDir, OutputStreamConsumer f) throws IOException
   {
-    final File tmpFile = new File(tmpDir, String.format(".%s.%s", file.getName(), UUID.randomUUID()));
+    final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
     try {
       try (final FileOutputStream out = new FileOutputStream(tmpFile)) {
