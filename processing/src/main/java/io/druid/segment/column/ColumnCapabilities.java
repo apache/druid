@@ -30,6 +30,4 @@ public interface ColumnCapabilities
   boolean hasBitmapIndexes();
   boolean hasSpatialIndexes();
   boolean hasMultipleValues();
-
-  void merge(ColumnCapabilities other);
 }

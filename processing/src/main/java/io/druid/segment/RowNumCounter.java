@@ -47,9 +47,4 @@ public final class RowNumCounter implements IntSupplier
   {
     rowNum++;
   }
-
-  public void setRowNum(int rowNum)
-  {
-    this.rowNum = rowNum;
-  }
 }

@@ -25,7 +25,6 @@ import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import java.util.List;
-import java.util.Map;
 import java.util.function.Predicate;
 
 /**
@@ -123,11 +122,5 @@ public class RowFilteringIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return baseAdapter.getMetadata();
-  }
-
-  @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    return baseAdapter.getDimensionHandlers();
   }
 }

@@ -26,7 +26,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * An adapter to an index
@@ -53,6 +52,4 @@ public interface IndexableAdapter
   ColumnCapabilities getCapabilities(String column);
 
   Metadata getMetadata();
-
-  Map<String, DimensionHandler> getDimensionHandlers();
 }

@@ -47,21 +47,9 @@ public class DoublesColumn implements GenericColumn
   }
 
   @Override
-  public float getFloatSingleValueRow(int rowNum)
-  {
-    return (float) column.get(rowNum);
-  }
-
-  @Override
   public long getLongSingleValueRow(int rowNum)
   {
     return (long) column.get(rowNum);
-  }
-
-  @Override
-  public double getDoubleSingleValueRow(int rowNum)
-  {
-    return column.get(rowNum);
   }
 
   @Override

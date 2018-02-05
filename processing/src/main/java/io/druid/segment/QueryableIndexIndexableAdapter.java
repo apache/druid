@@ -33,7 +33,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
-import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.ImmutableBitmapValues;
@@ -198,8 +197,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
     private final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
     private final int lastOffset = numRows - 1;
-    private final GenericColumn timestampColumn;
 
+    private final ColumnValueSelector offsetTimestampSelector;
     private final ColumnValueSelector[] offsetDimensionValueSelectors;
     private final ColumnValueSelector[] offsetMetricSelectors;
 
@@ -218,11 +217,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
     RowIteratorImpl()
     {
-      //noinspection ConstantConditions TIME_COLUMN_NAME always exists
-      timestampColumn = input.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
-      closer.register(timestampColumn);
-      columnCache.put(Column.TIME_COLUMN_NAME, timestampColumn);
-
       final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
           input,
           VirtualColumns.EMPTY,
@@ -231,6 +225,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           offset,
           columnCache
       );
+
+      offsetTimestampSelector = columnSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME);
 
       final List<DimensionHandler> dimensionHandlers = new ArrayList<>(input.getDimensionHandlers().values());
 
@@ -335,7 +331,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
     private void setRowPointerValues()
     {
-      rowTimestampSelector.setValue(timestampColumn.getLongSingleValueRow(offset.getOffset()));
+      rowTimestampSelector.setValue(offsetTimestampSelector.getLong());
       for (int i = 0; i < offsetDimensionValueSelectors.length; i++) {
         rowDimensionValueSelectors[i].setValueFrom(offsetDimensionValueSelectors[i]);
       }
@@ -441,11 +437,5 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return metadata;
-  }
-
-  @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    return input.getDimensionHandlers();
   }
 }

@@ -21,7 +21,6 @@ package io.druid.segment.incremental;
 
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
-import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.IntIteratorUtils;
@@ -228,11 +227,5 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return index.getMetadata();
-  }
-
-  @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    return index.getDimensionHandlers();
   }
 }

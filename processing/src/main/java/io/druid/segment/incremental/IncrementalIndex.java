@@ -797,15 +797,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return combiningAggregators;
   }
 
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    Map<String, DimensionHandler> handlers = Maps.newLinkedHashMap();
-    for (DimensionDesc desc : dimensionDescsList) {
-      handlers.put(desc.getName(), desc.getHandler());
-    }
-    return handlers;
-  }
-
   @Override
   public Iterator<Row> iterator()
   {

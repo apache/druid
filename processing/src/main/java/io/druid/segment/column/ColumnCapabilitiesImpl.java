@@ -105,7 +105,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return this;
   }
 
-  @Override
   public void merge(ColumnCapabilities other)
   {
     if (other == null) {
