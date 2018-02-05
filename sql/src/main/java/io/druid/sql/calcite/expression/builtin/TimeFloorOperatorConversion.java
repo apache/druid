@@ -21,9 +21,9 @@ package io.druid.sql.calcite.expression.builtin;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.expression.ExprUtils;
 import io.druid.query.expression.TimestampFloorExprMacro;
 import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
@@ -141,7 +141,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
           : null;
       final DateTimeZone timeZone =
           operands.size() > 3 && !RexLiteral.isNullLiteral(operands.get(3))
-          ? ExprUtils.inferTzfromString(RexLiteral.stringValue(operands.get(3)))
+          ? DateTimes.inferTzfromString(RexLiteral.stringValue(operands.get(3)))
           : plannerContext.getTimeZone();
       final PeriodGranularity granularity = new PeriodGranularity(period, origin, timeZone);
       return applyTimestampFloor(druidExpressions.get(0), granularity, plannerContext.getExprMacroTable());

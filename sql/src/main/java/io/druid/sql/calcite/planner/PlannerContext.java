@@ -22,8 +22,8 @@ package io.druid.sql.calcite.planner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.expression.ExprUtils;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import org.apache.calcite.DataContext;
@@ -99,7 +99,7 @@ public class PlannerContext
       }
 
       if (tzParam != null) {
-        timeZone = ExprUtils.inferTzfromString(String.valueOf(tzParam));
+        timeZone = DateTimes.inferTzfromString(String.valueOf(tzParam));
       } else {
         timeZone = DateTimeZone.UTC;
       }
