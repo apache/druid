@@ -456,7 +456,7 @@ public interface IndexMerger
         final PeekingIterator<String> iter = Iterators.peekingIterator(
             Iterators.transform(
                 indexed.iterator(),
-                input -> NullHandling.nullToEmptyIfNeeded(input)
+                NullHandling::nullToEmptyIfNeeded
             )
         );
         if (iter.hasNext()) {

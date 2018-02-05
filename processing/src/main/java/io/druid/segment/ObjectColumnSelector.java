@@ -27,7 +27,7 @@ package io.druid.segment;
  * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
  * {@link BaseObjectColumnValueSelector} must be used instead.
  */
-public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
+public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
   /**
    * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
@@ -36,7 +36,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
    */
   @Deprecated
   @Override
-  default float getFloat()
+  public float getFloat()
   {
     T value = getObject();
     if (value == null) {
@@ -52,7 +52,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
    */
   @Deprecated
   @Override
-  default double getDouble()
+  public double getDouble()
   {
     T value = getObject();
     if (value == null) {
@@ -68,7 +68,7 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
    */
   @Deprecated
   @Override
-  default long getLong()
+  public long getLong()
   {
     T value = getObject();
     if (value == null) {
@@ -78,15 +78,13 @@ public interface ObjectColumnSelector<T> extends ColumnValueSelector<T>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
-   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
-   * objects.
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector since it always returns false.
+   * There is no need to call this method.
    */
   @Deprecated
   @Override
-  default boolean isNull()
+  public final boolean isNull()
   {
-    T value = getObject();
-    return value == null;
+    return false;
   }
 }

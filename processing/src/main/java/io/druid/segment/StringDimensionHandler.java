@@ -28,6 +28,7 @@ import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.lang.reflect.Array;
 import java.util.Arrays;
@@ -77,13 +78,13 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return retVal;
   }
 
-  private boolean isNullRow(int[] row, Indexed<String> encodings)
+  private boolean isNullRow(@Nullable int[] row, Indexed<String> encodings)
   {
     if (row == null) {
       return true;
     }
-    for (int i : row) {
-      if (encodings.get(i) != null) {
+    for (int value : row) {
+      if (encodings.get(value) != null) {
         // Non-Null value
         return false;
       }

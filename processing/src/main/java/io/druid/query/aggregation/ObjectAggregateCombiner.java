@@ -24,11 +24,7 @@ import io.druid.segment.ObjectColumnSelector;
 /**
  * Specialization of {@link AggregateCombiner} for object aggregations.
  */
-public abstract class ObjectAggregateCombiner<T> implements AggregateCombiner<T>, ObjectColumnSelector<T>
+public abstract class ObjectAggregateCombiner<T> extends ObjectColumnSelector<T> implements AggregateCombiner<T>
 {
-  @Override
-  public final boolean isNull()
-  {
-    return false;
-  }
+ // No methods
 }

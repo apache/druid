@@ -54,16 +54,19 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.Function;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
-  private static final Function<Object, String> EMPTY_TO_NULL_IF_NEEDED = o -> o != null
-                                                                          ? NullHandling.emptyToNullIfNeeded(o.toString())
-                                                                          : null;
+
+  private static String emptytoNullIfNeeded(Object o)
+  {
+    return o != null
+           ? NullHandling.emptyToNullIfNeeded(o.toString())
+           : null;
+  }
 
   private static final int ABSENT_VALUE_ID = -1;
-  private static final int[] EMPTY_INT_ARRAY = new int[]{};
+  private static final int[] EMPTY_INT_ARRAY = IntArrays.EMPTY_ARRAY;
 
   private static class DimensionDictionary
   {
@@ -115,6 +118,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     public int size()
     {
       synchronized (lock) {
+        // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
         return idToValue.size();
       }
     }
@@ -222,22 +226,19 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     final int oldDictSize = dimLookup.size();
 
     if (dimValues == null) {
-      if (!dimLookup.contains(null)) {
-        encodedDimensionValues = new int[]{dimLookup.add(null)};
-      } else {
-        encodedDimensionValues = new int[]{dimLookup.getId(null)};
-      }
+      final int nullId = dimLookup.getId(null);
+      encodedDimensionValues = nullId == ABSENT_VALUE_ID ? new int[]{dimLookup.add(null)} : new int[]{nullId};
     } else if (dimValues instanceof List) {
       List<Object> dimValuesList = (List) dimValues;
       if (dimValuesList.isEmpty()) {
         dimLookup.add(null);
         encodedDimensionValues = EMPTY_INT_ARRAY;
       } else if (dimValuesList.size() == 1) {
-        encodedDimensionValues = new int[]{dimLookup.add(EMPTY_TO_NULL_IF_NEEDED.apply(dimValuesList.get(0)))};
+        encodedDimensionValues = new int[]{dimLookup.add(emptytoNullIfNeeded(dimValuesList.get(0)))};
       } else {
         final String[] dimensionValues = new String[dimValuesList.size()];
         for (int i = 0; i < dimValuesList.size(); i++) {
-          dimensionValues[i] = EMPTY_TO_NULL_IF_NEEDED.apply(dimValuesList.get(i));
+          dimensionValues[i] = emptytoNullIfNeeded(dimValuesList.get(i));
         }
         if (multiValueHandling.needSorting()) {
           // Sort multival row by their unencoded values first.
@@ -262,7 +263,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         encodedDimensionValues = pos == retVal.length ? retVal : Arrays.copyOf(retVal, pos);
       }
     } else {
-      encodedDimensionValues = new int[]{dimLookup.add(EMPTY_TO_NULL_IF_NEEDED.apply(dimValues))};
+      encodedDimensionValues = new int[]{dimLookup.add(emptytoNullIfNeeded(dimValues))};
     }
 
     // If dictionary size has changed, the sorted lookup is no longer valid.

@@ -1417,7 +1417,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  private class ObjectMetricColumnSelector implements ObjectColumnSelector
+  private class ObjectMetricColumnSelector extends ObjectColumnSelector
   {
     private final TimeAndDimsHolder currEntry;
     private final int metricIndex;

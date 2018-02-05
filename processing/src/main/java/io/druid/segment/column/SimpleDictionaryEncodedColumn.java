@@ -176,13 +176,6 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
           return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
         }
 
-        @Override
-        public boolean isNull()
-        {
-          IndexedInts row = getRow();
-          return row == null || row.size() == 0;
-        }
-
         @Nullable
         @Override
         public Object getObject()
