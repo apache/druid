@@ -42,6 +42,7 @@ public interface ColumnarFloats extends Closeable
 
   default ColumnValueSelector<Float> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
+    final boolean hasNulls = !nullValueBitmap.isEmpty();
     class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
     {
       @Override
@@ -53,7 +54,7 @@ public interface ColumnarFloats extends Closeable
       @Override
       public boolean isNull()
       {
-        return nullValueBitmap.get(offset.getOffset());
+        return hasNulls && nullValueBitmap.get(offset.getOffset());
       }
 
       @Override

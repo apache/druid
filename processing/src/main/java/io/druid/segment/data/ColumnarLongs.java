@@ -42,6 +42,7 @@ public interface ColumnarLongs extends Closeable
 
   default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
+    final boolean hasNulls = !nullValueBitmap.isEmpty();
     class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
     {
       @Override
@@ -59,7 +60,7 @@ public interface ColumnarLongs extends Closeable
       @Override
       public boolean isNull()
       {
-        return nullValueBitmap.get(offset.getOffset());
+        return hasNulls && nullValueBitmap.get(offset.getOffset());
       }
 
       @Override

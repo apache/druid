@@ -41,6 +41,7 @@ public interface ColumnarDoubles extends Closeable
 
   default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
+    final boolean hasNulls = !nullValueBitmap.isEmpty();
     class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
     {
       @Override
@@ -58,7 +59,7 @@ public interface ColumnarDoubles extends Closeable
       @Override
       public boolean isNull()
       {
-        return nullValueBitmap.get(offset.getOffset());
+        return hasNulls && nullValueBitmap.get(offset.getOffset());
       }
 
       @Override
