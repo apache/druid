@@ -39,9 +39,8 @@ public interface ColumnarDoubles extends Closeable
   @Override
   void close();
 
-  default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
+  default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset)
   {
-    final boolean hasNulls = !nullValueBitmap.isEmpty();
     class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
     {
       @Override
@@ -59,7 +58,39 @@ public interface ColumnarDoubles extends Closeable
       @Override
       public boolean isNull()
       {
-        return hasNulls && nullValueBitmap.get(offset.getOffset());
+        return false;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("columnar", ColumnarDoubles.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalDoubleColumnSelector();
+  }
+
+  default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
+  {
+    class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
+    {
+      @Override
+      public double getDouble()
+      {
+        return ColumnarDoubles.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return ColumnarDoubles.this.get(offset);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return nullValueBitmap.get(offset.getOffset());
       }
 
       @Override

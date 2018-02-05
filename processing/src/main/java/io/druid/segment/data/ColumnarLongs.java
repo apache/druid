@@ -72,4 +72,36 @@ public interface ColumnarLongs extends Closeable
     }
     return new HistoricalLongColumnSelector();
   }
+
+  default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset)
+  {
+    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
+    {
+      @Override
+      public long getLong()
+      {
+        return ColumnarLongs.this.get(offset.getOffset());
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return ColumnarLongs.this.get(offset);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return false;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("columnar", ColumnarLongs.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalLongColumnSelector();
+  }
 }

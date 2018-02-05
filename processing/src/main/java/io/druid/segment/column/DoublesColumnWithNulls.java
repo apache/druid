@@ -17,35 +17,36 @@
  * under the License.
  */
 
-package io.druid.segment.serde;
+package io.druid.segment.column;
 
-import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.segment.column.GenericColumn;
-import io.druid.segment.column.LongsColumn;
-import io.druid.segment.column.LongsColumnWithNulls;
-import io.druid.segment.data.CompressedColumnarLongsSupplier;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.data.ColumnarDoubles;
+import io.druid.segment.data.ReadableOffset;
 
 /**
-*/
-public class LongGenericColumnSupplier implements Supplier<GenericColumn>
+ * DoublesColumn with null values.
+ */
+public class DoublesColumnWithNulls extends DoublesColumn
 {
-  private final CompressedColumnarLongsSupplier column;
   private final ImmutableBitmap nullValueBitmap;
 
-  public LongGenericColumnSupplier(CompressedColumnarLongsSupplier column, ImmutableBitmap nullValueBitmap)
+  public DoublesColumnWithNulls(ColumnarDoubles columnarDoubles, ImmutableBitmap nullValueBitmap)
   {
-    this.column = column;
+    super(columnarDoubles);
     this.nullValueBitmap = nullValueBitmap;
   }
 
   @Override
-  public GenericColumn get()
+  public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
-    if (nullValueBitmap.isEmpty()) {
-      return new LongsColumn(column.get());
-    } else {
-      return new LongsColumnWithNulls(column.get(), nullValueBitmap);
-    }
+    return column.makeColumnValueSelector(offset, nullValueBitmap);
   }
+
+  @Override
+  public boolean isNull(int rowNum)
+  {
+    return nullValueBitmap.get(rowNum);
+  }
+
 }

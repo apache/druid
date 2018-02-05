@@ -40,6 +40,38 @@ public interface ColumnarFloats extends Closeable
   @Override
   void close();
 
+  default ColumnValueSelector<Float> makeColumnValueSelector(ReadableOffset offset)
+  {
+    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
+    {
+      @Override
+      public float getFloat()
+      {
+        return ColumnarFloats.this.get(offset.getOffset());
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return false;
+      }
+
+      @Override
+      public double getDouble(int offset)
+      {
+        return ColumnarFloats.this.get(offset);
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("columnar", ColumnarFloats.this);
+        inspector.visit("offset", offset);
+      }
+    }
+    return new HistoricalFloatColumnSelector();
+  }
+
   default ColumnValueSelector<Float> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
     final boolean hasNulls = !nullValueBitmap.isEmpty();
