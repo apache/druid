@@ -29,6 +29,7 @@ import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
+import java.util.TimeZone;
 
 public class ExprUtils
 {
@@ -46,7 +47,7 @@ public class ExprUtils
     }
 
     final Object literalValue = timeZoneArg.getLiteralValue();
-    return literalValue == null ? DateTimeZone.UTC : DateTimeZone.forID((String) literalValue);
+    return literalValue == null ? DateTimeZone.UTC : inferTzfromString((String) literalValue);
   }
 
   public static PeriodGranularity toPeriodGranularity(
@@ -64,7 +65,7 @@ public class ExprUtils
       timeZone = null;
     } else {
       final String value = timeZoneArg.eval(bindings).asString();
-      timeZone = value != null ? DateTimeZone.forID(value) : null;
+      timeZone = value != null ? inferTzfromString(value) : null;
     }
 
     if (originArg == null) {
@@ -76,5 +77,16 @@ public class ExprUtils
     }
 
     return new PeriodGranularity(period, origin, timeZone);
+  }
+
+  public static DateTimeZone inferTzfromString(String tzId)
+  {
+    try {
+      return DateTimeZone.forID(tzId);
+    }
+    catch (IllegalArgumentException e) {
+      // also support Java timezone strings
+      return DateTimeZone.forTimeZone(TimeZone.getTimeZone(tzId));
+    }
   }
 }

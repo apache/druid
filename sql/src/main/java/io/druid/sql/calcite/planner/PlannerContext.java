@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.expression.ExprUtils;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import org.apache.calcite.DataContext;
@@ -98,7 +99,7 @@ public class PlannerContext
       }
 
       if (tzParam != null) {
-        timeZone = DateTimeZone.forID(String.valueOf(tzParam));
+        timeZone = ExprUtils.inferTzfromString(String.valueOf(tzParam));
       } else {
         timeZone = DateTimeZone.UTC;
       }

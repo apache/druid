@@ -21,6 +21,7 @@ package io.druid.sql.calcite.expression.builtin;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.expression.ExprUtils;
 import io.druid.query.expression.TimestampExtractExprMacro;
 import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
@@ -88,7 +89,7 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
     );
 
     final DateTimeZone timeZone = call.getOperands().size() > 2 && !RexLiteral.isNullLiteral(call.getOperands().get(2))
-                                  ? DateTimeZone.forID(RexLiteral.stringValue(call.getOperands().get(2)))
+                                  ? ExprUtils.inferTzfromString(RexLiteral.stringValue(call.getOperands().get(2)))
                                   : plannerContext.getTimeZone();
 
     return applyTimeExtract(timeExpression, unit, timeZone);
