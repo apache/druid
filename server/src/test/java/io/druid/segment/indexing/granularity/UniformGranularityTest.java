@@ -28,7 +28,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -240,7 +239,7 @@ public class UniformGranularityTest
   public void testPeriodSegmentGranularity()
   {
     final GranularitySpec spec = new UniformGranularitySpec(
-            new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")),
+            new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles")),
             null,
             Lists.newArrayList(
                     Intervals.of("2012-01-08T00-08:00/2012-01-11T00-08:00"),
@@ -260,7 +259,7 @@ public class UniformGranularityTest
       actualIntervals.add(interval.toDurationMillis());
     }
 
-    final ISOChronology chrono = ISOChronology.getInstance(DateTimeZone.forID("America/Los_Angeles"));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzfromString("America/Los_Angeles"));
 
     final ArrayList<Long> expectedIntervals = Lists.newArrayList(
             new Interval("2012-01-01/2012-01-02", chrono).toDurationMillis(),
