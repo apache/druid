@@ -34,73 +34,74 @@ import java.io.Closeable;
 public interface ColumnarDoubles extends Closeable
 {
   int size();
+
   double get(int index);
 
   @Override
   void close();
 
-  default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset)
-  {
-    class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
-    {
-      @Override
-      public double getDouble()
-      {
-        return ColumnarDoubles.this.get(offset.getOffset());
-      }
-
-      @Override
-      public double getDouble(int offset)
-      {
-        return ColumnarDoubles.this.get(offset);
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return false;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("columnar", ColumnarDoubles.this);
-        inspector.visit("offset", offset);
-      }
-    }
-    return new HistoricalDoubleColumnSelector();
-  }
-
   default ColumnValueSelector<Double> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
-    class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
-    {
-      @Override
-      public double getDouble()
+    if (nullValueBitmap.isEmpty()) {
+      class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
       {
-        return ColumnarDoubles.this.get(offset.getOffset());
-      }
+        @Override
+        public double getDouble()
+        {
+          return ColumnarDoubles.this.get(offset.getOffset());
+        }
 
-      @Override
-      public double getDouble(int offset)
-      {
-        return ColumnarDoubles.this.get(offset);
-      }
+        @Override
+        public double getDouble(int offset)
+        {
+          return ColumnarDoubles.this.get(offset);
+        }
 
-      @Override
-      public boolean isNull()
-      {
-        return nullValueBitmap.get(offset.getOffset());
-      }
+        @Override
+        public boolean isNull()
+        {
+          return false;
+        }
 
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("columnar", ColumnarDoubles.this);
-        inspector.visit("offset", offset);
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarDoubles.this);
+          inspector.visit("offset", offset);
+        }
       }
+      return new HistoricalDoubleColumnSelector();
+    } else {
+      class HistoricalDoubleColumnSelectorWithNulls implements DoubleColumnSelector, HistoricalColumnSelector<Double>
+      {
+        @Override
+        public double getDouble()
+        {
+          return ColumnarDoubles.this.get(offset.getOffset());
+        }
+
+        @Override
+        public double getDouble(int offset)
+        {
+          return ColumnarDoubles.this.get(offset);
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return nullValueBitmap.get(offset.getOffset());
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarDoubles.this);
+          inspector.visit("offset", offset);
+          inspector.visit("nullValueBitmap", nullValueBitmap);
+        }
+      }
+      return new HistoricalDoubleColumnSelectorWithNulls();
     }
-    return new HistoricalDoubleColumnSelector();
   }
 }
 

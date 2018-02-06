@@ -52,11 +52,11 @@ import java.util.Iterator;
  * <p>
  * byte 1: version (0x1)
  * byte 2 == 0x1 =>; allowReverseLookup
- * bytes 3-6 =>; numBytesUsed, It will be -1 for null values.
+ * bytes 3-6 =>; numBytesUsed
  * bytes 7-10 =>; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes
- * for value
+ * for value. length of value will be -1 for null values.
  * <p>
  * V2 Storage Format
  * Meta, header and value files are separate and header file stored in native endian byte order.
@@ -99,12 +99,16 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     }
 
     /**
-     * numBytes will be {@link NULL_VALUE_SIZE_MARKER} for null values.
+     * numBytes will be -1 for null values.
      */
     @Override
     @Nullable
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
+      // numBytes will be -1 when the value is null and SQL compatible behavior for null handling is used.
+      // numBytes will be 0 when the value is empty string,
+      // For non-sql compliant, legacy null handling, nulls are stored as empty string
+      // and numBytes will be 0 for null values also.
       if (numBytes < 0) {
         return null;
       }
@@ -374,7 +378,9 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
   private T copyBufferAndGet(ByteBuffer valueBuffer, int startOffset, int endOffset)
   {
     ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
-    final int size = endOffset > startOffset ? endOffset - startOffset : copyValueBuffer.get(startOffset - Ints.BYTES);
+    final int size = endOffset > startOffset
+                     ? endOffset - startOffset
+                     : copyValueBuffer.get(startOffset - Integer.BYTES);
     copyValueBuffer.position(startOffset);
     // fromByteBuffer must not modify the buffer limit
     return strategy.fromByteBuffer(copyValueBuffer, size);

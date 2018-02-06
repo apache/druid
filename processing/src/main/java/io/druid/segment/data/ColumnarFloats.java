@@ -34,74 +34,75 @@ import java.io.Closeable;
 public interface ColumnarFloats extends Closeable
 {
   int size();
+
   float get(int index);
+
   void fill(int index, float[] toFill);
 
   @Override
   void close();
 
-  default ColumnValueSelector<Float> makeColumnValueSelector(ReadableOffset offset)
-  {
-    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
-    {
-      @Override
-      public float getFloat()
-      {
-        return ColumnarFloats.this.get(offset.getOffset());
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return false;
-      }
-
-      @Override
-      public double getDouble(int offset)
-      {
-        return ColumnarFloats.this.get(offset);
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("columnar", ColumnarFloats.this);
-        inspector.visit("offset", offset);
-      }
-    }
-    return new HistoricalFloatColumnSelector();
-  }
-
   default ColumnValueSelector<Float> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
-    final boolean hasNulls = !nullValueBitmap.isEmpty();
-    class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
-    {
-      @Override
-      public float getFloat()
+    if (nullValueBitmap.isEmpty()) {
+      class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
       {
-        return ColumnarFloats.this.get(offset.getOffset());
-      }
+        @Override
+        public float getFloat()
+        {
+          return ColumnarFloats.this.get(offset.getOffset());
+        }
 
-      @Override
-      public boolean isNull()
-      {
-        return hasNulls && nullValueBitmap.get(offset.getOffset());
-      }
+        @Override
+        public boolean isNull()
+        {
+          return false;
+        }
 
-      @Override
-      public double getDouble(int offset)
-      {
-        return ColumnarFloats.this.get(offset);
-      }
+        @Override
+        public double getDouble(int offset)
+        {
+          return ColumnarFloats.this.get(offset);
+        }
 
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("columnar", ColumnarFloats.this);
-        inspector.visit("offset", offset);
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarFloats.this);
+          inspector.visit("offset", offset);
+        }
       }
+      return new HistoricalFloatColumnSelector();
+    } else {
+      class HistoricalFloatColumnSelectorwithNulls implements FloatColumnSelector, HistoricalColumnSelector<Float>
+      {
+        @Override
+        public float getFloat()
+        {
+          return ColumnarFloats.this.get(offset.getOffset());
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return nullValueBitmap.get(offset.getOffset());
+        }
+
+        @Override
+        public double getDouble(int offset)
+        {
+          return ColumnarFloats.this.get(offset);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarFloats.this);
+          inspector.visit("offset", offset);
+          inspector.visit("nullValueBitmap", nullValueBitmap);
+        }
+      }
+      return new HistoricalFloatColumnSelectorwithNulls();
     }
-    return new HistoricalFloatColumnSelector();
   }
 }

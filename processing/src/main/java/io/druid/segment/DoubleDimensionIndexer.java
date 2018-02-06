@@ -102,9 +102,6 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       @Override
       public boolean isNull()
       {
-        if (NullHandling.replaceWithDefault()) {
-          return false;
-        }
         final Object[] dims = currEntry.get().getDims();
         return dimIndex >= dims.length || dims[dimIndex] == null;
       }

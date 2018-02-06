@@ -34,7 +34,9 @@ import java.io.Closeable;
 public interface ColumnarLongs extends Closeable
 {
   int size();
+
   long get(int index);
+
   void fill(int index, long[] toFill);
 
   @Override
@@ -42,66 +44,65 @@ public interface ColumnarLongs extends Closeable
 
   default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
-    final boolean hasNulls = !nullValueBitmap.isEmpty();
-    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
-    {
-      @Override
-      public long getLong()
+    if (nullValueBitmap.isEmpty()) {
+      class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
       {
-        return ColumnarLongs.this.get(offset.getOffset());
-      }
+        @Override
+        public long getLong()
+        {
+          return ColumnarLongs.this.get(offset.getOffset());
+        }
 
-      @Override
-      public double getDouble(int offset)
-      {
-        return ColumnarLongs.this.get(offset);
-      }
+        @Override
+        public double getDouble(int offset)
+        {
+          return ColumnarLongs.this.get(offset);
+        }
 
-      @Override
-      public boolean isNull()
-      {
-        return hasNulls && nullValueBitmap.get(offset.getOffset());
-      }
+        @Override
+        public boolean isNull()
+        {
+          return false;
+        }
 
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("columnar", ColumnarLongs.this);
-        inspector.visit("offset", offset);
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarLongs.this);
+          inspector.visit("offset", offset);
+        }
       }
+      return new HistoricalLongColumnSelector();
+    } else {
+      class HistoricalLongColumnSelectorWithNulls implements LongColumnSelector, HistoricalColumnSelector<Long>
+      {
+        @Override
+        public long getLong()
+        {
+          return ColumnarLongs.this.get(offset.getOffset());
+        }
+
+        @Override
+        public double getDouble(int offset)
+        {
+          return ColumnarLongs.this.get(offset);
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return nullValueBitmap.get(offset.getOffset());
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarLongs.this);
+          inspector.visit("offset", offset);
+          inspector.visit("nullValueBitmap", nullValueBitmap);
+        }
+      }
+      return new HistoricalLongColumnSelectorWithNulls();
     }
-    return new HistoricalLongColumnSelector();
-  }
-
-  default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset)
-  {
-    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
-    {
-      @Override
-      public long getLong()
-      {
-        return ColumnarLongs.this.get(offset.getOffset());
-      }
-
-      @Override
-      public double getDouble(int offset)
-      {
-        return ColumnarLongs.this.get(offset);
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return false;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("columnar", ColumnarLongs.this);
-        inspector.visit("offset", offset);
-      }
-    }
-    return new HistoricalLongColumnSelector();
   }
 }

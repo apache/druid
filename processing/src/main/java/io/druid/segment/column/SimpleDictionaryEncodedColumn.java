@@ -282,12 +282,6 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         }
 
         @Override
-        public boolean isNull()
-        {
-          return getObject() == null;
-        }
-
-        @Override
         public Object getObject()
         {
           return lookupName(getRowValue());

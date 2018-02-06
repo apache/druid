@@ -105,16 +105,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       }
     }
 
-    public boolean contains(String value)
-    {
-      synchronized (lock) {
-        if (value == null) {
-          return idForNull != ABSENT_VALUE_ID;
-        }
-        return valueToId.containsKey(value);
-      }
-    }
-
     public int size()
     {
       synchronized (lock) {

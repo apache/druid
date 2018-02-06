@@ -21,6 +21,7 @@ package io.druid.segment.column;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.IndexIO;
 import io.druid.segment.data.ColumnarDoubles;
 import io.druid.segment.data.ReadableOffset;
 
@@ -43,7 +44,8 @@ public class DoublesColumn implements GenericColumn
   @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
-    return column.makeColumnValueSelector(offset);
+    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory()
+                                                                        .makeEmptyImmutableBitmap());
   }
 
   @Override

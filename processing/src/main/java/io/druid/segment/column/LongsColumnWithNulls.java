@@ -20,6 +20,7 @@
 package io.druid.segment.column;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.data.ColumnarLongs;
 import io.druid.segment.data.ReadableOffset;
@@ -44,9 +45,9 @@ public class LongsColumnWithNulls extends LongsColumn
   }
 
   @Override
-  public boolean isNull(int rowNum)
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    return nullValueBitmap.get(rowNum);
+    super.inspectRuntimeShape(inspector);
+    inspector.visit("nullValueBitmap", nullValueBitmap);
   }
-
 }

@@ -133,7 +133,8 @@ public class Filters
             columnSelectorFactory
         );
 
-    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), NullHandling.emptyToNullIfNeeded(value));
+    return selector.getColumnSelectorStrategy()
+                   .makeValueMatcher(selector.getSelector(), NullHandling.emptyToNullIfNeeded(value));
   }
 
   /**

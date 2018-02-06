@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 
 /**
  * Helper class for NullHandling. This class is used to switch between SQL compatible Null Handling behavior
- * introduced as part of {@link https://github.com/druid-io/druid/issues/4349} and the old druid behavior
+ * introduced as part of https://github.com/druid-io/druid/issues/4349 and the old druid behavior
  * where null values are replaced with default values e.g Null Strings are replaced with empty values.
  */
 public class NullHandling
@@ -44,7 +44,7 @@ public class NullHandling
 
   /**
    * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.
-   * See {@link io.druid.guice.NullHandlingModule} for details.
+   * See io.druid.guice.NullHandlingModule for details.
    * It does not take effect in all unit tests since we don't use Guice Injection.
    * For tests default system property is supposed to be used only in tests
    */

@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.common.config.NullHandling;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
@@ -28,9 +29,11 @@ import javax.annotation.Nullable;
  * Represents "absent" column.
  */
 @PublicApi
-public final class NilColumnValueSelector implements ColumnValueSelector
+public class NilColumnValueSelector implements ColumnValueSelector
 {
-  private static final NilColumnValueSelector INSTANCE = new NilColumnValueSelector();
+  private static final NilColumnValueSelector INSTANCE = NullHandling.sqlCompatible()
+                                                         ? new SqlCompatibleNilColumnValueSelector()
+                                                         : new NilColumnValueSelector();
 
   public static NilColumnValueSelector instance()
   {
@@ -88,12 +91,40 @@ public final class NilColumnValueSelector implements ColumnValueSelector
   @Override
   public boolean isNull()
   {
-    return true;
+    return false;
   }
 
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect
+  }
+
+  private static class SqlCompatibleNilColumnValueSelector extends NilColumnValueSelector
+  {
+    @Override
+    public boolean isNull()
+    {
+      return true;
+    }
+
+    @Override
+    public double getDouble()
+    {
+      throw new IllegalStateException("Cannot return null value as double");
+    }
+
+    @Override
+    public float getFloat()
+    {
+      throw new IllegalStateException("Cannot return null value as float");
+    }
+
+    @Override
+    public long getLong()
+    {
+      throw new IllegalStateException("Cannot return null value as long");
+    }
+
   }
 }
