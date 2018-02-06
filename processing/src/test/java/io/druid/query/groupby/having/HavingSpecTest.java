@@ -168,7 +168,7 @@ public class HavingSpecTest
     assertFalse(spec.eval(getTestRow(100L)));
     assertFalse(spec.eval(getTestRow(100.0)));
     assertFalse(spec.eval(getTestRow(100d)));
-    assertTrue(spec.eval(getTestRow(100.56d))); // True since 100.56f == (float) 100.56d
+    assertTrue(spec.eval(getTestRow(100.56d)));
     assertFalse(spec.eval(getTestRow(90.53d)));
     assertTrue(spec.eval(getTestRow(100.56f)));
     assertFalse(spec.eval(getTestRow(90.53f)));
