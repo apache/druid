@@ -65,12 +65,6 @@ public final class QueryPlus<T>
     return queryMetrics;
   }
 
-  @Nullable
-  public String getIdentity()
-  {
-    return identity;
-  }
-
   /**
    * Returns the same QueryPlus object with the identity replaced. This new identity will affect future calls to
    * {@link #withoutQueryMetrics()} but will not affect any currently-existing queryMetrics.
