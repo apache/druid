@@ -16,22 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.indexing.common.index;
 
-package io.druid.server.security;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.IngestionSpec;
+import io.druid.segment.indexing.RealtimeIOConfig;
 
-import io.druid.java.util.http.client.HttpClient;
-
-public class NoopEscalator implements Escalator
+public class RealtimeAppenderatorIngestionSpec extends IngestionSpec<RealtimeIOConfig, RealtimeAppenderatorTuningConfig>
 {
-  @Override
-  public HttpClient createEscalatedClient(HttpClient baseClient)
-  {
-    return baseClient;
-  }
 
-  @Override
-  public AuthenticationResult createEscalatedAuthenticationResult()
+  @JsonCreator
+  public RealtimeAppenderatorIngestionSpec(
+      @JsonProperty("dataSchema") DataSchema dataSchema,
+      @JsonProperty("ioConfig") RealtimeIOConfig ioConfig,
+      @JsonProperty("tuningConfig") RealtimeAppenderatorTuningConfig tuningConfig
+  )
   {
-    return AllowAllAuthenticator.ALLOW_ALL_RESULT;
+    super(dataSchema, ioConfig, tuningConfig);
   }
 }

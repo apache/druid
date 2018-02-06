@@ -95,11 +95,20 @@ public class AuthorizerMapperModule implements DruidModule
 
       // Default is allow all
       if (authorizers == null) {
+        AllowAllAuthorizer allowAllAuthorizer = new AllowAllAuthorizer();
+        authorizerMap.put(AuthConfig.ALLOW_ALL_NAME, allowAllAuthorizer);
+
         return new AuthorizerMapper(null) {
           @Override
           public Authorizer getAuthorizer(String name)
           {
-            return new AllowAllAuthorizer();
+            return allowAllAuthorizer;
+          }
+
+          @Override
+          public Map<String, Authorizer> getAuthorizerMap()
+          {
+            return authorizerMap;
           }
         };
       }

@@ -276,8 +276,10 @@ An example of compaction task is
 }
 ```
 
-This compaction task merges _all segments_ of the interval `2017-01-01/2018-01-01` into a _single segment_.
-To merge each day's worth of data into a separate segment, you can submit multiple `compact` tasks, one for each day. They will run in parallel.
+This compaction task reads _all segments_ of the interval `2017-01-01/2018-01-01` and results in new segments.
+Note that intervals of the input segments are merged into a single interval of `2017-01-01/2018-01-01` no matter what the segmentGranularity was.
+To controll the number of result segments, you can set `targetPartitionSize` or `numShards`. See [indexTuningConfig](#tuningconfig) for more details.
+To merge each day's worth of data into separate segments, you can submit multiple `compact` tasks, one for each day. They will run in parallel.
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
 For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html), and `dimensionsSpec` and `metricsSpec`

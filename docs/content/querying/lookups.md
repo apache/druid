@@ -8,15 +8,17 @@ layout: doc_page
 Lookups are an <a href="../development/experimental.html">experimental</a> feature.
 </div>
 
-Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
-See [dimension specs](../querying/dimensionspecs.html) for more information. For the purpose of these documents, 
-a "key" refers to a dimension value to match, and a "value" refers to its replacement. 
-So if you wanted to rename `appid-12345` to `Super Mega Awesome App` then the key would be `appid-12345` and the value 
-would be `Super Mega Awesome App`. 
+Lookups are a concept in Druid where dimension values are (optionally) replaced with new values, allowing join-like
+functionality. Applying lookups in Druid is similar to joining a dimension table in a data warehouse. See
+[dimension specs](../querying/dimensionspecs.html) for more information. For the purpose of these documents, a "key"
+refers to a dimension value to match, and a "value" refers to its replacement. So if you wanted to map
+`appid-12345` to `Super Mega Awesome App` then the key would be `appid-12345` and the value would be
+`Super Mega Awesome App`.
 
-It is worth noting that lookups support use cases where keys map to unique values (injective) such as a country code and 
-a country name, and also supports use cases where multiple IDs map to the same value, e.g. multiple app-ids belonging to 
-a single account manager.
+It is worth noting that lookups support not just use cases where keys map one-to-one to unique values, such as country
+code and country name, but also support use cases where multiple IDs map to the same value, e.g. multiple app-ids
+mapping to a single account manager. When lookups are one-to-one, Druid is able to apply additional optimizations at
+query time; see [Query execution](#query-execution) below for more details.
 
 Lookups do not have history. They always use the current data. This means that if the chief account manager for a 
 particular app-id changes, and you issue a query with a lookup to store the app-id to account manager relationship, 
@@ -32,6 +34,38 @@ Other lookup types are available as extensions, including:
 
 - Globally cached lookups from local files, remote URIs, or JDBC through [lookups-cached-global](../development/extensions-core/lookups-cached-global.html).
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](../development/extensions-core/kafka-extraction-namespace.html).
+
+Query Execution
+---------------
+When executing an aggregation query involving lookups, Druid can decide to apply lookups either while scanning and
+aggregating rows, or to apply them after aggregation is complete. It is more efficient to apply lookups after
+aggregation is complete, so Druid will do this if it can. Druid decides this by checking if the lookup is marked
+as "injective" or not. In general, you should set this property for any lookup that is naturally one-to-one, to allow
+Druid to run your queries as fast as possible.
+
+Injective lookups should include _all_ possible keys that may show up in your dataset, and should also map all keys to
+_unique values_. This matters because non-injective lookups may map different keys to the same value, which must be
+accounted for during aggregation, lest query results contain two result values that should have been aggregated into
+one.
+
+This lookup is injective (assuming it contains all possible keys from your data):
+
+```
+1 -> Foo
+2 -> Bar
+3 -> Billy
+```
+
+But this one is not, since both "2" and "3" map to the same key:
+
+```
+1 -> Foo
+2 -> Bar
+3 -> Bar
+```
+
+To tell Druid that your lookup is injective, you must specify `"injective" : true` in the lookup configuration. Druid
+will not detect this automatically.
 
 Dynamic Configuration
 ---------------------

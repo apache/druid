@@ -28,6 +28,7 @@ import io.druid.query.extraction.ExtractionFn;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 public class RegisteredLookupExtractionFn implements ExtractionFn
 {
@@ -38,7 +39,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   private final String lookup;
   private final boolean retainMissingValue;
   private final String replaceMissingValueWith;
-  private final boolean injective;
+  private final Boolean injective;
   private final boolean optimize;
 
   @JsonCreator
@@ -47,7 +48,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       @JsonProperty("lookup") String lookup,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
       @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
-      @JsonProperty("injective") final boolean injective,
+      @JsonProperty("injective") final Boolean injective,
       @JsonProperty("optimize") Boolean optimize
   )
   {
@@ -79,7 +80,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   }
 
   @JsonProperty("injective")
-  public boolean isInjective()
+  public Boolean isInjective()
   {
     return injective;
   }
@@ -142,13 +143,17 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
+          final LookupExtractor factory = Preconditions.checkNotNull(
+              manager.get(getLookup()),
+              "Lookup [%s] not found",
+              getLookup()
+          ).getLookupExtractorFactory().get();
+
           delegate = new LookupExtractionFn(
-              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup())
-                           .getLookupExtractorFactory()
-                           .get(),
+              factory,
               isRetainMissingValue(),
               getReplaceMissingValueWith(),
-              isInjective(),
+              injective == null ? factory.isOneToOne() : injective,
               isOptimize()
           );
         }
@@ -158,7 +163,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -166,35 +171,19 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    RegisteredLookupExtractionFn that = (RegisteredLookupExtractionFn) o;
-
-    if (isRetainMissingValue() != that.isRetainMissingValue()) {
-      return false;
-    }
-    if (isInjective() != that.isInjective()) {
-      return false;
-    }
-    if (isOptimize() != that.isOptimize()) {
-      return false;
-    }
-    if (!getLookup().equals(that.getLookup())) {
-      return false;
-    }
-    return getReplaceMissingValueWith() != null
-           ? getReplaceMissingValueWith().equals(that.getReplaceMissingValueWith())
-           : that.getReplaceMissingValueWith() == null;
+    final RegisteredLookupExtractionFn that = (RegisteredLookupExtractionFn) o;
+    return retainMissingValue == that.retainMissingValue &&
+           optimize == that.optimize &&
+           Objects.equals(lookup, that.lookup) &&
+           Objects.equals(replaceMissingValueWith, that.replaceMissingValueWith) &&
+           Objects.equals(injective, that.injective);
   }
 
   @Override
   public int hashCode()
   {
-    int result = getLookup().hashCode();
-    result = 31 * result + (isRetainMissingValue() ? 1 : 0);
-    result = 31 * result + (getReplaceMissingValueWith() != null ? getReplaceMissingValueWith().hashCode() : 0);
-    result = 31 * result + (isInjective() ? 1 : 0);
-    result = 31 * result + (isOptimize() ? 1 : 0);
-    return result;
+
+    return Objects.hash(lookup, retainMissingValue, replaceMissingValueWith, injective, optimize);
   }
 
   @Override

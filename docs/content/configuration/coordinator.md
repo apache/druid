@@ -148,18 +148,6 @@ An example of compaction config is:
 
 For the realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large values to avoid frequent compact task failures.
 
-## Compact Task TuningConfig
-
-Compact task tuning config is a subset of the tuningConfig of IndexTask. See [TuningConfig](../ingestion/tasks.html#tuningconfig) for more details.
-
-|Property|Required|
-|--------|--------|
-|`maxRowsInMemory`|no|
-|`maxTotalRows`|no|
-|`indexSpec`|no|
-|`maxPendingPersists`|no|
-|`publishTimeout`|no|
-
 # Lookups Dynamic Config (EXPERIMENTAL)
 These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.html)
 
