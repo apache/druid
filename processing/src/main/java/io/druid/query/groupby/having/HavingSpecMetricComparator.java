@@ -24,9 +24,10 @@ import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.query.aggregation.AggregatorFactory;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -46,18 +47,22 @@ class HavingSpecMetricComparator
         metricValueObj = aggregators.get(aggregationName).finalizeComputation(metricValueObj);
       }
 
-      if (metricValueObj instanceof Long) {
-        long l = ((Long) metricValueObj).longValue();
-        return Longs.compare(l, value.longValue());
+      if (metricValueObj instanceof Long || metricValueObj instanceof Integer) {
+        long n = ((Number) metricValueObj).longValue();
+
+        if (value instanceof Long || value instanceof Integer) {
+          return Longs.compare(n, value.longValue());
+        } else if (value instanceof Double || value instanceof Float) {
+          return BigDecimal.valueOf(n).compareTo(BigDecimal.valueOf(value.doubleValue()));
+        } else {
+          throw new ISE("Number was[%s]?!?", value.getClass().getName());
+        }
       } else if (metricValueObj instanceof Float) {
-        float l = ((Float) metricValueObj).floatValue();
-        return Floats.compare(l, value.floatValue());
+        float n = (Float) metricValueObj;
+        return Floats.compare(n, value.floatValue());
       } else if (metricValueObj instanceof Double) {
-        double l = ((Double) metricValueObj).longValue();
-        return Doubles.compare(l, value.doubleValue());
-      } else if (metricValueObj instanceof Integer) {
-        int l = ((Integer) metricValueObj).intValue();
-        return Ints.compare(l, value.intValue());
+        double n = (Double) metricValueObj;
+        return Doubles.compare(n, value.doubleValue());
       } else if (metricValueObj instanceof String) {
         String metricValueStr = (String) metricValueObj;
         if (LONG_PAT.matcher(metricValueStr).matches()) {
