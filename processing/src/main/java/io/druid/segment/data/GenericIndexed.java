@@ -105,10 +105,11 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     @Nullable
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      // numBytes will be -1 when the value is null and SQL compatible behavior for null handling is used.
-      // numBytes will be 0 when the value is empty string,
-      // For non-sql compliant, legacy null handling, nulls are stored as empty string
-      // and numBytes will be 0 for null values also.
+      // When SQL Compatibility is ON
+      //   1. numBytes will be -1 for null value, return value will be null
+      //   2. numBytes will be 0 for empty string, return value will be empty string
+      // For Legacy null handling when nulls and empty string are considered same -
+      //     numBytes will be 0 for both empty string and null and return value will be null for both.
       if (numBytes < 0) {
         return null;
       }
