@@ -48,11 +48,15 @@ class HavingSpecMetricComparator
       }
 
       if (metricValueObj instanceof Long || metricValueObj instanceof Integer) {
+        // Cast ints metrics to longs. It makes the code simpler and won't change the result.
         long n = ((Number) metricValueObj).longValue();
 
         if (value instanceof Long || value instanceof Integer) {
           return Longs.compare(n, value.longValue());
         } else if (value instanceof Double || value instanceof Float) {
+          // Use BigDecimal for comparison, a convenient way to handle edge cases without worrying about them
+          // ourselves. Cast the value to double since that's what BigDecimal wants. Should be fine since doubles can
+          // represent all float values.
           return BigDecimal.valueOf(n).compareTo(BigDecimal.valueOf(value.doubleValue()));
         } else {
           throw new ISE("Number was[%s]?!?", value.getClass().getName());
