@@ -34,7 +34,7 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 
-@JsonTypeName("appenderator")
+@JsonTypeName("realtime_appenderator")
 public class RealtimeAppenderatorTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int defaultMaxRowsInMemory = 75000;
