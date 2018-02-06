@@ -50,7 +50,6 @@ import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
-import org.joda.time.DateTimeZone;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;

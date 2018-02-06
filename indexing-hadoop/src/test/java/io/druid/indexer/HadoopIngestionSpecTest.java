@@ -36,7 +36,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
