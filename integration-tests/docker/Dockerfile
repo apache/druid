@@ -2,7 +2,8 @@
 FROM imply/druiditbase
 
 # Setup metadata store
-RUN /etc/init.d/mysql start \
+# touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
+RUN find /var/lib/mysql -type f -exec touch {} \; && /etc/init.d/mysql start \
       && echo "GRANT ALL ON druid.* TO 'druid'@'%' IDENTIFIED BY 'diurd'; CREATE database druid DEFAULT CHARACTER SET utf8;" | mysql -u root \
       && /etc/init.d/mysql stop
 
@@ -10,11 +11,13 @@ RUN /etc/init.d/mysql start \
 ADD lib/* /usr/local/druid/lib/
 
 # Add sample data
-RUN /etc/init.d/mysql start \
+# touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
+RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && java -cp "/usr/local/druid/lib/*" -Ddruid.metadata.storage.type=mysql io.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
       && /etc/init.d/mysql stop
 ADD sample-data.sql sample-data.sql
-RUN /etc/init.d/mysql start \
+# touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
+RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && cat sample-data.sql | mysql -u root druid \
       && /etc/init.d/mysql stop
 
