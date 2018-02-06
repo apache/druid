@@ -127,7 +127,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           new V3CompressedVSizeColumnarMultiIntsSerializer(offsetWriter, valueWriter);
       V3CompressedVSizeColumnarMultiIntsSupplier supplierFromIterable =
           V3CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
-              Iterables.transform(vals, ArrayBasedIndexedInts::of),
+              Iterables.transform(vals, ArrayBasedIndexedInts::new),
               offsetChunkFactor,
               maxValue,
               byteOrder,

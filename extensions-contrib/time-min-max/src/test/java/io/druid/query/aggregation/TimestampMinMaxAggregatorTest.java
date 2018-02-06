@@ -151,7 +151,7 @@ public class TimestampMinMaxAggregatorTest
     ByteBuffer buffer = ByteBuffer.wrap(new byte[Longs.BYTES]);
     aggregator.init(buffer, 0);
 
-    for (Timestamp value: values) {
+    for (Timestamp value : values) {
       aggregate(selector, aggregator, buffer, 0);
     }
 

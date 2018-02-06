@@ -22,11 +22,11 @@ package io.druid.segment.realtime;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
-import com.metamx.metrics.MonitorUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
+import io.druid.java.util.metrics.MonitorUtils;
 import io.druid.query.DruidMetrics;
 
 import java.util.List;

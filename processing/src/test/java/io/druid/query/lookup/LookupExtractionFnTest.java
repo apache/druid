@@ -20,7 +20,6 @@
 package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -36,11 +35,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RunWith(Parameterized.class)
 public class LookupExtractionFnTest
@@ -53,30 +52,23 @@ public class LookupExtractionFnTest
             ImmutableList.of(
                 ImmutableSet.of(true, false),
                 ImmutableSet.of("", "MISSING VALUE"),
-                ImmutableSet.of(true, false)
+                ImmutableSet.of(Optional.of(true), Optional.of(false), Optional.empty())
             )
-        ), new Function<List<?>, Object[]>()
-        {
-          @Nullable
-          @Override
-          public Object[] apply(List<?> input)
-          {
-            return input.toArray();
-          }
-        }
+        ),
+        List::toArray
     );
   }
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private final boolean retainMissing;
   private final String replaceMissing;
-  private final boolean injective;
+  private final Boolean injective;
 
-  public LookupExtractionFnTest(boolean retainMissing, String replaceMissing, boolean injective)
+  public LookupExtractionFnTest(boolean retainMissing, String replaceMissing, Optional<Boolean> injective)
   {
     this.replaceMissing = Strings.emptyToNull(replaceMissing);
     this.retainMissing = retainMissing;
-    this.injective = injective;
+    this.injective = injective.orElse(null);
   }
 
   @Test
@@ -136,7 +128,12 @@ public class LookupExtractionFnTest
 
     Assert.assertEquals(retainMissing, lookupExtractionFn2.isRetainMissingValue());
     Assert.assertEquals(replaceMissing, lookupExtractionFn2.getReplaceMissingValueWith());
-    Assert.assertEquals(injective, lookupExtractionFn2.isInjective());
+
+    if (injective == null) {
+      Assert.assertEquals(lookupExtractionFn2.getLookup().isOneToOne(), lookupExtractionFn2.isInjective());
+    } else {
+      Assert.assertEquals(injective, lookupExtractionFn2.isInjective());
+    }
 
     Assert.assertArrayEquals(lookupExtractionFn.getCacheKey(), lookupExtractionFn2.getCacheKey());
 

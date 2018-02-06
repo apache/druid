@@ -26,12 +26,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.io.AppendableByteArrayInputStream;
-import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.InputStreamResponseHandler;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.io.AppendableByteArrayInputStream;
+import io.druid.java.util.http.client.response.ClientResponse;
+import io.druid.java.util.http.client.response.InputStreamResponseHandler;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RE;
@@ -52,9 +52,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * This class facilitates the usage of long-polling HTTP endpoints powered by {@link ChangeRequestHistory} .
- * For example {@ HttpServerInventoryView} uses it to keep segment state in sync with data nodes which expose
- * the segment state via HTTP endpoint in {@link io.druid.server.http.SegmentListerResource.getSegments(..)}
+ * This class facilitates the usage of long-polling HTTP endpoints powered by {@link ChangeRequestHistory}.
+ * For example {@link io.druid.client.HttpServerInventoryView} uses it to keep segment state in sync with data nodes
+ * which expose the segment state via HTTP endpoint in {@link io.druid.server.http.SegmentListerResource#getSegments}.
  */
 public class ChangeRequestHttpSyncer<T>
 {

@@ -573,13 +573,6 @@ public class HadoopDruidIndexerConfig
 
   public void verify()
   {
-    try {
-      log.info("Running with config:%n%s", JSON_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(this));
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-
     Preconditions.checkNotNull(schema.getDataSchema().getDataSource(), "dataSource");
     Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec(), "parseSpec");
     Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec().getTimestampSpec(), "timestampSpec");

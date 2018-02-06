@@ -23,10 +23,10 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -87,7 +87,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
       Injector injector = DruidTestModuleFactory.getInjector();
       IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
       HttpClient client = injector.getInstance(Key.get(HttpClient.class, TestClient.class));
-      ;
+
       waitUntilInstanceReady(client, config.getCoordinatorUrl());
       waitUntilInstanceReady(client, config.getIndexerUrl());
       waitUntilInstanceReady(client, config.getBrokerUrl());

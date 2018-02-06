@@ -22,7 +22,7 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.coordinator.CoordinatorSelectorConfig;
 import io.druid.curator.discovery.ServerDiscoveryFactory;

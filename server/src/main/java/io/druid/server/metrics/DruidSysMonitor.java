@@ -21,7 +21,7 @@ package io.druid.server.metrics;
 
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.metamx.metrics.SysMonitor;
+import io.druid.java.util.metrics.SysMonitor;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
 

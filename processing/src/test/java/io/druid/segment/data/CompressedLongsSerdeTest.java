@@ -49,7 +49,7 @@ public class CompressedLongsSerdeTest
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (CompressionFactory.LongEncodingStrategy encodingStrategy: CompressionFactory.LongEncodingStrategy.values()) {
+    for (CompressionFactory.LongEncodingStrategy encodingStrategy : CompressionFactory.LongEncodingStrategy.values()) {
       for (CompressionStrategy strategy : CompressionStrategy.values()) {
         data.add(new Object[]{encodingStrategy, strategy, ByteOrder.BIG_ENDIAN});
         data.add(new Object[]{encodingStrategy, strategy, ByteOrder.LITTLE_ENDIAN});

@@ -44,12 +44,27 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
 
   /**
    * <p>
-   *   This method will be called to stop the LookupExtractor upon deletion.
+   *   This method will be called to stop the LookupExtractor upon Druid process stop. This would be used, for
+   *   example, to stop any thread pools it might have.
    *   Calling this method multiple times should always return true if successfully closed.
    * </p>
    * @return Returns false if not successfully closed the {@link LookupExtractor} otherwise returns true
    */
   boolean close();
+
+  /**
+   * <p>
+   *   This method will be called to drop the LookupExtractor upon explicit user request to coordinator to drop
+   *   this lookup. In this method user can do additional cleanup (e.g. deleting disk persisted cache) not done simply
+   *   when Druid process was being stopped to be restarted.
+   *   Calling this method multiple times should always return true if successfully destroyed.
+   * </p>
+   * @return Returns false if not successfully destroyed the {@link LookupExtractor} otherwise returns true
+   */
+  default boolean destroy()
+  {
+    return close();
+  }
 
   /**
    * This method is deprecated and is not removed only to allow 0.10.0 to 0.10.1 transition. It is not used

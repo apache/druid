@@ -20,7 +20,7 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.BalancerSegmentHolder;

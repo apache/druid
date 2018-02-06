@@ -31,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -43,6 +44,10 @@ public class LookupSnapshotTakerTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
 
@@ -112,7 +117,7 @@ public class LookupSnapshotTakerTest
     Assert.assertEquals(lookupBeanList, actualList);
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testIOExceptionDuringLookupPersist() throws IOException
   {
     File directory = temporaryFolder.newFolder();
@@ -120,6 +125,7 @@ public class LookupSnapshotTakerTest
     Assert.assertFalse(snapshotFile.exists());
     Assert.assertTrue(snapshotFile.createNewFile());
     Assert.assertTrue(snapshotFile.setReadOnly());
+    Assert.assertTrue(snapshotFile.getParentFile().setReadOnly());
     LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
     LookupBean lookupBean = new LookupBean(
         "name",
@@ -135,9 +141,11 @@ public class LookupSnapshotTakerTest
         )
     );
     List<LookupBean> lookupBeanList = Lists.newArrayList(lookupBean);
+
+    expectedException.expect(ISE.class);
+    expectedException.expectMessage("Exception during serialization of lookups");
     lookupSnapshotTaker.takeSnapshot(lookupBeanList);
   }
-
 
   @Test
   public void tesLookupPullingFromEmptyFile() throws IOException

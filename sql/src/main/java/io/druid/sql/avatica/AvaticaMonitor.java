@@ -19,9 +19,9 @@
 
 package io.druid.sql.avatica;
 
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.calcite.avatica.metrics.Counter;
 import org.apache.calcite.avatica.metrics.Gauge;

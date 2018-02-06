@@ -26,7 +26,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Emitter;
 import io.druid.guice.DruidGuiceExtensions;
 import io.druid.guice.LifecycleModule;
 import io.druid.server.emitter.ComposingEmitterConfig;

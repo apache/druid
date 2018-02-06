@@ -37,8 +37,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
@@ -1033,7 +1033,7 @@ public class AppenderatorImpl implements Appenderator
           {
             if (sinks.get(identifier) != sink) {
               // Only abandon sink if it is the same one originally requested to be abandoned.
-              log.warn("Sink for segment[%s] no longer valid, not abandoning.");
+              log.warn("Sink for segment[%s] no longer valid, not abandoning.", identifier);
               return null;
             }
 

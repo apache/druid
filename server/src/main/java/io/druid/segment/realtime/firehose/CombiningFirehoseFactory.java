@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;

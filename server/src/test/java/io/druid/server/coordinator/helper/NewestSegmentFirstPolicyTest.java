@@ -409,7 +409,7 @@ public class NewestSegmentFirstPolicyTest
     orderedSpecs.sort((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.totalInterval, s2.totalInterval));
     Collections.reverse(orderedSpecs);
 
-    for (SegmentGenerateSpec spec: orderedSpecs) {
+    for (SegmentGenerateSpec spec : orderedSpecs) {
       Interval remaininInterval = spec.totalInterval;
 
       while (!Intervals.isEmpty(remaininInterval)) {

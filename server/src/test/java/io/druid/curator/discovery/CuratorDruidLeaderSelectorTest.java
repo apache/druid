@@ -19,8 +19,8 @@
 
 package io.druid.curator.discovery;
 
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.curator.CuratorTestBase;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.java.util.common.logger.Logger;

@@ -2304,7 +2304,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithTimeZone()
   {
-    DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
 
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource(QueryRunnerTestHelper.dataSource)
