@@ -26,6 +26,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
 import io.druid.java.util.common.StringUtils;
+import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.http.security.StateResourceFilter;
 
 import javax.inject.Inject;
@@ -55,7 +56,7 @@ public class StatusResource
 
   @GET
   @Path("/properties")
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(ConfigResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Map<String, String> getProperties()
   {
