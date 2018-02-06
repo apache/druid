@@ -75,7 +75,7 @@ public class TimewarpOperatorTest
 
       Assert.assertEquals(
           tOffset,
-          t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.forID("America/Los_Angeles")))
+          t.plus(testOperator.computeOffset(t.getMillis(), DateTimes.inferTzfromString("America/Los_Angeles")))
       );
     }
   }
@@ -226,7 +226,7 @@ public class TimewarpOperatorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("dummy")
               .intervals("2014-07-31T-07/2014-08-05T-07")
-              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")))
+              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles")))
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .build();
 
@@ -286,7 +286,7 @@ public class TimewarpOperatorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("dummy")
               .intervals("2014-07-31T-07/2014-08-05T-07")
-              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Phoenix")))
+              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Phoenix")))
               .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
               .build();
 

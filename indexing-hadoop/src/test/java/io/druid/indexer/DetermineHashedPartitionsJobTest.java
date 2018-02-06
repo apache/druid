@@ -27,6 +27,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -115,7 +116,7 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 1,
                 first,
-                new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles"))
+                new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles"))
             }
         }
     );
