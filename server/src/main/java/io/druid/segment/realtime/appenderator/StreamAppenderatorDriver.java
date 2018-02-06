@@ -140,6 +140,15 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
     }
   }
 
+  public AppenderatorDriverAddResult add(
+      InputRow row,
+      String sequenceName,
+      final Supplier<Committer> committerSupplier
+  ) throws IOException
+  {
+    return append(row, sequenceName, committerSupplier, false, true);
+  }
+
   /**
    * Add a row. Must not be called concurrently from multiple threads.
    *
