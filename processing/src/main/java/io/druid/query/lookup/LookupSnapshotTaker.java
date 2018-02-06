@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 
@@ -50,7 +51,10 @@ public class LookupSnapshotTaker
   )
   {
     this.objectMapper = jsonMapper;
-    Preconditions.checkArgument(!Strings.isNullOrEmpty(persistDirectory), "can not work without specifying persistDirectory");
+    Preconditions.checkArgument(
+        !Strings.isNullOrEmpty(persistDirectory),
+        "can not work without specifying persistDirectory"
+    );
     this.persistDirectory = new File(persistDirectory);
     if (!this.persistDirectory.exists()) {
       Preconditions.checkArgument(this.persistDirectory.mkdirs(), "Oups was not able to create persist directory");
@@ -72,7 +76,7 @@ public class LookupSnapshotTaker
         LOGGER.warn("found empty file no lookups to load from [%s]", persistFile.getAbsolutePath());
         return Collections.emptyList();
       }
-      lookupBeanList = objectMapper.readValue(persistFile, new TypeReference<List<LookupBean>>(){});
+      lookupBeanList = objectMapper.readValue(persistFile, new TypeReference<List<LookupBean>>() {});
       return lookupBeanList;
     }
     catch (IOException e) {
@@ -83,7 +87,7 @@ public class LookupSnapshotTaker
   public synchronized void takeSnapshot(List<LookupBean> lookups)
   {
     try {
-      objectMapper.writeValue(persistFile, lookups);
+      FileUtils.writeAtomically(persistFile, out -> objectMapper.writeValue(out, lookups));
     }
     catch (IOException e) {
       throw new ISE(e, "Exception during serialization of lookups using file [%s]", persistFile.getAbsolutePath());
