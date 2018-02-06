@@ -27,6 +27,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
 
 public class FileUtilsTest
 {
@@ -47,5 +48,30 @@ public class FileUtilsTest
     }
     long buffersMemoryAfter = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     Assert.assertEquals(buffersMemoryBefore, buffersMemoryAfter);
+  }
+
+  @Test
+  public void testWriteAtomically() throws IOException
+  {
+    final File tmpDir = folder.newFolder();
+    final File tmpFile = new File(tmpDir, "file1");
+    FileUtils.writeAtomically(tmpFile, out -> out.write(StringUtils.toUtf8("foo")));
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
+
+    // Try writing again, throw error partway through.
+    try {
+      FileUtils.writeAtomically(tmpFile, out -> {
+        out.write(StringUtils.toUtf8("bar"));
+        out.flush();
+        throw new ISE("OMG!");
+      });
+    }
+    catch (IllegalStateException e) {
+      // Suppress
+    }
+    Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
+
+    FileUtils.writeAtomically(tmpFile, out -> out.write(StringUtils.toUtf8("baz")));
+    Assert.assertEquals("baz", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
   }
 }

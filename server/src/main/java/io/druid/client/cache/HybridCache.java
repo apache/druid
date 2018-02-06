@@ -21,7 +21,7 @@ package io.druid.client.cache;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;

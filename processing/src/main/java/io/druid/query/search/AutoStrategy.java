@@ -19,7 +19,7 @@
 
 package io.druid.query.search;
 
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.segment.ColumnSelectorBitmapIndexSelector;

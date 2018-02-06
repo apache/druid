@@ -21,8 +21,8 @@ package io.druid.client.cache;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.logger.Logger;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;

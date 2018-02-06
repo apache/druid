@@ -19,20 +19,12 @@
 
 package io.druid.https;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.server.security.TLSUtils;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 
 public class SSLContextProvider implements Provider<SSLContext>
 {
@@ -51,25 +43,12 @@ public class SSLContextProvider implements Provider<SSLContext>
   {
     log.info("Creating SslContext for https client using config [%s]", config);
 
-    SSLContext sslContext = null;
-    try {
-      sslContext = SSLContext.getInstance(config.getProtocol() == null ? "TLSv1.2" : config.getProtocol());
-      KeyStore keyStore = KeyStore.getInstance(config.getTrustStoreType() == null
-                                               ? KeyStore.getDefaultType()
-                                               : config.getTrustStoreType());
-      keyStore.load(
-          new FileInputStream(config.getTrustStorePath()),
-          config.getTrustStorePasswordProvider().getPassword().toCharArray()
-      );
-      TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(config.getTrustStoreAlgorithm() == null
-                                                                                ? TrustManagerFactory.getDefaultAlgorithm()
-                                                                                : config.getTrustStoreAlgorithm());
-      trustManagerFactory.init(keyStore);
-      sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
-    }
-    catch (CertificateException | KeyManagementException | IOException | KeyStoreException | NoSuchAlgorithmException e) {
-      Throwables.propagate(e);
-    }
-    return sslContext;
+    return TLSUtils.createSSLContext(
+        config.getProtocol(),
+        config.getTrustStoreType(),
+        config.getTrustStorePath(),
+        config.getTrustStoreAlgorithm(),
+        config.getTrustStorePasswordProvider()
+    );
   }
 }

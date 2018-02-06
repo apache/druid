@@ -65,6 +65,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Partitioner;
@@ -211,9 +212,17 @@ public class IndexGeneratorJob implements Jobby
 
       boolean success = job.waitForCompletion(true);
 
-      Counter invalidRowCount = job.getCounters()
-                                   .findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
-      jobStats.setInvalidRowCount(invalidRowCount.getValue());
+      Counters counters = job.getCounters();
+      if (counters == null) {
+        log.info("No counters found for job [%s]", job.getJobName());
+      } else {
+        Counter invalidRowCount = counters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER);
+        if (invalidRowCount != null) {
+          jobStats.setInvalidRowCount(invalidRowCount.getValue());
+        } else {
+          log.info("No invalid row counter found for job [%s]", job.getJobName());
+        }
+      }
 
       return success;
     }
@@ -258,7 +267,9 @@ public class IndexGeneratorJob implements Jobby
     private static final HashFunction hashFunction = Hashing.murmur3_128();
 
     private AggregatorFactory[] aggregators;
+
     private AggregatorFactory[] aggsForSerializingSegmentInputRow;
+    private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
 
     @Override
     protected void setup(Context context)
@@ -277,6 +288,11 @@ public class IndexGeneratorJob implements Jobby
           aggsForSerializingSegmentInputRow[i] = aggregators[i].getCombiningFactory();
         }
       }
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
+                                                           .getDataSchema()
+                                                           .getParser()
+                                                           .getParseSpec()
+                                                           .getDimensionsSpec());
     }
 
     @Override
@@ -307,9 +323,9 @@ public class IndexGeneratorJob implements Jobby
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
       byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
-                                  InputRowSerde.toBytes(inputRow, aggsForSerializingSegmentInputRow, reportParseExceptions)
+                                  InputRowSerde.toBytes(typeHelperMap, inputRow, aggsForSerializingSegmentInputRow, reportParseExceptions)
                                                                       :
-                                  InputRowSerde.toBytes(inputRow, aggregators, reportParseExceptions);
+                                  InputRowSerde.toBytes(typeHelperMap, inputRow, aggregators, reportParseExceptions);
 
       context.write(
           new SortableBytes(
@@ -330,6 +346,7 @@ public class IndexGeneratorJob implements Jobby
     private HadoopDruidIndexerConfig config;
     private AggregatorFactory[] aggregators;
     private AggregatorFactory[] combiningAggs;
+    private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
 
     @Override
     protected void setup(Context context)
@@ -342,6 +359,11 @@ public class IndexGeneratorJob implements Jobby
       for (int i = 0; i < aggregators.length; ++i) {
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
+                                                           .getDataSchema()
+                                                           .getParser()
+                                                           .getParseSpec()
+                                                           .getDimensionsSpec());
     }
 
     @Override
@@ -358,11 +380,11 @@ public class IndexGeneratorJob implements Jobby
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
         IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null, null);
-        index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
+        index.add(InputRowSerde.fromBytes(typeHelperMap, first.getBytes(), aggregators));
 
         while (iter.hasNext()) {
           context.progress();
-          InputRow value = InputRowSerde.fromBytes(iter.next().getBytes(), aggregators);
+          InputRow value = InputRowSerde.fromBytes(typeHelperMap, iter.next().getBytes(), aggregators);
 
           if (!index.canAppendRow()) {
             dimOrder.addAll(index.getDimensionOrder());
@@ -389,10 +411,13 @@ public class IndexGeneratorJob implements Jobby
         context.progress();
         Row row = rows.next();
         InputRow inputRow = getInputRowFromRow(row, dimensions);
+
         // reportParseExceptions is true as any unparseable data is already handled by the mapper.
+        byte[] serializedRow = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, true);
+
         context.write(
             key,
-            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs, true))
+            new BytesWritable(serializedRow)
         );
       }
       index.close();
@@ -487,6 +512,7 @@ public class IndexGeneratorJob implements Jobby
     private List<String> metricNames = Lists.newArrayList();
     private AggregatorFactory[] aggregators;
     private AggregatorFactory[] combiningAggs;
+    private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
 
     protected ProgressIndicator makeProgressIndicator(final Context context)
     {
@@ -538,6 +564,11 @@ public class IndexGeneratorJob implements Jobby
         metricNames.add(aggregators[i].getName());
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
+      typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
+                                                           .getDataSchema()
+                                                           .getParser()
+                                                           .getParseSpec()
+                                                           .getDimensionsSpec());
     }
 
     @Override
@@ -605,7 +636,7 @@ public class IndexGeneratorJob implements Jobby
         for (final BytesWritable bw : values) {
           context.progress();
 
-          final InputRow inputRow = index.formatRow(InputRowSerde.fromBytes(bw.getBytes(), aggregators));
+          final InputRow inputRow = index.formatRow(InputRowSerde.fromBytes(typeHelperMap, bw.getBytes(), aggregators));
           int numRows = index.add(inputRow);
 
           ++lineCount;

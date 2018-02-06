@@ -28,8 +28,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskStatus;
@@ -548,6 +548,24 @@ public class RemoteTaskRunnerTest
     );
     Assert.assertEquals(1, lazyworkers.size());
     Assert.assertEquals(1, remoteTaskRunner.getLazyWorkers().size());
+  }
+
+  @Test
+  public void testFindLazyWorkerNotRunningAnyTaskButWithZeroMaxWorkers() throws Exception
+  {
+    doSetup();
+    Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
+        new Predicate<ImmutableWorkerInfo>()
+        {
+          @Override
+          public boolean apply(ImmutableWorkerInfo input)
+          {
+            return true;
+          }
+        }, 0
+    );
+    Assert.assertEquals(0, lazyworkers.size());
+    Assert.assertEquals(0, remoteTaskRunner.getLazyWorkers().size());
   }
 
   @Test

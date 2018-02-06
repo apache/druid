@@ -21,7 +21,7 @@ package io.druid.server.coordinator;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.StringUtils;
 
 import java.util.List;

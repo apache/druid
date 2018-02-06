@@ -76,7 +76,7 @@ public class NewestSegmentFirstPolicyBenchmark
   @Param("10")
   private int numCompactionTaskSlots;
 
-  private Map<String, CoordinatorCompactionConfig> compactionConfigs;
+  private Map<String, DataSourceCompactionConfig> compactionConfigs;
   private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
 
   @Setup(Level.Trial)
@@ -87,7 +87,7 @@ public class NewestSegmentFirstPolicyBenchmark
       final String dataSource = DATA_SOURCE_PREFIX + i;
       compactionConfigs.put(
           dataSource,
-          new CoordinatorCompactionConfig(
+          new DataSourceCompactionConfig(
               dataSource,
               0,
               targetCompactionSizeBytes,

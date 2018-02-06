@@ -21,7 +21,7 @@ package io.druid.client;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.common.StringUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -113,9 +113,9 @@ public class ImmutableDruidServer
   public String getURL()
   {
     if (metadata.getHostAndTlsPort() != null) {
-      return StringUtils.safeFormat("https://%s", metadata.getHostAndTlsPort());
+      return StringUtils.nonStrictFormat("https://%s", metadata.getHostAndTlsPort());
     } else {
-      return StringUtils.safeFormat("http://%s", metadata.getHostAndPort());
+      return StringUtils.nonStrictFormat("http://%s", metadata.getHostAndPort());
     }
   }
 

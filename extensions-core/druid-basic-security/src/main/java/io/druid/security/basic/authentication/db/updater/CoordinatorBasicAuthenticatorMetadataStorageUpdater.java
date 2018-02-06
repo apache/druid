@@ -22,7 +22,7 @@ package io.druid.security.basic.authentication.db.updater;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.common.config.ConfigManager;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;

@@ -19,9 +19,9 @@
 
 package io.druid.security.basic.authentication;
 
-import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.FullResponseHolder;
-import com.metamx.http.client.response.HttpResponseHandler;
+import io.druid.java.util.http.client.response.ClientResponse;
+import io.druid.java.util.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 

@@ -28,8 +28,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
@@ -626,8 +626,8 @@ public class LookupReferencesManager
       LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
       if (old != null) {
-        if (!old.getLookupExtractorFactory().close()) {
-          throw new ISE("close method returned false for lookup [%s]:[%s]", lookupName, old);
+        if (!old.getLookupExtractorFactory().destroy()) {
+          throw new ISE("destroy method returned false for lookup [%s]:[%s]", lookupName, old);
         }
       }
     }
@@ -659,9 +659,9 @@ public class LookupReferencesManager
       if (lookupExtractorFactoryContainer != null) {
         LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
-        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().close()) {
+        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().destroy()) {
           throw new ISE(
-              "close method returned false for lookup [%s]:[%s]",
+              "destroy method returned false for lookup [%s]:[%s]",
               lookupName,
               lookupExtractorFactoryContainer
           );
