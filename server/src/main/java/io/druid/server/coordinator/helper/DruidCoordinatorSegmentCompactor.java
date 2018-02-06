@@ -24,12 +24,14 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
-import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.DataSourceCompactionConfig;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -38,7 +40,7 @@ import java.util.stream.Collectors;
 public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 {
   static final String COMPACT_TASK_COUNT = "compactTaskCount";
-  static final String SEGMENTS_WAIT_COMPACT = "segmentsWaitCompact";
+  static final String SEGMENT_SIZE_WAIT_COMPACT = "segmentSizeWaitCompact";
 
   // Should be synced with CompactionTask.TYPE
   private static final String COMPACT_TASK_TYPE = "compact";
@@ -46,6 +48,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
   private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
   private final IndexingServiceClient indexingServiceClient;
+
+  private Object2LongMap<String> remainingSegmentSizeBytes;
 
   @Inject
   public DruidCoordinatorSegmentCompactor(IndexingServiceClient indexingServiceClient)
@@ -58,17 +62,17 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   {
     LOG.info("Run coordinator segment compactor");
 
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+    final CoordinatorCompactionConfig dynamicConfig = params.getCoordinatorCompactionConfig();
     final CoordinatorStats stats = new CoordinatorStats();
 
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = params.getDataSources();
-      List<CoordinatorCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
+      List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
 
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
-        Map<String, CoordinatorCompactionConfig> compactionConfigs = compactionConfigList
+        Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
             .stream()
-            .collect(Collectors.toMap(CoordinatorCompactionConfig::getDataSource, Function.identity()));
+            .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
         final int numRunningCompactTasks = indexingServiceClient
             .getRunningTasks()
             .stream()
@@ -113,7 +117,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   }
 
   private CoordinatorStats doRun(
-      Map<String, CoordinatorCompactionConfig> compactionConfigs,
+      Map<String, DataSourceCompactionConfig> compactionConfigs,
       int numAvailableCompactionTaskSlots,
       CompactionSegmentIterator iterator
   )
@@ -126,7 +130,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
       final String dataSourceName = segmentsToCompact.get(0).getDataSource();
 
       if (segmentsToCompact.size() > 1) {
-        final CoordinatorCompactionConfig config = compactionConfigs.get(dataSourceName);
+        final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
             config.getTaskPriority(),
@@ -148,13 +152,20 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   {
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(COMPACT_TASK_COUNT, numCompactionTasks);
-    iterator.remainingSegments().object2LongEntrySet().fastForEach(
+    remainingSegmentSizeBytes = iterator.remainingSegmentSizeBytes();
+    iterator.remainingSegmentSizeBytes().object2LongEntrySet().fastForEach(
         entry -> {
           final String dataSource = entry.getKey();
           final long numSegmentsWaitCompact = entry.getLongValue();
-          stats.addToDataSourceStat(SEGMENTS_WAIT_COMPACT, dataSource, numSegmentsWaitCompact);
+          stats.addToDataSourceStat(SEGMENT_SIZE_WAIT_COMPACT, dataSource, numSegmentsWaitCompact);
         }
     );
     return stats;
+  }
+
+  @Nullable
+  public long getRemainingSegmentSizeBytes(String dataSource)
+  {
+    return remainingSegmentSizeBytes.getLong(dataSource);
   }
 }

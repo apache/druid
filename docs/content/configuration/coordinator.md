@@ -106,9 +106,6 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`killDataSourceWhitelist`|List of dataSources for which kill tasks are sent if property `druid.coordinator.kill.on` is true.|none|
 |`killAllDataSources`|Send kill tasks for ALL dataSources if property `druid.coordinator.kill.on` is true. If this is set to true then `killDataSourceWhitelist` must not be specified or be empty list.|false|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 0 (loading queue is unbounded) |0|
-|`compactionConfigs`|Compaction config list. See the below [Compaction Config](#compaction-config)|none|
-|`compactionTaskSlotRatio`|The ratio of the total task slots to the copmaction task slots. The actual max number of compaction tasks is `min(maxCompactionTaskSlots, compactionTaskSlotRatio * total task slots)`.|0.1|
-|`maxCompactionTaskSlots`|The maximum number of task slots for compaction task. The actual max number of compaction tasks is `min(maxCompactionTaskSlots, compactionTaskSlotRatio * total task slots)`.|Unbounded|
 
 To view the audit history of coordinator dynamic config issue a GET request to the URL -
 
@@ -124,7 +121,25 @@ To view last <n> entries of the audit history of coordinator dynamic config issu
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
 
-# Compaction Config
+# Lookups Dynamic Config (EXPERIMENTAL)
+These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.html)
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.manager.lookups.hostDeleteTimeout`|How long to wait for a `DELETE` request to a particular node before considering the `DELETE` a failure|PT1s|
+|`druid.manager.lookups.hostUpdateTimeout`|How long to wait for a `POST` request to a particular node before considering the `POST` a failure|PT10s|
+|`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure|PT10s|
+|`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure|PT60s|
+|`druid.manager.lookups.threadPoolSize`|How many nodes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
+|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|
+
+Compaction Configuration
+------------------------
+
+Compaction configurations can also be set or updated dynamically without restarting coordinators. For segment compaction,
+please see [Compacting Segments](../design/coordinator.html#compacting-segments).
+
+A description of the compaction config is:
 
 |Property|Description|Required|
 |--------|-----------|--------|
@@ -146,16 +161,4 @@ An example of compaction config is:
 }
 ```
 
-For the realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large values to avoid frequent compact task failures.
-
-# Lookups Dynamic Config (EXPERIMENTAL)
-These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.html)
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.manager.lookups.hostDeleteTimeout`|How long to wait for a `DELETE` request to a particular node before considering the `DELETE` a failure|PT1s|
-|`druid.manager.lookups.hostUpdateTimeout`|How long to wait for a `POST` request to a particular node before considering the `POST` a failure|PT10s|
-|`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure|PT10s|
-|`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure|PT60s|
-|`druid.manager.lookups.threadPoolSize`|How many nodes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
-|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|
+For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large values to avoid frequent compact task failures.
