@@ -21,7 +21,6 @@ package io.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.theta.SetOperation;
@@ -171,7 +170,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    return ByteBuffer.allocate(1 + Ints.BYTES + fieldNameBytes.length)
+    return ByteBuffer.allocate(1 + Integer.BYTES + fieldNameBytes.length)
                      .put(cacheId)
                      .putInt(size)
                      .put(fieldNameBytes)

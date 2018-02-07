@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
@@ -190,7 +189,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
         segmentWriteOutMedium,
         "test",
         compressionStrategy,
-        Longs.BYTES * 10000
+        Long.BYTES * 10000
     );
     CompressedVSizeColumnarIntsSerializer writer = new CompressedVSizeColumnarIntsSerializer(
         segmentWriteOutMedium,

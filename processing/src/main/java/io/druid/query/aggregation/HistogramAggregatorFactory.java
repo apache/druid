@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
@@ -191,7 +189,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     ByteBuffer buf = ByteBuffer
-        .allocate(1 + fieldNameBytes.length + Floats.BYTES * breaks.length)
+        .allocate(1 + fieldNameBytes.length + Float.BYTES * breaks.length)
         .put(AggregatorUtil.HIST_CACHE_TYPE_ID)
         .put(fieldNameBytes)
         .put((byte) 0xFF);
@@ -209,7 +207,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES * (breaks.length + 1) + Floats.BYTES * 2;
+    return Long.BYTES * (breaks.length + 1) + Float.BYTES * 2;
   }
 
   @Override

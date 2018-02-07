@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
 import io.druid.collections.spatial.ImmutablePoint;
 
 import java.nio.ByteBuffer;
@@ -180,16 +178,16 @@ public class PolygonBound extends RectangularBound
   @Override
   public byte[] getCacheKey()
   {
-    ByteBuffer abscissaBuffer = ByteBuffer.allocate(abscissa.length * Floats.BYTES);
+    ByteBuffer abscissaBuffer = ByteBuffer.allocate(abscissa.length * Float.BYTES);
     abscissaBuffer.asFloatBuffer().put(abscissa);
     final byte[] abscissaCacheKey = abscissaBuffer.array();
 
-    ByteBuffer ordinateBuffer = ByteBuffer.allocate(ordinate.length * Floats.BYTES);
+    ByteBuffer ordinateBuffer = ByteBuffer.allocate(ordinate.length * Float.BYTES);
     ordinateBuffer.asFloatBuffer().put(ordinate);
     final byte[] ordinateCacheKey = ordinateBuffer.array();
 
     final ByteBuffer cacheKey = ByteBuffer
-        .allocate(1 + abscissaCacheKey.length + ordinateCacheKey.length + Ints.BYTES)
+        .allocate(1 + abscissaCacheKey.length + ordinateCacheKey.length + Integer.BYTES)
         .put(abscissaCacheKey)
         .put(ordinateCacheKey)
         .putInt(getLimit())
