@@ -21,7 +21,6 @@ package io.druid.common.utils;
 
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
-import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.io.Channels;
@@ -53,7 +52,7 @@ public class SerializerUtils
       throw new IllegalArgumentException("Expected writable, big-endian, heap byteBuffer");
     }
     helperBuffer.putInt(0, value);
-    out.write(helperBuffer.array(), helperBuffer.arrayOffset(), Ints.BYTES);
+    out.write(helperBuffer.array(), helperBuffer.arrayOffset(), Integer.BYTES);
   }
 
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
@@ -145,7 +144,7 @@ public class SerializerUtils
 
   private void writeInt(WritableByteChannel out, int intValue) throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(Ints.BYTES);
+    final ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
     buffer.putInt(intValue);
     buffer.flip();
     Channels.writeFully(out, buffer);
@@ -153,7 +152,7 @@ public class SerializerUtils
 
   private int readInt(InputStream in) throws IOException
   {
-    byte[] intBytes = new byte[Ints.BYTES];
+    byte[] intBytes = new byte[Integer.BYTES];
 
     ByteStreams.readFully(in, intBytes);
 
@@ -188,7 +187,7 @@ public class SerializerUtils
 
   public void writeLong(WritableByteChannel out, long longValue) throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(Longs.BYTES);
+    final ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
     buffer.putLong(longValue);
     buffer.flip();
     Channels.writeFully(out, buffer);
@@ -196,7 +195,7 @@ public class SerializerUtils
 
   long readLong(InputStream in) throws IOException
   {
-    byte[] longBytes = new byte[Longs.BYTES];
+    byte[] longBytes = new byte[Long.BYTES];
 
     ByteStreams.readFully(in, longBytes);
 
@@ -231,7 +230,7 @@ public class SerializerUtils
 
   void writeFloat(WritableByteChannel out, float floatValue) throws IOException
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(Floats.BYTES);
+    final ByteBuffer buffer = ByteBuffer.allocate(Float.BYTES);
     buffer.putFloat(floatValue);
     buffer.flip();
     Channels.writeFully(out, buffer);
@@ -265,6 +264,6 @@ public class SerializerUtils
 
   public int getSerializedStringByteSize(String str)
   {
-    return Ints.BYTES + StringUtils.toUtf8(str).length;
+    return Integer.BYTES + StringUtils.toUtf8(str).length;
   }
 }

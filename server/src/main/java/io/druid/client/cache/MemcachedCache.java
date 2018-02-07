@@ -31,13 +31,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Ints;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
-import io.druid.java.util.metrics.AbstractMonitor;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -500,7 +499,7 @@ public class MemcachedCache implements Cache
   private static byte[] serializeValue(NamedKey key, byte[] value)
   {
     byte[] keyBytes = key.toByteArray();
-    return ByteBuffer.allocate(Ints.BYTES + keyBytes.length + value.length)
+    return ByteBuffer.allocate(Integer.BYTES + keyBytes.length + value.length)
                      .putInt(keyBytes.length)
                      .put(keyBytes)
                      .put(value)

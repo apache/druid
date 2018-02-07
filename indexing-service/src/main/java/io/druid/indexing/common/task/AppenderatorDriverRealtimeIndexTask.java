@@ -26,7 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.Committer;
@@ -94,7 +93,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   private static String makeTaskId(RealtimeAppenderatorIngestionSpec spec)
   {
     final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Ints.BYTES * 2; ++i) {
+    for (int i = 0; i < Integer.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((random.nextInt() >>> (i * 4)) & 0x0F)));
     }
     return StringUtils.format(

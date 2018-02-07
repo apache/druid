@@ -163,5 +163,12 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use io.druid.java.util.common.logger.Logger instead"/>
     </module>
+
+    <module name="Regexp">
+      <!-- Couldn't check this in forbidden-apis, because javac replaces compile-time constants without refs. -->
+      <property name="format" value="(Shorts|Chars|Ints|Longs|Floats|Doubles)\.BYTES"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use java.lang.Primitive.BYTES instead."/>
+    </module>
   </module>
 </module>

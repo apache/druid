@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -41,7 +40,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -58,6 +56,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -2304,7 +2303,7 @@ public class IndexMergerTestBase
   @Test
   public void testDictIdSeeker() throws Exception
   {
-    IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Ints.BYTES).asIntBuffer();
+    IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Integer.BYTES).asIntBuffer();
     dimConversions.put(0);
     dimConversions.put(2);
     dimConversions.put(4);
