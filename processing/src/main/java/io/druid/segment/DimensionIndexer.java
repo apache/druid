@@ -122,9 +122,10 @@ public interface DimensionIndexer
    *
    * @param dimValues Single row val to process
    *
+   * @param reportParseExceptions
    * @return An array containing an encoded representation of the input row value.
    */
-  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(Object dimValues);
+  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions);
 
 
   /**

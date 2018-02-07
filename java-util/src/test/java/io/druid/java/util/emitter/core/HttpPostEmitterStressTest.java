@@ -23,16 +23,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -139,5 +142,118 @@ public class HttpPostEmitterStressTest
         throw new AssertionError("event " + eventIndex);
       }
     }
+  }
+
+  @Test
+  public void testLargeEventsQueueLimit() throws InterruptedException, IOException
+  {
+    ObjectMapper mapper = new ObjectMapper();
+
+    HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
+        .setFlushMillis(100)
+        .setFlushCount(4)
+        .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
+        .setMaxBatchSize(1024 * 1024)
+        .setBatchQueueSizeLimit(10)
+        .build();
+    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper());
+
+    emitter.start();
+
+    httpClient.setGoHandler(new GoHandler() {
+      @Override
+      protected <X extends Exception> ListenableFuture<Response> go(Request request) throws X
+      {
+        return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
+      }
+    });
+
+    char[] chars = new char[600000];
+    Arrays.fill(chars, '*');
+    String bigString = new String(chars);
+
+    Event bigEvent = ServiceMetricEvent.builder()
+                                       .setFeed("bigEvents")
+                                       .setDimension("test", bigString)
+                                       .build("metric", 10)
+                                       .build("qwerty", "asdfgh");
+
+    for (int i = 0; i < 1000; i++) {
+      emitter.emit(bigEvent);
+      Assert.assertTrue(emitter.getLargeEventsToEmit() <= 11);
+    }
+
+    emitter.flush();
+  }
+
+  @Test
+  public void testLargeAndSmallEventsQueueLimit() throws InterruptedException, IOException
+  {
+    HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
+        .setFlushMillis(100)
+        .setFlushCount(4)
+        .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
+        .setMaxBatchSize(1024 * 1024)
+        .setBatchQueueSizeLimit(10)
+        .build();
+    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper());
+
+    emitter.start();
+
+    httpClient.setGoHandler(new GoHandler() {
+      @Override
+      protected <X extends Exception> ListenableFuture<Response> go(Request request) throws X
+      {
+        return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
+      }
+    });
+
+    char[] chars = new char[600000];
+    Arrays.fill(chars, '*');
+    String bigString = new String(chars);
+
+    Event smallEvent = ServiceMetricEvent.builder()
+                                       .setFeed("smallEvents")
+                                       .setDimension("test", "hi")
+                                       .build("metric", 10)
+                                       .build("qwerty", "asdfgh");
+
+    Event bigEvent = ServiceMetricEvent.builder()
+                                       .setFeed("bigEvents")
+                                       .setDimension("test", bigString)
+                                       .build("metric", 10)
+                                       .build("qwerty", "asdfgh");
+
+    final CountDownLatch threadsCompleted = new CountDownLatch(2);
+    new Thread() {
+      @Override
+      public void run()
+      {
+        for (int i = 0; i < 1000; i++) {
+
+          emitter.emit(smallEvent);
+
+          Assert.assertTrue(emitter.getFailedBuffers() <= 10);
+          Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+        }
+        threadsCompleted.countDown();
+      }
+    }.start();
+    new Thread() {
+      @Override
+      public void run()
+      {
+        for (int i = 0; i < 1000; i++) {
+
+          emitter.emit(bigEvent);
+
+          Assert.assertTrue(emitter.getFailedBuffers() <= 10);
+          Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+        }
+        threadsCompleted.countDown();
+      }
+    }.start();
+    threadsCompleted.await();
+    emitter.flush();
   }
 }

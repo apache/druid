@@ -35,6 +35,7 @@ import io.druid.java.util.http.client.Request;
 import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.audit.AuditInfo;
+import io.druid.common.config.ConfigManager.SetResult;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.jackson.DefaultObjectMapper;
@@ -578,7 +579,7 @@ public class LookupCoordinatorManagerTest
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
                         EasyMock.eq(EMPTY_TIERED_LOOKUP),
                         EasyMock.eq(auditInfo)
-                    )).andReturn(true).once();
+                    )).andReturn(SetResult.ok()).once();
     EasyMock.replay(configManager);
     manager.updateLookups(EMPTY_TIERED_LOOKUP, auditInfo);
     EasyMock.verify(configManager);
@@ -609,7 +610,7 @@ public class LookupCoordinatorManagerTest
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
                         EasyMock.eq(TIERED_LOOKUP_MAP_V0),
                         EasyMock.eq(auditInfo)
-                    )).andReturn(true).once();
+                    )).andReturn(SetResult.ok()).once();
     EasyMock.replay(configManager);
     manager.updateLookup(LOOKUP_TIER, SINGLE_LOOKUP_NAME, SINGLE_LOOKUP_SPEC_V0, auditInfo);
     EasyMock.verify(configManager);
@@ -665,7 +666,7 @@ public class LookupCoordinatorManagerTest
                         )),
             EasyMock.eq(auditInfo)
         )
-    ).andReturn(true).once();
+    ).andReturn(SetResult.ok()).once();
     EasyMock.replay(configManager);
     Assert.assertTrue(
         manager.updateLookups(
@@ -725,7 +726,7 @@ public class LookupCoordinatorManagerTest
                         )),
             EasyMock.eq(auditInfo)
         )
-    ).andReturn(true).once();
+    ).andReturn(SetResult.ok()).once();
     EasyMock.replay(configManager);
     Assert.assertTrue(
         manager.updateLookups(
@@ -762,7 +763,7 @@ public class LookupCoordinatorManagerTest
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
                         EasyMock.eq(TIERED_LOOKUP_MAP_V1),
                         EasyMock.eq(auditInfo)
-                    )).andReturn(true).once();
+                    )).andReturn(SetResult.ok()).once();
     EasyMock.replay(configManager);
     manager.updateLookups(TIERED_LOOKUP_MAP_V1, auditInfo);
     EasyMock.verify(configManager);
@@ -837,7 +838,7 @@ public class LookupCoordinatorManagerTest
                         )),
             EasyMock.eq(auditInfo)
         )
-    ).andReturn(true).once();
+    ).andReturn(SetResult.ok()).once();
     EasyMock.replay(configManager);
     Assert.assertTrue(manager.updateLookups(ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(
                                                 LOOKUP_TIER + "1", ImmutableMap.of(
@@ -892,7 +893,7 @@ public class LookupCoordinatorManagerTest
             ),
             EasyMock.eq(auditInfo)
         )
-    ).andReturn(true).once();
+    ).andReturn(SetResult.ok()).once();
     EasyMock.replay(configManager);
     Assert.assertTrue(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
     EasyMock.verify(configManager);
@@ -1427,7 +1428,7 @@ public class LookupCoordinatorManagerTest
             ),
             EasyMock.anyObject(AuditInfo.class)
         )
-    ).andReturn(true).once();
+    ).andReturn(SetResult.ok()).once();
 
     EasyMock.replay(configManager);
 

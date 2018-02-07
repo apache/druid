@@ -50,7 +50,6 @@ import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
-import org.joda.time.DateTimeZone;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -225,7 +224,13 @@ public class TimeFilteringTest extends BaseFilterTest
   @Test
   public void testTimeFilterWithTimeFormatExtractionFn()
   {
-    ExtractionFn exfn = new TimeFormatExtractionFn("EEEE", DateTimeZone.forID("America/New_York"), "en", null, false);
+    ExtractionFn exfn = new TimeFormatExtractionFn(
+        "EEEE",
+        DateTimes.inferTzfromString("America/New_York"),
+        "en",
+        null,
+        false
+    );
     assertFilterMatches(
         new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Wednesday", exfn),
         ImmutableList.<String>of("0", "1", "2", "3", "4", "5")

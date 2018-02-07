@@ -20,6 +20,7 @@
 package io.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.java.util.common.Pair;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,9 +45,12 @@ public class HttpEmitterConfigTest
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
     Assert.assertEquals(null, config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Assert.assertEquals(5 * 1024 * 1024, config.getMaxBatchSize());
+    Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
+        Runtime.getRuntime().maxMemory()
+    );
+    Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
+    Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
-    Assert.assertEquals(50, config.getBatchQueueSizeLimit());
     Assert.assertEquals(2.0f, config.getHttpTimeoutAllowanceFactor(), 0.0f);
     Assert.assertEquals(0, config.getMinHttpTimeoutMillis());
   }
@@ -65,9 +69,12 @@ public class HttpEmitterConfigTest
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
     Assert.assertEquals(null, config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Assert.assertEquals(5 * 1024 * 1024, config.getMaxBatchSize());
+    Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
+        Runtime.getRuntime().maxMemory()
+    );
+    Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
+    Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
-    Assert.assertEquals(50, config.getBatchQueueSizeLimit());
     Assert.assertEquals(2.0f, config.getHttpTimeoutAllowanceFactor(), 0.0f);
     Assert.assertEquals(0, config.getMinHttpTimeoutMillis());
   }
@@ -133,5 +140,33 @@ public class HttpEmitterConfigTest
     Assert.assertEquals(2500, config.getBatchQueueSizeLimit());
     Assert.assertEquals(3.0f, config.getHttpTimeoutAllowanceFactor(), 0.0f);
     Assert.assertEquals(100, config.getMinHttpTimeoutMillis());
+  }
+
+  @Test
+  public void testMemoryLimits()
+  {
+    Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
+        64 * 1024 * 1024
+    );
+    Assert.assertEquals(3355443, batchConfigPair.lhs.intValue());
+    Assert.assertEquals(2, batchConfigPair.rhs.intValue());
+
+    Pair<Integer, Integer> batchConfigPair2 = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
+        128 * 1024 * 1024
+    );
+    Assert.assertEquals(5242880, batchConfigPair2.lhs.intValue());
+    Assert.assertEquals(2, batchConfigPair2.rhs.intValue());
+
+    Pair<Integer, Integer> batchConfigPair3 = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
+        256 * 1024 * 1024
+    );
+    Assert.assertEquals(5242880, batchConfigPair3.lhs.intValue());
+    Assert.assertEquals(5, batchConfigPair3.rhs.intValue());
+
+    Pair<Integer, Integer> batchConfigPair4 = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
+        Long.MAX_VALUE
+    );
+    Assert.assertEquals(5242880, batchConfigPair4.lhs.intValue());
+    Assert.assertEquals(50, batchConfigPair4.rhs.intValue());
   }
 }

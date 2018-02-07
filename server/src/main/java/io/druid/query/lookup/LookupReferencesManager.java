@@ -626,8 +626,8 @@ public class LookupReferencesManager
       LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
       if (old != null) {
-        if (!old.getLookupExtractorFactory().close()) {
-          throw new ISE("close method returned false for lookup [%s]:[%s]", lookupName, old);
+        if (!old.getLookupExtractorFactory().destroy()) {
+          throw new ISE("destroy method returned false for lookup [%s]:[%s]", lookupName, old);
         }
       }
     }
@@ -659,9 +659,9 @@ public class LookupReferencesManager
       if (lookupExtractorFactoryContainer != null) {
         LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
-        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().close()) {
+        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().destroy()) {
           throw new ISE(
-              "close method returned false for lookup [%s]:[%s]",
+              "destroy method returned false for lookup [%s]:[%s]",
               lookupName,
               lookupExtractorFactoryContainer
           );
