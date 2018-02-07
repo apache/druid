@@ -19,11 +19,9 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingWriter
@@ -46,7 +44,7 @@ public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void setOutputStream(OutputStream output)
+  public void setOutputStream(WriteOutBytes output)
   {
     serializer = VSizeLongSerde.getSerializer(bitsPerValue, output);
   }
@@ -58,13 +56,19 @@ public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException
+  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException
   {
-    metaOut.write(CompressionFactory.setEncodingFlag(strategy.getId()));
-    metaOut.write(CompressionFactory.LongEncodingFormat.DELTA.getId());
-    metaOut.write(CompressionFactory.DELTA_ENCODING_VERSION);
-    metaOut.write(Longs.toByteArray(base));
-    metaOut.write(Ints.toByteArray(bitsPerValue));
+    metaOut.put(CompressionFactory.setEncodingFlag(strategy.getId()));
+    metaOut.put(CompressionFactory.LongEncodingFormat.DELTA.getId());
+    metaOut.put(CompressionFactory.DELTA_ENCODING_VERSION);
+    metaOut.putLong(base);
+    metaOut.putInt(bitsPerValue);
+  }
+
+  @Override
+  public int metaSize()
+  {
+    return 1 + 1 + 1 + Long.BYTES + Integer.BYTES;
   }
 
   @Override

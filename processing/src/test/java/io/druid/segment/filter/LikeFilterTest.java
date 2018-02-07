@@ -56,12 +56,12 @@ public class LikeFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "foo")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "foobar")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "bar")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "foobarbaz")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "foo%bar"))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "foo")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "foobar")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "bar")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "foobarbaz")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "foo%bar")).get(0)
   );
 
   public LikeFilterTest(

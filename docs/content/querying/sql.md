@@ -56,14 +56,17 @@ WHERE clause can also reference a subquery, like `WHERE col1 IN (SELECT foo FROM
 as [semi-joins](#query-execution), described below.
 
 The GROUP BY clause refers to columns in the FROM table. Using GROUP BY, DISTINCT, or any aggregation functions will
-trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution).
+trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution). GROUP BY
+can refer to an expression or a select clause ordinal position (like `GROUP BY 2` to group by the second selected
+column).
 
 The HAVING clause refers to columns that are present after execution of GROUP BY. It can be used to filter on either
 grouping expressions or aggregated values. It can only be used together with GROUP BY.
 
 The ORDER BY clause refers to columns that are present after execution of GROUP BY. It can be used to order the results
-based on either grouping expressions or aggregated values. The ORDER BY expression can be a column name, alias, or
-ordinal position (like `ORDER BY 2` to order by the second column). ORDER BY can only be used together with GROUP BY.
+based on either grouping expressions or aggregated values. ORDER BY can refer to an expression or a select clause
+ordinal position (like `ORDER BY 2` to order by the second selected column). For non-aggregation queries, ORDER BY
+can only order by the `__time` column. For aggregation queries, ORDER BY can order by any column.
 
 The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
 to data nodes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
@@ -105,13 +108,15 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`FLOOR(expr)`|Floor.|
 |`LN(expr)`|Logarithm (base e).|
 |`LOG10(expr)`|Logarithm (base 10).|
-|`POW(expr, power)`|expr to a power.|
+|`POWER(expr, power)`|expr to a power.|
 |`SQRT(expr)`|Square root.|
+|`TRUNCATE(expr[, digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
+|`TRUNC(expr[, digits])`|Synonym for `TRUNCATE`.|
 |`x + y`|Addition.|
 |`x - y`|Subtraction.|
 |`x * y`|Multiplication.|
 |`x / y`|Division.|
-|`x % y`|Mod.|
+|`MOD(x, y)`|Modulo (remainder of x divided by y).|
 
 ### String functions
 
@@ -120,13 +125,18 @@ String functions accept strings, and return a type appropriate to the function.
 |Function|Notes|
 |--------|-----|
 |`x \|\| y`|Concat strings x and y.|
-|`CHARACTER_LENGTH(expr)`|Length of expr in UTF-16 code units.|
+|`LENGTH(expr)`|Length of expr in UTF-16 code units.|
+|`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
+|`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
+|`STRLEN(expr)`|Synonym for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.html).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
+|`STRPOS(haystack, needle)`|Returns the index of needle within haystack, starting from 1. If the needle is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
-|`TRIM([BOTH | LEADING | TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
+|`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
+|`TRIM([BOTH \| LEADING \| TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
 |`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>`).|
 |`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>`).|
 |`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>`).|
@@ -146,6 +156,7 @@ over the connection time zone.
 |--------|-----|
 |`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
 |`CURRENT_DATE`|Current date in the connection's time zone.|
+|`DATE_TRUNC(<unit>, <timestamp_expr>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millenium'.|
 |`TIME_FLOOR(<timestamp_expr>, <period>, [<origin>, [<timezone>]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
 |`TIME_SHIFT(<timestamp_expr>, <period>, <step>, [<timezone>])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
 |`TIME_EXTRACT(<timestamp_expr>, [<unit>, [<timezone>]])`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
@@ -156,6 +167,7 @@ over the connection time zone.
 |`EXTRACT(<unit> FROM timestamp_expr)`|Extracts a time part from expr, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, or YEAR. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
 |`FLOOR(timestamp_expr TO <unit>)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 |`CEIL(timestamp_expr TO <unit>)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`TIMESTAMPADD(<unit>, <count>, <timestamp>)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
 |`timestamp_expr { + \| - } <interval_expr>`|Add or subtract an amount of time from a timestamp. interval_expr can include interval literals like `INTERVAL '2' HOUR`, and may include interval arithmetic as well. This operator treats days as uniformly 86400 seconds long, and does not take into account daylight savings time. To account for daylight savings time, use TIME_SHIFT instead.|
 
 ### Comparison operators
@@ -168,6 +180,8 @@ over the connection time zone.
 |`x >= y`|Greater than or equal to.|
 |`x < y`|Less than.|
 |`x <= y`|Less than or equal to.|
+|`x BETWEEN y AND z`|Equivalent to `x >= y AND x <= z`.|
+|`x NOT BETWEEN y AND z`|Equivalent to `x < y OR x > z`.|
 |`x LIKE pattern [ESCAPE esc]`|True if x matches a SQL LIKE pattern (with an optional escape).|
 |`x NOT LIKE pattern [ESCAPE esc]`|True if x does not match a SQL LIKE pattern (with an optional escape).|
 |`x IS NULL`|True if x is NULL or empty string.|
@@ -207,6 +221,8 @@ Additionally, some Druid features are not supported by the SQL language. Some un
 
 - [Multi-value dimensions](multi-value-dimensions.html).
 - [DataSketches aggregators](../development/extensions-core/datasketches-aggregators.html).
+- [Spatial filters](../development/geo.html).
+- [Query cancellation](querying.html#query-cancellation).
 
 ## Data types and casts
 
@@ -319,18 +335,25 @@ of configuration.
 ### JSON over HTTP
 
 You can make Druid SQL queries using JSON over HTTP by posting to the endpoint `/druid/v2/sql/`. The request should
-be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`. You can
-use _curl_ to send these queries from the command-line:
+be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
+
+Results are available in two formats: "object" (the default; a JSON array of JSON objects), and "array" (a JSON array
+of JSON arrays). In "object" form, each row's field names will match the column names from your SQL query. In "array"
+form, each row's values are returned in the order specified in your SQL query.
+
+You can use _curl_ to send SQL queries from the command-line:
 
 ```bash
 $ cat query.json
-{"query":"SELECT COUNT(*) FROM data_source"}
+{"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
 
 $ curl -XPOST -H'Content-Type: application/json' http://BROKER:8082/druid/v2/sql/ -d @query.json
-[{"EXPR$0":24433}]
+[{"TheCount":24433}]
 ```
 
-You can also provide [connection context parameters](#connection-context) by adding a "context" map, like:
+Metadata is available over the HTTP API by querying the ["INFORMATION_SCHEMA" tables](#retrieving-metadata).
+
+Finally, you can also provide [connection context parameters](#connection-context) by adding a "context" map, like:
 
 ```json
 {
@@ -340,8 +363,6 @@ You can also provide [connection context parameters](#connection-context) by add
   }
 }
 ```
-
-Metadata is available over the HTTP API by querying the ["INFORMATION_SCHEMA" tables](#retrieving-metadata).
 
 ### JDBC
 
@@ -375,9 +396,15 @@ Table metadata is available over JDBC using `connection.getMetaData()` or by que
 ["INFORMATION_SCHEMA" tables](#retrieving-metadata). Parameterized queries (using `?` or other placeholders) don't work properly,
 so avoid those.
 
+#### Connection Stickiness
+
 Druid's JDBC server does not share connection state between brokers. This means that if you're using JDBC and have
 multiple Druid brokers, you should either connect to a specific broker, or use a load balancer with sticky sessions
 enabled.
+
+The Druid Router node provides connection stickiness when balancing JDBC requests. Please see [Router](../development/router.html) documentation for more details.
+
+Note that the non-JDBC [JSON over HTTP](#json-over-http) API is stateless and does not require stickiness.
 
 ### Connection context
 
@@ -385,14 +412,14 @@ Druid SQL supports setting connection parameters on the client. The parameters i
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
 [Query context](query-context.html) for details on the possible options.
 
+Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
+
 |Parameter|Description|Default value|
 |---------|-----------|-------------|
 |`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 |`useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the broker|
 |`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the broker|
 |`useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|druid.sql.planner.useFallback on the broker|
-
-Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
 
 ### Retrieving metadata
 

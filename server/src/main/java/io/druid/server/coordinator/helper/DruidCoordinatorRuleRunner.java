@@ -20,8 +20,8 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.metamx.common.guava.Comparators;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.DateTimes;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;

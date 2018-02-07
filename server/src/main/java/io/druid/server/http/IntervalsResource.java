@@ -21,13 +21,12 @@ package io.druid.server.http;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.InventoryView;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -71,14 +70,14 @@ public class IntervalsResource
   public Response getIntervals(@Context final HttpServletRequest req)
   {
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
-    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        req,
         serverInventoryView,
-        authorizerMapper,
-        (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+        authorizerMapper
     );
 
     final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
-    for (DruidDataSource dataSource : datasources) {
+    for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
         Map<String, Map<String, Object>> interval = retVal.get(dataSegment.getInterval());
         if (interval == null) {
@@ -103,17 +102,17 @@ public class IntervalsResource
   )
   {
     final Interval theInterval = Intervals.of(interval.replace("_", "/"));
-    final Set<DruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+    final Set<ImmutableDruidDataSource> datasources = InventoryViewUtils.getSecuredDataSources(
+        req,
         serverInventoryView,
-        authorizerMapper,
-        (AuthenticationResult) req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)
+        authorizerMapper
     );
 
     final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
 
     if (full != null) {
       final Map<Interval, Map<String, Map<String, Object>>> retVal = Maps.newTreeMap(comparator);
-      for (DruidDataSource dataSource : datasources) {
+      for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
             Map<String, Map<String, Object>> dataSourceInterval = retVal.get(dataSegment.getInterval());
@@ -131,7 +130,7 @@ public class IntervalsResource
 
     if (simple != null) {
       final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
-      for (DruidDataSource dataSource : datasources) {
+      for (ImmutableDruidDataSource dataSource : datasources) {
         for (DataSegment dataSegment : dataSource.getSegments()) {
           if (theInterval.contains(dataSegment.getInterval())) {
             Map<String, Object> properties = retVal.get(dataSegment.getInterval());
@@ -153,7 +152,7 @@ public class IntervalsResource
     }
 
     final Map<String, Object> retVal = Maps.newHashMap();
-    for (DruidDataSource dataSource : datasources) {
+    for (ImmutableDruidDataSource dataSource : datasources) {
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
           retVal.put("size", MapUtils.getLong(retVal, "size", 0L) + dataSegment.getSize());
@@ -167,7 +166,7 @@ public class IntervalsResource
 
   private void setProperties(
       final Map<Interval, Map<String, Map<String, Object>>> retVal,
-      DruidDataSource dataSource, DataSegment dataSegment
+      ImmutableDruidDataSource dataSource, DataSegment dataSegment
   )
   {
     Map<String, Object> properties = retVal.get(dataSegment.getInterval()).get(dataSource.getName());

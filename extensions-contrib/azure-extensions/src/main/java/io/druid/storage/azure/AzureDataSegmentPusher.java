@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -40,7 +39,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 public class AzureDataSegmentPusher implements DataSegmentPusher
 {
@@ -109,12 +107,13 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final long size,
       final File compressedSegmentData,
       final File descriptorFile,
-      final Map<String, String> azurePaths
+      final Map<String, String> azurePaths,
+      final boolean replaceExisting
   )
       throws StorageException, IOException, URISyntaxException
   {
-    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"));
-    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"));
+    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"), replaceExisting);
+    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"), replaceExisting);
 
     final DataSegment outSegment = segment
         .withSize(size)
@@ -131,9 +130,9 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment segment) throws IOException
+  public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean replaceExisting)
+      throws IOException
   {
-
     log.info("Uploading [%s] to Azure.", indexFilesDir);
 
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
@@ -148,14 +147,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final Map<String, String> azurePaths = getAzurePaths(segment);
 
       return AzureUtils.retryAzureOperation(
-          new Callable<DataSegment>()
-          {
-            @Override
-            public DataSegment call() throws Exception
-            {
-              return uploadDataSegment(segment, version, size, outFile, descFile, azurePaths);
-            }
-          },
+          () -> uploadDataSegment(segment, version, size, outFile, descFile, azurePaths, replaceExisting),
           config.getMaxTries()
       );
     }

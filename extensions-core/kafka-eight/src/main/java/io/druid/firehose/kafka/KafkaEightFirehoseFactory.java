@@ -23,12 +23,12 @@ package io.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
-
-import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.java.util.common.logger.Logger;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
@@ -37,9 +37,11 @@ import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.InvalidMessageException;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -47,7 +49,7 @@ import java.util.Set;
 
 /**
  */
-public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
+public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser<ByteBuffer>>
 {
   private static final Logger log = new Logger(KafkaEightFirehoseFactory.class);
 
@@ -69,13 +71,14 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
   }
 
   @Override
-  public Firehose connect(final ByteBufferInputRowParser firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory) throws IOException
   {
     Set<String> newDimExclus = Sets.union(
         firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
         Sets.newHashSet("feed")
     );
-    final ByteBufferInputRowParser theParser = firehoseParser.withParseSpec(
+
+    final InputRowParser<ByteBuffer> theParser = firehoseParser.withParseSpec(
         firehoseParser.getParseSpec()
                       .withDimensionsSpec(
                           firehoseParser.getParseSpec()
@@ -105,23 +108,29 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
 
     return new Firehose()
     {
+      Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+
       @Override
       public boolean hasMore()
       {
-        return iter.hasNext();
+        return nextIterator.hasNext() || iter.hasNext();
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {
         try {
-          final byte[] message = iter.next().message();
+          if (!nextIterator.hasNext()) {
+            final byte[] message = iter.next().message();
 
-          if (message == null) {
-            return null;
+            if (message == null) {
+              return null;
+            }
+            nextIterator = theParser.parseBatch(ByteBuffer.wrap(message)).iterator();
           }
 
-          return theParser.parse(ByteBuffer.wrap(message));
+          return nextIterator.next();
 
         }
         catch (InvalidMessageException e) {

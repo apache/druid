@@ -20,12 +20,13 @@
 package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.jackson.DefaultObjectMapper;
@@ -62,10 +63,12 @@ public class RemoteTaskActionClientTest
     long now = System.currentTimeMillis();
 
     result = Collections.singletonList(new TaskLock(
+        TaskLockType.SHARED,
         "groupId",
         "dataSource",
         Intervals.utc(now - 30 * 1000, now),
-        "version"
+        "version",
+        0
     ));
   }
 
@@ -91,7 +94,7 @@ public class RemoteTaskActionClientTest
     replay(druidLeaderClient);
 
 
-    Task task = new NoopTask("id", 0, 0, null, null, null);
+    Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task, druidLeaderClient, new RetryPolicyFactory(
         new RetryPolicyConfig()
@@ -131,7 +134,7 @@ public class RemoteTaskActionClientTest
     replay(druidLeaderClient);
 
 
-    Task task = new NoopTask("id", 0, 0, null, null, null);
+    Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task, druidLeaderClient, new RetryPolicyFactory(
         objectMapper.readValue("{\"maxRetryCount\":0}", RetryPolicyConfig.class)

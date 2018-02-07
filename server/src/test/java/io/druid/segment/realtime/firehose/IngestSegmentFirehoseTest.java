@@ -33,6 +33,9 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -47,16 +50,22 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import io.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IngestSegmentFirehoseTest
 {
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
@@ -87,11 +96,26 @@ public class IngestSegmentFirehoseTest
       new HyperUniquesAggregatorFactory("unique_hosts", "unique_hosts")
   );
 
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
+
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  private IndexIO indexIO = TestHelper.getTestIndexIO();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9();
+  private final IndexIO indexIO;
+  private final IndexMerger indexMerger;
+
+  public IngestSegmentFirehoseTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+  }
 
   @Test
   public void testReadFromIndexAndWriteAnotherIndex() throws Exception
@@ -117,6 +141,7 @@ public class IngestSegmentFirehoseTest
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
       final IngestSegmentFirehose firehose = new IngestSegmentFirehose(
           ImmutableList.of(wsa, wsa),
+          TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           null
@@ -149,6 +174,7 @@ public class IngestSegmentFirehoseTest
       // Do a spatial filter
       final IngestSegmentFirehose firehose2 = new IngestSegmentFirehose(
           ImmutableList.of(new WindowedStorageAdapter(queryable, Intervals.of("2000/3000"))),
+          TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           new SpatialDimFilter("spatial", new RadiusBound(new float[]{1, 0}, 0.1f))
@@ -204,7 +230,7 @@ public class IngestSegmentFirehoseTest
       for (String line : rows) {
         index.add(parser.parse(line));
       }
-      indexMerger.persist(index, segmentDir, new IndexSpec());
+      indexMerger.persist(index, segmentDir, new IndexSpec(), null);
     }
   }
 }

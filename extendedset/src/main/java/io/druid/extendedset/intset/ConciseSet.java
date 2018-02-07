@@ -794,79 +794,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @SuppressWarnings("NonShortCircuitBooleanExpression")
-  @Override
-  public int intersectionSize(IntSet o)
-  {
-    // special cases
-    if (isEmpty() || o == null || o.isEmpty()) {
-      return 0;
-    }
-    if (this == o) {
-      return size();
-    }
-
-    final ConciseSet other = convert(o);
-
-    // check whether the first operator starts with a sequence that
-    // completely "covers" the second operator
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      if (isZeroSequence(this.words[0])) {
-        return 0;
-      }
-      return other.size();
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      if (isZeroSequence(other.words[0])) {
-        return 0;
-      }
-      return this.size();
-    }
-
-    int res = 0;
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
-            res += maxLiteralLengthMultiplication(minCount);
-          }
-          if (!thisItr.prepareNext(minCount) | /* NOT || */ !otherItr.prepareNext(minCount)) {
-            break;
-          }
-        } else {
-          res += getLiteralBitCount(thisItr.toLiteral() & otherItr.word);
-          thisItr.word--;
-          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
-            break;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        res += getLiteralBitCount(thisItr.word & otherItr.toLiteral());
-        otherItr.word--;
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
-          break;
-        }
-      } else {
-        res += getLiteralBitCount(thisItr.word & otherItr.word);
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
-          break;
-        }
-      }
-    }
-
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
   public ByteBuffer toByteBuffer()
   {
     ByteBuffer buffer = ByteBuffer.allocate((lastWordIndex + 1) * 4);
@@ -1071,32 +998,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
       return clone();
     }
     return performOperation(convert(other), Operator.ANDNOT);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConciseSet symmetricDifference(IntSet other)
-  {
-    if (other == this) {
-      return empty();
-    }
-    if (other == null || other.isEmpty()) {
-      return clone();
-    }
-    return performOperation(convert(other), Operator.XOR);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConciseSet complemented()
-  {
-    ConciseSet cloned = clone();
-    cloned.complement();
-    return cloned;
   }
 
   /**
@@ -1582,261 +1483,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
 
     // no more words
     return false;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean containsAll(IntSet c)
-  {
-    if (c == null || c.isEmpty() || c == this) {
-      return true;
-    }
-    if (isEmpty()) {
-      return false;
-    }
-
-    final ConciseSet other = convert(c);
-    if (other.last > last) {
-      return false;
-    }
-    if (size >= 0 && other.size > size) {
-      return false;
-    }
-    if (other.size == 1) {
-      return contains(other.last);
-    }
-
-    // check whether the first operator starts with a sequence that
-    // completely "covers" the second operator
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      return !isZeroSequence(this.words[0]);
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      return false;
-    }
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word) == 0
-              && (ConciseSetUtils.SEQUENCE_BIT & otherItr.word) != 0) {
-            return false;
-          }
-          if (!otherItr.prepareNext(minCount)) {
-            return true;
-          }
-          if (!thisItr.prepareNext(minCount)) {
-            return false;
-          }
-        } else {
-          if ((thisItr.toLiteral() & otherItr.word) != otherItr.word) {
-            return false;
-          }
-          thisItr.word--;
-          if (!otherItr.prepareNext()) {
-            return true;
-          }
-          if (!thisItr.prepareNext(1)) {
-            return false;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        int o = otherItr.toLiteral();
-        if ((thisItr.word & otherItr.toLiteral()) != o) {
-          return false;
-        }
-        otherItr.word--;
-        if (!otherItr.prepareNext(1)) {
-          return true;
-        }
-        if (!thisItr.prepareNext()) {
-          return false;
-        }
-      } else {
-        if ((thisItr.word & otherItr.word) != otherItr.word) {
-          return false;
-        }
-        if (!otherItr.prepareNext()) {
-          return true;
-        }
-        if (!thisItr.prepareNext()) {
-          return false;
-        }
-      }
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean containsAny(IntSet c)
-  {
-    if (c == null || c.isEmpty() || c == this) {
-      return true;
-    }
-    if (isEmpty()) {
-      return false;
-    }
-
-    final ConciseSet other = convert(c);
-    if (other.size == 1) {
-      return contains(other.last);
-    }
-
-    // disjoint sets
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      return !isZeroSequence(this.words[0]);
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      return !isZeroSequence(other.words[0]);
-    }
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
-            return true;
-          }
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(minCount) |  /* NOT || */ !otherItr.prepareNext(minCount)) {
-            return false;
-          }
-        } else {
-          if ((thisItr.toLiteral() & otherItr.word) != ConciseSetUtils.ALL_ZEROS_LITERAL) {
-            return true;
-          }
-          thisItr.word--;
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
-            return false;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        if ((thisItr.word & otherItr.toLiteral()) != ConciseSetUtils.ALL_ZEROS_LITERAL) {
-          return true;
-        }
-        otherItr.word--;
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
-          return false;
-        }
-      } else {
-        if ((thisItr.word & otherItr.word) != ConciseSetUtils.ALL_ZEROS_LITERAL) {
-          return true;
-        }
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
-          return false;
-        }
-      }
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean containsAtLeast(IntSet c, int minElements)
-  {
-    if (minElements < 1) {
-      throw new IllegalArgumentException();
-    }
-    if ((size >= 0 && size < minElements) || c == null || c.isEmpty() || isEmpty()) {
-      return false;
-    }
-    if (this == c) {
-      return size() >= minElements;
-    }
-
-    // convert the other set in order to perform a more complex intersection
-    ConciseSet other = convert(c);
-    if (other.size >= 0 && other.size < minElements) {
-      return false;
-    }
-    if (minElements == 1 && other.size == 1) {
-      return contains(other.last);
-    }
-    if (minElements == 1 && size == 1) {
-      return other.contains(last);
-    }
-
-    // disjoint sets
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      return !isZeroSequence(this.words[0]);
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      return !isZeroSequence(other.words[0]);
-    }
-
-    // resulting size
-    int res = 0;
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
-            res += maxLiteralLengthMultiplication(minCount);
-            if (res >= minElements) {
-              return true;
-            }
-          }
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(minCount) |  /* NOT || */ !otherItr.prepareNext(minCount)) {
-            return false;
-          }
-        } else {
-          res += getLiteralBitCount(thisItr.toLiteral() & otherItr.word);
-          if (res >= minElements) {
-            return true;
-          }
-          thisItr.word--;
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
-            return false;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        res += getLiteralBitCount(thisItr.word & otherItr.toLiteral());
-        if (res >= minElements) {
-          return true;
-        }
-        otherItr.word--;
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
-          return false;
-        }
-      } else {
-        res += getLiteralBitCount(thisItr.word & otherItr.word);
-        if (res >= minElements) {
-          return true;
-        }
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
-          return false;
-        }
-      }
-    }
   }
 
   /**
@@ -2584,19 +2230,19 @@ public class ConciseSet extends AbstractIntSet implements Serializable
    */
   private interface WordExpander
   {
-    public boolean hasNext();
+    boolean hasNext();
 
-    public boolean hasPrevious();
+    boolean hasPrevious();
 
-    public int next();
+    int next();
 
-    public int previous();
+    int previous();
 
-    public void skipAllAfter(int i);
+    void skipAllAfter(int i);
 
-    public void skipAllBefore(int i);
+    void skipAllBefore(int i);
 
-    public void reset(int offset, int word, boolean fromBeginning);
+    void reset(int offset, int word, boolean fromBeginning);
   }
 
   /**

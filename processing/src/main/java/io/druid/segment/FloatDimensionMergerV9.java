@@ -19,15 +19,12 @@
 
 package io.druid.segment;
 
-import io.druid.java.util.common.io.Closer;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.List;
@@ -35,42 +32,30 @@ import java.util.List;
 public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
 {
   protected String dimensionName;
-  protected ProgressIndicator progress;
   protected final IndexSpec indexSpec;
-  protected ColumnCapabilities capabilities;
-  protected final File outDir;
-  protected IOPeon ioPeon;
-
   private FloatColumnSerializer serializer;
 
   public FloatDimensionMergerV9(
       String dimensionName,
       IndexSpec indexSpec,
-      File outDir,
-      IOPeon ioPeon,
-      ColumnCapabilities capabilities,
-      ProgressIndicator progress
+      SegmentWriteOutMedium segmentWriteOutMedium
   )
   {
     this.dimensionName = dimensionName;
     this.indexSpec = indexSpec;
-    this.capabilities = capabilities;
-    this.outDir = outDir;
-    this.ioPeon = ioPeon;
-    this.progress = progress;
 
     try {
-      setupEncodedValueWriter();
+      setupEncodedValueWriter(segmentWriteOutMedium);
     }
     catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }
   }
 
-  protected void setupEncodedValueWriter() throws IOException
+  private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = FloatColumnSerializer.create(ioPeon, dimensionName, metCompression);
+    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
+    this.serializer = FloatColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
     serializer.open();
   }
 
@@ -93,7 +78,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   }
 
   @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
+  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
   {
     // floats have no indices to write
   }
@@ -108,7 +93,6 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   @Override
   public ColumnDescriptor makeColumnDescriptor() throws IOException
   {
-    serializer.close();
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);
     builder.addSerde(

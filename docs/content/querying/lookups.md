@@ -8,15 +8,17 @@ layout: doc_page
 Lookups are an <a href="../development/experimental.html">experimental</a> feature.
 </div>
 
-Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
-See [dimension specs](../querying/dimensionspecs.html) for more information. For the purpose of these documents, 
-a "key" refers to a dimension value to match, and a "value" refers to its replacement. 
-So if you wanted to rename `appid-12345` to `Super Mega Awesome App` then the key would be `appid-12345` and the value 
-would be `Super Mega Awesome App`. 
+Lookups are a concept in Druid where dimension values are (optionally) replaced with new values, allowing join-like
+functionality. Applying lookups in Druid is similar to joining a dimension table in a data warehouse. See
+[dimension specs](../querying/dimensionspecs.html) for more information. For the purpose of these documents, a "key"
+refers to a dimension value to match, and a "value" refers to its replacement. So if you wanted to map
+`appid-12345` to `Super Mega Awesome App` then the key would be `appid-12345` and the value would be
+`Super Mega Awesome App`.
 
-It is worth noting that lookups support use cases where keys map to unique values (injective) such as a country code and 
-a country name, and also supports use cases where multiple IDs map to the same value, e.g. multiple app-ids belonging to 
-a single account manager.
+It is worth noting that lookups support not just use cases where keys map one-to-one to unique values, such as country
+code and country name, but also support use cases where multiple IDs map to the same value, e.g. multiple app-ids
+mapping to a single account manager. When lookups are one-to-one, Druid is able to apply additional optimizations at
+query time; see [Query execution](#query-execution) below for more details.
 
 Lookups do not have history. They always use the current data. This means that if the chief account manager for a 
 particular app-id changes, and you issue a query with a lookup to store the app-id to account manager relationship, 
@@ -33,6 +35,38 @@ Other lookup types are available as extensions, including:
 - Globally cached lookups from local files, remote URIs, or JDBC through [lookups-cached-global](../development/extensions-core/lookups-cached-global.html).
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](../development/extensions-core/kafka-extraction-namespace.html).
 
+Query Execution
+---------------
+When executing an aggregation query involving lookups, Druid can decide to apply lookups either while scanning and
+aggregating rows, or to apply them after aggregation is complete. It is more efficient to apply lookups after
+aggregation is complete, so Druid will do this if it can. Druid decides this by checking if the lookup is marked
+as "injective" or not. In general, you should set this property for any lookup that is naturally one-to-one, to allow
+Druid to run your queries as fast as possible.
+
+Injective lookups should include _all_ possible keys that may show up in your dataset, and should also map all keys to
+_unique values_. This matters because non-injective lookups may map different keys to the same value, which must be
+accounted for during aggregation, lest query results contain two result values that should have been aggregated into
+one.
+
+This lookup is injective (assuming it contains all possible keys from your data):
+
+```
+1 -> Foo
+2 -> Bar
+3 -> Billy
+```
+
+But this one is not, since both "2" and "3" map to the same key:
+
+```
+1 -> Foo
+2 -> Bar
+3 -> Bar
+```
+
+To tell Druid that your lookup is injective, you must specify `"injective" : true` in the lookup configuration. Druid
+will not detect this automatically.
+
 Dynamic Configuration
 ---------------------
 <div class="note caution">
@@ -48,12 +82,12 @@ The tiers for lookups are completely independent of historical tiers.
 These configs are accessed using JSON through the following URI template
 
 ```
-http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/lookups/{tier}/{id}
+http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/lookups/config/{tier}/{id}
 ```
 
 All URIs below are assumed to have `http://<COORDINATOR_IP>:<PORT>` prepended.
 
-If you have NEVER configured lookups before, you MUST post an empty json object `{}` to `/druid/coordinator/v1/lookups` to initialize the configuration.
+If you have NEVER configured lookups before, you MUST post an empty json object `{}` to `/druid/coordinator/v1/lookups/config` to initialize the configuration.
 
 These endpoints will return one of the following results:
 
@@ -70,7 +104,7 @@ The coordinator periodically checks if any of the nodes need to load/drop lookup
 # API for configuring lookups
 
 ## Bulk update
-Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups`. The format of the json object is as follows:
+Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups/config`. The format of the json object is as follows:
 
 ```json
 {
@@ -188,9 +222,9 @@ For example, a config might look something like:
 All entries in the map will UPDATE existing entries. No entries will be deleted.
 
 ## Update Lookup
-A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/{tier}/{id}` will update that specific extractor factory.
+A `POST` to a particular lookup extractor factory via `/druid/coordinator/v1/lookups/config/{tier}/{id}` will update that specific extractor factory.
 
-For example, a post to `/druid/coordinator/v1/lookups/realtime_customer1/site_id_customer1` might contain the following:
+For example, a post to `/druid/coordinator/v1/lookups/config/realtime_customer1/site_id_customer1` might contain the following:
 
 ```json
 {
@@ -209,7 +243,7 @@ This will replace the `site_id_customer1` lookup in the `realtime_customer1` wit
 ## Get Lookup
 A `GET` to a particular lookup extractor factory is accomplished via `/druid/coordinator/v1/lookups/{tier}/{id}`
 
-Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/realtime_customer2/site_id_customer2` should return
+Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/config/realtime_customer2/site_id_customer2` should return
 
 ```json
 {
@@ -224,14 +258,14 @@ Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/realtime_cust
 ```
 
 ## Delete Lookup
-A `DELETE` to `/druid/coordinator/v1/lookups/{tier}/{id}` will remove that lookup from the cluster.
+A `DELETE` to `/druid/coordinator/v1/lookups/config/{tier}/{id}` will remove that lookup from the cluster.
 
 ## List tier names
-A `GET` to `/druid/coordinator/v1/lookups` will return a list of known tier names in the dynamic configuration.
+A `GET` to `/druid/coordinator/v1/lookups/config` will return a list of known tier names in the dynamic configuration.
 To discover a list of tiers currently active in the cluster **instead of** ones known in the dynamic configuration, the parameter `discover=true` can be added as per `/druid/coordinator/v1/lookups?discover=true`.
 
 ## List lookup names
-A `GET` to `/druid/coordinator/v1/lookups/{tier}` will return a list of known lookup names for that tier.
+A `GET` to `/druid/coordinator/v1/lookups/config/{tier}` will return a list of known lookup names for that tier.
 
 # Additional API related to status of configured lookups
 These end points can be used to get the propagation status of configured lookups to lookup nodes such as historicals.
@@ -322,7 +356,11 @@ It is possible to save the configuration across restarts such that a node will n
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.lookup.snapshotWorkingDir`| Working path used to store snapshot of current lookup configuration, leaving this property null will disable snapshot/bootstrap utility|null|
+|`druid.lookup.snapshotWorkingDir`|Working path used to store snapshot of current lookup configuration, leaving this property null will disable snapshot/bootstrap utility|null|
+|`druid.lookup.enableLookupSyncOnStartup`|Enable the lookup synchronization process with coordinator on startup. The queryable nodes will fetch and load the lookups from the coordinator instead of waiting for the coordinator to load the lookups for them. Users may opt to disable this option if there are no lookups configured in the cluster.|true|
+|`druid.lookup.numLookupLoadingThreads`|Number of threads for loading the lookups in parallel on startup. This thread pool is destroyed once startup is done. It is not kept during the lifetime of the JVM|Available Processors / 2|
+|`druid.lookup.coordinatorFetchRetries`|How many times to retry to fetch the lookup bean list from coordinator, during the sync on startup.|3|
+|`druid.lookup.lookupStartRetries`|How many times to retry to start each lookup, either during the sync on startup, or during the runtime.|3|
 
 ## Introspect a Lookup
 

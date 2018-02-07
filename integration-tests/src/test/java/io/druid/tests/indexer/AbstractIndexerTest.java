@@ -33,8 +33,8 @@ import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
@@ -55,17 +55,17 @@ public abstract class AbstractIndexerTest
 
   protected void unloadAndKillData(final String dataSource) throws Exception
   {
-    ArrayList<String> intervals = coordinator.getSegmentIntervals(dataSource);
+    List<String> intervals = coordinator.getSegmentIntervals(dataSource);
 
     // each element in intervals has this form:
     //   2015-12-01T23:15:00.000Z/2015-12-01T23:16:00.000Z
     // we'll sort the list (ISO dates have lexicographic order)
     // then delete segments from the 1st date in the first string
     // to the 2nd date in the last string
-    Collections.sort (intervals);
+    Collections.sort(intervals);
     String first = intervals.get(0).split("/")[0];
     String last = intervals.get(intervals.size() - 1).split("/")[1];
-    unloadAndKillData (dataSource, first, last);
+    unloadAndKillData(dataSource, first, last);
   }
 
   protected void unloadAndKillData(final String dataSource, String start, String end) throws Exception
@@ -74,7 +74,7 @@ public abstract class AbstractIndexerTest
     // realtime tasks can get stuck waiting for handoff. https://github.com/druid-io/druid/issues/1729
     waitForAllTasksToComplete();
     Interval interval = Intervals.of(start + "/" + end);
-    coordinator.unloadSegmentsForDataSource(dataSource, interval);
+    coordinator.unloadSegmentsForDataSource(dataSource);
     RetryUtil.retryUntilFalse(
         new Callable<Boolean>()
         {

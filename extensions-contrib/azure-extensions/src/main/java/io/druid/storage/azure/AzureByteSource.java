@@ -30,9 +30,9 @@ import java.net.URISyntaxException;
 public class AzureByteSource extends ByteSource
 {
 
-  final private AzureStorage azureStorage;
-  final private String containerName;
-  final private String blobPath;
+  private final AzureStorage azureStorage;
+  private final String containerName;
+  private final String blobPath;
 
   public AzureByteSource(
       AzureStorage azureStorage,

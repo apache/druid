@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.TestHelper;
 import io.druid.storage.hdfs.HdfsDataSegmentFinder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -53,7 +53,7 @@ import java.util.Set;
 public class HdfsDataSegmentFinderTest
 {
 
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper = TestHelper.makeJsonMapper();
   private static final String DESCRIPTOR_JSON = "descriptor.json";
   private static final String INDEX_ZIP = "index.zip";
   private static final DataSegment SEGMENT_1 = DataSegment
@@ -276,20 +276,6 @@ public class HdfsDataSegmentFinderTest
 
     final HdfsDataSegmentFinder hdfsDataSegmentFinder = new HdfsDataSegmentFinder(conf, mapper);
     hdfsDataSegmentFinder.findSegments(dataSourceDir.toString(), false);
-  }
-
-  @Test(expected = SegmentLoadingException.class)
-  public void testFindSegmentsFail2() throws SegmentLoadingException
-  {
-    // will fail to desierialize descriptor.json because DefaultObjectMapper doesn't recognize NumberedShardSpec
-    final HdfsDataSegmentFinder hdfsDataSegmentFinder = new HdfsDataSegmentFinder(conf, new DefaultObjectMapper());
-    try {
-      hdfsDataSegmentFinder.findSegments(dataSourceDir.toString(), false);
-    }
-    catch (SegmentLoadingException e) {
-      Assert.assertTrue(e.getCause() instanceof IOException);
-      throw e;
-    }
   }
 
   private String getDescriptorPath(DataSegment segment)

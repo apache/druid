@@ -22,12 +22,14 @@ package io.druid.data.input.thrift;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.metamx.common.IAE;
+import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.IAE;
 import com.twitter.elephantbird.mapreduce.io.ThriftWritable;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
+import io.druid.java.util.common.parsers.Parser;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
@@ -37,9 +39,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
-
-import io.druid.java.util.common.parsers.Parser;
 
 /**
  * 1. load thrift class from classpath or provided jar
@@ -52,8 +53,8 @@ public class ThriftInputRowParser implements InputRowParser<Object>
   private final String jarPath;
   private final String thriftClassName;
 
-  final private Parser<String, Object> parser;
-  volatile private Class<TBase> thriftClass = null;
+  private Parser<String, Object> parser;
+  private volatile Class<TBase> thriftClass = null;
 
   @JsonCreator
   public ThriftInputRowParser(
@@ -67,7 +68,6 @@ public class ThriftInputRowParser implements InputRowParser<Object>
     Preconditions.checkNotNull(thriftClassName, "thrift class name");
 
     this.parseSpec = parseSpec;
-    parser = parseSpec.makeParser();
   }
 
   public Class<TBase> getThriftClass()
@@ -90,8 +90,14 @@ public class ThriftInputRowParser implements InputRowParser<Object>
 
 
   @Override
-  public InputRow parse(Object input)
+  public List<InputRow> parseBatch(Object input)
   {
+    if (parser == null) {
+      // parser should be created when it is really used to avoid unnecessary initialization of the underlying
+      // parseSpec.
+      parser = parseSpec.makeParser();
+    }
+
     // There is a Parser check in phase 2 of mapreduce job, thrift jar may not present in peon side.
     // Place it this initialization in constructor will get ClassNotFoundException
     try {
@@ -132,13 +138,13 @@ public class ThriftInputRowParser implements InputRowParser<Object>
       throw new IAE("some thing wrong with your thrift?");
     }
 
-    Map<String, Object> record = parser.parse(json);
+    Map<String, Object> record = parser.parseToMap(json);
 
-    return new MapBasedInputRow(
+    return ImmutableList.of(new MapBasedInputRow(
         parseSpec.getTimestampSpec().extractTimestamp(record),
         parseSpec.getDimensionsSpec().getDimensionNames(),
         record
-    );
+    ));
   }
 
   @Override

@@ -24,12 +24,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;
@@ -41,6 +39,7 @@ import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.metadata.AllColumnIncluderator;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
@@ -51,8 +50,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.security.AuthenticationResult;
-import io.druid.server.security.Authenticator;
-import io.druid.server.security.AuthenticatorMapper;
+import io.druid.server.security.Escalator;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
 import io.druid.sql.calcite.table.RowSignature;
@@ -71,6 +69,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -117,11 +116,12 @@ public class DruidSchema extends AbstractSchema
   // All segments that need to be refreshed.
   private final TreeSet<DataSegment> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
-  // Escalating authenticator, so we can attach an authentication result to queries we generate.
-  private final Authenticator escalatingAuthenticator;
+  // Escalator, so we can attach an authentication result to queries we generate.
+  private final Escalator escalator;
 
   private boolean refreshImmediately = false;
   private long lastRefresh = 0L;
+  private long lastFailure = 0L;
   private boolean isServerViewInitialized = false;
 
   @Inject
@@ -130,7 +130,7 @@ public class DruidSchema extends AbstractSchema
       final TimelineServerView serverView,
       final PlannerConfig config,
       final ViewManager viewManager,
-      final AuthenticatorMapper authenticatorMapper
+      final Escalator escalator
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
@@ -138,8 +138,8 @@ public class DruidSchema extends AbstractSchema
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = ScheduledExecutors.fixed(1, "DruidSchema-Cache-%d");
-    this.tables = Maps.newConcurrentMap();
-    this.escalatingAuthenticator = authenticatorMapper.getEscalatingAuthenticator();
+    this.tables = new ConcurrentHashMap<>();
+    this.escalator = escalator;
 
     serverView.registerTimelineCallback(
         MoreExecutors.sameThreadExecutor(),
@@ -198,7 +198,13 @@ public class DruidSchema extends AbstractSchema
                     final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
 
                     while (true) {
+                      // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
+                      final boolean wasRecentFailure = DateTimes.utc(lastFailure)
+                                                                .plus(config.getMetadataRefreshPeriod())
+                                                                .isAfterNow();
+
                       if (isServerViewInitialized &&
+                          !wasRecentFailure &&
                           (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
                           (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
                         break;
@@ -212,6 +218,7 @@ public class DruidSchema extends AbstractSchema
                     // Mutable segments need a refresh every period, since new columns could be added dynamically.
                     segmentsNeedingRefresh.addAll(mutableSegments);
 
+                    lastFailure = 0L;
                     lastRefresh = System.currentTimeMillis();
                     refreshImmediately = false;
                   }
@@ -259,6 +266,7 @@ public class DruidSchema extends AbstractSchema
                     // Add our segments and dataSources back to their refresh and rebuild lists.
                     segmentsNeedingRefresh.addAll(segmentsToRefresh);
                     dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
+                    lastFailure = System.currentTimeMillis();
                     lock.notifyAll();
                   }
                 }
@@ -410,7 +418,7 @@ public class DruidSchema extends AbstractSchema
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         queryLifecycleFactory,
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY),
-        escalatingAuthenticator.createEscalatedAuthenticationResult()
+        escalator.createEscalatedAuthenticationResult()
     );
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);

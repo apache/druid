@@ -67,14 +67,11 @@ public class GuiceInjectorsTest
 
   private static class CustomEmitterFactory implements Provider<CustomEmitter>
   {
-
     private Emitter emitter;
-    private Injector injector;
 
     @Inject
     public void configure(Injector injector)
     {
-      this.injector = injector;
       emitter = injector.getInstance(Emitter.class);
     }
 

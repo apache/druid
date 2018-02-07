@@ -28,12 +28,12 @@ import com.google.inject.name.Named;
 import io.druid.common.utils.SocketUtil;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.server.initialization.ServerConfig;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Objects;
 
 /**
  */
@@ -61,17 +61,25 @@ public class DruidNode
   private int plaintextPort = -1;
 
   @JsonProperty
+  private boolean enablePlaintextPort = true;
+
+  @JsonProperty
   @Max(0xffff)
   private int tlsPort = -1;
 
-  @JacksonInject
-  @NotNull
-  private ServerConfig serverConfig;
+  @JsonProperty
+  private boolean enableTlsPort = false;
 
-  public DruidNode(String serviceName, String host, Integer plaintextPort, Integer tlsPort, ServerConfig serverConfig)
+  public DruidNode(
+      String serviceName,
+      String host,
+      Integer plaintextPort,
+      Integer tlsPort,
+      boolean enablePlaintextPort,
+      boolean enableTlsPort
+  )
   {
-    this(serviceName, host, plaintextPort, null, tlsPort, serverConfig);
-    this.serverConfig = serverConfig;
+    this(serviceName, host, plaintextPort, null, tlsPort, enablePlaintextPort, enableTlsPort);
   }
 
   /**
@@ -89,6 +97,7 @@ public class DruidNode
    * host = "[2001:db8:85a3::8a2e:370:7334]", port = 123 -> host = 2001:db8:85a3::8a2e:370:7334, port = 123
    * host = "2001:db8:85a3::8a2e:370:7334", port = 123 -> host = 2001:db8:85a3::8a2e:370:7334, port = 123
    * host = null     , port = 123  -> host = _default_, port = 123
+   *
    */
   @JsonCreator
   public DruidNode(
@@ -97,19 +106,30 @@ public class DruidNode
       @JsonProperty("plaintextPort") Integer plaintextPort,
       @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port,
       @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
-      @JacksonInject ServerConfig serverConfig
+      @JsonProperty("enablePlaintextPort") Boolean enablePlaintextPort,
+      @JsonProperty("enableTlsPort") boolean enableTlsPort
   )
   {
-    init(serviceName, host, plaintextPort != null ? plaintextPort : port, tlsPort, serverConfig);
+    init(
+        serviceName,
+        host,
+        plaintextPort != null ? plaintextPort : port,
+        tlsPort,
+        enablePlaintextPort == null ? true : enablePlaintextPort.booleanValue(),
+        enableTlsPort
+    );
   }
 
-  private void init(String serviceName, String host, Integer plainTextPort, Integer tlsPort, ServerConfig serverConfig)
+  private void init(String serviceName, String host, Integer plainTextPort, Integer tlsPort, boolean enablePlaintextPort, boolean enableTlsPort)
   {
     Preconditions.checkNotNull(serviceName);
 
-    if (!serverConfig.isTls() && !serverConfig.isPlaintext()) {
-      throw new IAE("At least one of the druid.server.http.plainText or druid.server.http.tls needs to be enabled");
+    if (!enableTlsPort && !enablePlaintextPort) {
+      throw new IAE("At least one of the druid.enablePlaintextPort or druid.enableTlsPort needs to be true.");
     }
+
+    this.enablePlaintextPort = enablePlaintextPort;
+    this.enableTlsPort = enableTlsPort;
 
     final boolean nullHost = host == null;
     HostAndPort hostAndPort;
@@ -128,16 +148,16 @@ public class DruidNode
       host = getDefaultHost();
     }
 
-    if (serverConfig.isPlaintext() && serverConfig.isTls() && ((plainTextPort == null || tlsPort == null)
+    if (enablePlaintextPort && enableTlsPort && ((plainTextPort == null || tlsPort == null)
                                                                || plainTextPort.equals(tlsPort))) {
       // If both plainTExt and tls are enabled then do not allow plaintextPort to be null or
       throw new IAE("plaintextPort and tlsPort cannot be null or same if both http and https connectors are enabled");
     }
-    if (serverConfig.isTls() && (tlsPort == null || tlsPort < 0)) {
-      throw new IAE("A valid tlsPort needs to specified when druid.server.http.tls is set");
+    if (enableTlsPort && (tlsPort == null || tlsPort < 0)) {
+      throw new IAE("A valid tlsPort needs to specified when druid.enableTlsPort is set");
     }
 
-    if (serverConfig.isPlaintext()) {
+    if (enablePlaintextPort) {
       // to preserve backwards compatible behaviour
       if (nullHost && plainTextPort == null) {
         plainTextPort = -1;
@@ -150,7 +170,7 @@ public class DruidNode
     } else {
       this.plaintextPort = -1;
     }
-    if (serverConfig.isTls()) {
+    if (enableTlsPort) {
       this.tlsPort = tlsPort;
     } else {
       this.tlsPort = -1;
@@ -175,6 +195,16 @@ public class DruidNode
     return plaintextPort;
   }
 
+  public boolean isEnablePlaintextPort()
+  {
+    return enablePlaintextPort;
+  }
+
+  public boolean isEnableTlsPort()
+  {
+    return enableTlsPort;
+  }
+
   public int getTlsPort()
   {
     return tlsPort;
@@ -182,7 +212,7 @@ public class DruidNode
 
   public DruidNode withService(String service)
   {
-    return new DruidNode(service, host, plaintextPort, tlsPort, serverConfig);
+    return new DruidNode(service, host, plaintextPort, tlsPort, enablePlaintextPort, enableTlsPort);
   }
 
   public String getServiceScheme()
@@ -195,7 +225,7 @@ public class DruidNode
    */
   public String getHostAndPort()
   {
-    if (serverConfig.isPlaintext()) {
+    if (enablePlaintextPort) {
       if (plaintextPort < 0) {
         return HostAndPort.fromString(host).toString();
       } else {
@@ -207,7 +237,7 @@ public class DruidNode
 
   public String getHostAndTlsPort()
   {
-    if (serverConfig.isTls()) {
+    if (enableTlsPort) {
       return HostAndPort.fromParts(host, tlsPort).toString();
     }
     return null;
@@ -215,7 +245,7 @@ public class DruidNode
 
   public int getPortToUse()
   {
-    if (serverConfig.isTls()) {
+    if (enableTlsPort) {
       return getTlsPort();
     } else {
       return getPlaintextPort();
@@ -246,33 +276,20 @@ public class DruidNode
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     DruidNode druidNode = (DruidNode) o;
-
-    if (plaintextPort != druidNode.plaintextPort) {
-      return false;
-    }
-    if (tlsPort != druidNode.tlsPort) {
-      return false;
-    }
-    if (serviceName != null ? !serviceName.equals(druidNode.serviceName) : druidNode.serviceName != null) {
-      return false;
-    }
-    if (host != null ? !host.equals(druidNode.host) : druidNode.host != null) {
-      return false;
-    }
-    return serverConfig != null ? serverConfig.equals(druidNode.serverConfig) : druidNode.serverConfig == null;
+    return port == druidNode.port &&
+           plaintextPort == druidNode.plaintextPort &&
+           enablePlaintextPort == druidNode.enablePlaintextPort &&
+           tlsPort == druidNode.tlsPort &&
+           enableTlsPort == druidNode.enableTlsPort &&
+           Objects.equals(serviceName, druidNode.serviceName) &&
+           Objects.equals(host, druidNode.host);
   }
 
   @Override
   public int hashCode()
   {
-    int result = serviceName != null ? serviceName.hashCode() : 0;
-    result = 31 * result + (host != null ? host.hashCode() : 0);
-    result = 31 * result + plaintextPort;
-    result = 31 * result + tlsPort;
-    result = 31 * result + (serverConfig != null ? serverConfig.hashCode() : 0);
-    return result;
+    return Objects.hash(serviceName, host, port, plaintextPort, enablePlaintextPort, tlsPort, enableTlsPort);
   }
 
   @Override
@@ -281,9 +298,11 @@ public class DruidNode
     return "DruidNode{" +
            "serviceName='" + serviceName + '\'' +
            ", host='" + host + '\'' +
+           ", port=" + port +
            ", plaintextPort=" + plaintextPort +
+           ", enablePlaintextPort=" + enablePlaintextPort +
            ", tlsPort=" + tlsPort +
-           ", serverConfig=" + serverConfig +
+           ", enableTlsPort=" + enableTlsPort +
            '}';
   }
 }

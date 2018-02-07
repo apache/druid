@@ -35,7 +35,7 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
    *
    * @return the payload
    */
-  public T getObject();
+  T getObject();
 
   /**
    * Determines if this PartitionChunk abuts another PartitionChunk.  A sequence of abutting PartitionChunks should
@@ -44,7 +44,7 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
    * @param chunk input chunk
    * @return true if this chunk abuts the input chunk
    */
-  public boolean abuts(PartitionChunk<T> chunk);
+  boolean abuts(PartitionChunk<T> chunk);
 
   /**
    * Returns true if this chunk is the beginning of the partition. Most commonly, that means it represents the range
@@ -52,7 +52,7 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
    *
    * @return true if the chunk is the beginning of the partition
    */
-  public boolean isStart();
+  boolean isStart();
 
   /**
    * Returns true if this chunk is the end of the partition.  Most commonly, that means it represents the range
@@ -60,7 +60,7 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
    *
    * @return true if the chunk is the beginning of the partition
    */
-  public boolean isEnd();
+  boolean isEnd();
 
   /**
    * Returns the partition chunk number of this PartitionChunk.  I.e. if there are 4 partitions in total and this
@@ -68,5 +68,5 @@ public interface PartitionChunk<T> extends Comparable<PartitionChunk<T>>
    *
    * @return the sequential numerical id of this partition chunk
    */
-  public int getChunkNumber();
+  int getChunkNumber();
 }

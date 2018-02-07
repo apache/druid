@@ -27,13 +27,9 @@ import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.InDimFilter;
-import io.druid.query.filter.SelectorDimFilter;
-import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
-import org.joda.time.Interval;
 
 import java.util.Arrays;
 import java.util.List;
@@ -301,27 +297,10 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       return this;
     }
 
-    public ScanQueryBuilder intervals(String s)
-    {
-      querySegmentSpec = new LegacySegmentSpec(s);
-      return this;
-    }
-
-    public ScanQueryBuilder intervals(List<Interval> l)
-    {
-      querySegmentSpec = new LegacySegmentSpec(l);
-      return this;
-    }
-
     public ScanQueryBuilder virtualColumns(VirtualColumns virtualColumns)
     {
       this.virtualColumns = virtualColumns;
       return this;
-    }
-
-    public ScanQueryBuilder virtualColumns(List<VirtualColumn> virtualColumns)
-    {
-      return virtualColumns(VirtualColumns.create(virtualColumns));
     }
 
     public ScanQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
@@ -350,18 +329,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     public ScanQueryBuilder limit(long l)
     {
       limit = l;
-      return this;
-    }
-
-    public ScanQueryBuilder filters(String dimensionName, String value)
-    {
-      dimFilter = new SelectorDimFilter(dimensionName, value, null);
-      return this;
-    }
-
-    public ScanQueryBuilder filters(String dimensionName, String value, String... values)
-    {
-      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
       return this;
     }
 

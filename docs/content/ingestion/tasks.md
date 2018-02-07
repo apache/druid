@@ -88,9 +88,32 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
-|id|The task ID. If this is not explicitly specified, Druid generates the task ID using the name of the task file and date-time stamp. |no|
+|id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
 |spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
 |context|Context containing various task configuration parameters. See below for more details.|no|
+
+#### Task Priority
+
+Druid's indexing tasks use locks for atomic data ingestion. Each lock is acquired for the combination of a dataSource and an interval. Once a task acquires a lock, it can write data for the dataSource and the interval of the acquired lock unless the lock is released or preempted. Please see [the below Locking section](#locking)
+
+Each task has a priority which is used for lock acquisition. The locks of higher-priority tasks can preempt the locks of lower-priority tasks if they try to acquire for the same dataSource and interval. If some locks of a task are preempted, the behavior of the preempted task depends on the task implementation. Usually, most tasks finish as failed if they are preempted.
+
+Tasks can have different default priorities depening on their types. Here are a list of default priorities. Higher the number, higher the priority.
+
+|task type|default priority|
+|---------|----------------|
+|Realtime index task|75|
+|Batch index task|50|
+|Merge/Append/Compaction task|25|
+|Other tasks|0|
+
+You can override the task priority by setting your priority in the task context like below.
+
+```json
+"context" : {
+  "priority" : 100
+}
+```
 
 #### DataSchema
 
@@ -120,9 +143,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
 |forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](./design/index.html). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. This flag cannot be used with either `appendToExisting` of IOConfig or `forceExtendableShardSpecs`. For more details, see the below __Segment publishing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../design/index.html). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. This flag cannot be used with either `appendToExisting` of IOConfig or `forceExtendableShardSpecs`. For more details, see the below __Segment publishing modes__ section.|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |publishTimeout|Milliseconds to wait for publishing segments. It must be >= 0, where 0 means to wait forever.|0|no|
+|segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used|no|
 
 #### IndexSpec
 
@@ -161,19 +185,6 @@ On the contrary, in the incremental publishing mode, segments are incrementally 
 
 To enable bulk publishing mode, `forceGuaranteedRollup` should be set in the TuningConfig. Note that this option cannot be used with either `forceExtendableShardSpecs` of TuningConfig or `appendToExisting` of IOConfig.
 
-### Task Context
-
-The task context is used for various task configuration parameters. The following parameters apply to all tasks.
-
-|property|default|description|
-|--------|-------|-----------|
-|taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [the below Locking section](#locking).|
-
-<div class="note caution">
-When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
-As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of overlords.
-</div>
-
 Segment Merging Tasks
 ---------------------
 
@@ -187,7 +198,8 @@ Append tasks append a list of segments together into a single segment (one after
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "segments": <JSON list of DataSegment objects to append>,
-    "aggregations": <optional list of aggregators>
+    "aggregations": <optional list of aggregators>,
+    "context": <task context>
 }
 ```
 
@@ -205,7 +217,8 @@ The grammar is:
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
     "rollup": <whether or not to rollup data during a merge>,
-    "segments": <JSON list of DataSegment objects to merge>
+    "segments": <JSON list of DataSegment objects to merge>,
+    "context": <task context>
 }
 ```
 
@@ -222,9 +235,68 @@ The grammar is:
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
     "rollup": <whether or not to rollup data during a merge>,
-    "interval": <DataSegment objects in this interval are going to be merged>
+    "interval": <DataSegment objects in this interval are going to be merged>,
+    "context": <task context>
 }
 ```
+
+### Compaction Task
+
+Compaction tasks merge all segments of the given interval. The syntax is:
+
+```json
+{
+    "type": "compact",
+    "id": <task_id>,
+    "dataSource": <task_datasource>,
+    "interval": <interval to specify segments to be merged>,
+    "dimensions" <custom dimensionsSpec>,
+    "tuningConfig" <index task tuningConfig>,
+    "context": <task context>
+}
+```
+
+|Field|Description|Required|
+|-----|-----------|--------|
+|`type`|Task type. Should be `compact`|Yes|
+|`id`|Task id|No|
+|`dataSource`|dataSource name to be compacted|Yes|
+|`interval`|interval of segments to be compacted|Yes|
+|`dimensions`|custom dimensionsSpec. compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
+|`tuningConfig`|[Index task tuningConfig](#tuningconfig)|No|
+|`context`|[Task context](#taskcontext)|No|
+
+An example of compaction task is
+
+```json
+{
+  "type" : "compact",
+  "dataSource" : "wikipedia",
+  "interval" : "2017-01-01/2018-01-01"
+}
+```
+
+This compaction task reads _all segments_ of the interval `2017-01-01/2018-01-01` and results in new segments.
+Note that intervals of the input segments are merged into a single interval of `2017-01-01/2018-01-01` no matter what the segmentGranularity was.
+To controll the number of result segments, you can set `targetPartitionSize` or `numShards`. See [indexTuningConfig](#tuningconfig) for more details.
+To merge each day's worth of data into separate segments, you can submit multiple `compact` tasks, one for each day. They will run in parallel.
+
+A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
+For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html), and `dimensionsSpec` and `metricsSpec`
+include all dimensions and metrics of the input segments by default.
+
+The output segment can have different metadata from the input segments unless all input segments have the same metadata.
+
+- Dimensions: since Druid supports schema change, the dimensions can be different across segments even if they are a part of the same dataSource.
+If the input segments have different dimensions, the output segment basically includes all dimensions of the input segments.
+However, even if the input segments have the same set of dimensions, the dimension order or the data type of dimensions can be different. For example, the data type of some dimensions can be
+changed from `string` to primitive types, or the order of dimensions can be changed for better locality (See [Partitioning](batch-ingestion.html#partitioning-specification)).
+In this case, the dimensions of recent segments precede that of old segments in terms of data types and the ordering.
+This is because more recent segments are more likely to have the new desired order and data types. If you want to use
+your own ordering and types, you can specify a custom `dimensionsSpec` in the compaction task spec.
+- Roll-up: the output segment is rolled up only when `rollup` is set for all input segments.
+See [Roll-up](../design/index.html#roll-up) for more details. 
+You can check that your segments are rolled up or not by using [Segment Metadata Queries](../querying/segmentmetadataquery.html#analysistypes).
 
 Segment Destroying Tasks
 ------------------------
@@ -238,7 +310,8 @@ Kill tasks delete all information about a segment and removes it from deep stora
     "type": "kill",
     "id": <task_id>,
     "dataSource": <task_datasource>,
-    "interval" : <all_segments_in_this_interval_will_die!>
+    "interval" : <all_segments_in_this_interval_will_die!>,
+    "context": <task context>
 }
 ```
 
@@ -319,10 +392,35 @@ These tasks start, sleep for a time and are used only for testing. The available
 }
 ```
 
+Task Context
+------------
+
+The task context is used for various task configuration parameters. The following parameters apply to all task types.
+
+|property|default|description|
+|--------|-------|-----------|
+|taskLockTimeout|300000|task lock timeout in millisecond. For more details, see [the below Locking section](#locking).|
+|priority|Different based on task types. See [Task Priority](#task-priority).|Task priority|
+
+<div class="note caution">
+When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
+As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of overlords.
+</div>
+
 Locking
 -------
 
-Once an overlord node accepts a task, a lock is created for the data source and interval specified in the task. 
+Once an overlord node accepts a task, the task acquires locks for the data source and intervals specified in the task.
+
+There are two lock types, i.e., _shared lock_ and _exclusive lock_.
+
+- A task needs to acquire a shared lock before it reads segments of an interval. Multiple shared locks can be acquired for the same dataSource and interval. Shared locks are always preemptable, but they don't preempt each other.
+- A task needs to acquire an exclusive lock before it writes segments for an interval. An exclusive lock is also preemptable except while the task is publishing segments.
+
+Each task can have different lock priorities. The locks of higher-priority tasks can preempt the locks of lower-priority tasks. The lock preemption works based on _optimistic locking_. When a lock is preempted, it is not notified to the owner task immediately. Instead, it's notified when the owner task tries to acquire the same lock again. (Note that lock acquisition is idempotent unless the lock is preempted.) In general, tasks don't compete for acquiring locks because they usually targets different dataSources or intervals.
+
+A task writing data into a dataSource must acquire exclusive locks for target intervals. Note that exclusive locks are still preemptable. That is, they also be able to be preempted by higher priority locks unless they are _publishing segments_ in a critical section. Once publishing segments is finished, those locks become preemptable again.
+
 Tasks do not need to explicitly release locks, they are released upon task completion. Tasks may potentially release 
-locks early if they desire. Tasks ids are unique by naming them using UUIDs or the timestamp in which the task was created. 
+locks early if they desire. Task ids are unique by naming them using UUIDs or the timestamp in which the task was created. 
 Tasks are also part of a "task group", which is a set of tasks that can share interval locks.

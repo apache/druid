@@ -62,9 +62,9 @@ public class FloatLastAggregationTest
     valueSelector = new TestFloatColumnSelector(floats);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
-    EasyMock.expect(colSelectorFactory.makeFloatColumnSelector("nilly")).andReturn(valueSelector);
-    EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("billy")).andReturn(objectSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
   }
 
@@ -84,9 +84,6 @@ public class FloatLastAggregationTest
     Assert.assertEquals(floats[0], result.rhs, 0.0001);
     Assert.assertEquals((long) floats[0], agg.getLong());
     Assert.assertEquals(floats[0], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
   }
 
   @Test
@@ -136,9 +133,6 @@ public class FloatLastAggregationTest
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Float>) agg.get()).rhs, 0.0001);
   }
 
   @Test

@@ -38,11 +38,8 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultGenericQueryMetricsFactory;
-import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -82,8 +79,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
   private final ObjectMapper jsonMapper;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final Supplier<SelectQueryConfig> configSupplier;
-  private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final SelectQueryMetricsFactory queryMetricsFactory;
 
   public SelectQueryQueryToolChest(
       ObjectMapper jsonMapper,
@@ -91,7 +87,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       Supplier<SelectQueryConfig> configSupplier
   )
   {
-    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, new DefaultGenericQueryMetricsFactory(jsonMapper));
+    this(jsonMapper, intervalChunkingQueryRunnerDecorator, configSupplier, DefaultSelectQueryMetricsFactory.instance());
   }
 
   @Inject
@@ -99,12 +95,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       ObjectMapper jsonMapper,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
       Supplier<SelectQueryConfig> configSupplier,
-      GenericQueryMetricsFactory queryMetricsFactory
+      SelectQueryMetricsFactory queryMetricsFactory
   )
   {
     this.jsonMapper = jsonMapper;
     this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
-    this.configSupplier = configSupplier;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -139,9 +134,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public QueryMetrics<Query<?>> makeMetrics(SelectQuery query)
+  public SelectQueryMetrics makeMetrics(SelectQuery query)
   {
-    return queryMetricsFactory.makeMetrics(query);
+    SelectQueryMetrics queryMetrics = queryMetricsFactory.makeMetrics(query);
+    queryMetrics.query(query);
+    return queryMetrics;
   }
 
   @Override
@@ -309,7 +306,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
               for (int idx = 0; idx < dimOutputNames.size(); idx++) {
                 if (!cachedOutputNames.get(idx).equals(dimOutputNames.get(idx))) {
                   // rename outputName in the EventHolder
-                  for (EventHolder eventHolder: eventHolders) {
+                  for (EventHolder eventHolder : eventHolders) {
                     Object obj = eventHolder.getEvent().remove(cachedOutputNames.get(idx));
                     if (obj != null) {
                       eventHolder.getEvent().put(dimOutputNames.get(idx), obj);

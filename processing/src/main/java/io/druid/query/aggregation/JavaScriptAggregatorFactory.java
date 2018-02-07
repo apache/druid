@@ -27,20 +27,17 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Doubles;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -48,6 +45,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class JavaScriptAggregatorFactory extends AggregatorFactory
 {
@@ -58,7 +56,8 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   private final String fnCombine;
   private final JavaScriptConfig config;
 
-  private final JavaScriptAggregator.ScriptAggregator compiledScript;
+  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
+  private JavaScriptAggregator.ScriptAggregator compiledScript;
 
   @JsonCreator
   public JavaScriptAggregatorFactory(
@@ -83,49 +82,25 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     this.fnReset = fnReset;
     this.fnCombine = fnCombine;
     this.config = config;
-
-    if (config.isEnabled()) {
-      this.compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
-    } else {
-      this.compiledScript = null;
-    }
   }
 
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
+    checkAndCompileScript();
     return new JavaScriptAggregator(
-        Lists.transform(
-            fieldNames,
-            new com.google.common.base.Function<String, ObjectColumnSelector>()
-            {
-              @Override
-              public ObjectColumnSelector apply(@Nullable String s)
-              {
-                return columnFactory.makeObjectColumnSelector(s);
-              }
-            }
-        ),
-        getCompiledScript()
+        fieldNames.stream().map(columnFactory::makeColumnValueSelector).collect(Collectors.toList()),
+        compiledScript
     );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
+    checkAndCompileScript();
     return new JavaScriptBufferAggregator(
-        Lists.transform(
-            fieldNames,
-            new com.google.common.base.Function<String, ObjectColumnSelector>()
-            {
-              @Override
-              public ObjectColumnSelector apply(@Nullable String s)
-              {
-                return columnSelectorFactory.makeObjectColumnSelector(s);
-              }
-            }
-        ),
-        getCompiledScript()
+        fieldNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList()),
+        compiledScript
     );
   }
 
@@ -138,7 +113,8 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return getCompiledScript().combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
+    checkAndCompileScript();
+    return compiledScript.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
   @Override
@@ -157,7 +133,8 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        combined = getCompiledScript().combine(combined, selector.getDouble());
+        checkAndCompileScript();
+        combined = compiledScript.combine(combined, selector.getDouble());
       }
 
       @Override
@@ -285,7 +262,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Doubles.BYTES;
+    return Double.BYTES;
   }
 
   @Override
@@ -300,13 +277,23 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
            '}';
   }
 
-  private JavaScriptAggregator.ScriptAggregator getCompiledScript()
+  /**
+   * This class can be used by multiple threads, so this function should be thread-safe to avoid extra
+   * script compilation.
+   */
+  private void checkAndCompileScript()
   {
     if (compiledScript == null) {
-      throw new ISE("JavaScript is disabled");
-    }
+      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
-    return compiledScript;
+      synchronized (config) {
+        if (compiledScript == null) {
+          compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+        }
+      }
+    }
   }
 
   @VisibleForTesting
@@ -330,7 +317,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     return new JavaScriptAggregator.ScriptAggregator()
     {
       @Override
-      public double aggregate(final double current, final ObjectColumnSelector[] selectorList)
+      public double aggregate(final double current, final BaseObjectColumnValueSelector[] selectorList)
       {
         Context cx = Context.getCurrentContext();
         if (cx == null) {
@@ -345,7 +332,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
 
         args[0] = current;
         for (int i = 0; i < size; i++) {
-          final ObjectColumnSelector selector = selectorList[i];
+          final BaseObjectColumnValueSelector selector = selectorList[i];
           if (selector != null) {
             final Object arg = selector.getObject();
             if (arg != null && arg.getClass().isArray()) {

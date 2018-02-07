@@ -27,10 +27,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import com.google.inject.Binder;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Module;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -40,13 +36,17 @@ import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexing.common.SegmentLoaderFactory;
+import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -63,6 +63,7 @@ import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -91,16 +92,20 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private static final String TIME_COLUMN = "t";
   private static final String[] DIMENSIONS = new String[]{"d1"};
   private static final String[] METRICS = new String[]{"m1"};
-  private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
-      new JSONParseSpec(
-          new TimestampSpec(TIME_COLUMN, "auto", null),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)),
+
+  // Must decorate the parser, since IngestSegmentFirehoseFactory will undecorate it.
+  private static final InputRowParser<Map<String, Object>> ROW_PARSER = TransformSpec.NONE.decorate(
+      new MapInputRowParser(
+          new JSONParseSpec(
+              new TimestampSpec(TIME_COLUMN, "auto", null),
+              new DimensionsSpec(
+                  DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)),
+                  null,
+                  null
+              ),
               null,
               null
-          ),
-          null,
-          null
+          )
       )
   );
 
@@ -144,7 +149,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       while (firehose.hasMore()) {
         final InputRow row = firehose.nextRow();
         count++;
-        sum += row.getLongMetric(METRICS[0]);
+        sum += row.getMetric(METRICS[0]).longValue();
       }
     }
 
@@ -226,7 +231,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     }
 
     try {
-      INDEX_MERGER_V9.persist(index, persistDir, new IndexSpec());
+      INDEX_MERGER_V9.persist(index, persistDir, new IndexSpec(), null);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -289,6 +294,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
             } else {
               throw new IllegalArgumentException("WTF");
             }
+          } else if (taskAction instanceof LockAcquireAction) {
+            return (RetType) new TaskLock(TaskLockType.EXCLUSIVE, null, DATA_SOURCE, Intervals.of("2000/2001"), "v1", 0);
           } else {
             throw new UnsupportedOperationException();
           }
@@ -338,25 +345,15 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           null,
           null
       );
-      final Injector injector = Guice.createInjector(
-          new Module()
-          {
-            @Override
-            public void configure(Binder binder)
-            {
-              binder.bind(TaskToolboxFactory.class).toInstance(taskToolboxFactory);
-            }
-          }
-      );
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,
           testCase.interval,
           new NoopDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
-          injector,
           INDEX_IO
       );
+      factory.setTaskToolbox(taskToolboxFactory.build(NoopTask.create(DATA_SOURCE)));
 
       constructors.add(
           new Object[]{

@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 public class FloatMaxBufferAggregator extends SimpleFloatBufferAggregator
 {
 
-  FloatMaxBufferAggregator(FloatColumnSelector selector)
+  FloatMaxBufferAggregator(BaseFloatColumnValueSelector selector)
   {
     super(selector);
   }
@@ -37,16 +37,6 @@ public class FloatMaxBufferAggregator extends SimpleFloatBufferAggregator
   public void init(ByteBuffer buf, int position)
   {
     buf.putFloat(position, Float.NEGATIVE_INFINITY);
-  }
-
-  @Override
-  public void putFirst(ByteBuffer buf, int position, float value)
-  {
-    if (!Float.isNaN(value)) {
-      buf.putFloat(position, value);
-    } else {
-      init(buf, position);
-    }
   }
 
   @Override

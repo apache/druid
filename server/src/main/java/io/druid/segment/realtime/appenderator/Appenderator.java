@@ -54,6 +54,16 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   Object startJob();
 
   /**
+   * Same as {@link #add(SegmentIdentifier, InputRow, Supplier, boolean)}, with allowIncrementalPersists set to true
+   */
+  default AppenderatorAddResult add(SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier)
+      throws IndexSizeExceededException, SegmentNotWritableException
+  {
+    return add(identifier, row, committerSupplier, true);
+  }
+
+
+  /**
    * Add a row. Must not be called concurrently from multiple threads.
    * <p>
    * If no pending segment exists for the provided identifier, a new one will be created.
@@ -65,16 +75,28 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
    * metadata committed by Committer in sync.
    *
-   * @param identifier        the segment into which this row should be added
-   * @param row               the row to add
-   * @param committerSupplier supplier of a committer associated with all data that has been added, including this row
+   * @param identifier               the segment into which this row should be added
+   * @param row                      the row to add
+   * @param committerSupplier        supplier of a committer associated with all data that has been added, including this row
+   *                                 if {@param allowIncrementalPersists} is set to false then this will not be used as no
+   *                                 persist will be done automatically
+   * @param allowIncrementalPersists indicate whether automatic persist should be performed or not if required.
+   *                                 If this flag is set to false then the return value should have
+   *                                 {@link AppenderatorAddResult#isPersistRequired} set to true if persist was skipped
+   *                                 because of this flag and it is assumed that the responsibility of calling
+   *                                 {@link #persistAll(Committer)} is on the caller.
    *
-   * @return positive number indicating how many summarized rows exist in this segment so far
+   * @return {@link AppenderatorAddResult}
    *
    * @throws IndexSizeExceededException  if this row cannot be added because it is too large
    * @throws SegmentNotWritableException if the requested segment is known, but has been closed
    */
-  int add(SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier)
+  AppenderatorAddResult add(
+      SegmentIdentifier identifier,
+      InputRow row,
+      Supplier<Committer> committerSupplier,
+      boolean allowIncrementalPersists
+  )
       throws IndexSizeExceededException, SegmentNotWritableException;
 
   /**
@@ -91,7 +113,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    *
    * @throws IllegalStateException if the segment is unknown
    */
-  int getRowCount(final SegmentIdentifier identifier);
+  int getRowCount(SegmentIdentifier identifier);
 
   /**
    * Returns the number of total rows in this appenderator.
@@ -104,7 +126,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Drop all in-memory and on-disk data, and forget any previously-remembered commit metadata. This could be useful if,
    * for some reason, rows have been added that we do not actually want to hand off. Blocks until all data has been
    * cleared. This may take some time, since all pending persists must finish first.
-   *
+   * <p>
    * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
    * metadata committed by Committer in sync.
    */
@@ -135,7 +157,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    *
    * @param identifiers segment identifiers to be persisted
    * @param committer   a committer associated with all data that has been added to segments of the given identifiers so
-   *                   far
+   *                    far
    *
    * @return future that resolves when all pending data to segments of the identifiers has been persisted, contains
    * commit metadata for this persist
@@ -178,9 +200,53 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   ListenableFuture<SegmentsAndMetadata> push(Collection<SegmentIdentifier> identifiers, Committer committer);
 
   /**
-   * Stop any currently-running processing and clean up after ourselves. This will not remove any on-disk persisted
-   * data, but it will drop any data that has not yet been persisted.
+   * Stop any currently-running processing and clean up after ourselves. This allows currently running persists and pushes
+   * to finish. This will not remove any on-disk persisted data, but it will drop any data that has not yet been persisted.
    */
   @Override
   void close();
+
+  /**
+   * Stop all processing, abandoning current pushes, currently running persist may be allowed to finish if they persist
+   * critical metadata otherwise shutdown immediately. This will not remove any on-disk persisted data,
+   * but it will drop any data that has not yet been persisted.
+   * Since this does not wait for pushes to finish, implementations have to make sure if any push is still happening
+   * in background thread then it does not cause any problems.
+   */
+  void closeNow();
+
+  /**
+   * Result of {@link Appenderator#add(SegmentIdentifier, InputRow, Supplier, boolean)} containing following information
+   * - SegmentIdentifier - identifier of segment to which rows are being added
+   * - int - positive number indicating how many summarized rows exist in this segment so far and
+   * - boolean - true if {@param allowIncrementalPersists} is set to false and persist is required; false otherwise
+   */
+  class AppenderatorAddResult
+  {
+    private final SegmentIdentifier segmentIdentifier;
+    private final int numRowsInSegment;
+    private final boolean isPersistRequired;
+
+    AppenderatorAddResult(SegmentIdentifier identifier, int numRowsInSegment, boolean isPersistRequired)
+    {
+      this.segmentIdentifier = identifier;
+      this.numRowsInSegment = numRowsInSegment;
+      this.isPersistRequired = isPersistRequired;
+    }
+
+    SegmentIdentifier getSegmentIdentifier()
+    {
+      return segmentIdentifier;
+    }
+
+    int getNumRowsInSegment()
+    {
+      return numRowsInSegment;
+    }
+
+    boolean isPersistRequired()
+    {
+      return isPersistRequired;
+    }
+  }
 }

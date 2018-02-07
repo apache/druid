@@ -85,7 +85,7 @@ import java.util.zip.ZipInputStream;
 
 public class OrcIndexGeneratorJobTest
 {
-  static private final AggregatorFactory[] aggs = {
+  private static final AggregatorFactory[] aggs = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
@@ -206,6 +206,7 @@ public class OrcIndexGeneratorJobTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)
                 ),
+                null,
                 mapper
             ),
             new HadoopIOConfig(
@@ -305,7 +306,7 @@ public class OrcIndexGeneratorJobTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        for (Rowboat row: adapter.getRows()) {
+        for (Rowboat row : adapter.getRows()) {
           Object[] metrics = row.getMetrics();
 
           rowCount++;

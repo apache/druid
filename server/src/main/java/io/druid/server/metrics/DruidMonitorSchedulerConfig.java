@@ -20,7 +20,7 @@
 package io.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.metrics.MonitorSchedulerConfig;
+import io.druid.java.util.metrics.MonitorSchedulerConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 

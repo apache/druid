@@ -95,7 +95,7 @@ public class TopNQueryQueryToolChestTest
         result
     );
 
-    ObjectMapper objectMapper = TestHelper.getJsonMapper();
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     Object fromCacheValue = objectMapper.readValue(
         objectMapper.writeValueAsBytes(preparedValue),
         strategy.getCacheObjectClazz()

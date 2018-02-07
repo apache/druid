@@ -34,6 +34,9 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * TODO rewrite to use JMH and move to the benchmarks project
+ */
 public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 {
   private final HashFunction fn = Hashing.murmur3_128();
@@ -141,6 +144,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     return buf;
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public double timeFold(int reps) throws Exception
   {
     final ByteBuffer buf = allocateEmptyHLLBuffer(targetIsDirect, alignTarget, 0);

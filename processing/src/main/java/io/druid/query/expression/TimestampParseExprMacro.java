@@ -19,6 +19,7 @@
 
 package io.druid.query.expression;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
@@ -26,6 +27,8 @@ import io.druid.math.expr.ExprMacroTable;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nonnull;
@@ -51,14 +54,15 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
     final DateTimeZone timeZone;
 
     if (args.size() > 2 && args.get(2).getLiteralValue() != null) {
-      timeZone = DateTimeZone.forID((String) args.get(2).getLiteralValue());
+      timeZone = DateTimes.inferTzfromString((String) args.get(2).getLiteralValue());
     } else {
       timeZone = DateTimeZone.UTC;
     }
 
-    final DateTimeFormatter formatter = formatString == null
-                                        ? ISODateTimeFormat.dateTimeParser()
-                                        : DateTimeFormat.forPattern(formatString).withZone(timeZone);
+    final DateTimes.UtcFormatter formatter =
+        formatString == null
+        ? createDefaultParser(timeZone)
+        : DateTimes.wrapFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
 
     class TimestampParseExpr implements Expr
     {
@@ -66,8 +70,13 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
+        final String value = arg.eval(bindings).asString();
+        if (value == null) {
+          return ExprEval.of(null);
+        }
+
         try {
-          return ExprEval.of(formatter.parseDateTime(arg.eval(bindings).asString()).getMillis());
+          return ExprEval.of(formatter.parse(value).getMillis());
         }
         catch (IllegalArgumentException e) {
           // Catch exceptions potentially thrown by formatter.parseDateTime. Our docs say that unparseable timestamps
@@ -85,5 +94,36 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
     }
 
     return new TimestampParseExpr();
+  }
+
+  /**
+   * Default formatter that parses according to the docs for this method: "If the pattern is not provided, this parses
+   * time strings in either ISO8601 or SQL format."
+   */
+  private static DateTimes.UtcFormatter createDefaultParser(final DateTimeZone timeZone)
+  {
+    final DateTimeFormatter offsetElement = new DateTimeFormatterBuilder()
+        .appendTimeZoneOffset("Z", true, 2, 4)
+        .toFormatter();
+
+    DateTimeParser timeOrOffset = new DateTimeFormatterBuilder()
+        .append(
+            null,
+            new DateTimeParser[]{
+                new DateTimeFormatterBuilder().appendLiteral('T').toParser(),
+                new DateTimeFormatterBuilder().appendLiteral(' ').toParser()
+            }
+        )
+        .appendOptional(ISODateTimeFormat.timeElementParser().getParser())
+        .appendOptional(offsetElement.getParser())
+        .toParser();
+
+    return DateTimes.wrapFormatter(
+        new DateTimeFormatterBuilder()
+            .append(ISODateTimeFormat.dateElementParser())
+            .appendOptional(timeOrOffset)
+            .toFormatter()
+            .withZone(timeZone)
+    );
   }
 }

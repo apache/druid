@@ -21,31 +21,18 @@ package io.druid.query.aggregation;
 
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public abstract class SimpleFloatBufferAggregator implements BufferAggregator
 {
-  protected final FloatColumnSelector selector;
+  protected final BaseFloatColumnValueSelector selector;
 
-  SimpleFloatBufferAggregator(FloatColumnSelector selector)
+  SimpleFloatBufferAggregator(BaseFloatColumnValueSelector selector)
   {
     this.selector = selector;
   }
-
-  public FloatColumnSelector getSelector()
-  {
-    return selector;
-  }
-
-  /**
-   * Faster equivalent to
-   * aggregator.init(buf, position);
-   * aggregator.aggregate(buf, position, value);
-   */
-  @CalledFromHotLoop
-  public abstract void putFirst(ByteBuffer buf, int position, float value);
 
   @CalledFromHotLoop
   public abstract void aggregate(ByteBuffer buf, int position, float value);

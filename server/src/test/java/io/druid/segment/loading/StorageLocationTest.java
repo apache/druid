@@ -36,7 +36,7 @@ public class StorageLocationTest
   public void testStorageLocation() throws Exception
   {
     long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail);
+    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, null);
 
     verifyLoc(expectedAvail, loc);
 
@@ -69,7 +69,7 @@ public class StorageLocationTest
   {
     Assert.assertEquals(maxSize, loc.available());
     for (int i = 0; i <= maxSize; ++i) {
-      Assert.assertTrue(String.valueOf(i), loc.canHandle(i));
+      Assert.assertTrue(String.valueOf(i), loc.canHandle(makeSegment("2013/2014", i)));
     }
   }
 

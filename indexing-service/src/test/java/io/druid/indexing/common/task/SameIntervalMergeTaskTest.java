@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LockListAction;
@@ -90,6 +91,7 @@ public class SameIntervalMergeTaskTest
         true,
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -124,10 +126,12 @@ public class SameIntervalMergeTaskTest
           Assert.assertEquals(mergeTask.getInterval(), ((LockTryAcquireAction) taskAction).getInterval());
           isRedayCountDown.countDown();
           taskLock = new TaskLock(
+              TaskLockType.EXCLUSIVE,
               mergeTask.getGroupId(),
               mergeTask.getDataSource(),
               mergeTask.getInterval(),
-              version
+              version,
+              Tasks.DEFAULT_TASK_PRIORITY
           );
           return (RetType) taskLock;
         }
@@ -197,7 +201,7 @@ public class SameIntervalMergeTaskTest
               }
 
               @Override
-              public DataSegment push(File file, DataSegment segment) throws IOException
+              public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
               {
                 // the merged segment is pushed to storage
                 segments.add(segment);

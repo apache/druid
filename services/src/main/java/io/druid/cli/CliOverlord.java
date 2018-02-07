@@ -58,6 +58,8 @@ import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
+import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
+import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -75,6 +77,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelper;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleanerConfig;
+import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -89,7 +92,6 @@ import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -121,7 +123,9 @@ public class CliOverlord extends ServerRunnable
       "/console.html",
       "/old-console/*",
       "/images/*",
-      "/js/*"
+      "/js/*",
+      "/druid/indexer/v1/isLeader",
+      "/status/health"
   );
 
   public CliOverlord()
@@ -174,6 +178,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
             binder.bind(TaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskStorageQueryAdapter.class).in(LazySingleton.class);
+            binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
@@ -195,6 +200,7 @@ public class CliOverlord extends ServerRunnable
 
             Jerseys.addResource(binder, OverlordResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
+            Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
 
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
@@ -250,6 +256,9 @@ public class CliOverlord extends ServerRunnable
             biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME).to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
+            biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME).to(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+            binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
             JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
           }
 
@@ -275,7 +284,6 @@ public class CliOverlord extends ServerRunnable
             );
             biddy.addBinding("simple").to(SimpleWorkerProvisioningStrategy.class);
             biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerProvisioningStrategy.class);
-
           }
 
           private void configureOverlordHelpers(Binder binder)
@@ -315,19 +323,20 @@ public class CliOverlord extends ServerRunnable
           )
       );
 
-      final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
       final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
       final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
       List<Authenticator> authenticators = null;
       AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+
+      // perform no-op authorization for these resources
+      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
       authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
-      // perform no-op authorization for these static resources
-      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
 
       // Check that requests were authorized before sending responses
       AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
@@ -336,14 +345,17 @@ public class CliOverlord extends ServerRunnable
           jsonMapper
       );
 
-      // /status should not redirect, so add first
+      // add some paths not to be redirected to leader.
       root.addFilter(GuiceFilter.class, "/status/*", null);
+      root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
 
       // redirect anything other than status to the current lead
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
 
       // Can't use /* here because of Guice and Jetty static content conflicts
       root.addFilter(GuiceFilter.class, "/druid/*", null);
+
+      root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
 
       HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(

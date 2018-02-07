@@ -38,9 +38,12 @@ import io.druid.segment.DimensionSelector;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+/**
+ * TODO rewrite to use JMH and move to the benchmarks project
+ */
 public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 {
-  private final static int MAX = 5_000_000;
+  private static final int MAX = 5_000_000;
 
   CardinalityBufferAggregator agg;
   List<DimensionSelector> selectorList;
@@ -112,6 +115,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
     agg.init(buf, pos);
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public Object timeBufferAggregate(int reps) throws Exception
   {
     for (int i = 0; i < reps; ++i) {

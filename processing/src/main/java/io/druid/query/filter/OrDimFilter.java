@@ -26,10 +26,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import io.druid.java.util.common.StringUtils;
-import io.druid.query.Druids;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.filter.OrFilter;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -38,7 +39,7 @@ public class OrDimFilter implements DimFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
-  final private List<DimFilter> fields;
+  private final List<DimFilter> fields;
 
   @JsonCreator
   public OrDimFilter(
@@ -48,6 +49,20 @@ public class OrDimFilter implements DimFilter
     fields = DimFilters.filterNulls(fields);
     Preconditions.checkArgument(fields.size() > 0, "OR operator requires at least one field");
     this.fields = fields;
+  }
+
+  public OrDimFilter(DimFilter... fields)
+  {
+    this(Arrays.asList(fields));
+  }
+
+  public OrDimFilter(String dimensionName, String value, String... values)
+  {
+    fields = new ArrayList<>(values.length + 1);
+    fields.add(new SelectorDimFilter(dimensionName, value, null));
+    for (String val : values) {
+      fields.add(new SelectorDimFilter(dimensionName, val, null));
+    }
   }
 
   @JsonProperty
@@ -66,7 +81,7 @@ public class OrDimFilter implements DimFilter
   public DimFilter optimize()
   {
     List<DimFilter> elements = DimFilters.optimize(fields);
-    return elements.size() == 1 ? elements.get(0) : Druids.newOrDimFilterBuilder().fields(elements).build();
+    return elements.size() == 1 ? elements.get(0) : new OrDimFilter(elements);
   }
 
   @Override

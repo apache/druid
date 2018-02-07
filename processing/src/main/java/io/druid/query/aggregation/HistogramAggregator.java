@@ -20,7 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -40,11 +40,11 @@ public class HistogramAggregator implements Aggregator
     return ((Histogram) lhs).fold((Histogram) rhs);
   }
 
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
 
   private Histogram histogram;
 
-  public HistogramAggregator(FloatColumnSelector selector, float[] breaks)
+  public HistogramAggregator(BaseFloatColumnValueSelector selector, float[] breaks)
   {
     this.selector = selector;
     this.histogram = new Histogram(breaks);
@@ -54,12 +54,6 @@ public class HistogramAggregator implements Aggregator
   public void aggregate()
   {
     histogram.offer(selector.getFloat());
-  }
-
-  @Override
-  public void reset()
-  {
-    this.histogram = new Histogram(histogram.breaks);
   }
 
   @Override

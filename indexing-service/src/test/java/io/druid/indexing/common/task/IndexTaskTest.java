@@ -20,6 +20,7 @@
 package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
@@ -30,10 +31,12 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockListAction;
+import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
@@ -46,12 +49,16 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.transform.ExpressionTransform;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -208,6 +215,50 @@ public class IndexTaskTest
   }
 
   @Test
+  public void testTransformSpec() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,1\n");
+      writer.write("2014-01-01T02:00:30Z,c,1\n");
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            null,
+            new TransformSpec(
+                new SelectorDimFilter("dim", "b", null),
+                ImmutableList.of(
+                    new ExpressionTransform("dimt", "concat(dim,dim)", ExprMacroTable.nil())
+                )
+            ),
+            null,
+            createTuningConfig(2, null, true, false),
+            false
+        ),
+        null
+    );
+
+    Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
+
+    final List<DataSegment> segments = runTask(indexTask);
+
+    Assert.assertEquals(1, segments.size());
+
+    Assert.assertEquals("test", segments.get(0).getDataSource());
+    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+  }
+
+  @Test
   public void testWithArbitraryGranularity() throws Exception
   {
     File tmpDir = temporaryFolder.newFolder();
@@ -228,7 +279,7 @@ public class IndexTaskTest
             null,
             new ArbitraryGranularitySpec(
                 Granularities.MINUTE,
-                Collections.singletonList(Intervals.of("2014/2015"))
+                Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
             ),
             createTuningConfig(10, null, false, true),
             false
@@ -249,8 +300,8 @@ public class IndexTaskTest
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("2015-03-01T07:59:59.977Z,a,1\n");
-      writer.write("2015-03-01T08:00:00.000Z,b,1\n");
+      writer.write("2014-01-01T07:59:59.977Z,a,1\n");
+      writer.write("2014-01-01T08:00:00.000Z,b,1\n");
     }
 
     IndexTask indexTask = new IndexTask(
@@ -262,7 +313,7 @@ public class IndexTaskTest
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.HOUR,
-                Collections.singletonList(Intervals.of("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
+                Collections.singletonList(Intervals.of("2014-01-01T08:00:00Z/2014-01-01T09:00:00Z"))
             ),
             createTuningConfig(50, null, false, true),
             false
@@ -879,103 +930,124 @@ public class IndexTaskTest
     runTask(indexTask);
   }
 
-  private final List<DataSegment> runTask(final IndexTask indexTask) throws Exception
+  private List<DataSegment> runTask(IndexTask indexTask) throws Exception
   {
     final List<DataSegment> segments = Lists.newArrayList();
 
-    indexTask.run(
-        new TaskToolbox(
-            null,
-            new TaskActionClient()
-            {
-              @Override
-              public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
-              {
-                if (taskAction instanceof LockListAction) {
-                  return (RetType) Collections.singletonList(
-                      new TaskLock(
-                          "", "", null, DateTimes.nowUtc().toString()
-                      )
-                  );
-                }
+    final TaskActionClient actionClient = new TaskActionClient()
+    {
+      @Override
+      public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+      {
+        if (taskAction instanceof LockListAction) {
+          return (RetType) Collections.singletonList(
+              new TaskLock(
+                  TaskLockType.EXCLUSIVE,
+                  "",
+                  "",
+                  Intervals.of("2014/P1Y"), DateTimes.nowUtc().toString(),
+                  Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
+              )
+          );
+        }
 
-                if (taskAction instanceof LockAcquireAction) {
-                  return (RetType) new TaskLock(
-                      "groupId",
-                      "test",
-                      ((LockAcquireAction) taskAction).getInterval(),
-                      DateTimes.nowUtc().toString()
-                  );
-                }
+        if (taskAction instanceof LockAcquireAction) {
+          return (RetType) new TaskLock(
+              TaskLockType.EXCLUSIVE, "groupId",
+              "test",
+              ((LockAcquireAction) taskAction).getInterval(),
+              DateTimes.nowUtc().toString(),
+              Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
+          );
+        }
 
-                if (taskAction instanceof SegmentTransactionalInsertAction) {
-                  return (RetType) new SegmentPublishResult(
-                      ((SegmentTransactionalInsertAction) taskAction).getSegments(),
-                      true
-                  );
-                }
+        if (taskAction instanceof LockTryAcquireAction) {
+          return (RetType) new TaskLock(
+              TaskLockType.EXCLUSIVE,
+              "groupId",
+              "test",
+              ((LockTryAcquireAction) taskAction).getInterval(),
+              DateTimes.nowUtc().toString(),
+              Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY
+          );
+        }
 
-                if (taskAction instanceof SegmentAllocateAction) {
-                  SegmentAllocateAction action = (SegmentAllocateAction) taskAction;
-                  Interval interval = action.getPreferredSegmentGranularity().bucket(action.getTimestamp());
-                  ShardSpec shardSpec = new NumberedShardSpec(segmentAllocatePartitionCounter++, 0);
-                  return (RetType) new SegmentIdentifier(action.getDataSource(), interval, "latestVersion", shardSpec);
-                }
+        if (taskAction instanceof SegmentTransactionalInsertAction) {
+          return (RetType) new SegmentPublishResult(
+              ((SegmentTransactionalInsertAction) taskAction).getSegments(),
+              true
+          );
+        }
 
-                return null;
-              }
-            },
-            null,
-            new DataSegmentPusher()
-            {
-              @Deprecated
-              @Override
-              public String getPathForHadoop(String dataSource)
-              {
-                return getPathForHadoop();
-              }
+        if (taskAction instanceof SegmentAllocateAction) {
+          SegmentAllocateAction action = (SegmentAllocateAction) taskAction;
+          Interval interval = action.getPreferredSegmentGranularity().bucket(action.getTimestamp());
+          ShardSpec shardSpec = new NumberedShardSpec(segmentAllocatePartitionCounter++, 0);
+          return (RetType) new SegmentIdentifier(action.getDataSource(), interval, "latestVersion", shardSpec);
+        }
 
-              @Override
-              public String getPathForHadoop()
-              {
-                return null;
-              }
+        return null;
+      }
+    };
 
-              @Override
-              public DataSegment push(File file, DataSegment segment) throws IOException
-              {
-                segments.add(segment);
-                return segment;
-              }
+    final DataSegmentPusher pusher = new DataSegmentPusher()
+    {
+      @Deprecated
+      @Override
+      public String getPathForHadoop(String dataSource)
+      {
+        return getPathForHadoop();
+      }
 
-              @Override
-              public Map<String, Object> makeLoadSpec(URI uri)
-              {
-                throw new UnsupportedOperationException();
-              }
-            },
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            jsonMapper,
-            temporaryFolder.newFolder(),
-            indexIO,
-            null,
-            null,
-            indexMergerV9,
-            null,
-            null,
-            null,
-            null
-        )
+      @Override
+      public String getPathForHadoop()
+      {
+        return null;
+      }
+
+      @Override
+      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+      {
+        segments.add(segment);
+        return segment;
+      }
+
+      @Override
+      public Map<String, Object> makeLoadSpec(URI uri)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+
+    final TaskToolbox box = new TaskToolbox(
+        null,
+        actionClient,
+        null,
+        pusher,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        jsonMapper,
+        temporaryFolder.newFolder(),
+        indexIO,
+        null,
+        null,
+        indexMergerV9,
+        null,
+        null,
+        null,
+        null
     );
+
+    indexTask.isReady(box.getTaskActionClient());
+    indexTask.run(box);
 
     Collections.sort(segments);
 
@@ -985,6 +1057,18 @@ public class IndexTaskTest
   private IndexTask.IndexIngestionSpec createIngestionSpec(
       File baseDir,
       ParseSpec parseSpec,
+      GranularitySpec granularitySpec,
+      IndexTuningConfig tuningConfig,
+      boolean appendToExisting
+  )
+  {
+    return createIngestionSpec(baseDir, parseSpec, TransformSpec.NONE, granularitySpec, tuningConfig, appendToExisting);
+  }
+
+  private IndexTask.IndexIngestionSpec createIngestionSpec(
+      File baseDir,
+      ParseSpec parseSpec,
+      TransformSpec transformSpec,
       GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
       boolean appendToExisting
@@ -1008,6 +1092,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 Arrays.asList(Intervals.of("2014/2015"))
             ),
+            transformSpec,
             jsonMapper
         ),
         new IndexTask.IndexIOConfig(
@@ -1062,6 +1147,7 @@ public class IndexTaskTest
         forceExtendableShardSpecs,
         forceGuaranteedRollup,
         reportParseException,
+        null,
         null
     );
   }

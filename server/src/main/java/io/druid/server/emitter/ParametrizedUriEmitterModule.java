@@ -25,13 +25,12 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.ParametrizedUriEmitter;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.ParametrizedUriEmitter;
+import io.druid.java.util.emitter.core.ParametrizedUriEmitterConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.http.LifecycleUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;
@@ -39,11 +38,13 @@ import javax.net.ssl.SSLContext;
 
 public class ParametrizedUriEmitterModule implements Module
 {
+  private static final Logger log = new Logger(ParametrizedUriEmitterModule.class);
+
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.emitter.parametrized", ParametrizedUriEmitterConfig.class);
-    HttpEmitterModule.configureSsl(binder);
+    JsonConfigProvider.bind(binder, "druid.emitter.parametrized.httpEmitting", ParametrizedUriEmitterSSLClientConfig.class);
   }
 
   @Provides
@@ -51,21 +52,22 @@ public class ParametrizedUriEmitterModule implements Module
   @Named("parametrized")
   public Emitter getEmitter(
       Supplier<ParametrizedUriEmitterConfig> config,
+      Supplier<ParametrizedUriEmitterSSLClientConfig> parametrizedSSLClientConfig,
       @Nullable SSLContext sslContext,
       Lifecycle lifecycle,
       ObjectMapper jsonMapper
   )
   {
-    final HttpClientConfig.Builder builder = HttpClientConfig
-        .builder()
-        .withNumConnections(1)
-        .withReadTimeout(config.get().getReadTimeout().toStandardDuration());
-    if (sslContext != null) {
-      builder.withSslContext(sslContext);
-    }
+    HttpEmitterSSLClientConfig sslConfig = parametrizedSSLClientConfig.get().getHttpEmittingSSLClientConfig();
     return new ParametrizedUriEmitter(
         config.get(),
-        HttpClientInit.createClient(builder.build(), LifecycleUtils.asMmxLifecycle(lifecycle)),
+        lifecycle.addCloseableInstance(
+            HttpEmitterModule.createAsyncHttpClient(
+                "ParmetrizedUriEmitter-AsyncHttpClient-%d",
+                "ParmetrizedUriEmitter-AsyncHttpClient-Timer-%d",
+                HttpEmitterModule.getEffectiveSSLContext(sslConfig, sslContext)
+            )
+        ),
         jsonMapper
     );
   }

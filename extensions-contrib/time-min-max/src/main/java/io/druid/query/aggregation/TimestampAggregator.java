@@ -20,7 +20,7 @@
 package io.druid.query.aggregation;
 
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -37,7 +37,7 @@ public class TimestampAggregator implements Aggregator
     }
   }
 
-  private final ObjectColumnSelector selector;
+  private final BaseObjectColumnValueSelector selector;
   private final String name;
   private final TimestampSpec timestampSpec;
   private final Comparator<Long> comparator;
@@ -47,7 +47,7 @@ public class TimestampAggregator implements Aggregator
 
   public TimestampAggregator(
       String name,
-      ObjectColumnSelector selector,
+      BaseObjectColumnValueSelector selector,
       TimestampSpec timestampSpec,
       Comparator<Long> comparator,
       Long initValue
@@ -59,7 +59,7 @@ public class TimestampAggregator implements Aggregator
     this.comparator = comparator;
     this.initValue = initValue;
 
-    reset();
+    most = this.initValue;
   }
 
   @Override
@@ -70,12 +70,6 @@ public class TimestampAggregator implements Aggregator
     if (value != null) {
       most = comparator.compare(most, value) > 0 ? most : value;
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    most = initValue;
   }
 
   @Override

@@ -62,7 +62,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/fonts/*",
       "/old-console/*",
       "/coordinator/false",
-      "/overlord/false"
+      "/overlord/false",
+      "/status/health",
+      "/druid/coordinator/v1/isLeader"
   );
 
   private static Logger log = new Logger(CoordinatorJettyServerInitializer.class);
@@ -112,13 +114,15 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     List<Authenticator> authenticators = null;
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+
+    // perform no-op authorization for these resources
+    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
-    // perform no-op authorization for these static resources
-    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
 
     // Check that requests were authorized before sending responses
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
@@ -127,8 +131,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
         jsonMapper
     );
 
-    // /status should not redirect, so add first
+    // add some paths not to be redirected to leader.
     root.addFilter(GuiceFilter.class, "/status/*", null);
+    root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
 
     // redirect anything other than status to the current lead
     root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
@@ -140,6 +145,8 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     if (beOverlord) {
       root.addFilter(GuiceFilter.class, "/druid/indexer/*", null);
     }
+    root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+
     // this will be removed in the next major release
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 

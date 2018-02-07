@@ -19,8 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.memory.MemoryRegion;
-import com.yahoo.memory.NativeMemory;
+import com.yahoo.memory.Memory;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.java.util.common.IAE;
 import io.druid.segment.data.ObjectStrategy;
@@ -51,7 +50,7 @@ public class SketchObjectStrategy implements ObjectStrategy
       return SketchHolder.EMPTY;
     }
 
-    return SketchHolder.of(new MemoryRegion(new NativeMemory(buffer), buffer.position(), numBytes));
+    return SketchHolder.of(Memory.wrap(buffer).region(buffer.position(), numBytes));
   }
 
   @Override

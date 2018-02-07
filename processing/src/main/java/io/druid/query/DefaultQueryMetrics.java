@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.query.filter.Filter;
 import org.joda.time.Interval;
@@ -179,6 +179,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   @Override
   public void postFilters(List<Filter> postFilters)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void identity(String identity)
   {
     // Emit nothing by default.
   }

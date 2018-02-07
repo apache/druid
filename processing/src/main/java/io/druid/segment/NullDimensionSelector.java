@@ -51,12 +51,6 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   }
 
   @Override
-  public int getRowValue()
-  {
-    return 0;
-  }
-
-  @Override
   public int getRowValue(int offset)
   {
     return 0;
@@ -110,6 +104,19 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   public int lookupId(String name)
   {
     return Strings.isNullOrEmpty(name) ? 0 : -1;
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return null;
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return Object.class;
   }
 
   @Override

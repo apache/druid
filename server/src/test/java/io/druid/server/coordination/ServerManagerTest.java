@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
@@ -66,6 +66,7 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.SegmentManager;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -155,7 +156,8 @@ public class ServerManagerTest
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),
-        segmentManager
+        segmentManager,
+        new ServerConfig()
     );
 
     loadQueryable("test", "1", Intervals.of("P1d/2011-04-01"));
@@ -444,7 +446,7 @@ public class ServerManagerTest
           {
             Map<String, Object> context = new HashMap<String, Object>();
             Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query), context);
-            Sequences.toList(seq, Lists.<Result<SearchResultValue>>newArrayList());
+            seq.toList();
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
             while (expectedIter.hasNext() && adaptersIter.hasNext()) {

@@ -19,10 +19,19 @@
 
 package io.druid.sql.calcite.aggregation;
 
-import com.google.common.base.Predicate;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.FilteredAggregatorFactory;
-import io.druid.query.filter.DimFilter;
+import io.druid.segment.column.ValueType;
+import io.druid.sql.calcite.expression.DruidExpression;
+import io.druid.sql.calcite.expression.Expressions;
+import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
+import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexNode;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class Aggregations
 {
@@ -31,30 +40,38 @@ public class Aggregations
     // No instantiation.
   }
 
-  /**
-   * Returns true if "factory" is an aggregator factory that either matches "predicate" (if filter is null) or is
-   * a filtered aggregator factory whose filter is equal to "filter" and underlying aggregator matches "predicate".
-   *
-   * @param factory   factory to match
-   * @param filter    filter, may be null
-   * @param clazz     class of factory to match
-   * @param predicate predicate
-   *
-   * @return true if the aggregator matches filter + predicate
-   */
-  public static <T extends AggregatorFactory> boolean aggregatorMatches(
-      final AggregatorFactory factory,
-      final DimFilter filter,
-      final Class<T> clazz,
-      final Predicate<T> predicate
+  @Nullable
+  public static List<DruidExpression> getArgumentsForSimpleAggregator(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final AggregateCall call,
+      final Project project
   )
   {
-    if (filter != null) {
-      return factory instanceof FilteredAggregatorFactory &&
-             ((FilteredAggregatorFactory) factory).getFilter().equals(filter)
-             && aggregatorMatches(((FilteredAggregatorFactory) factory).getAggregator(), null, clazz, predicate);
+    return call.getArgList().stream()
+               .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+               .map(rexNode -> toDruidExpressionForSimpleAggregator(plannerContext, rowSignature, rexNode))
+               .collect(Collectors.toList());
+  }
+
+  private static DruidExpression toDruidExpressionForSimpleAggregator(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode
+  )
+  {
+    final DruidExpression druidExpression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
+    if (druidExpression == null) {
+      return null;
+    }
+
+    if (druidExpression.isSimpleExtraction() &&
+        (!druidExpression.isDirectColumnAccess()
+         || rowSignature.getColumnType(druidExpression.getDirectColumn()) == ValueType.STRING)) {
+      // Aggregators are unable to implicitly cast strings to numbers. So remove the simple extraction in this case.
+      return druidExpression.map(simpleExtraction -> null, Function.identity());
     } else {
-      return clazz.isAssignableFrom(factory.getClass()) && predicate.apply(clazz.cast(factory));
+      return druidExpression;
     }
   }
 }

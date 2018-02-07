@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
@@ -73,18 +72,18 @@ public class ApproximateHistogramAggregationTest
   public void testIngestWithNullsIgnoredAndQuery() throws Exception
   {
     MapBasedRow row = ingestAndQuery(true);
-    Assert.assertEquals(92.782760, row.getFloatMetric("index_min"), 0.0001);
-    Assert.assertEquals(135.109191, row.getFloatMetric("index_max"), 0.0001);
-    Assert.assertEquals(133.69340, row.getFloatMetric("index_quantile"), 0.0001);
+    Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
+    Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
+    Assert.assertEquals(133.69340, row.getMetric("index_quantile").floatValue(), 0.0001);
   }
 
   @Test
   public void testIngestWithNullsToZeroAndQuery() throws Exception
   {
     MapBasedRow row = ingestAndQuery(false);
-    Assert.assertEquals(0.0, row.getFloatMetric("index_min"), 0.0001);
-    Assert.assertEquals(135.109191, row.getFloatMetric("index_max"), 0.0001);
-    Assert.assertEquals(131.428176, row.getFloatMetric("index_quantile"), 0.0001);
+    Assert.assertEquals(0.0, row.getMetric("index_min").floatValue(), 0.0001);
+    Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
+    Assert.assertEquals(131.428176, row.getMetric("index_quantile").floatValue(), 0.0001);
   }
 
   private MapBasedRow ingestAndQuery(boolean ignoreNulls) throws Exception
@@ -140,6 +139,6 @@ public class ApproximateHistogramAggregationTest
         query
     );
 
-    return (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
+    return (MapBasedRow) seq.toList().get(0);
   }
 }

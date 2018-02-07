@@ -31,11 +31,8 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -112,7 +109,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       AtomicInteger numEntries,
       TimeAndDims key,
       ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier
+      Supplier<InputRow> rowSupplier,
+      boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException
   {
     final int priorIndex = facts.getPriorIndex(key);
@@ -131,7 +129,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
+      if (numEntries.get() >= maxRowCount
+          && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX
+          && !skipMaxRowsInMemoryCheck) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
       final int prev = facts.putIfAbsent(key, rowIndex);
@@ -308,10 +308,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   // operations.
   static class ObjectCachingColumnSelectorFactory implements ColumnSelectorFactory
   {
-    private final Map<String, LongColumnSelector> longColumnSelectorMap;
-    private final Map<String, FloatColumnSelector> floatColumnSelectorMap;
-    private final Map<String, ObjectColumnSelector> objectColumnSelectorMap;
-    private final Map<String, DoubleColumnSelector> doubleColumnSelectorMap;
+    private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
     private final ColumnSelectorFactory delegate;
 
     public ObjectCachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
@@ -319,15 +316,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       this.delegate = delegate;
 
       if (concurrentEventAdd) {
-        longColumnSelectorMap = new ConcurrentHashMap<>();
-        floatColumnSelectorMap = new ConcurrentHashMap<>();
-        objectColumnSelectorMap = new ConcurrentHashMap<>();
-        doubleColumnSelectorMap = new ConcurrentHashMap<>();
+        columnSelectorMap = new ConcurrentHashMap<>();
       } else {
-        longColumnSelectorMap = new HashMap<>();
-        floatColumnSelectorMap = new HashMap<>();
-        objectColumnSelectorMap = new HashMap<>();
-        doubleColumnSelectorMap = new HashMap<>();
+        columnSelectorMap = new HashMap<>();
       }
     }
 
@@ -338,43 +329,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     @Override
-    public FloatColumnSelector makeFloatColumnSelector(String columnName)
+    public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
     {
-      final FloatColumnSelector existing = floatColumnSelectorMap.get(columnName);
+      final ColumnValueSelector existing = columnSelectorMap.get(columnName);
       if (existing != null) {
         return existing;
       }
-      return floatColumnSelectorMap.computeIfAbsent(columnName, delegate::makeFloatColumnSelector);
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(String columnName)
-    {
-      final LongColumnSelector existing = longColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      }
-      return longColumnSelectorMap.computeIfAbsent(columnName, delegate::makeLongColumnSelector);
-    }
-
-    @Override
-    public ObjectColumnSelector makeObjectColumnSelector(String columnName)
-    {
-      final ObjectColumnSelector existing = objectColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      }
-      return objectColumnSelectorMap.computeIfAbsent(columnName, delegate::makeObjectColumnSelector);
-    }
-
-    @Override
-    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
-    {
-      final DoubleColumnSelector existing = doubleColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      }
-      return doubleColumnSelectorMap.computeIfAbsent(columnName, delegate::makeDoubleColumnSelector);
+      return columnSelectorMap.computeIfAbsent(columnName, delegate::makeColumnValueSelector);
     }
 
     @Nullable

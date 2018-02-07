@@ -47,13 +47,11 @@ import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.java.util.common.parsers.ParseException;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.DruidProcessingConfig;
-import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
@@ -153,8 +151,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.junit.Assert.assertEquals;
-
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
 {
@@ -190,7 +186,6 @@ public class GroupByQueryRunnerTest
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
   private GroupByQueryConfig config;
-  private final String testName;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -297,6 +292,26 @@ public class GroupByQueryRunnerTest
         return "v2SmallDictionary";
       }
     };
+    final GroupByQueryConfig v2ParallelCombineConfig = new GroupByQueryConfig()
+    {
+      @Override
+      public String getDefaultStrategy()
+      {
+        return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public int getNumParallelCombineThreads()
+      {
+        return DEFAULT_PROCESSING_CONFIG.getNumThreads();
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2ParallelCombine";
+      }
+    };
 
     v1Config.setMaxIntermediateRows(10000);
     v1SingleThreadedConfig.setMaxIntermediateRows(10000);
@@ -306,7 +321,8 @@ public class GroupByQueryRunnerTest
         v1SingleThreadedConfig,
         v2Config,
         v2SmallBufferConfig,
-        v2SmallDictionaryConfig
+        v2SmallDictionaryConfig,
+        v2ParallelCombineConfig
     );
   }
 
@@ -404,7 +420,6 @@ public class GroupByQueryRunnerTest
       String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner
   )
   {
-    this.testName = testName;
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
@@ -566,11 +581,6 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(UnsupportedOperationException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    }
-
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotivex", "rows", 1L, "idx", 135L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "businessx", "rows", 1L, "idx", 118L),
@@ -662,7 +672,7 @@ public class GroupByQueryRunnerTest
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("[alias] already defined");
 
-    GroupByQuery query = GroupByQuery
+    GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -1088,7 +1098,6 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    List<Row> res = Lists.newArrayList(results);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
@@ -2158,7 +2167,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = ImmutableList.of();
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    assertEquals(expectedResults, results);
+    Assert.assertEquals(expectedResults, results);
   }
 
   @Test
@@ -2295,7 +2304,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithTimeZone()
   {
-    DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
 
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -2764,7 +2773,7 @@ public class GroupByQueryRunnerTest
           @Override
           public int compare(Row o1, Row o2)
           {
-            return Float.compare(o1.getFloatMetric("idx"), o2.getFloatMetric("idx"));
+            return Float.compare(o1.getMetric("idx").floatValue(), o2.getMetric("idx").floatValue());
           }
         };
 
@@ -2775,7 +2784,7 @@ public class GroupByQueryRunnerTest
           @Override
           public int compare(Row o1, Row o2)
           {
-            int value = Float.compare(o1.getFloatMetric("rows"), o2.getFloatMetric("rows"));
+            int value = Float.compare(o1.getMetric("rows").floatValue(), o2.getMetric("rows").floatValue());
             if (value != 0) {
               return value;
             }
@@ -3319,10 +3328,6 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    // havingSpec equalTo/greaterThan/lessThan do not work on complex aggregators, even if they could be finalized.
-    // See also: https://github.com/druid-io/druid/issues/2507
-    expectedException.expect(ParseException.class);
-    expectedException.expectMessage("Unknown type[class io.druid.hll.HLLCV1]");
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
   }
@@ -3574,7 +3579,7 @@ public class GroupByQueryRunnerTest
 
     final Object next1 = resultsIter.next();
     Object expectedNext1 = expectedResultsIter.next();
-    assertEquals("order-limit", expectedNext1, next1);
+    Assert.assertEquals("order-limit", expectedNext1, next1);
 
     final Object next2 = resultsIter.next();
     Object expectedNext2 = expectedResultsIter.next();
@@ -3862,7 +3867,8 @@ public class GroupByQueryRunnerTest
                 ),
                 new SelectorDimFilter("__time", String.valueOf(DateTimes.of("2011-04-01").getMillis()), null)
             )
-        )
+        ),
+        null
     );
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -3908,7 +3914,8 @@ public class GroupByQueryRunnerTest
                 new BoundDimFilter("rows", "12", null, true, false, null, extractionFn2, StringComparators.NUMERIC),
                 new SelectorDimFilter("idx", "super-217", extractionFn)
             )
-        )
+        ),
+        null
     );
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -4712,7 +4719,7 @@ public class GroupByQueryRunnerTest
         "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
     );
 
-    GroupByQuery query = GroupByQuery
+    GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
@@ -4754,7 +4761,7 @@ public class GroupByQueryRunnerTest
         "'__time' cannot be used as an output name for dimensions, aggregators, or post-aggregators."
     );
 
-    GroupByQuery query = GroupByQuery
+    GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -5121,7 +5128,7 @@ public class GroupByQueryRunnerTest
               @Override
               public boolean eval(Row row)
               {
-                return (row.getFloatMetric("idx_subpostagg") < 3800);
+                return (row.getMetric("idx_subpostagg").floatValue() < 3800);
               }
             }
         )
@@ -5386,7 +5393,7 @@ public class GroupByQueryRunnerTest
               @Override
               public boolean eval(Row row)
               {
-                return (row.getFloatMetric("idx_subpostagg") < 3800);
+                return (row.getMetric("idx_subpostagg").floatValue() < 3800);
               }
             }
         )
@@ -6878,7 +6885,7 @@ public class GroupByQueryRunnerTest
                                          )
                                      )
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(Druids.newOrDimFilterBuilder().fields(dimFilters).build())
+                                     .setDimFilter(new OrDimFilter(dimFilters))
                                      .build();
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -7424,7 +7431,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    assertEquals(
+    Assert.assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),
@@ -7688,7 +7695,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    assertEquals(
+    Assert.assertEquals(
         Functions.<Sequence<Row>>identity(),
         query.getLimitSpec().build(
             query.getDimensions(),
@@ -7939,7 +7946,8 @@ public class GroupByQueryRunnerTest
                             StringComparators.NUMERIC
                         )
                     )
-                )
+                ),
+                null
             )
         )
         .setGranularity(QueryRunnerTestHelper.allGran)
@@ -8867,10 +8875,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<Row> results = Sequences.toList(
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
-        new ArrayList<Row>()
-    );
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -8960,10 +8965,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = Sequences.toList(
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
-        Lists.<Row>newArrayList()
-    );
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -9057,20 +9059,15 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "market", "spot", "rows", 2L, "idx", 257L)
     );
 
-    Iterable<Row> results = Sequences.toList(
-        mergedRunner.run(QueryPlus.wrap(allGranQuery), context),
-        Lists.<Row>newArrayList()
-    );
+    Iterable<Row> results = mergedRunner.run(QueryPlus.wrap(allGranQuery), context).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
   @Test
   public void testGroupByLimitPushDownPostAggNotSupported()
   {
-    //if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage("Limit push down when sorting by a post aggregator is not supported.");
-    //}
 
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -9113,7 +9110,7 @@ public class GroupByQueryRunnerTest
         )
         .build();
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
   @Test
@@ -9261,7 +9258,8 @@ public class GroupByQueryRunnerTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Cannot force limit push down when a having spec is present.");
 
-    GroupByQuery query = new GroupByQuery.Builder()
+    GroupByQuery
+        .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(

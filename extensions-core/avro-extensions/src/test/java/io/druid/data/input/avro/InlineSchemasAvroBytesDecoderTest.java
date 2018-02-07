@@ -26,10 +26,10 @@ import io.druid.data.input.AvroStreamInputRowParserTest;
 import io.druid.data.input.SomeAvroDatum;
 import io.druid.jackson.DefaultObjectMapper;
 import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -95,7 +95,7 @@ public class InlineSchemasAvroBytesDecoderTest
 
     out.write(new byte[]{1});
     out.write(ByteBuffer.allocate(4).putInt(10).array());
-    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+    DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
     GenericRecord actual = new InlineSchemasAvroBytesDecoder(

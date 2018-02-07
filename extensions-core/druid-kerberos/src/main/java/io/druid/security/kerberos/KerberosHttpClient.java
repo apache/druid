@@ -24,11 +24,11 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import com.metamx.http.client.AbstractHttpClient;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.HttpResponseHandler;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.http.client.AbstractHttpClient;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -136,7 +136,7 @@ public class KerberosHttpClient extends AbstractHttpClient
             request.setHeader("Cookie", "");
             inner_go(request.copy(), httpResponseHandler, duration, future);
           } else {
-            log.info("Not retrying and returning future response");
+            log.debug("Not retrying and returning future response");
             future.set(result.getObj());
           }
         }

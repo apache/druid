@@ -23,5 +23,5 @@ package io.druid.indexer;
  */
 public interface Jobby
 {
-  public boolean run();
+  boolean run();
 }

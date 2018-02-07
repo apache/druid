@@ -29,8 +29,8 @@ import com.google.inject.Module;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
@@ -42,7 +42,6 @@ import io.druid.initialization.Initialization;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.BaseJettyTest;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.server.Handler;
@@ -53,7 +52,9 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -61,19 +62,23 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.net.URI;
 
 /**
  */
 public class DruidLeaderClientTest extends BaseJettyTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private DiscoveryDruidNode discoveryDruidNode;
   private HttpClient httpClient;
 
   @Override
   protected Injector setupInjector()
   {
-    final DruidNode node = new DruidNode("test", "localhost", null, null, new ServerConfig());
+    final DruidNode node = new DruidNode("test", "localhost", null, null, true, false);
     discoveryDruidNode = new DiscoveryDruidNode(node, "test", ImmutableMap.of());
 
     Injector injector = Initialization.makeInjectorWithModules(
@@ -128,6 +133,31 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
+  public void testNoLeaderFound() throws Exception
+  {
+    DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of());
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
+
+    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+
+    DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        httpClient,
+        druidNodeDiscoveryProvider,
+        "nodetype",
+        "/simple/leader",
+        EasyMock.createNiceMock(ServerDiscoverySelector.class)
+    );
+    druidLeaderClient.start();
+
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("No known server");
+    druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
+  }
+
+  @Test
   public void testRedirection() throws Exception
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
@@ -163,7 +193,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(
         ImmutableList.of(new DiscoveryDruidNode(
-            new DruidNode("test", "dummyhost", 64231, null, new ServerConfig()),
+            new DruidNode("test", "dummyhost", 64231, null, true, false),
             "test",
             ImmutableMap.of()
         ))

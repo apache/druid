@@ -21,6 +21,7 @@ package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Iterators;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -30,10 +31,10 @@ import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
-import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.java.util.common.logger.Logger;
 import net.jodah.lyra.ConnectionOptions;
 import net.jodah.lyra.Connections;
@@ -41,9 +42,11 @@ import net.jodah.lyra.config.Config;
 import net.jodah.lyra.retry.RetryPolicy;
 import net.jodah.lyra.util.Duration;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -100,7 +103,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * For more information on RabbitMQ high availability please see:
  * <a href="http://www.rabbitmq.com/ha.html">http://www.rabbitmq.com/ha.html</a>.
  */
-public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
+public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<ByteBuffer>>
 {
   private static final Logger log = new Logger(RabbitMQFirehoseFactory.class);
 
@@ -116,7 +119,9 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   ) throws Exception
   {
     this.connectionFactory = connectionFactory == null
-                             ? connectionFactoryCOMPAT == null ? JacksonifiedConnectionFactory.makeDefaultConnectionFactory() : connectionFactoryCOMPAT
+                             ? connectionFactoryCOMPAT == null
+                               ? JacksonifiedConnectionFactory.makeDefaultConnectionFactory()
+                               : connectionFactoryCOMPAT
                              : connectionFactory;
     this.config = config == null ? RabbitMQFirehoseConfig.makeDefaultConfig() : config;
 
@@ -135,7 +140,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
   }
 
   @Override
-  public Firehose connect(final ByteBufferInputRowParser firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory) throws IOException
   {
     ConnectionOptions lyraOptions = new ConnectionOptions(this.connectionFactory);
     Config lyraConfig = new Config()
@@ -189,10 +194,10 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
     return new Firehose()
     {
       /**
-       * Storing the latest delivery as a member variable should be safe since this will only be run
+       * Storing the latest row as a member variable should be safe since this will only be run
        * by a single thread.
        */
-      private Delivery delivery;
+      private InputRow nextRow;
 
       /**
        * Store the latest delivery tag to be able to commit (acknowledge) the message delivery up to
@@ -200,17 +205,27 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
        */
       private long lastDeliveryTag;
 
+      private Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+
       @Override
       public boolean hasMore()
       {
-        delivery = null;
+        nextRow = null;
         try {
+          if (nextIterator.hasNext()) {
+            nextRow = nextIterator.next();
+            return true;
+          }
           // Wait for the next delivery. This will block until something is available.
-          delivery = consumer.nextDelivery();
+          final Delivery delivery = consumer.nextDelivery();
           if (delivery != null) {
             lastDeliveryTag = delivery.getEnvelope().getDeliveryTag();
-            // If delivery is non-null, we report that there is something more to process.
-            return true;
+            nextIterator = firehoseParser.parseBatch(ByteBuffer.wrap(delivery.getBody())).iterator();
+            if (nextIterator.hasNext()) {
+              nextRow = nextIterator.next();
+              // If delivery is non-null, we report that there is something more to process.
+              return true;
+            }
           }
         }
         catch (InterruptedException e) {
@@ -225,16 +240,17 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         return false;
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {
-        if (delivery == null) {
+        if (nextRow == null) {
           //Just making sure.
           log.wtf("I have nothing in delivery. Method hasMore() should have returned false.");
           return null;
         }
 
-        return firehoseParser.parse(ByteBuffer.wrap(delivery.getBody()));
+        return nextRow;
       }
 
       @Override

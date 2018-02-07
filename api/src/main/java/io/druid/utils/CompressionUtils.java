@@ -36,26 +36,26 @@ public class CompressionUtils
   private static final Logger log = new Logger(CompressionUtils.class);
 
 
-  @Deprecated // Use com.metamx.common.CompressionUtils.zip
+  @Deprecated // Use io.druid.java.util.common.CompressionUtils.zip
   public static long zip(File directory, File outputZipFile) throws IOException
   {
     return io.druid.java.util.common.CompressionUtils.zip(directory, outputZipFile);
   }
 
 
-  @Deprecated // Use com.metamx.common.CompressionUtils.zip
+  @Deprecated // Use io.druid.java.util.common.CompressionUtils.zip
   public static long zip(File directory, OutputStream out) throws IOException
   {
     return io.druid.java.util.common.CompressionUtils.zip(directory, out);
   }
 
-  @Deprecated // Use com.metamx.common.CompressionUtils.unzip
+  @Deprecated // Use io.druid.java.util.common.CompressionUtils.unzip
   public static void unzip(File pulledFile, File outDir) throws IOException
   {
     io.druid.java.util.common.CompressionUtils.unzip(pulledFile, outDir);
   }
 
-  @Deprecated // Use com.metamx.common.CompressionUtils.unzip
+  @Deprecated // Use io.druid.java.util.common.CompressionUtils.unzip
   public static void unzip(InputStream in, File outDir) throws IOException
   {
     io.druid.java.util.common.CompressionUtils.unzip(in, outDir);
@@ -63,8 +63,8 @@ public class CompressionUtils
 
   /**
    * Uncompress using a gzip uncompress algorithm from the `pulledFile` to the `outDir`.
-   * Unlike `com.metamx.common.CompressionUtils.gunzip`, this function takes an output *DIRECTORY* and tries to guess the file name.
-   * It is recommended that the caller use `com.metamx.common.CompressionUtils.gunzip` and specify the output file themselves to ensure names are as expected
+   * Unlike `io.druid.java.util.common.CompressionUtils.gunzip`, this function takes an output *DIRECTORY* and tries to guess the file name.
+   * It is recommended that the caller use `io.druid.java.util.common.CompressionUtils.gunzip` and specify the output file themselves to ensure names are as expected
    *
    * @param pulledFile The source file
    * @param outDir     The destination directory to put the resulting file

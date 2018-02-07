@@ -71,7 +71,7 @@ public class RedirectFilter implements Filter
     if (redirectInfo.doLocal(request.getRequestURI())) {
       chain.doFilter(request, response);
     } else {
-      URL url = redirectInfo.getRedirectURL(request.getScheme(), request.getQueryString(), request.getRequestURI());
+      URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
       log.debug("Forwarding request to [%s]", url);
 
       if (url == null) {

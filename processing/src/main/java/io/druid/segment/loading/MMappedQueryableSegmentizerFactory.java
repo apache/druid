@@ -21,7 +21,6 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
@@ -34,7 +33,6 @@ import java.io.IOException;
  */
 public class MMappedQueryableSegmentizerFactory implements SegmentizerFactory
 {
-  private static final Logger log = new Logger(MMappedQueryableSegmentizerFactory.class);
 
   private final IndexIO indexIO;
 

@@ -145,6 +145,7 @@ public class RealtimeManagerTest
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
     schema2 = new DataSchema(
@@ -152,6 +153,7 @@ public class RealtimeManagerTest
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
@@ -209,6 +211,7 @@ public class RealtimeManagerTest
         null,
         0,
         0,
+        null,
         null,
         null,
         null
@@ -269,6 +272,7 @@ public class RealtimeManagerTest
         0,
         null,
         null,
+        null,
         null
     );
 
@@ -287,6 +291,7 @@ public class RealtimeManagerTest
         0,
         null,
         null,
+        null,
         null
     );
 
@@ -295,6 +300,7 @@ public class RealtimeManagerTest
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("ignore")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -331,8 +337,8 @@ public class RealtimeManagerTest
     }
 
     Assert.assertEquals(1, realtimeManager.getMetrics("test").processed());
-    Assert.assertEquals(1, realtimeManager.getMetrics("test").thrownAway());
-    Assert.assertEquals(2, realtimeManager.getMetrics("test").unparseable());
+    Assert.assertEquals(2, realtimeManager.getMetrics("test").thrownAway());
+    Assert.assertEquals(1, realtimeManager.getMetrics("test").unparseable());
     Assert.assertTrue(plumber.isStartedJob());
     Assert.assertTrue(plumber.isFinishedJob());
     Assert.assertEquals(0, plumber.getPersistCount());
@@ -823,21 +829,9 @@ public class RealtimeManagerTest
         }
 
         @Override
-        public float getFloatMetric(String metric)
+        public Number getMetric(String metric)
         {
           return 0;
-        }
-
-        @Override
-        public long getLongMetric(String metric)
-        {
-          return 0L;
-        }
-
-        @Override
-        public double getDoubleMetric(String metric)
-        {
-          return 0.0d;
         }
 
         @Override
@@ -871,6 +865,7 @@ public class RealtimeManagerTest
       return rows.hasNext();
     }
 
+    @Nullable
     @Override
     public InputRow nextRow()
     {
@@ -1067,7 +1062,7 @@ public class RealtimeManagerTest
         return -1;
       }
 
-      return sink.add(row);
+      return sink.add(row, false);
     }
 
     public Sink getSink(long timestamp)

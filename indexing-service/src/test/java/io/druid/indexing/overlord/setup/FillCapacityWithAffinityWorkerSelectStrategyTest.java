@@ -57,7 +57,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, 1, 0, null, null, null)
+        new NoopTask(null, null, 1, 0, null, null, null)
         {
           @Override
           public String getDataSource()
@@ -94,7 +94,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, 1, 0, null, null, null)
+        new NoopTask(null, null, 1, 0, null, null, null)
     );
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
@@ -117,7 +117,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
                 DateTimes.nowUtc()
             )
         ),
-        new NoopTask(null, 1, 0, null, null, null)
+        new NoopTask(null, null, 1, 0, null, null, null)
     );
     Assert.assertNull(worker);
   }

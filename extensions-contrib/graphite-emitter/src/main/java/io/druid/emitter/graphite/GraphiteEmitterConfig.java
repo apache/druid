@@ -29,33 +29,36 @@ import java.util.List;
 
 public class GraphiteEmitterConfig
 {
-  public final static String PLAINTEXT_PROTOCOL = "plaintext";
-  public final static String PICKLE_PROTOCOL = "pickle";
-  private final static int DEFAULT_BATCH_SIZE = 100;
+  public static final String PLAINTEXT_PROTOCOL = "plaintext";
+  public static final String PICKLE_PROTOCOL = "pickle";
+  private static final int DEFAULT_BATCH_SIZE = 100;
   private static final Long DEFAULT_FLUSH_PERIOD = (long) (60 * 1000); // flush every one minute
-  private final static long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
+  private static final long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
 
   @JsonProperty
-  final private String hostname;
+  private final String hostname;
   @JsonProperty
-  final private int port;
+  private final int port;
   @JsonProperty
-  final private int batchSize;
+  private final int batchSize;
   @JsonProperty
-  final private String protocol;
+  private final String protocol;
   @JsonProperty
-  final private Long flushPeriod;
+  private final Long flushPeriod;
   @JsonProperty
-  final private Integer maxQueueSize;
+  private final Integer maxQueueSize;
   @JsonProperty("eventConverter")
-  final private DruidToGraphiteEventConverter druidToGraphiteEventConverter;
+  private final DruidToGraphiteEventConverter druidToGraphiteEventConverter;
   @JsonProperty
-  final private List<String> alertEmitters;
+  private final List<String> alertEmitters;
   @JsonProperty
-  final private Long emitWaitTime;
+  private final List<String> requestLogEmitters;
+
+  @JsonProperty
+  private final Long emitWaitTime;
   //waiting up to the specified wait time if necessary for an event to become available.
   @JsonProperty
-  final private Long waitForEventTime;
+  private final Long waitForEventTime;
 
   @Override
   public boolean equals(Object o)
@@ -95,6 +98,11 @@ public class GraphiteEmitterConfig
         : that.getAlertEmitters() != null) {
       return false;
     }
+    if (getRequestLogEmitters() != null
+        ? !getRequestLogEmitters().equals(that.getRequestLogEmitters())
+        : that.getRequestLogEmitters() != null) {
+      return false;
+    }
     if (!getEmitWaitTime().equals(that.getEmitWaitTime())) {
       return false;
     }
@@ -113,6 +121,7 @@ public class GraphiteEmitterConfig
     result = 31 * result + getMaxQueueSize().hashCode();
     result = 31 * result + getDruidToGraphiteEventConverter().hashCode();
     result = 31 * result + (getAlertEmitters() != null ? getAlertEmitters().hashCode() : 0);
+    result = 31 * result + (getRequestLogEmitters() != null ? getRequestLogEmitters().hashCode() : 0);
     result = 31 * result + getEmitWaitTime().hashCode();
     result = 31 * result + getWaitForEventTime().hashCode();
     return result;
@@ -128,6 +137,7 @@ public class GraphiteEmitterConfig
       @JsonProperty("maxQueueSize") Integer maxQueueSize,
       @JsonProperty("eventConverter") DruidToGraphiteEventConverter druidToGraphiteEventConverter,
       @JsonProperty("alertEmitters") List<String> alertEmitters,
+      @JsonProperty("requestLogEmitters") List<String> requestLogEmitters,
       @JsonProperty("emitWaitTime") Long emitWaitTime,
       @JsonProperty("waitForEventTime") Long waitForEventTime
   )
@@ -135,6 +145,7 @@ public class GraphiteEmitterConfig
     this.waitForEventTime = waitForEventTime == null ? DEFAULT_GET_TIMEOUT : waitForEventTime;
     this.emitWaitTime = emitWaitTime == null ? 0 : emitWaitTime;
     this.alertEmitters = alertEmitters == null ? Collections.<String>emptyList() : alertEmitters;
+    this.requestLogEmitters = requestLogEmitters == null ? Collections.<String>emptyList() : requestLogEmitters;
     this.druidToGraphiteEventConverter = Preconditions.checkNotNull(
         druidToGraphiteEventConverter,
         "Event converter can not ne null dude"
@@ -193,6 +204,12 @@ public class GraphiteEmitterConfig
   public List<String> getAlertEmitters()
   {
     return alertEmitters;
+  }
+
+  @JsonProperty
+  public List<String> getRequestLogEmitters()
+  {
+    return requestLogEmitters;
   }
 
   @JsonProperty

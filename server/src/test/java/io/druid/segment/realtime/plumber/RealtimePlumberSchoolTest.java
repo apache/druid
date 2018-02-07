@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
@@ -39,6 +38,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
@@ -56,6 +56,9 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
@@ -84,7 +87,24 @@ import java.util.concurrent.TimeUnit;
 @RunWith(Parameterized.class)
 public class RealtimePlumberSchoolTest
 {
+  @Parameterized.Parameters(name = "rejectionPolicy = {0}, segmentWriteOutMediumFactory = {1}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
+        new NoopRejectionPolicyFactory(),
+        new MessageTimeRejectionPolicyFactory()
+    };
+
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
+      constructors.add(new Object[]{rejectionPolicy, OffHeapMemorySegmentWriteOutMediumFactory.instance()});
+      constructors.add(new Object[]{rejectionPolicy, TmpFileSegmentWriteOutMediumFactory.instance()});
+    }
+    return constructors;
+  }
+
   private final RejectionPolicyFactory rejectionPolicy;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   private RealtimePlumber plumber;
   private RealtimePlumberSchool realtimePlumberSchool;
   private DataSegmentAnnouncer announcer;
@@ -99,24 +119,10 @@ public class RealtimePlumberSchoolTest
   private FireDepartmentMetrics metrics;
   private File tmpDir;
 
-  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy)
+  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     this.rejectionPolicy = rejectionPolicy;
-  }
-
-  @Parameterized.Parameters(name = "rejectionPolicy = {0}")
-  public static Collection<?> constructorFeeder() throws IOException
-  {
-    final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
-        new NoopRejectionPolicyFactory(),
-        new MessageTimeRejectionPolicyFactory()
-    };
-
-    final List<Object[]> constructors = Lists.newArrayList();
-    for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
-      constructors.add(new Object[]{rejectionPolicy});
-    }
-    return constructors;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @Before
@@ -142,6 +148,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -161,6 +168,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.YEAR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -202,6 +210,7 @@ public class RealtimePlumberSchoolTest
         0,
         false,
         null,
+        null,
         null
     );
 
@@ -213,11 +222,11 @@ public class RealtimePlumberSchoolTest
         segmentPublisher,
         handoffNotifierFactory,
         MoreExecutors.sameThreadExecutor(),
-        TestHelper.getTestIndexMergerV9(),
-        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        TestHelper.getJsonMapper()
+        TestHelper.makeJsonMapper()
     );
 
     metrics = new FireDepartmentMetrics();
@@ -596,19 +605,7 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
-      {
-        return 0;
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return 0L;
-      }
-
-      @Override
-      public double getDoubleMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0;
       }
@@ -656,27 +653,15 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0;
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return 0L;
       }
 
       @Override
       public Object getRaw(String dimension)
       {
         return dimVals;
-      }
-
-      @Override
-      public double getDoubleMetric(String metric)
-      {
-        return 0;
       }
 
       @Override

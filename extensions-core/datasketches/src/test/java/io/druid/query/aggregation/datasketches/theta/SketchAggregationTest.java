@@ -31,9 +31,9 @@ import com.yahoo.sketches.theta.Union;
 import com.yahoo.sketches.theta.UpdateSketch;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -42,7 +42,6 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -102,11 +101,11 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
-            DateTime.parse("2014-10-19T00:00:00.000Z"),
+            DateTimes.of("2014-10-19T00:00:00.000Z"),
             ImmutableMap
                 .<String, Object>builder()
                 .put("sids_sketch_count", 50.0)
@@ -143,12 +142,12 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(5, results.size());
     Assert.assertEquals(
         ImmutableList.of(
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_3")
@@ -161,7 +160,7 @@ public class SketchAggregationTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_1")
@@ -174,7 +173,7 @@ public class SketchAggregationTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_2")
@@ -187,7 +186,7 @@ public class SketchAggregationTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_4")
@@ -200,7 +199,7 @@ public class SketchAggregationTest
                     .build()
             ),
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_5")
@@ -229,7 +228,7 @@ public class SketchAggregationTest
   @Test
   public void testSketchMergeFinalization() throws Exception
   {
-    SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().build(128));
+    SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(128).build());
 
     SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
@@ -341,12 +340,12 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("retention_test_data_group_by_query.json")
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         ImmutableList.of(
             new MapBasedRow(
-                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                DateTimes.of("2014-10-19T00:00:00.000Z"),
                 ImmutableMap
                     .<String, Object>builder()
                     .put("product", "product_1")
@@ -370,7 +369,7 @@ public class SketchAggregationTest
     Comparator<Object> comparator = SketchHolder.COMPARATOR;
     Assert.assertEquals(0, comparator.compare(null, null));
 
-    Union union1 = (Union) SetOperation.builder().build(1 << 4, Family.UNION);
+    Union union1 = (Union) SetOperation.builder().setNominalEntries(1 << 4).build(Family.UNION);
     union1.update("a");
     union1.update("b");
     Sketch sketch1 = union1.getResult();
@@ -378,7 +377,7 @@ public class SketchAggregationTest
     Assert.assertEquals(-1, comparator.compare(null, SketchHolder.of(sketch1)));
     Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch1), null));
 
-    Union union2 = (Union) SetOperation.builder().build(1 << 4, Family.UNION);
+    Union union2 = (Union) SetOperation.builder().setNominalEntries(1 << 4).build(Family.UNION);
     union2.update("a");
     union2.update("b");
     union2.update("c");
@@ -396,7 +395,7 @@ public class SketchAggregationTest
   public void testRelocation()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
     updateSketch.update(1);
 
@@ -420,7 +419,7 @@ public class SketchAggregationTest
     );
   }
 
-  public final static String readFileFromClasspathAsString(String fileName) throws IOException
+  public static final String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),

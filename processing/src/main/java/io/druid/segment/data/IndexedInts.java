@@ -19,10 +19,10 @@
 
 package io.druid.segment.data;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
-import java.io.Closeable;
 import java.util.function.IntConsumer;
 
 /**
@@ -31,7 +31,8 @@ import java.util.function.IntConsumer;
  * Doesn't extend {@link Iterable} (or {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidential
  * for-each iteration with boxing.
  */
-public interface IndexedInts extends Closeable, HotLoopCallee
+@PublicApi
+public interface IndexedInts extends HotLoopCallee
 {
   @CalledFromHotLoop
   int size();
@@ -44,5 +45,17 @@ public interface IndexedInts extends Closeable, HotLoopCallee
     for (int i = 0; i < size; i++) {
       action.accept(get(i));
     }
+  }
+
+  @SuppressWarnings("unused") // Set up your IDE to render IndexedInts impls using this method during debug.
+  default String debugToString()
+  {
+    StringBuilder sb = new StringBuilder("[");
+    forEach(v -> sb.append(v).append(',').append(' '));
+    if (sb.length() > 1) {
+      sb.setLength(sb.length() - 2);
+    }
+    sb.append(']');
+    return sb.toString();
   }
 }

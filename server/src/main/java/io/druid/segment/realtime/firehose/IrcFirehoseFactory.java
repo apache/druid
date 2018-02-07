@@ -21,6 +21,7 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.ircclouds.irc.api.Callback;
 import com.ircclouds.irc.api.IRCApi;
@@ -33,13 +34,16 @@ import com.ircclouds.irc.api.state.IIRCState;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -61,7 +65,7 @@ import java.util.concurrent.TimeUnit;
  * );
  * }</pre>
  */
-public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
+public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<DateTime, ChannelPrivMsg>>>
 {
   private static final Logger log = new Logger(IrcFirehoseFactory.class);
 
@@ -101,7 +105,10 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
   }
 
   @Override
-  public Firehose connect(final IrcInputRowParser firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(
+      final InputRowParser<Pair<DateTime, ChannelPrivMsg>> firehoseParser,
+      final File temporaryDirectory
+  ) throws IOException
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -182,27 +189,33 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
     return new Firehose()
     {
       InputRow nextRow = null;
+      Iterator<InputRow> nextIterator = Iterators.emptyIterator();
 
       @Override
       public boolean hasMore()
       {
         try {
           while (true) {
-            Pair<DateTime, ChannelPrivMsg> nextMsg = queue.poll(100, TimeUnit.MILLISECONDS);
             if (closed) {
               return false;
             }
-            if (nextMsg == null) {
-              continue;
-            }
-            try {
-              nextRow = firehoseParser.parse(nextMsg);
+
+            if (nextIterator.hasNext()) {
+              nextRow = nextIterator.next();
               if (nextRow != null) {
                 return true;
               }
-            }
-            catch (IllegalArgumentException iae) {
-              log.debug("ignoring invalid message in channel [%s]", nextMsg.rhs.getChannelName());
+            } else {
+              Pair<DateTime, ChannelPrivMsg> nextMsg = queue.poll(100, TimeUnit.MILLISECONDS);
+              if (nextMsg == null) {
+                continue;
+              }
+              try {
+                nextIterator = firehoseParser.parseBatch(nextMsg).iterator();
+              }
+              catch (IllegalArgumentException iae) {
+                log.debug("ignoring invalid message in channel [%s]", nextMsg.rhs.getChannelName());
+              }
             }
           }
         }
@@ -212,6 +225,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<IrcInputRowParser>
         }
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {

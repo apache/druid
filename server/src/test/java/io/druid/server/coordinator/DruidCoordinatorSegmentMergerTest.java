@@ -22,7 +22,7 @@ package io.druid.server.coordinator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.java.util.common.Intervals;
@@ -471,7 +471,7 @@ public class DruidCoordinatorSegmentMergerTest
     final DruidCoordinatorRuntimeParams params =
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withAvailableSegments(ImmutableSet.copyOf(segments))
-                                     .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMergeBytesLimit(
+                                     .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMergeBytesLimit(
                                          mergeBytesLimit).withMergeSegmentsLimit(mergeSegmentsLimit).build())
                                      .withEmitter(EasyMock.createMock(ServiceEmitter.class))
                                      .build();

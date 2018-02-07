@@ -80,12 +80,12 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
 {
-  final private static AggregatorFactory[] aggs1 = {
+  private static final AggregatorFactory[] aggs1 = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
 
-  final private static AggregatorFactory[] aggs2 = {
+  private static final AggregatorFactory[] aggs2 = {
       new CountAggregatorFactory("count")
   };
 
@@ -496,6 +496,7 @@ public class IndexGeneratorJobTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)
                 ),
+                null,
                 mapper
             ),
             new HadoopIOConfig(

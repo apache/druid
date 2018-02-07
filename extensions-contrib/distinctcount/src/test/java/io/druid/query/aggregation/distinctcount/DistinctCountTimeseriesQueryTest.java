@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -98,13 +97,8 @@ public class DistinctCountTimeseriesQueryTest
                                   )
                                   .build();
 
-    final Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        engine.process(
-            query,
-            new IncrementalIndexStorageAdapter(index)
-        ),
-        Lists.<Result<TimeseriesResultValue>>newLinkedList()
-    );
+    final Iterable<Result<TimeseriesResultValue>> results =
+        engine.process(query, new IncrementalIndexStorageAdapter(index)).toList();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(

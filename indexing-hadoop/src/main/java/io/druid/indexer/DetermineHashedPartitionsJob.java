@@ -242,7 +242,6 @@ public class DetermineHashedPartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Object value,
         Context context,
         boolean reportParseExceptions
     ) throws IOException, InterruptedException
@@ -300,12 +299,14 @@ public class DetermineHashedPartitionsJob implements Jobby
   {
     private final List<Interval> intervals = Lists.newArrayList();
     protected HadoopDruidIndexerConfig config = null;
+    private boolean determineIntervals;
 
     @Override
     protected void setup(Context context)
         throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
+      determineIntervals = !config.getSegmentGranularIntervals().isPresent();
     }
 
     @Override
@@ -321,12 +322,20 @@ public class DetermineHashedPartitionsJob implements Jobby
             HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
         );
       }
-      Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(DateTimes.utc(key.get()));
 
-      if (!intervalOptional.isPresent()) {
-        throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+      Interval interval;
+
+      if (determineIntervals) {
+        interval = config.getGranularitySpec().getSegmentGranularity().bucket(DateTimes.utc(key.get()));
+      } else {
+        Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(DateTimes.utc(key.get()));
+
+        if (!intervalOptional.isPresent()) {
+          throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+        }
+        interval = intervalOptional.get();
       }
-      Interval interval = intervalOptional.get();
+
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
@@ -353,7 +362,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.run(context);
-      if (!config.getSegmentGranularIntervals().isPresent()) {
+      if (determineIntervals) {
         final Path outPath = config.makeIntervalInfoPath();
         final OutputStream out = Utils.makePathAndOutputStream(
             context, outPath, config.isOverwriteFiles()

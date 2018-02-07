@@ -23,20 +23,21 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
-import io.druid.TestUtil;
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.expression.TestExprMacroTable;
+import io.druid.query.expression.LookupEnabledTestExprMacroTable;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.timeline.DataSegment;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +46,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestUtils
 {
-  private static final Logger log = new Logger(TestUtil.class);
+  private static final Logger log = new Logger(TestUtils.class);
 
   private final ObjectMapper jsonMapper;
   private final IndexMergerV9 indexMergerV9;
@@ -53,9 +54,10 @@ public class TestUtils
 
   public TestUtils()
   {
-    jsonMapper = new DefaultObjectMapper();
+    this.jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(
         jsonMapper,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -65,7 +67,7 @@ public class TestUtils
           }
         }
     );
-    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO);
+    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
     for (Module module : list) {
@@ -74,12 +76,13 @@ public class TestUtils
 
     jsonMapper.setInjectableValues(
         new InjectableValues.Std()
-            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(ObjectMapper.class, jsonMapper)
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
             .addValue(AuthConfig.class, new AuthConfig())
             .addValue(AuthorizerMapper.class, null)
+            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
     );
   }
 

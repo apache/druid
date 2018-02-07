@@ -52,12 +52,6 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   }
 
   @Override
-  public int getRowValue()
-  {
-    return 0;
-  }
-
-  @Override
   public int getRowValue(int offset)
   {
     return 0;
@@ -111,6 +105,19 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   public int lookupId(String name)
   {
     return value.equals(name) ? 0 : -1;
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return value;
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return String.class;
   }
 
   @Override

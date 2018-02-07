@@ -22,6 +22,7 @@ package io.druid.sql.calcite.planner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizerMapper;
@@ -41,9 +42,12 @@ import java.util.Map;
  */
 public class PlannerContext
 {
+  // query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
   public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
-  public static final String CTX_AUTHENTICATION_RESULT = "authenticationResult";
+
+  // DataContext keys
+  public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
@@ -95,7 +99,7 @@ public class PlannerContext
       }
 
       if (tzParam != null) {
-        timeZone = DateTimeZone.forID(String.valueOf(tzParam));
+        timeZone = DateTimes.inferTzfromString(String.valueOf(tzParam));
       } else {
         timeZone = DateTimeZone.UTC;
       }
@@ -170,7 +174,8 @@ public class PlannerContext
               new DateTime("1970-01-01T00:00:00.000", localNow.getZone()),
               localNow
           ).toDurationMillis(),
-          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone()
+          DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone(),
+          DATA_CTX_AUTHENTICATION_RESULT, authenticationResult
       );
 
       @Override

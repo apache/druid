@@ -21,17 +21,20 @@ package io.druid.server.coordinator;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.client.DruidDataSource;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  */
@@ -41,12 +44,13 @@ public class DruidCoordinatorRuntimeParams
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
-  private final Set<DruidDataSource> dataSources;
+  private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
   private final Set<DataSegment> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
+  private final CoordinatorCompactionConfig coordinatorCompactionConfig;
   private final CoordinatorStats stats;
   private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategy balancerStrategy;
@@ -56,12 +60,13 @@ public class DruidCoordinatorRuntimeParams
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
-      Set<DruidDataSource> dataSources,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
       Set<DataSegment> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
+      CoordinatorCompactionConfig coordinatorCompactionConfig,
       CoordinatorStats stats,
       DateTime balancerReferenceTimestamp,
       BalancerStrategy balancerStrategy
@@ -77,6 +82,7 @@ public class DruidCoordinatorRuntimeParams
     this.replicationManager = replicationManager;
     this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
+    this.coordinatorCompactionConfig = coordinatorCompactionConfig;
     this.stats = stats;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     this.balancerStrategy = balancerStrategy;
@@ -102,7 +108,7 @@ public class DruidCoordinatorRuntimeParams
     return segmentReplicantLookup;
   }
 
-  public Set<DruidDataSource> getDataSources()
+  public Map<String, VersionedIntervalTimeline<String, DataSegment>> getDataSources()
   {
     return dataSources;
   }
@@ -130,6 +136,11 @@ public class DruidCoordinatorRuntimeParams
   public CoordinatorDynamicConfig getCoordinatorDynamicConfig()
   {
     return coordinatorDynamicConfig;
+  }
+
+  public CoordinatorCompactionConfig getCoordinatorCompactionConfig()
+  {
+    return coordinatorCompactionConfig;
   }
 
   public CoordinatorStats getCoordinatorStats()
@@ -170,6 +181,7 @@ public class DruidCoordinatorRuntimeParams
         replicationManager,
         emitter,
         coordinatorDynamicConfig,
+        coordinatorCompactionConfig,
         stats,
         balancerReferenceTimestamp,
         balancerStrategy
@@ -189,6 +201,7 @@ public class DruidCoordinatorRuntimeParams
         replicationManager,
         emitter,
         coordinatorDynamicConfig,
+        coordinatorCompactionConfig,
         stats,
         balancerReferenceTimestamp,
         balancerStrategy
@@ -201,12 +214,13 @@ public class DruidCoordinatorRuntimeParams
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
-    private final Set<DruidDataSource> dataSources;
+    private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
     private final Set<DataSegment> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
+    private CoordinatorCompactionConfig coordinatorCompactionConfig;
     private CoordinatorStats stats;
     private DateTime balancerReferenceTimestamp;
     private BalancerStrategy balancerStrategy;
@@ -217,13 +231,14 @@ public class DruidCoordinatorRuntimeParams
       this.druidCluster = null;
       this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
-      this.dataSources = Sets.newHashSet();
-      this.availableSegments = Sets.newTreeSet(DruidCoordinator.SEGMENT_COMPARATOR);
+      this.dataSources = new HashMap<>();
+      this.availableSegments = new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR);
       this.loadManagementPeons = Maps.newHashMap();
       this.replicationManager = null;
       this.emitter = null;
       this.stats = new CoordinatorStats();
-      this.coordinatorDynamicConfig = new CoordinatorDynamicConfig.Builder().build();
+      this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
+      this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
       this.balancerReferenceTimestamp = DateTimes.nowUtc();
     }
 
@@ -232,12 +247,13 @@ public class DruidCoordinatorRuntimeParams
         DruidCluster cluster,
         MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
-        Set<DruidDataSource> dataSources,
+        Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
         Set<DataSegment> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
+        CoordinatorCompactionConfig coordinatorCompactionConfig,
         CoordinatorStats stats,
         DateTime balancerReferenceTimestamp,
         BalancerStrategy balancerStrategy
@@ -253,6 +269,7 @@ public class DruidCoordinatorRuntimeParams
       this.replicationManager = replicationManager;
       this.emitter = emitter;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
+      this.coordinatorCompactionConfig = coordinatorCompactionConfig;
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
       this.balancerStrategy = balancerStrategy;
@@ -271,6 +288,7 @@ public class DruidCoordinatorRuntimeParams
           replicationManager,
           emitter,
           coordinatorDynamicConfig,
+          coordinatorCompactionConfig,
           stats,
           balancerReferenceTimestamp,
           balancerStrategy
@@ -301,9 +319,30 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withDatasources(Collection<DruidDataSource> dataSourcesCollection)
+    public Builder withDataSources(Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources)
     {
-      dataSources.addAll(Collections.unmodifiableCollection(dataSourcesCollection));
+      this.dataSources = dataSources;
+      return this;
+    }
+
+    public Builder withDataSources(Collection<ImmutableDruidDataSource> dataSourcesCollection)
+    {
+      dataSourcesCollection.forEach(
+          dataSource -> {
+            VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.computeIfAbsent(
+                dataSource.getName(),
+                k -> new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER)
+            );
+
+            dataSource.getSegments().forEach(
+                segment -> timeline.add(
+                    segment.getInterval(),
+                    segment.getVersion(),
+                    segment.getShardSpec().createChunk(segment)
+                )
+            );
+          }
+      );
       return this;
     }
 
@@ -340,6 +379,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withDynamicConfigs(CoordinatorDynamicConfig configs)
     {
       this.coordinatorDynamicConfig = configs;
+      return this;
+    }
+
+    public Builder withCompactionConfig(CoordinatorCompactionConfig config)
+    {
+      this.coordinatorCompactionConfig = config;
       return this;
     }
 

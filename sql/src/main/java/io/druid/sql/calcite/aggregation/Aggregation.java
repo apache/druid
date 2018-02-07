@@ -29,9 +29,13 @@ import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.VirtualColumn;
+import io.druid.sql.calcite.filtration.Filtration;
+import io.druid.sql.calcite.table.RowSignature;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -51,6 +55,10 @@ public class Aggregation
     this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
     this.aggregatorFactories = Preconditions.checkNotNull(aggregatorFactories, "aggregatorFactories");
     this.postAggregator = postAggregator;
+
+    if (aggregatorFactories.isEmpty()) {
+      Preconditions.checkArgument(postAggregator != null, "postAggregator must be present if there are no aggregators");
+    }
 
     if (postAggregator == null) {
       Preconditions.checkArgument(aggregatorFactories.size() == 1, "aggregatorFactories.size == 1");
@@ -134,6 +142,7 @@ public class Aggregation
     return aggregatorFactories;
   }
 
+  @Nullable
   public PostAggregator getPostAggregator()
   {
     return postAggregator;
@@ -146,7 +155,7 @@ public class Aggregation
            : Iterables.getOnlyElement(aggregatorFactories).getName();
   }
 
-  public Aggregation filter(final DimFilter filter)
+  public Aggregation filter(final RowSignature sourceRowSignature, final DimFilter filter)
   {
     if (filter == null) {
       return this;
@@ -167,9 +176,25 @@ public class Aggregation
       }
     }
 
+    final DimFilter baseOptimizedFilter = Filtration.create(filter)
+                                                    .optimizeFilterOnly(sourceRowSignature)
+                                                    .getDimFilter();
+
     final List<AggregatorFactory> newAggregators = Lists.newArrayList();
     for (AggregatorFactory agg : aggregatorFactories) {
-      newAggregators.add(new FilteredAggregatorFactory(agg, filter));
+      if (agg instanceof FilteredAggregatorFactory) {
+        final FilteredAggregatorFactory filteredAgg = (FilteredAggregatorFactory) agg;
+        newAggregators.add(
+            new FilteredAggregatorFactory(
+                filteredAgg.getAggregator(),
+                Filtration.create(new AndDimFilter(ImmutableList.of(filteredAgg.getFilter(), baseOptimizedFilter)))
+                          .optimizeFilterOnly(sourceRowSignature)
+                          .getDimFilter()
+            )
+        );
+      } else {
+        newAggregators.add(new FilteredAggregatorFactory(agg, baseOptimizedFilter));
+      }
     }
 
     return new Aggregation(virtualColumns, newAggregators, postAggregator);

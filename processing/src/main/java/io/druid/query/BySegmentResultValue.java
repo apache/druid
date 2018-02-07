@@ -29,9 +29,9 @@ import java.util.List;
 @PublicApi
 public interface BySegmentResultValue<T>
 {
-  public List<T> getResults();
+  List<T> getResults();
 
-  public String getSegmentId();
+  String getSegmentId();
 
-  public Interval getInterval();
+  Interval getInterval();
 }

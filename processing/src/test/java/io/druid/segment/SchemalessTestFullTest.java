@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -28,7 +29,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -45,9 +45,9 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
-import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.SearchHit;
 import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -57,9 +57,16 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -67,15 +74,24 @@ import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class SchemalessTestFullTest
 {
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
+
   final double UNIQUES_2 = 2.000977198748901d;
   final double UNIQUES_1 = 1.0002442201269182d;
 
+  final SchemalessIndexTest schemalessIndexTest;
   final String dataSource = "testing";
   final Granularity allGran = Granularities.ALL;
-  final String dimensionValue = "dimension";
-  final String valueValue = "value";
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -96,6 +112,11 @@ public class SchemalessTestFullTest
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
       Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
+
+  public SchemalessTestFullTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
+  }
 
   @Test
   public void testCompleteIntersectingSchemas()
@@ -929,7 +950,7 @@ public class SchemalessTestFullTest
 
     runTests(
         new QueryableIndexSegment(
-            null, SchemalessIndexTest.getMergedIncrementalIndex(0, 0)
+            null, schemalessIndexTest.getMergedIncrementalIndex(0, 0)
         ),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
@@ -1014,7 +1035,7 @@ public class SchemalessTestFullTest
 
     runTests(
         new QueryableIndexSegment(
-            null, SchemalessIndexTest.getMergedIncrementalIndex(1, 1)
+            null, schemalessIndexTest.getMergedIncrementalIndex(1, 1)
         ),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
@@ -1145,7 +1166,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, SchemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})),
+        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1336,7 +1357,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, SchemalessIndexTest.getMergedIncrementalIndexDiffMetrics()),
+        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndexDiffMetrics()),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1361,11 +1382,11 @@ public class SchemalessTestFullTest
             StringUtils.format("Failed: II[%,d, %,d]", index2, index1)
         ),
         new Pair<>(
-            SchemalessIndexTest.getMergedIncrementalIndex(index1, index2),
+            schemalessIndexTest.getMergedIncrementalIndex(index1, index2),
             StringUtils.format("Failed: MII[%,d, %,d]", index1, index2)
         ),
         new Pair<>(
-            SchemalessIndexTest.getMergedIncrementalIndex(index2, index1),
+            schemalessIndexTest.getMergedIncrementalIndex(index2, index1),
             StringUtils.format("Failed: MII[%,d, %,d]", index2, index1)
         )
     );
@@ -1402,7 +1423,9 @@ public class SchemalessTestFullTest
       Segment adapter,
       List<Result<TimeseriesResultValue>> expectedTimeseriesResults,
       List<Result<TimeseriesResultValue>> expectedFilteredTimeseriesResults,
+      @SuppressWarnings("unused") // see below
       List<Result<TopNResultValue>> expectedTopNResults,
+      @SuppressWarnings("unused") // see below
       List<Result<TopNResultValue>> expectedFilteredTopNResults,
       List<Result<SearchResultValue>> expectedSearchResults,
       List<Result<SearchResultValue>> expectedFilteredSearchResults,
@@ -1447,15 +1470,12 @@ public class SchemalessTestFullTest
                                           )
                                       )
                                   )
-                                  .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                                  .postAggregators(addRowsIndexConstant)
                                   .build();
 
     failMsg += " timeseries ";
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1481,19 +1501,17 @@ public class SchemalessTestFullTest
                                           )
                                       )
                                   )
-                                  .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                                  .postAggregators(addRowsIndexConstant)
                                   .build();
 
     failMsg += " filtered timeseries ";
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
-
+  /** See {@link #runTests} */
+  @SuppressWarnings("unused")
   private void testFullOnTopN(QueryRunner runner, List<Result<TopNResultValue>> expectedResults, String failMsg)
   {
     TopNQuery query = new TopNQueryBuilder()
@@ -1519,14 +1537,13 @@ public class SchemalessTestFullTest
 
     failMsg += " topN ";
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TopNResultValue>>newArrayList()
-    );
+    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
+  /** See {@link #runTests} */
+  @SuppressWarnings("unused")
   private void testFilteredTopN(QueryRunner runner, List<Result<TopNResultValue>> expectedResults, String failMsg)
   {
     TopNQuery query = new TopNQueryBuilder()
@@ -1553,10 +1570,7 @@ public class SchemalessTestFullTest
 
     failMsg += " filtered topN ";
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TopNResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TopNResultValue>>newArrayList()
-    );
+    Iterable<Result<TopNResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1571,10 +1585,7 @@ public class SchemalessTestFullTest
 
     failMsg += " search ";
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SearchResultValue>>newArrayList()
-    );
+    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1590,10 +1601,7 @@ public class SchemalessTestFullTest
 
     failMsg += " filtered search ";
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<SearchResultValue>>newArrayList()
-    );
+    Iterable<Result<SearchResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 
@@ -1609,10 +1617,7 @@ public class SchemalessTestFullTest
 
     failMsg += " timeBoundary ";
     HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeBoundaryResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeBoundaryResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults, failMsg);
   }
 }

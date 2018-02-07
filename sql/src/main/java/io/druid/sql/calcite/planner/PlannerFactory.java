@@ -25,22 +25,27 @@ import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.Escalator;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
+import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.config.CalciteConnectionConfigImpl;
+import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.Contexts;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.validate.SqlConformance;
+import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 
 import java.util.Map;
+import java.util.Properties;
 
 public class PlannerFactory
 {
@@ -62,7 +67,7 @@ public class PlannerFactory
 
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final AuthenticatorMapper authenticatorMapper;
+  private final Escalator escalator;
 
   @Inject
   public PlannerFactory(
@@ -72,8 +77,8 @@ public class PlannerFactory
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final AuthConfig authConfig,
-      final AuthenticatorMapper authenticatorMapper,
       final AuthorizerMapper authorizerMapper,
+      final Escalator escalator,
       final @Json ObjectMapper jsonMapper
   )
   {
@@ -84,13 +89,13 @@ public class PlannerFactory
     this.plannerConfig = plannerConfig;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.authenticatorMapper = authenticatorMapper;
+    this.escalator = escalator;
     this.jsonMapper = jsonMapper;
   }
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
-    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema);
+    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema, authorizerMapper);
     final PlannerContext plannerContext = PlannerContext.create(
         operatorTable,
         macroTable,
@@ -99,7 +104,13 @@ public class PlannerFactory
         queryContext
     );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
-
+    final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
+        .configBuilder()
+        .withExpand(false)
+        .withDecorrelationEnabled(false)
+        .withTrimUnusedFields(false)
+        .withInSubQueryThreshold(Integer.MAX_VALUE)
+        .build();
     final FrameworkConfig frameworkConfig = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
@@ -109,17 +120,39 @@ public class PlannerFactory
         .programs(Rules.programs(plannerContext, queryMaker))
         .executor(new DruidRexExecutor(plannerContext))
         .context(Contexts.EMPTY_CONTEXT)
-        .typeSystem(RelDataTypeSystem.DEFAULT)
-        .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))
         .typeSystem(DruidTypeSystem.INSTANCE)
+        .defaultSchema(rootSchema.getSubSchema(DruidSchema.NAME))
+        .sqlToRelConverterConfig(sqlToRelConverterConfig)
+        .context(new Context()
+        {
+          @Override
+          @SuppressWarnings("unchecked")
+          public <C> C unwrap(final Class<C> aClass)
+          {
+            if (aClass.equals(CalciteConnectionConfig.class)) {
+              // This seems to be the best way to provide our own SqlConformance instance. Otherwise, Calcite's
+              // validator will not respect it.
+              final Properties props = new Properties();
+              return (C) new CalciteConnectionConfigImpl(props)
+              {
+                @Override
+                public SqlConformance conformance()
+                {
+                  return DruidConformance.instance();
+                }
+              };
+            } else {
+              return null;
+            }
+          }
+        })
         .build();
 
     return new DruidPlanner(
         Frameworks.getPlanner(frameworkConfig),
         plannerContext,
-        authConfig,
         authorizerMapper,
-        authenticatorMapper
+        escalator
     );
   }
 }

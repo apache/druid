@@ -45,14 +45,13 @@ import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryToolChest;
 import io.druid.server.initialization.BaseJettyTest;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
+import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
-import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
@@ -113,7 +112,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", null, null, new ServerConfig())
+                    new DruidNode("test", "localhost", null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 binder.bind(AuthorizerMapper.class).toInstance(
@@ -209,7 +208,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-      final QueryHostFinder hostFinder = new QueryHostFinder(null)
+      final QueryHostFinder hostFinder = new QueryHostFinder(null, new RendezvousHashAvaticaConnectionBalancer())
       {
         @Override
         public io.druid.client.selector.Server getServer(Query query)
@@ -252,8 +251,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                   // noop
                 }
               },
-              new DefaultGenericQueryMetricsFactory(jsonMapper),
-              AuthTestUtils.TEST_AUTHENTICATOR_MAPPER
+              new DefaultGenericQueryMetricsFactory(jsonMapper)
           )
           {
             @Override
@@ -307,6 +305,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assert.assertEquals(
         new URI("http://localhost/"),
         AsyncQueryForwardingServlet.makeURI("http", "localhost", "/", null)
+    );
+
+    // Test reWrite Encoded interval with timezone info
+    // decoded parameters 1900-01-01T00:00:00.000+01.00 -> 1900-01-01T00:00:00.000+01:00
+    Assert.assertEquals(
+        new URI(
+            "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"),
+        AsyncQueryForwardingServlet.makeURI(
+            "http",
+            "localhost:1234",
+            "/some/path",
+            "intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"
+        )
     );
   }
 

@@ -19,13 +19,13 @@
 
 package io.druid.server.lookup.namespace.cache;
 
-import com.google.common.primitives.Chars;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.lang.ref.WeakReference;
 import java.util.Collections;
@@ -55,9 +55,13 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   );
 
   @Inject
-  public OnHeapNamespaceExtractionCacheManager(Lifecycle lifecycle, ServiceEmitter serviceEmitter)
+  public OnHeapNamespaceExtractionCacheManager(
+      Lifecycle lifecycle,
+      ServiceEmitter serviceEmitter,
+      NamespaceExtractionConfig config
+  )
   {
-    super(lifecycle, serviceEmitter);
+    super(lifecycle, serviceEmitter, config);
   }
 
   private void expungeCollectedCaches()
@@ -126,6 +130,6 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
       }
     }
     serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/numEntries", numEntries));
-    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", size * Chars.BYTES));
+    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", size * Character.BYTES));
   }
 }

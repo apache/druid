@@ -167,16 +167,16 @@ public class FilterPartitionTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "6", "dim1", "B453B411", "dim2", ImmutableList.of("c", "d", "e"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "7", "dim1", "HELLO", "dim2", ImmutableList.of("foo"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "8", "dim1", "abc", "dim2", ImmutableList.of("bar"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "9", "dim1", "1", "dim2", ImmutableList.of("foo", "bar")))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "6", "dim1", "B453B411", "dim2", ImmutableList.of("c", "d", "e"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "7", "dim1", "HELLO", "dim2", ImmutableList.of("foo"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "8", "dim1", "abc", "dim2", ImmutableList.of("bar"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "9", "dim1", "1", "dim2", ImmutableList.of("foo", "bar"))).get(0)
   );
 
   public FilterPartitionTest(
@@ -620,18 +620,14 @@ public class FilterPartitionTest extends BaseFilterTest
         ImmutableList.of("2", "3", "7")
     );
 
-    DimFilter dimFilter3 = new OrDimFilter(Arrays.<DimFilter>asList(
+    DimFilter dimFilter3 = new OrDimFilter(
         dimFilter1,
         dimFilter2,
-        new AndDimFilter(Arrays.<DimFilter>asList(
+        new AndDimFilter(
             new NoBitmapSelectorDimFilter("dim1", "super-1", JS_EXTRACTION_FN),
             new SelectorDimFilter("dim2", "super-foo", JS_EXTRACTION_FN)
         )
-        ))
     );
-
-    Filter filter3 = dimFilter3.toFilter();
-    Filter filter3CNF = Filters.convertToCNF(dimFilter3.toFilter());
 
     assertFilterMatches(
         dimFilter3,

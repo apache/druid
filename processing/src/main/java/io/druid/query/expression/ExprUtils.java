@@ -19,6 +19,7 @@
 
 package io.druid.query.expression;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.Expr;
@@ -27,6 +28,8 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
+
+import javax.annotation.Nullable;
 
 public class ExprUtils
 {
@@ -44,13 +47,13 @@ public class ExprUtils
     }
 
     final Object literalValue = timeZoneArg.getLiteralValue();
-    return literalValue == null ? DateTimeZone.UTC : DateTimeZone.forID((String) literalValue);
+    return literalValue == null ? DateTimeZone.UTC : DateTimes.inferTzfromString((String) literalValue);
   }
 
   public static PeriodGranularity toPeriodGranularity(
       final Expr periodArg,
-      final Expr originArg,
-      final Expr timeZoneArg,
+      @Nullable final Expr originArg,
+      @Nullable final Expr timeZoneArg,
       final Expr.ObjectBinding bindings
   )
   {
@@ -62,7 +65,7 @@ public class ExprUtils
       timeZone = null;
     } else {
       final String value = timeZoneArg.eval(bindings).asString();
-      timeZone = value != null ? DateTimeZone.forID(value) : null;
+      timeZone = value != null ? DateTimes.inferTzfromString(value) : null;
     }
 
     if (originArg == null) {
@@ -75,4 +78,5 @@ public class ExprUtils
 
     return new PeriodGranularity(period, origin, timeZone);
   }
+
 }

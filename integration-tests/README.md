@@ -15,7 +15,18 @@ describing the cluster.
 Integration Testing Using Docker 
 -------------------
 
-## Installing Docker
+For running integration tests using docker there are 2 approaches.
+If your platform supports docker natively, you can simply set `DOCKER_IP`
+environment variable to localhost and skip to [Running tests](#running-tests) section.
+
+```
+export DOCKER_IP=127.0.0.1
+```
+
+The other approach is to use separate virtual machine to run docker
+containers with help of `docker-machine` tool.
+
+## Installing Docker Machine
 
 Please refer to instructions at [https://github.com/druid-io/docker-druid/blob/master/docker-install.md](https://github.com/druid-io/docker-druid/blob/master/docker-install.md).
 
@@ -182,7 +193,3 @@ This will tell the test framework that the test class needs to be constructed us
 2) FromFileTestQueryHelper - reads queries with expected results from file and executes them and verifies the results using ResultVerifier
 
 Refer ITIndexerTest as an example on how to use dependency Injection
-
-TODOS
------------------------
-1) Remove the patch for TestNG after resolution of Surefire-622

@@ -41,7 +41,7 @@ public class JavaScriptParserTest
     );
     String data = "foo-val1";
 
-    final Map<String, Object> parsed = parser.parse(data);
+    final Map<String, Object> parsed = parser.parseToMap(data);
     ImmutableMap.Builder builder = ImmutableMap.builder();
     builder.put("one", "foo");
     builder.put("two", "val1");
@@ -62,7 +62,7 @@ public class JavaScriptParserTest
     );
     String data = "val1-val2";
 
-    final Map<String, Object> parsed = parser.parse(data);
+    final Map<String, Object> parsed = parser.parseToMap(data);
     ImmutableMap.Builder builder = ImmutableMap.builder();
     builder.put("one", Lists.newArrayList("val1", "val2"));
     Assert.assertEquals(

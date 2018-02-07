@@ -91,7 +91,7 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
         final DateTime dateTime = new DateTime(arg.eval(bindings).asLong(), chronology);
         switch (unit) {
           case EPOCH:
-            return ExprEval.of(dateTime.getMillis());
+            return ExprEval.of(dateTime.getMillis() / 1000);
           case SECOND:
             return ExprEval.of(dateTime.secondOfMinute().get());
           case MINUTE:

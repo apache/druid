@@ -24,10 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -154,7 +154,7 @@ public class EventReceiverFirehoseTestClient
                            ? MediaType.APPLICATION_JSON
                            : SmileMediaTypes.APPLICATION_JACKSON_SMILE;
         totalEventsPosted += postEvents(events, mapper, mediaType);
-        ;
+
         expectedEventsPosted += events.size();
         events = new ArrayList<>();
       }

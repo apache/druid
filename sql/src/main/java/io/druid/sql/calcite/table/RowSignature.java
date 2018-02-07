@@ -35,6 +35,7 @@ import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.planner.Calcites;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.type.SqlTypeName;
 
@@ -70,6 +71,30 @@ public class RowSignature
 
     this.columnTypes = ImmutableMap.copyOf(columnTypes0);
     this.columnNames = columnNamesBuilder.build();
+  }
+
+  public static RowSignature from(final List<String> rowOrder, final RelDataType rowType)
+  {
+    if (rowOrder.size() != rowType.getFieldCount()) {
+      throw new IAE("Field count %d != %d", rowOrder.size(), rowType.getFieldCount());
+    }
+
+    final RowSignature.Builder rowSignatureBuilder = builder();
+
+    for (int i = 0; i < rowOrder.size(); i++) {
+      final RelDataTypeField field = rowType.getFieldList().get(i);
+      final SqlTypeName sqlTypeName = field.getType().getSqlTypeName();
+      final ValueType valueType;
+
+      valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      if (valueType == null) {
+        throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
+      }
+
+      rowSignatureBuilder.add(rowOrder.get(i), valueType);
+    }
+
+    return rowSignatureBuilder.build();
   }
 
   public static Builder builder()
@@ -121,7 +146,7 @@ public class RowSignature
    */
   public RelDataType getRelDataType(final RelDataTypeFactory typeFactory)
   {
-    final RelDataTypeFactory.FieldInfoBuilder builder = typeFactory.builder();
+    final RelDataTypeFactory.Builder builder = typeFactory.builder();
     for (final String columnName : columnNames) {
       final ValueType columnType = getColumnType(columnName);
       final RelDataType type;
@@ -152,7 +177,10 @@ public class RowSignature
             break;
           case COMPLEX:
             // Loses information about exactly what kind of complex column this is.
-            type = typeFactory.createSqlType(SqlTypeName.OTHER);
+            type = typeFactory.createTypeWithNullability(
+                typeFactory.createSqlType(SqlTypeName.OTHER),
+                true
+            );
             break;
           default:
             throw new ISE("WTF?! valueType[%s] not translatable?", columnType);
@@ -194,7 +222,7 @@ public class RowSignature
   @Override
   public String toString()
   {
-    final StringBuilder s = new StringBuilder("RowSignature{");
+    final StringBuilder s = new StringBuilder("{");
     for (int i = 0; i < columnNames.size(); i++) {
       if (i > 0) {
         s.append(", ");

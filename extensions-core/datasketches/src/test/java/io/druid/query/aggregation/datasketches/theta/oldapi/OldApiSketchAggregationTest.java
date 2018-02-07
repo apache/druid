@@ -25,9 +25,9 @@ import com.google.common.io.Files;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.UpdateSketch;
 import io.druid.data.input.MapBasedRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -37,7 +37,6 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import io.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -96,11 +95,11 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("oldapi/old_simple_test_data_group_by_query.json")
     );
 
-    List results = Sequences.toList(seq, Lists.newArrayList());
+    List results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
-            DateTime.parse("2014-10-19T00:00:00.000Z"),
+            DateTimes.of("2014-10-19T00:00:00.000Z"),
             ImmutableMap
                 .<String, Object>builder()
                 .put("sketch_count", 50.0)
@@ -128,11 +127,11 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_group_by_query.json")
     );
 
-    List results = Sequences.toList(seq, Lists.newArrayList());
+    List results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
-            DateTime.parse("2014-10-19T00:00:00.000Z"),
+            DateTimes.of("2014-10-19T00:00:00.000Z"),
             ImmutableMap
                 .<String, Object>builder()
                 .put("sids_sketch_count", 50.0)
@@ -203,7 +202,7 @@ public class OldApiSketchAggregationTest
   public void testRelocation()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+    SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
     updateSketch.update(1);
 
@@ -227,7 +226,7 @@ public class OldApiSketchAggregationTest
     );
   }
 
-  public final static String readFileFromClasspathAsString(String fileName) throws IOException
+  public static final String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(OldApiSketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),

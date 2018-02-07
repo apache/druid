@@ -180,7 +180,11 @@ public class UriCacheGeneratorTest
           @Override
           public NamespaceExtractionCacheManager apply(Lifecycle lifecycle)
           {
-            return new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+            return new OnHeapNamespaceExtractionCacheManager(
+                lifecycle,
+                new NoopServiceEmitter(),
+                new NamespaceExtractionConfig()
+            );
           }
         },
         new Function<Lifecycle, NamespaceExtractionCacheManager>()
@@ -188,7 +192,11 @@ public class UriCacheGeneratorTest
           @Override
           public NamespaceExtractionCacheManager apply(Lifecycle lifecycle)
           {
-            return new OffHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+            return new OffHeapNamespaceExtractionCacheManager(
+                lifecycle,
+                new NoopServiceEmitter(),
+                new NamespaceExtractionConfig()
+            );
           }
         }
     );

@@ -42,8 +42,8 @@ public class IndexedIntsTest
   {
     return Arrays.asList(
         new Object[][]{
-            {VSizeIndexedInts.fromArray(array)},
-            {ArrayBasedIndexedInts.of(array)}
+            {VSizeColumnarInts.fromArray(array)},
+            {new ArrayBasedIndexedInts(array)}
         }
     );
   }

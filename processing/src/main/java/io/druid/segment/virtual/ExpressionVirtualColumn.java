@@ -29,11 +29,8 @@ import io.druid.math.expr.Parser;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -83,32 +80,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public ObjectColumnSelector makeObjectColumnSelector(
-      final String columnName,
-      final ColumnSelectorFactory columnSelectorFactory
-  )
-  {
-    final ExpressionObjectSelector baseSelector = ExpressionSelectors.makeObjectColumnSelector(
-        columnSelectorFactory,
-        parsedExpression
-    );
-    return new ObjectColumnSelector()
-    {
-      @Override
-      public Class classOfObject()
-      {
-        return Object.class;
-      }
-
-      @Override
-      public Object getObject()
-      {
-        return baseSelector.getObject().value();
-      }
-    };
-  }
-
-  @Override
   public DimensionSelector makeDimensionSelector(
       final DimensionSpec dimensionSpec,
       final ColumnSelectorFactory columnSelectorFactory
@@ -124,21 +95,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public FloatColumnSelector makeFloatColumnSelector(
-      final String columnName,
-      final ColumnSelectorFactory columnSelectorFactory
-  )
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
-    return ExpressionSelectors.makeFloatColumnSelector(columnSelectorFactory, parsedExpression, 0.0f);
-  }
-
-  @Override
-  public LongColumnSelector makeLongColumnSelector(
-      final String columnName,
-      final ColumnSelectorFactory columnSelectorFactory
-  )
-  {
-    return ExpressionSelectors.makeLongColumnSelector(columnSelectorFactory, parsedExpression, 0L);
+    return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression);
   }
 
   @Override
@@ -157,14 +116,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public boolean usesDotNotation()
   {
     return false;
-  }
-
-  @Override
-  public DoubleColumnSelector makeDoubleColumnSelector(
-      String columnName, ColumnSelectorFactory factory
-  )
-  {
-    return ExpressionSelectors.makeDoubleColumnSelector(factory, parsedExpression, 0.0d);
   }
 
   @Override

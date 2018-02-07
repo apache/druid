@@ -41,9 +41,11 @@ import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public class AuthorizerMapperModule implements DruidModule
 {
@@ -89,19 +91,26 @@ public class AuthorizerMapperModule implements DruidModule
       Map<String, Authorizer> authorizerMap = Maps.newHashMap();
       List<String> authorizers = authConfig.getAuthorizers();
 
+      validateAuthorizers(authorizers);
+
       // Default is allow all
       if (authorizers == null) {
+        AllowAllAuthorizer allowAllAuthorizer = new AllowAllAuthorizer();
+        authorizerMap.put(AuthConfig.ALLOW_ALL_NAME, allowAllAuthorizer);
+
         return new AuthorizerMapper(null) {
           @Override
           public Authorizer getAuthorizer(String name)
           {
-            return new AllowAllAuthorizer();
+            return allowAllAuthorizer;
+          }
+
+          @Override
+          public Map<String, Authorizer> getAuthorizerMap()
+          {
+            return authorizerMap;
           }
         };
-      }
-
-      if (authorizers.isEmpty()) {
-        throw new IAE("Must have at least one Authorizer configured.");
       }
 
       for (String authorizerName : authorizers) {
@@ -111,7 +120,15 @@ public class AuthorizerMapperModule implements DruidModule
             Authorizer.class
         );
 
-        authorizerProvider.inject(props, configurator);
+        String nameProperty = StringUtils.format("druid.auth.authorizer.%s.name", authorizerName);
+        Properties adjustedProps = new Properties(props);
+        if (adjustedProps.containsKey(nameProperty)) {
+          throw new IAE("Name property [%s] is reserved.", nameProperty);
+        } else {
+          adjustedProps.put(nameProperty, authorizerName);
+        }
+
+        authorizerProvider.inject(adjustedProps, configurator);
 
         Supplier<Authorizer> authorizerSupplier = authorizerProvider.get();
         if (authorizerSupplier == null) {
@@ -122,6 +139,25 @@ public class AuthorizerMapperModule implements DruidModule
       }
 
       return new AuthorizerMapper(authorizerMap);
+    }
+  }
+
+  private static void validateAuthorizers(List<String> authorizers)
+  {
+    if (authorizers == null) {
+      return;
+    }
+
+    if (authorizers.isEmpty()) {
+      throw new IAE("Must have at least one Authorizer configured.");
+    }
+
+    Set<String> authorizerSet = new HashSet<>();
+    for (String authorizer : authorizers) {
+      if (authorizerSet.contains(authorizer)) {
+        throw new ISE("Cannot have multiple authorizers with the same name: [%s]", authorizer);
+      }
+      authorizerSet.add(authorizer);
     }
   }
 }

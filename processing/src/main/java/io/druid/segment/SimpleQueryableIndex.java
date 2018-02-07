@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -28,15 +29,17 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
  */
-public class SimpleQueryableIndex implements QueryableIndex
+public class SimpleQueryableIndex extends AbstractIndex implements QueryableIndex
 {
   private final Interval dataInterval;
-  private final Indexed<String> columnNames;
+  private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
   private final Map<String, Column> columns;
@@ -45,9 +48,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final Map<String, DimensionHandler> dimensionHandlers;
 
   public SimpleQueryableIndex(
-      Interval dataInterval,
-      Indexed<String> columnNames,
-      Indexed<String> dimNames,
+      Interval dataInterval, Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
       Map<String, Column> columns,
       SmooshedFileMapper fileMapper,
@@ -56,7 +57,13 @@ public class SimpleQueryableIndex implements QueryableIndex
   {
     Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
     this.dataInterval = dataInterval;
-    this.columnNames = columnNames;
+    ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
+    for (String column : columns.keySet()) {
+      if (!Column.TIME_COLUMN_NAME.equals(column)) {
+        columnNamesBuilder.add(column);
+      }
+    }
+    this.columnNames = columnNamesBuilder.build();
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;
     this.columns = columns;
@@ -79,9 +86,15 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
-  public Indexed<String> getColumnNames()
+  public List<String> getColumnNames()
   {
     return columnNames;
+  }
+
+  @Override
+  public StorageAdapter toStorageAdapter()
+  {
+    return new QueryableIndexStorageAdapter(this);
   }
 
   @Override
@@ -96,6 +109,7 @@ public class SimpleQueryableIndex implements QueryableIndex
     return bitmapFactory;
   }
 
+  @Nullable
   @Override
   public Column getColumn(String columnName)
   {

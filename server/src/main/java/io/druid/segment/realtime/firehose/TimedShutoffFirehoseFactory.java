@@ -21,14 +21,15 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -102,6 +103,7 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
       return firehose.hasMore();
     }
 
+    @Nullable
     @Override
     public InputRow nextRow()
     {

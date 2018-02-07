@@ -32,7 +32,7 @@ import java.util.Map;
 
 public class ConfigFileConfigProvider implements IntegrationTestingConfigProvider
 {
-  private final static Logger LOG = new Logger(ConfigFileConfigProvider.class);
+  private static final Logger LOG = new Logger(ConfigFileConfigProvider.class);
   private String routerUrl;
   private String brokerUrl;
   private String historicalUrl;
@@ -178,6 +178,18 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getPassword()
       {
         return password;
+      }
+
+      @Override
+      public Map<String, String> getProperties()
+      {
+        return props;
+      }
+
+      @Override
+      public boolean manageKafkaTopic()
+      {
+        return Boolean.valueOf(props.getOrDefault("manageKafkaTopic", "true"));
       }
     };
   }

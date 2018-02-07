@@ -30,5 +30,5 @@ import java.io.IOException;
 @ExtensionPoint
 public interface TaskLogPusher
 {
-  public void pushTaskLog(String taskid, File logFile) throws IOException;
+  void pushTaskLog(String taskid, File logFile) throws IOException;
 }

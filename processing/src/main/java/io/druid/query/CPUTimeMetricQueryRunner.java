@@ -20,7 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Supplier;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.common.utils.VMUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;

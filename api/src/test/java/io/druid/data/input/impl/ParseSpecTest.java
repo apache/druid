@@ -31,6 +31,7 @@ public class ParseSpecTest
   @Test(expected = ParseException.class)
   public void testDuplicateNames() throws Exception
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -53,6 +54,7 @@ public class ParseSpecTest
   @Test(expected = IllegalArgumentException.class)
   public void testDimAndDimExcluOverlap() throws Exception
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -75,6 +77,7 @@ public class ParseSpecTest
   @Test
   public void testDimExclusionDuplicate() throws Exception
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",

@@ -46,7 +46,7 @@ public class ServerDiscoverySelectorTest
   {
     serviceProvider = EasyMock.createMock(ServiceProvider.class);
     instance = EasyMock.createMock(ServiceInstance.class);
-    serverDiscoverySelector = new ServerDiscoverySelector(serviceProvider);
+    serverDiscoverySelector = new ServerDiscoverySelector(serviceProvider, "test");
   }
 
   @Test
