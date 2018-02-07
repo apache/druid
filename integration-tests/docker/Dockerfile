@@ -24,10 +24,14 @@ RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
 # Setup supervisord
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# unless advertised.host.name is set to docker host ip, publishing data fails
+# internal docker_ip:9092 endpoint is used to access Kafka from other Docker containers
+# external docker ip:9093 endpoint is used to access Kafka from test code
 # run this last to avoid rebuilding the image every time the ip changes
 ADD docker_ip docker_ip
-RUN perl -pi -e "s/#advertised.listeners=.*/advertised.listeners=PLAINTEXT:\/\/$(cat docker_ip):9092/" /usr/local/kafka/config/server.properties
+RUN perl -pi -e "s/#listeners=.*/listeners=INTERNAL:\/\/$(resolveip -s $HOSTNAME):9092,EXTERNAL:\/\/$(resolveip -s $HOSTNAME):9093/" /usr/local/kafka/config/server.properties
+RUN perl -pi -e "s/#advertised.listeners=.*/advertised.listeners=INTERNAL:\/\/$(resolveip -s $HOSTNAME):9092,EXTERNAL:\/\/$(cat docker_ip):9093/" /usr/local/kafka/config/server.properties
+RUN perl -pi -e "s/#listener.security.protocol.map=.*/listener.security.protocol.map=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT\ninter.broker.listener.name=INTERNAL/" /usr/local/kafka/config/server.properties
+RUN perl
 
 # Expose ports:
 # - 8081: HTTP (coordinator)
