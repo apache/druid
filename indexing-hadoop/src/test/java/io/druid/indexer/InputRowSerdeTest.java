@@ -20,9 +20,14 @@
 package io.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.DoubleDimensionSchema;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.java.util.common.parsers.ParseException;
@@ -35,8 +40,11 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -53,17 +61,22 @@ public class InputRowSerdeTest
     new AggregatorsModule(); //registers ComplexMetric serde for hyperUnique
   }
 
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   public InputRowSerdeTest()
   {
     this.timestamp = System.currentTimeMillis();
-    this.dims = ImmutableList.of("dim_non_existing", "d1", "d2");
-    this.event = ImmutableMap.<String, Object>of(
-        "d1", "d1v",
-        "d2", ImmutableList.of("d2v1", "d2v2"),
-        "m1", 5.0f,
-        "m2", 100L,
-        "m3", "m3v"
-    );
+    this.dims = ImmutableList.of("dim_non_existing", "d1", "d2", "d3", "d4", "d5");
+    this.event = Maps.newHashMap();
+    event.put("d1", "d1v");
+    event.put("d2", ImmutableList.of("d2v1", "d2v2"));
+    event.put("d3", 200L);
+    event.put("d4", 300.1f);
+    event.put("d5", 400.5d);
+    event.put("m1", 5.0f);
+    event.put("m2", 100L);
+    event.put("m3", "m3v");
   }
 
   @Test
@@ -99,14 +112,29 @@ public class InputRowSerdeTest
         }
     };
 
-    byte[] data = InputRowSerde.toBytes(in, aggregatorFactories, false); // Ignore Unparseable aggregator
-    InputRow out = InputRowSerde.fromBytes(data, aggregatorFactories);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("d1"),
+            new StringDimensionSchema("d2"),
+            new LongDimensionSchema("d3"),
+            new FloatDimensionSchema("d4"),
+            new DoubleDimensionSchema("d5")
+        ),
+        null,
+        null
+    );
+
+    byte[] data = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, false); // Ignore Unparseable aggregator
+    InputRow out = InputRowSerde.fromBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), data, aggregatorFactories);
 
     Assert.assertEquals(timestamp, out.getTimestampFromEpoch());
     Assert.assertEquals(dims, out.getDimensions());
     Assert.assertEquals(Collections.EMPTY_LIST, out.getDimension("dim_non_existing"));
     Assert.assertEquals(ImmutableList.of("d1v"), out.getDimension("d1"));
     Assert.assertEquals(ImmutableList.of("d2v1", "d2v2"), out.getDimension("d2"));
+    Assert.assertEquals(200L, out.getRaw("d3"));
+    Assert.assertEquals(300.1f, out.getRaw("d4"));
+    Assert.assertEquals(400.5d, out.getRaw("d5"));
 
     Assert.assertEquals(0.0f, out.getMetric("agg_non_existing").floatValue(), 0.00001);
     Assert.assertEquals(5.0f, out.getMetric("m1out").floatValue(), 0.00001);
@@ -117,7 +145,7 @@ public class InputRowSerdeTest
     EasyMock.verify(mockedAggregator);
   }
 
-  @Test(expected = ParseException.class)
+  @Test
   public void testThrowParseExceptions()
   {
     InputRow in = new MapBasedInputRow(
@@ -133,7 +161,66 @@ public class InputRowSerdeTest
         new LongSumAggregatorFactory("unparseable", "m3") // Unparseable from String to Long
     };
 
-    InputRowSerde.toBytes(in, aggregatorFactories, true);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("d1"),
+            new StringDimensionSchema("d2"),
+            new LongDimensionSchema("d3"),
+            new FloatDimensionSchema("d4"),
+            new DoubleDimensionSchema("d5")
+        ),
+        null,
+        null
+    );
 
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("Encountered parse error for aggregator[unparseable]");
+    InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
+  }
+
+  @Test
+  public void testDimensionParseExceptions()
+  {
+    InputRow in = new MapBasedInputRow(
+        timestamp,
+        dims,
+        event
+    );
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
+        new LongSumAggregatorFactory("m2out", "m2")
+    };
+
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("could not convert value [d1v] to long");
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new LongDimensionSchema("d1")
+        ),
+        null,
+        null
+    );
+    InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
+
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("could not convert value [d1v] to float");
+    dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new FloatDimensionSchema("d1")
+        ),
+        null,
+        null
+    );
+    InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
+
+    expectedException.expect(ParseException.class);
+    expectedException.expectMessage("could not convert value [d1v] to double");
+    dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new DoubleDimensionSchema("d1")
+        ),
+        null,
+        null
+    );
+    InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
   }
 }
