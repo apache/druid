@@ -38,6 +38,7 @@ import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -99,6 +101,10 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
               getListObject(listObjectInspector, oip.getStructFieldData(input, field))
           );
           break;
+        case MAP:
+          MapObjectInspector mapObjectInspector = (MapObjectInspector) objectInspector;
+          getMapObject(field.getFieldName(), mapObjectInspector, oip.getStructFieldData(input, field), map);
+          break;
         default:
           break;
       }
@@ -130,6 +136,23 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     }
 
     return list;
+  }
+
+  private void getMapObject(String parentName, MapObjectInspector mapObjectInspector, Object mapObject, Map<String, Object> parsedMap)
+  {
+    if (mapObjectInspector.getMapSize(mapObject) < 0) {
+      return;
+    }
+    String prefix = parentName + "_";
+    Map objectMap = mapObjectInspector.getMap(mapObject);
+    PrimitiveObjectInspector key = (PrimitiveObjectInspector) mapObjectInspector.getMapKeyObjectInspector();
+    PrimitiveObjectInspector value = (PrimitiveObjectInspector) mapObjectInspector.getMapValueObjectInspector();
+    for (Iterator itr = objectMap.entrySet().iterator(); itr.hasNext(); ) {
+      Map.Entry it = (Map.Entry) itr.next();
+      parsedMap.put(prefix + key.getPrimitiveJavaObject(it.getKey()).toString(),
+              value.getPrimitiveJavaObject(it.getValue()));
+    }
+
   }
 
   @Override
