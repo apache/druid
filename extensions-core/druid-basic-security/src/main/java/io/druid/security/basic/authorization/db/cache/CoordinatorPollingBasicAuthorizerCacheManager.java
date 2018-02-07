@@ -21,7 +21,6 @@ package io.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import io.druid.client.coordinator.Coordinator;
@@ -29,6 +28,7 @@ import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
@@ -212,7 +212,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
     cacheDir.mkdirs();
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserRoleMapFilename(prefix));
-    Files.write(userMapBytes, userMapFile);
+    FileUtils.writeAtomically(userMapFile, out -> out.write(userMapBytes));
   }
 
   @Nullable
