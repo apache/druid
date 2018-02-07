@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
@@ -44,28 +43,16 @@ import java.util.Map;
  * See {@link AbstractITRealtimeIndexTaskTest} for test details.
  */
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
+public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
 {
-  private static final Logger LOG = new Logger(ITRealtimeIndexTaskTest.class);
-  private static final String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_index_task.json";
-  private static final String REALTIME_QUERIES_RESOURCE = "/indexer/wikipedia_realtime_index_queries.json";
+  private static final Logger LOG = new Logger(ITAppenderatorDriverRealtimeIndexTaskTest.class);
+  private static final String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_appenderator_index_task.json";
+  private static final String REALTIME_QUERIES_RESOURCE = "/indexer/wikipedia_realtime_appenderator_index_queries.json";
 
   @Test
   public void testRealtimeIndexTask() throws Exception
   {
     doTest();
-  }
-
-  @Override
-  String getTaskResource()
-  {
-    return REALTIME_TASK_RESOURCE;
-  }
-
-  @Override
-  String getQueriesResource()
-  {
-    return REALTIME_QUERIES_RESOURCE;
   }
 
   @Override
@@ -100,12 +87,13 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
       // there are 22 lines in the file
       int i = 1;
       DateTime dt = DateTimes.nowUtc();  // timestamp used for sending each event
-      dtFirst = dt;                      // timestamp of 1st event
-      dtLast = dt;                       // timestamp of last event
+      dtFirst = dt;
+      dtLast = dt;
       String line;
       while ((line = reader.readLine()) != null) {
         if (i == 15) { // for the 15th line, use a time before the window
           dt = dt.minusMinutes(10);
+          dtFirst = dt; // oldest timestamp
         } else if (i == 16) { // remember this time to use in the expected response from the groupBy query
           dtGroupBy = dt;
         } else if (i == 18) { // use a time 6 seconds ago so it will be out of order
@@ -128,7 +116,7 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
           Thread.sleep(DELAY_BETWEEN_EVENTS_SECS * 1000);
         }
         catch (InterruptedException ex) { /* nothing */ }
-        dtLast = dt;
+        dtLast = dt; // latest timestamp
         dt = DateTimes.nowUtc();
         i++;
       }
@@ -140,5 +128,17 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
       reader.close();
       eventReceiverSelector.stop();
     }
+  }
+
+  @Override
+  String getTaskResource()
+  {
+    return REALTIME_TASK_RESOURCE;
+  }
+
+  @Override
+  String getQueriesResource()
+  {
+    return REALTIME_QUERIES_RESOURCE;
   }
 }
