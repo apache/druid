@@ -236,7 +236,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         return groupByStrategy.processSubtotalsSpec(
             query,
             resource,
-            groupByStrategy.mergeResults(runner, query, context)
+            groupByStrategy.mergeResults(runner, query.withSubtotalsSpec(null), context)
         );
       } else {
         return groupByStrategy.applyPostProcessing(groupByStrategy.mergeResults(runner, query, context), query);

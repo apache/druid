@@ -193,6 +193,21 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
+    this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, dimensions);
+
+    // Verify no duplicate names between dimensions, aggregators, and postAggregators.
+    // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
+    // We're not counting __time, even though that name is problematic. See: https://github.com/druid-io/druid/pull/3684
+    verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
+
+    this.postProcessingFn = postProcessingFn != null ? postProcessingFn : makePostProcessingFn();
+
+    // Check if limit push down configuration is valid and check if limit push down will be applied
+    this.applyLimitPushDown = determineApplyLimitPushDown();
+  }
+
+  private List<List<String>> verifySubtotalsSpec(List<List<String>> subtotalsSpec, List<DimensionSpec> dimensions)
+  {
     // if subtotalsSpec exists then validate that all are subsets of dimensions spec and are in same order.
     // For example if we had {D1, D2, D3} in dimensions spec then
     // {D2}, {D1, D2}, {D1, D3}, {D2, D3} etc are valid in subtotalsSpec while
@@ -213,22 +228,16 @@ public class GroupByQuery extends BaseQuery<Row>
             }
           }
           if (!found) {
-            throw new IAE("Subtotal spec %s is either not a subset or items are in different order than in dimensiosn spec.", subtotalSpec);
+            throw new IAE(
+                "Subtotal spec %s is either not a subset or items are in different order than in dimensiosn spec.",
+                subtotalSpec
+            );
           }
         }
       }
     }
-    this.subtotalsSpec = subtotalsSpec;
 
-    // Verify no duplicate names between dimensions, aggregators, and postAggregators.
-    // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
-    // We're not counting __time, even though that name is problematic. See: https://github.com/druid-io/druid/pull/3684
-    verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-
-    this.postProcessingFn = postProcessingFn != null ? postProcessingFn : makePostProcessingFn();
-
-    // Check if limit push down configuration is valid and check if limit push down will be applied
-    this.applyLimitPushDown = determineApplyLimitPushDown();
+    return subtotalsSpec;
   }
 
   @JsonProperty
