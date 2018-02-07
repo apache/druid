@@ -27,11 +27,16 @@ import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.UUID;
 
 public class FileUtils
 {
@@ -46,6 +51,7 @@ public class FileUtils
       return input instanceof Exception;
     }
   };
+
   /**
    * Copy input byte source to outFile. If outFile exists, it is attempted to be deleted.
    *
@@ -150,15 +156,76 @@ public class FileUtils
    * }}</pre>
    *
    * @param file the file to map
-   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
-   * @throws FileNotFoundException if the {@code file} does not exist
-   * @throws IOException if an I/O error occurs
    *
+   * @return a {@link MappedByteBufferHandler}, wrapping a read-only buffer reflecting {@code file}
+   *
+   * @throws FileNotFoundException if the {@code file} does not exist
+   * @throws IOException           if an I/O error occurs
    * @see FileChannel#map(FileChannel.MapMode, long, long)
    */
   public static MappedByteBufferHandler map(File file) throws IOException
   {
     MappedByteBuffer mappedByteBuffer = Files.map(file);
     return new MappedByteBufferHandler(mappedByteBuffer);
+  }
+
+  /**
+   * Write to a file atomically, by first writing to a temporary file in the same directory and then moving it to
+   * the target location. This function attempts to clean up its temporary files when possible, but they may stick
+   * around (for example, if the JVM crashes partway through executing the function). In any case, the target file
+   * should be unharmed.
+   *
+   * The OutputStream passed to the consumer is uncloseable; calling close on it will do nothing. This is to ensure
+   * that the stream stays open so we can fsync it here before closing. Hopefully, this doesn't cause any problems
+   * for callers.
+   *
+   * This method is not just thread-safe, but is also safe to use from multiple processes on the same machine.
+   */
+  public static void writeAtomically(final File file, OutputStreamConsumer f) throws IOException
+  {
+    writeAtomically(file, file.getParentFile(), f);
+  }
+
+  private static void writeAtomically(final File file, final File tmpDir, OutputStreamConsumer f) throws IOException
+  {
+    final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
+
+    try {
+      try (final FileOutputStream out = new FileOutputStream(tmpFile)) {
+        // Pass f an uncloseable stream so we can fsync before closing.
+        f.accept(uncloseable(out));
+
+        // fsync to avoid write-then-rename-then-crash causing empty files on some filesystems.
+        out.getChannel().force(true);
+      }
+
+      // No exception thrown; do the move.
+      java.nio.file.Files.move(
+          tmpFile.toPath(),
+          file.toPath(),
+          StandardCopyOption.ATOMIC_MOVE,
+          StandardCopyOption.REPLACE_EXISTING
+      );
+    }
+    finally {
+      tmpFile.delete();
+    }
+  }
+
+  private static OutputStream uncloseable(final OutputStream out) throws IOException
+  {
+    return new FilterOutputStream(out)
+    {
+      @Override
+      public void close() throws IOException
+      {
+        // Do nothing.
+      }
+    };
+  }
+
+  public interface OutputStreamConsumer
+  {
+    void accept(OutputStream outputStream) throws IOException;
   }
 }
