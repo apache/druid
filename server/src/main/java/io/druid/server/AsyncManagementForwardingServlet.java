@@ -30,6 +30,7 @@ import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.http.DruidHttpClientConfig;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.security.AuthConfig;
 import org.apache.http.client.utils.URIBuilder;
@@ -92,7 +93,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
   {
     String currentLeader;
-    String requestURI = request.getRequestURI().toLowerCase();
+    String requestURI = StringUtils.toLowerCase(request.getRequestURI());
     if (requestURI.startsWith(STANDARD_COORDINATOR_BASE_PATH)) {
       currentLeader = coordLeaderSelector.getCurrentLeader();
     } else if (requestURI.startsWith(STANDARD_OVERLORD_BASE_PATH)) {
