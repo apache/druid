@@ -27,6 +27,7 @@ import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.ConfigManager.SetResult;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
 import io.druid.server.coordinator.DataSourceCompactionConfig;
 import io.druid.server.http.security.ConfigResourceFilter;
@@ -121,6 +122,19 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
+    if (!dataSource.equals(newConfig.getDataSource())) {
+      return Response
+          .status(Response.Status.BAD_REQUEST)
+          .entity(
+              StringUtils.format(
+                  "dataSource[%s] in config is different from the requested one[%s]",
+                  newConfig.getDataSource(),
+                  dataSource
+              )
+          )
+          .build();
+    }
+
     CoordinatorCompactionConfig current = manager.watch(
         CoordinatorCompactionConfig.CONFIG_KEY,
         CoordinatorCompactionConfig.class
