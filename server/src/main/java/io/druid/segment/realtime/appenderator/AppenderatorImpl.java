@@ -736,14 +736,6 @@ public class AppenderatorImpl implements Appenderator
     }
     try {
       shutdownExecutors();
-      Preconditions.checkState(
-          persistExecutor == null || persistExecutor.awaitTermination(365, TimeUnit.DAYS),
-          "persistExecutor not terminated"
-      );
-      Preconditions.checkState(
-          intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
-          "intermediateTempExecutor not terminated"
-      );
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -820,22 +812,31 @@ public class AppenderatorImpl implements Appenderator
   {
     if (persistExecutor != null) {
       persistExecutor.shutdownNow();
+    }
+    if (pushExecutor != null) {
+      pushExecutor.shutdownNow();
+    }
+    if (intermediateTempExecutor != null) {
+      intermediateTempExecutor.shutdownNow();
+    }
+
+    if (persistExecutor != null) {
       Preconditions.checkState(
           persistExecutor.awaitTermination(365, TimeUnit.DAYS),
           "persistExecutor not terminated"
       );
       persistExecutor = null;
     }
+
     if (pushExecutor != null) {
-      pushExecutor.shutdownNow();
       Preconditions.checkState(
           pushExecutor.awaitTermination(365, TimeUnit.DAYS),
           "pushExecutor not terminated"
       );
       pushExecutor = null;
     }
+
     if (intermediateTempExecutor != null) {
-      intermediateTempExecutor.shutdownNow();
       Preconditions.checkState(
           intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
           "intermediateTempExecutor not terminated"

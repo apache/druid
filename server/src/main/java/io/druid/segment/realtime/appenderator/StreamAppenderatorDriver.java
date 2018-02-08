@@ -178,6 +178,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Move a set of identifiers out from "active", making way for newer segments.
+   * This method is to support KafkaIndexTask's legacy mode and will be removed in the future.
+   * See KakfaIndexTask.runLegacy().
    */
   public void moveSegmentOut(final String sequenceName, final List<SegmentIdentifier> identifiers)
   {

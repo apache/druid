@@ -48,7 +48,19 @@ public class SegmentWithState
   {
     APPENDING,
     APPEND_FINISHED,   // only used in StreamAppenderatorDriver
-    PUSHED_AND_DROPPED // only used in BatchAppenderatorDriver
+    PUSHED_AND_DROPPED; // only used in BatchAppenderatorDriver
+
+    @JsonCreator
+    public static SegmentState fromString(@JsonProperty String name)
+    {
+      if (name.equalsIgnoreCase("ACTIVE")) {
+        return APPENDING;
+      } else if (name.equalsIgnoreCase("INACTIVE")) {
+        return APPEND_FINISHED;
+      } else {
+        return SegmentState.valueOf(name);
+      }
+    }
   }
 
   private final SegmentIdentifier segmentIdentifier;

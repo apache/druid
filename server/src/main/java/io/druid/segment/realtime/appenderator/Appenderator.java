@@ -73,7 +73,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Committer is guaranteed to be *created* synchronously with the call to add, but will actually be used
    * asynchronously.
    * <p>
-   * If committer is not provided, any data are NOT persisted. If it's provided, the add, clear, persist, persistAll,
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
    * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param identifier               the segment into which this row should be added
@@ -153,7 +153,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * persist, but will actually be used asynchronously. Any metadata returned by the committer will be associated with
    * the data persisted to disk.
    * <p>
-   * If committer is not provided, any data are NOT persisted. If it's provided, the add, clear, persist, persistAll,
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
    * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param identifiers segment identifiers to be persisted
@@ -171,7 +171,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * be used asynchronously. Any metadata returned by the committer will be associated with the data persisted to
    * disk.
    * <p>
-   * If committer is not provided, any data are NOT persisted. If it's provided, the add, clear, persist, persistAll,
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
    * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param committer a committer associated with all data that has been added so far
@@ -189,7 +189,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * <p>
    * After this method is called, you cannot add new data to any segments that were previously under construction.
    * <p>
-   * If committer is not provided, any data are NOT persisted. If it's provided, the add, clear, persist, persistAll,
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
    * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param identifiers list of segments to push

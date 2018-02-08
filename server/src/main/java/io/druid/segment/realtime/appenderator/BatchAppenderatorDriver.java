@@ -81,7 +81,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   {
     final Object metadata = appenderator.startJob();
     if (metadata != null) {
-      throw new ISE("Metadata should be null because batch ingestion doesn't support committing intermediate states");
+      throw new ISE("Metadata should be null because BatchAppenderatorDriver never persists it");
     }
     return null;
   }
