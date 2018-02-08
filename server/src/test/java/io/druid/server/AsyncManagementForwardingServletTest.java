@@ -33,6 +33,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -139,7 +140,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinatorExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(coordinatorExpectedRequest.method);
 
@@ -159,7 +160,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinatorExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format(
+        new URL(StringUtils.format(
             "http://localhost:%d%s?%s", port, coordinatorExpectedRequest.path, coordinatorExpectedRequest.query
         )).openConnection());
     connection.setRequestMethod(coordinatorExpectedRequest.method);
@@ -178,7 +179,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinatorExpectedRequest.method = "POST";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(coordinatorExpectedRequest.method);
 
@@ -194,7 +195,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinatorExpectedRequest.method = "DELETE";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, coordinatorExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(coordinatorExpectedRequest.method);
 
@@ -211,7 +212,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinatorExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d/proxy/coordinator%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator%s", port, coordinatorExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(coordinatorExpectedRequest.method);
 
@@ -231,7 +232,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinatorExpectedRequest.body = "[\"2012-01-01T00:00:00.000/2012-01-03T00:00:00.000\", \"2012-01-05T00:00:00.000/2012-01-07T00:00:00.000\"]";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d/proxy/coordinator%s", port, coordinatorExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/coordinator%s", port, coordinatorExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(coordinatorExpectedRequest.method);
 
@@ -259,7 +260,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     overlordExpectedRequest.body = "{\"type\": \"index\", \"spec\": \"stuffGoesHere\"}";
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, overlordExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(overlordExpectedRequest.method);
 
@@ -283,7 +284,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     overlordExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d%s", port, overlordExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(overlordExpectedRequest.method);
 
@@ -302,7 +303,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     overlordExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d/proxy/overlord/%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/overlord/%s", port, overlordExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(overlordExpectedRequest.method);
 
@@ -317,7 +318,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   public void testBadProxyDestination() throws Exception
   {
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d/proxy/other/status", port)).openConnection());
+        new URL(StringUtils.format("http://localhost:%d/proxy/other/status", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(400, connection.getResponseCode());
@@ -329,7 +330,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   public void testLocalRequest() throws Exception
   {
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(String.format("http://localhost:%d/status", port)).openConnection());
+        new URL(StringUtils.format("http://localhost:%d/status", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(404, connection.getResponseCode());
@@ -403,7 +404,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
         @Override
         public String getCurrentLeader()
         {
-          return String.format("http://localhost:%d", coordinatorPort);
+          return StringUtils.format("http://localhost:%d", coordinatorPort);
         }
       };
 
@@ -412,7 +413,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
         @Override
         public String getCurrentLeader()
         {
-          return String.format("http://localhost:%d", overlordPort);
+          return StringUtils.format("http://localhost:%d", overlordPort);
         }
       };
 
