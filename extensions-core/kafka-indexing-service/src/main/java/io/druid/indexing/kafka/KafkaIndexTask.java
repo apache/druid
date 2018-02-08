@@ -1159,6 +1159,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
         }
       }
+      catch (Exception e) {
+        log.error(e, "Encountered exception in runLegacy() before persisting.");
+        throw e;
+      }
       finally {
         driver.persist(committerSupplier.get()); // persist pending data
       }
