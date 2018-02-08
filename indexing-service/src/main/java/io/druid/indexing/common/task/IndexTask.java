@@ -735,6 +735,10 @@ public class IndexTask extends AbstractTask
           }
         }
       }
+      catch (Exception e) {
+        log.error(e, "Encountered exception in generateAndPublishSegments() before persisting.");
+        throw e;
+      }
       finally {
         driver.persist(committerSupplier.get());
       }

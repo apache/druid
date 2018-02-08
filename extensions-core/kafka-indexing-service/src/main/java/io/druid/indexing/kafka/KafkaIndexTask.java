@@ -796,6 +796,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
         }
       }
+      catch (Exception e) {
+        log.error(e, "Encountered exception in run() before persisting.");
+        throw e;
+      }
       finally {
         log.info("Persisting all pending data");
         driver.persist(committerSupplier.get()); // persist pending data
