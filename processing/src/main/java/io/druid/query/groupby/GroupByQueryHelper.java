@@ -22,7 +22,6 @@ package io.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.BlockingPool;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
@@ -47,7 +46,6 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.DateTime;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -60,7 +58,6 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
-      BlockingPool<ByteBuffer> bufferPool,
       final boolean combine
   )
   {
@@ -118,23 +115,13 @@ public class GroupByQueryHelper
         .withMinTimestamp(granTimeStart.getMillis())
         .build();
 
-    if (query.getContextValue("useOffheap", false)) {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOffheap(bufferPool);
-    } else {
-      index = new IncrementalIndex.Builder()
-          .setIndexSchema(indexSchema)
-          .setDeserializeComplexMetrics(false)
-          .setConcurrentEventAdd(true)
-          .setSortFacts(sortResults)
-          .setMaxRowCount(querySpecificConfig.getMaxResults())
-          .buildOnheap();
-    }
+    index = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setDeserializeComplexMetrics(false)
+        .setConcurrentEventAdd(true)
+        .setSortFacts(sortResults)
+        .setMaxRowCount(querySpecificConfig.getMaxResults())
+        .buildOnheap();
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {
@@ -189,7 +176,6 @@ public class GroupByQueryHelper
   public static IncrementalIndex makeIncrementalIndex(
       GroupByQuery query,
       GroupByQueryConfig config,
-      BlockingPool<ByteBuffer> bufferPool,
       Sequence<Row> rows,
       boolean combine
   )
@@ -197,7 +183,6 @@ public class GroupByQueryHelper
     Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
         config,
-        bufferPool,
         combine
     );
 

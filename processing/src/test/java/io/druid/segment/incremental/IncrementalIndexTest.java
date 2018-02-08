@@ -19,11 +19,9 @@
 
 package io.druid.segment.incremental;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
@@ -44,7 +42,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -108,34 +105,6 @@ public class IncrementalIndexTest
                       .setSortFacts(sortFacts)
                       .setMaxRowCount(1000)
                       .buildOnheap();
-                }
-              }
-          }
-      );
-      constructors.add(
-          new Object[]{
-              new IndexCreator()
-              {
-                @Override
-                public IncrementalIndex createIndex()
-                {
-                  return new IncrementalIndex.Builder()
-                      .setIndexSchema(schema)
-                      .setSortFacts(sortFacts)
-                      .setMaxRowCount(1000000)
-                      .buildOffheap(
-                          new StupidPool<ByteBuffer>(
-                              "OffheapIncrementalIndex-bufferPool",
-                              new Supplier<ByteBuffer>()
-                              {
-                                @Override
-                                public ByteBuffer get()
-                                {
-                                  return ByteBuffer.allocate(256 * 1024);
-                                }
-                              }
-                          )
-                      );
                 }
               }
           }

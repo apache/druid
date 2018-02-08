@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,7 +29,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -74,7 +72,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -132,66 +129,10 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
-                    return new IncrementalIndex.Builder()
-                        .setSimpleTestingIndexSchema(factories)
-                        .setMaxRowCount(1000000)
-                        .buildOffheap(
-                            new StupidPool<ByteBuffer>(
-                                "OffheapIncrementalIndex-bufferPool",
-                                new Supplier<ByteBuffer>()
-                                {
-                                  @Override
-                                  public ByteBuffer get()
-                                  {
-                                    return ByteBuffer.allocate(256 * 1024);
-                                  }
-                                }
-                            )
-                        );
-                  }
-                }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
                     return IncrementalIndexTest.createNoRollupIndex(factories);
                   }
                 }
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
-                  {
-                    return new IncrementalIndex.Builder()
-                        .setIndexSchema(
-                            new IncrementalIndexSchema.Builder()
-                                .withMetrics(factories)
-                                .withRollup(false)
-                                .build()
-                        )
-                        .setMaxRowCount(1000000)
-                        .buildOffheap(
-                            new StupidPool<ByteBuffer>(
-                                "OffheapIncrementalIndex-bufferPool",
-                                new Supplier<ByteBuffer>()
-                                {
-                                  @Override
-                                  public ByteBuffer get()
-                                  {
-                                    return ByteBuffer.allocate(256 * 1024);
-                                  }
-                                }
-                            )
-                        );
-                  }
-                }
             }
-
         }
     );
   }

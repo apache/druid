@@ -29,9 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
-import io.druid.collections.BlockingPool;
 import io.druid.data.input.Row;
-import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -56,7 +54,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.Interval;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 
@@ -65,20 +62,17 @@ public class GroupByStrategyV1 implements GroupByStrategy
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final GroupByQueryEngine engine;
   private final QueryWatcher queryWatcher;
-  private final BlockingPool<ByteBuffer> bufferPool;
 
   @Inject
   public GroupByStrategyV1(
       Supplier<GroupByQueryConfig> configSupplier,
       GroupByQueryEngine engine,
-      QueryWatcher queryWatcher,
-      @Global BlockingPool<ByteBuffer> bufferPool
+      QueryWatcher queryWatcher
   )
   {
     this.configSupplier = configSupplier;
     this.engine = engine;
     this.queryWatcher = queryWatcher;
-    this.bufferPool = bufferPool;
   }
 
   @Override
@@ -119,7 +113,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
     final IncrementalIndex index = GroupByQueryHelper.makeIncrementalIndex(
         query,
         configSupplier.get(),
-        bufferPool,
         baseRunner.run(
             QueryPlus.wrap(
                 new GroupByQuery.Builder(query)
@@ -213,7 +206,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
             )
         ),
         configSupplier.get(),
-        bufferPool,
         subqueryResult,
         false
     );
@@ -225,7 +217,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
     final IncrementalIndex outerQueryResultIndex = GroupByQueryHelper.makeIncrementalIndex(
         outerQuery,
         configSupplier.get(),
-        bufferPool,
         Sequences.concat(
             Sequences.map(
                 Sequences.simple(outerQuery.getIntervals()),
@@ -261,7 +252,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
       final Iterable<QueryRunner<Row>> queryRunners
   )
   {
-    return new GroupByMergedQueryRunner<>(exec, configSupplier, queryWatcher, bufferPool, queryRunners);
+    return new GroupByMergedQueryRunner<>(exec, configSupplier, queryWatcher, queryRunners);
   }
 
   @Override
