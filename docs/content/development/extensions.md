@@ -71,6 +71,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.html)|
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.html)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.html)|
+|druid-kafka|Kafka ingest firehose (high level consumer) for realtime nodes based on Kafka 1.0.|[link](../development/extensions-contrib/kafka-firehose.html)|
 
 ## Promoting Community Extension to Core Extension
 
