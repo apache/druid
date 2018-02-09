@@ -82,7 +82,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   private final ListeningExecutorService exec;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
-  private final BlockingPool<ByteBuffer> processingBufferPool;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
@@ -94,7 +93,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<Row>> queryables,
       int concurrencyHint,
-      BlockingPool<ByteBuffer> processingBufferPool,
       BlockingPool<ByteBuffer> mergeBufferPool,
       int mergeBufferSize,
       ObjectMapper spillMapper,
@@ -106,7 +104,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
     this.concurrencyHint = concurrencyHint;
-    this.processingBufferPool = processingBufferPool;
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
@@ -159,22 +156,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     final boolean hasTimeout = QueryContexts.hasTimeout(query);
     final long timeoutAt = System.currentTimeMillis() + queryTimeout;
 
-    final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier = new Supplier<ResourceHolder<ByteBuffer>>()
-    {
-      private boolean initialized;
-      private ResourceHolder<ByteBuffer> buffer;
-
-      @Override
-      public ResourceHolder<ByteBuffer> get()
-      {
-        if (!initialized) {
-          buffer = processingBufferPool.takeOrFailOnTimeout(60000);
-          initialized = true;
-        }
-        return buffer;
-      }
-    };
-
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Row, CloseableGrouperIterator<RowBasedKey, Row>>()
         {
@@ -192,18 +173,23 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
               resources.add(temporaryStorageHolder);
 
-              final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
+              final ReferenceCountingResourceHolder<List<ByteBuffer>> buffers;
+
+              // We need at least one buffer for merging and might need additional buffer to combine results
+              // in ParallelCombiner if configured.
+              final int buffersCount = config.getNumParallelCombineThreads() > 1 ? 2 : 1;
+
               try {
                 // This will potentially block if there are no merge buffers left in the pool.
                 if (hasTimeout) {
                   final long timeout = timeoutAt - System.currentTimeMillis();
-                  if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
+                  if (timeout <= 0 || (buffers = mergeBufferPool.takeBatch(buffersCount, timeout)) == null) {
                     throw new TimeoutException();
                   }
                 } else {
-                  mergeBufferHolder = mergeBufferPool.take();
+                  buffers = mergeBufferPool.takeBatch(buffersCount);
                 }
-                resources.add(mergeBufferHolder);
+                resources.add(buffers);
               }
               catch (Exception e) {
                 throw new QueryInterruptedException(e);
@@ -214,8 +200,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   false,
                   null,
                   config,
-                  Suppliers.ofInstance(mergeBufferHolder.get()),
-                  combineBufferSupplier,
+                  Suppliers.ofInstance(buffers.get().get(0)),
+                  buffersCount == 2 ? Suppliers.ofInstance(buffers.get().get(1)) : null,
                   concurrencyHint,
                   temporaryStorage,
                   spillMapper,
@@ -256,7 +242,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                     public AggregateResult call() throws Exception
                                     {
                                       try (
-                                          Releaser bufferReleaser = mergeBufferHolder.increment();
+                                          Releaser bufferReleaser = buffers.increment();
                                           Releaser grouperReleaser = grouperHolder.increment()
                                       ) {
                                         final AggregateResult retVal = input.run(queryPlusForRunners, responseContext)

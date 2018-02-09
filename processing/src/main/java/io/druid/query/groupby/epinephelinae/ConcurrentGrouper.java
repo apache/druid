@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.parsers.CloseableIterator;
@@ -96,7 +95,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   public ConcurrentGrouper(
       final GroupByQueryConfig groupByQueryConfig,
       final Supplier<ByteBuffer> bufferSupplier,
-      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
+      final Supplier<ByteBuffer> combineBufferSupplier,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final KeySerdeFactory<KeyType> combineKeySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
@@ -138,7 +137,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
   ConcurrentGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
-      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
+      final Supplier<ByteBuffer> combineBufferSupplier,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final KeySerdeFactory<KeyType> combineKeySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
