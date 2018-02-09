@@ -19,6 +19,7 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.IndexIO;
@@ -29,9 +30,21 @@ import io.druid.segment.data.ReadableOffset;
  */
 public class FloatsColumn implements GenericColumn
 {
+  /**
+   * Factory method to create FloatsColumn.
+   */
+  public static FloatsColumn create(ColumnarFloats column, ImmutableBitmap nullValueBitmap)
+  {
+    if (nullValueBitmap.isEmpty()) {
+      return new FloatsColumn(column);
+    } else {
+      return new FloatsColumnWithNulls(column, nullValueBitmap);
+    }
+  }
+
   final ColumnarFloats column;
 
-  public FloatsColumn(final ColumnarFloats column)
+  protected FloatsColumn(final ColumnarFloats column)
   {
     this.column = column;
   }

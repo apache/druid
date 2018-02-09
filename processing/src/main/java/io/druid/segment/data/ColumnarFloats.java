@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.FloatColumnSelector;
@@ -48,15 +49,15 @@ public interface ColumnarFloats extends Closeable
       class HistoricalFloatColumnSelector implements FloatColumnSelector, HistoricalColumnSelector<Float>
       {
         @Override
-        public float getFloat()
-        {
-          return ColumnarFloats.this.get(offset.getOffset());
-        }
-
-        @Override
         public boolean isNull()
         {
           return false;
+        }
+
+        @Override
+        public float getFloat()
+        {
+          return ColumnarFloats.this.get(offset.getOffset());
         }
 
         @Override
@@ -77,20 +78,22 @@ public interface ColumnarFloats extends Closeable
       class HistoricalFloatColumnSelectorwithNulls implements FloatColumnSelector, HistoricalColumnSelector<Float>
       {
         @Override
-        public float getFloat()
-        {
-          return ColumnarFloats.this.get(offset.getOffset());
-        }
-
-        @Override
         public boolean isNull()
         {
           return nullValueBitmap.get(offset.getOffset());
         }
 
         @Override
+        public float getFloat()
+        {
+          assert NullHandling.replaceWithDefault() || !isNull();
+          return ColumnarFloats.this.get(offset.getOffset());
+        }
+
+        @Override
         public double getDouble(int offset)
         {
+          assert NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset);
           return ColumnarFloats.this.get(offset);
         }
 

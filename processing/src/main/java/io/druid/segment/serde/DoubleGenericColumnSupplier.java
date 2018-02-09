@@ -22,7 +22,6 @@ package io.druid.segment.serde;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.DoublesColumn;
-import io.druid.segment.column.DoublesColumnWithNulls;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.ColumnarDoubles;
 
@@ -44,10 +43,6 @@ public class DoubleGenericColumnSupplier implements Supplier<GenericColumn>
   @Override
   public GenericColumn get()
   {
-    if (nullValueBitmap.isEmpty()) {
-      return new DoublesColumn(column.get());
-    } else {
-      return new DoublesColumnWithNulls(column.get(), nullValueBitmap);
-    }
+    return DoublesColumn.create(column.get(), nullValueBitmap);
   }
 }

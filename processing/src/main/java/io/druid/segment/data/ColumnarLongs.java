@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
@@ -48,6 +49,12 @@ public interface ColumnarLongs extends Closeable
       class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
       {
         @Override
+        public boolean isNull()
+        {
+          return false;
+        }
+
+        @Override
         public long getLong()
         {
           return ColumnarLongs.this.get(offset.getOffset());
@@ -57,12 +64,6 @@ public interface ColumnarLongs extends Closeable
         public double getDouble(int offset)
         {
           return ColumnarLongs.this.get(offset);
-        }
-
-        @Override
-        public boolean isNull()
-        {
-          return false;
         }
 
         @Override
@@ -77,21 +78,23 @@ public interface ColumnarLongs extends Closeable
       class HistoricalLongColumnSelectorWithNulls implements LongColumnSelector, HistoricalColumnSelector<Long>
       {
         @Override
+        public boolean isNull()
+        {
+          return nullValueBitmap.get(offset.getOffset());
+        }
+
+        @Override
         public long getLong()
         {
+          assert NullHandling.replaceWithDefault() || !isNull();
           return ColumnarLongs.this.get(offset.getOffset());
         }
 
         @Override
         public double getDouble(int offset)
         {
+          assert NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset);
           return ColumnarLongs.this.get(offset);
-        }
-
-        @Override
-        public boolean isNull()
-        {
-          return nullValueBitmap.get(offset.getOffset());
         }
 
         @Override

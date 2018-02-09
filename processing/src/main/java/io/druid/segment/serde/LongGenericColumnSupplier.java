@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.LongsColumn;
-import io.druid.segment.column.LongsColumnWithNulls;
 import io.druid.segment.data.CompressedColumnarLongsSupplier;
 
 /**
@@ -42,10 +41,6 @@ public class LongGenericColumnSupplier implements Supplier<GenericColumn>
   @Override
   public GenericColumn get()
   {
-    if (nullValueBitmap.isEmpty()) {
-      return new LongsColumn(column.get());
-    } else {
-      return new LongsColumnWithNulls(column.get(), nullValueBitmap);
-    }
+    return LongsColumn.create(column.get(), nullValueBitmap);
   }
 }

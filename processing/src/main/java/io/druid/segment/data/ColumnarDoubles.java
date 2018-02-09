@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
@@ -46,6 +47,12 @@ public interface ColumnarDoubles extends Closeable
       class HistoricalDoubleColumnSelector implements DoubleColumnSelector, HistoricalColumnSelector<Double>
       {
         @Override
+        public boolean isNull()
+        {
+          return false;
+        }
+
+        @Override
         public double getDouble()
         {
           return ColumnarDoubles.this.get(offset.getOffset());
@@ -55,12 +62,6 @@ public interface ColumnarDoubles extends Closeable
         public double getDouble(int offset)
         {
           return ColumnarDoubles.this.get(offset);
-        }
-
-        @Override
-        public boolean isNull()
-        {
-          return false;
         }
 
         @Override
@@ -75,21 +76,23 @@ public interface ColumnarDoubles extends Closeable
       class HistoricalDoubleColumnSelectorWithNulls implements DoubleColumnSelector, HistoricalColumnSelector<Double>
       {
         @Override
+        public boolean isNull()
+        {
+          return nullValueBitmap.get(offset.getOffset());
+        }
+
+        @Override
         public double getDouble()
         {
+          assert NullHandling.replaceWithDefault() || !isNull();
           return ColumnarDoubles.this.get(offset.getOffset());
         }
 
         @Override
         public double getDouble(int offset)
         {
+          assert NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset);
           return ColumnarDoubles.this.get(offset);
-        }
-
-        @Override
-        public boolean isNull()
-        {
-          return nullValueBitmap.get(offset.getOffset());
         }
 
         @Override

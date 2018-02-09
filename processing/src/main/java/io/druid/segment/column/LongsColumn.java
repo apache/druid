@@ -19,6 +19,7 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.IndexIO;
@@ -29,9 +30,21 @@ import io.druid.segment.data.ReadableOffset;
  */
 public class LongsColumn implements GenericColumn
 {
+  /**
+   * Factory method to create LongsColumn.
+   */
+  public static LongsColumn create(ColumnarLongs column, ImmutableBitmap nullValueBitmap)
+  {
+    if (nullValueBitmap.isEmpty()) {
+      return new LongsColumn(column);
+    } else {
+      return new LongsColumnWithNulls(column, nullValueBitmap);
+    }
+  }
+
   final ColumnarLongs column;
 
-  public LongsColumn(final ColumnarLongs column)
+  protected LongsColumn(final ColumnarLongs column)
   {
     this.column = column;
   }

@@ -113,9 +113,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          if (NullHandling.sqlCompatible()) {
-            throw new IllegalStateException("Cannot return null value as float");
-          }
+          assert NullHandling.replaceWithDefault();
           return 0.0f;
         }
 

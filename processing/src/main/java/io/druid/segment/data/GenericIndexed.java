@@ -56,7 +56,9 @@ import java.util.Iterator;
  * bytes 7-10 =>; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes
- * for value. length of value will be -1 for null values.
+ * for value. This field has no meaning, if next offset is strictly greater than the current offset,
+ * and if they are the same, -1 at this field means null, and 0 at this field means some object
+ * (potentially non-null - e. g. in the string case, that is serialized as an empty sequence of bytes).
  * <p>
  * V2 Storage Format
  * Meta, header and value files are separate and header file stored in native endian byte order.
@@ -98,21 +100,10 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
       return String.class;
     }
 
-    /**
-     * numBytes will be -1 for null values.
-     */
     @Override
     @Nullable
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      // When SQL Compatibility is ON
-      //   1. numBytes will be -1 for null value, return value will be null
-      //   2. numBytes will be 0 for empty string, return value will be empty string
-      // For Legacy null handling when nulls and empty string are considered same -
-      //     numBytes will be 0 for both empty string and null and return value will be null for both.
-      if (numBytes < 0) {
-        return null;
-      }
       return NullHandling.emptyToNullIfNeeded(StringUtils.fromUtf8Nullable(buffer, numBytes));
     }
 
@@ -420,9 +411,10 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
     T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
-      final int size = endOffset > startOffset
-                       ? endOffset - startOffset
-                       : copyValueBuffer.get(startOffset - Ints.BYTES);
+      int size = endOffset - startOffset;
+      if (size == 0 && copyValueBuffer.get(startOffset - Ints.BYTES) == NULL_VALUE_SIZE_MARKER) {
+        return null;
+      }
       lastReadSize = size;
 
       // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,

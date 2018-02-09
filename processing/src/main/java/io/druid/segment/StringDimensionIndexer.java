@@ -66,7 +66,6 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   private static final int ABSENT_VALUE_ID = -1;
-  private static final int[] EMPTY_INT_ARRAY = IntArrays.EMPTY_ARRAY;
 
   private static class DimensionDictionary
   {
@@ -222,7 +221,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       List<Object> dimValuesList = (List) dimValues;
       if (dimValuesList.isEmpty()) {
         dimLookup.add(null);
-        encodedDimensionValues = EMPTY_INT_ARRAY;
+        encodedDimensionValues = IntArrays.EMPTY_ARRAY;
       } else if (dimValuesList.size() == 1) {
         encodedDimensionValues = new int[]{dimLookup.add(emptytoNullIfNeeded(dimValuesList.get(0)))};
       } else {

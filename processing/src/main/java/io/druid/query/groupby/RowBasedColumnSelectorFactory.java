@@ -425,9 +425,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         public double getDouble()
         {
           Number metric = row.get().getMetric(columnName);
-          if (NullHandling.sqlCompatible() && metric == null) {
-            throw new IllegalStateException("Cannot return null value as double");
-          }
+          assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).doubleValue();
         }
 
@@ -435,9 +433,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         public float getFloat()
         {
           Number metric = row.get().getMetric(columnName);
-          if (NullHandling.sqlCompatible() && metric == null) {
-            throw new IllegalStateException("Cannot return null value as float");
-          }
+          assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).floatValue();
         }
 
@@ -445,9 +441,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         public long getLong()
         {
           Number metric = row.get().getMetric(columnName);
-          if (NullHandling.sqlCompatible() && metric == null) {
-            throw new IllegalStateException("Cannot return null value as long");
-          }
+          assert NullHandling.replaceWithDefault() || metric != null;
           return DimensionHandlerUtils.nullToZero(metric).longValue();
         }
 

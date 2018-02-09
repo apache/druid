@@ -91,7 +91,7 @@ public class NilColumnValueSelector implements ColumnValueSelector
   @Override
   public boolean isNull()
   {
-    return false;
+    return true;
   }
 
   @Override
@@ -102,11 +102,6 @@ public class NilColumnValueSelector implements ColumnValueSelector
 
   private static class SqlCompatibleNilColumnValueSelector extends NilColumnValueSelector
   {
-    @Override
-    public boolean isNull()
-    {
-      return true;
-    }
 
     @Override
     public double getDouble()

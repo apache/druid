@@ -133,18 +133,21 @@ public abstract class ExprEval<T>
     @Override
     public final int asInt()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return value.intValue();
     }
 
     @Override
     public final long asLong()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return value.longValue();
     }
 
     @Override
     public final double asDouble()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return value.doubleValue();
     }
   }
@@ -246,6 +249,7 @@ public abstract class ExprEval<T>
     public final int asInt()
     {
       if (value == null) {
+        assert NullHandling.replaceWithDefault();
         return 0;
       }
 
@@ -258,6 +262,7 @@ public abstract class ExprEval<T>
     {
       // GuavaUtils.tryParseLong handles nulls, no need for special null handling here.
       final Long theLong = GuavaUtils.tryParseLong(value);
+      assert NullHandling.replaceWithDefault() || theLong != null;
       return theLong == null ? 0L : theLong;
     }
 
@@ -265,6 +270,7 @@ public abstract class ExprEval<T>
     public final double asDouble()
     {
       if (value == null) {
+        assert NullHandling.replaceWithDefault();
         return 0.0;
       }
 

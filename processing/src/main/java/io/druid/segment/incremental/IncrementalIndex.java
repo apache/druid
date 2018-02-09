@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.NonBlockingPool;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
@@ -160,19 +161,25 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             @Override
             public long getLong()
             {
-              return DimensionHandlerUtils.nullToZero(in.get().getMetric(column)).longValue();
+              Number metric = in.get().getMetric(column);
+              assert NullHandling.replaceWithDefault() || metric != null;
+              return DimensionHandlerUtils.nullToZero(metric).longValue();
             }
 
             @Override
             public float getFloat()
             {
-              return DimensionHandlerUtils.nullToZero(in.get().getMetric(column)).floatValue();
+              Number metric = in.get().getMetric(column);
+              assert NullHandling.replaceWithDefault() || metric != null;
+              return DimensionHandlerUtils.nullToZero(metric).floatValue();
             }
 
             @Override
             public double getDouble()
             {
-              return DimensionHandlerUtils.nullToZero(in.get().getMetric(column)).doubleValue();
+              Number metric = in.get().getMetric(column);
+              assert NullHandling.replaceWithDefault() || metric != null;
+              return DimensionHandlerUtils.nullToZero(metric).doubleValue();
             }
 
             @Override
@@ -1401,6 +1408,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public long getLong()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return getMetricLongValue(currEntry.getValue(), metricIndex);
     }
 
@@ -1468,6 +1476,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public float getFloat()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return getMetricFloatValue(currEntry.getValue(), metricIndex);
     }
 
@@ -1498,6 +1507,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public double getDouble()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return getMetricDoubleValue(currEntry.getValue(), metricIndex);
     }
 

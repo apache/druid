@@ -112,9 +112,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
         final Object[] dims = currEntry.get().getDims();
 
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
-          if (NullHandling.sqlCompatible()) {
-            throw new IllegalStateException("Cannot return null value as double");
-          }
+          assert NullHandling.replaceWithDefault();
           return 0.0;
         }
         return (Double) dims[dimIndex];

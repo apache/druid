@@ -28,11 +28,11 @@ import io.druid.segment.data.ReadableOffset;
 /**
  * DoublesColumn with null values.
  */
-public class DoublesColumnWithNulls extends DoublesColumn
+class DoublesColumnWithNulls extends DoublesColumn
 {
   private final ImmutableBitmap nullValueBitmap;
 
-  public DoublesColumnWithNulls(ColumnarDoubles columnarDoubles, ImmutableBitmap nullValueBitmap)
+  DoublesColumnWithNulls(ColumnarDoubles columnarDoubles, ImmutableBitmap nullValueBitmap)
   {
     super(columnarDoubles);
     this.nullValueBitmap = nullValueBitmap;
@@ -55,5 +55,26 @@ public class DoublesColumnWithNulls extends DoublesColumn
   {
     super.inspectRuntimeShape(inspector);
     inspector.visit("nullValueBitmap", nullValueBitmap);
+  }
+
+  @Override
+  public float getFloatSingleValueRow(int rowNum)
+  {
+    assert !isNull(rowNum);
+    return super.getFloatSingleValueRow(rowNum);
+  }
+
+  @Override
+  public long getLongSingleValueRow(int rowNum)
+  {
+    assert !isNull(rowNum);
+    return super.getLongSingleValueRow(rowNum);
+  }
+
+  @Override
+  public double getDoubleSingleValueRow(int rowNum)
+  {
+    assert !isNull(rowNum);
+    return super.getLongSingleValueRow(rowNum);
   }
 }
