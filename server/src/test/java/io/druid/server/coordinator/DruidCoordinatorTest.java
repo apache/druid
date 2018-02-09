@@ -110,11 +110,18 @@ public class DruidCoordinatorTest extends CuratorTestBase
     configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
         configManager.watch(
-            EasyMock.anyString(),
+            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
     ).andReturn(new AtomicReference(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference(CoordinatorCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
     setupServerAndCurator();
     curator.start();

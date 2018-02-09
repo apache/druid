@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.RoaringBitmapFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -1920,7 +1919,7 @@ public class IndexMergerTestBase
   @Test
   public void testDictIdSeeker() throws Exception
   {
-    IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Ints.BYTES).asIntBuffer();
+    IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Integer.BYTES).asIntBuffer();
     dimConversions.put(0);
     dimConversions.put(2);
     dimConversions.put(4);

@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
@@ -385,7 +384,7 @@ public class GroupByQueryEngine
         cursor.advance();
       }
       while (!cursor.isDone() && rowUpdater.getNumRows() < maxIntermediateRows) {
-        ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Ints.BYTES);
+        ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Integer.BYTES);
 
         unprocessedKeys = rowUpdater.updateValues(key, dimensions);
         if (unprocessedKeys != null) {

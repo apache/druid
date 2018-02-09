@@ -31,10 +31,10 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
+import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.io.Closeable;
@@ -215,7 +215,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     size = theBuffer.getInt();
 
     int indexOffset = theBuffer.position();
-    int valuesOffset = theBuffer.position() + size * Ints.BYTES;
+    int valuesOffset = theBuffer.position() + size * Integer.BYTES;
 
     buffer.position(valuesOffset);
     // Ensure the value buffer's limit equals to capacity.
@@ -493,7 +493,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
   {
     Iterator<T> objects = objectsIterable.iterator();
     if (!objects.hasNext()) {
-      final ByteBuffer buffer = ByteBuffer.allocate(Ints.BYTES).putInt(0);
+      final ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES).putInt(0);
       buffer.flip();
       return new GenericIndexed<>(buffer, resultObjectStrategy, allowReverseLookup);
     }
@@ -532,7 +532,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
       throw new RuntimeException(e);
     }
 
-    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(Ints.BYTES + headerOut.size() + valuesOut.size()));
+    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(Integer.BYTES + headerOut.size() + valuesOut.size()));
     theBuffer.putInt(count);
     headerOut.writeTo(theBuffer);
     valuesOut.writeTo(theBuffer);
@@ -554,12 +554,12 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     final int endOffset;
 
     if (index == 0) {
-      startOffset = Ints.BYTES;
+      startOffset = Integer.BYTES;
       endOffset = headerBuffer.getInt(0);
     } else {
-      int headerPosition = (index - 1) * Ints.BYTES;
-      startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
-      endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+      int headerPosition = (index - 1) * Integer.BYTES;
+      startOffset = headerBuffer.getInt(headerPosition) + Integer.BYTES;
+      endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
     }
     return copyBufferAndGet(firstValueBuffer, startOffset, endOffset);
   }
@@ -581,9 +581,9 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
           startOffset = 4;
           endOffset = headerBuffer.getInt(0);
         } else {
-          int headerPosition = (index - 1) * Ints.BYTES;
-          startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
-          endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+          int headerPosition = (index - 1) * Integer.BYTES;
+          startOffset = headerBuffer.getInt(headerPosition) + Integer.BYTES;
+          endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
         }
         return bufferedIndexedGet(copyBuffer, startOffset, endOffset);
       }
@@ -656,13 +656,13 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
     int relativePositionOfIndex = index & relativeIndexMask;
     if (relativePositionOfIndex == 0) {
-      int headerPosition = index * Ints.BYTES;
-      startOffset = Ints.BYTES;
+      int headerPosition = index * Integer.BYTES;
+      startOffset = Integer.BYTES;
       endOffset = headerBuffer.getInt(headerPosition);
     } else {
-      int headerPosition = (index - 1) * Ints.BYTES;
-      startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
-      endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+      int headerPosition = (index - 1) * Integer.BYTES;
+      startOffset = headerBuffer.getInt(headerPosition) + Integer.BYTES;
+      endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
     }
     int fileNum = index >> logBaseTwoOfElementsPerValueFile;
     return copyBufferAndGet(valueBuffers[fileNum], startOffset, endOffset);
@@ -687,13 +687,13 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
         int relativePositionOfIndex = index & relativeIndexMask;
         if (relativePositionOfIndex == 0) {
-          int headerPosition = index * Ints.BYTES;
+          int headerPosition = index * Integer.BYTES;
           startOffset = 4;
           endOffset = headerBuffer.getInt(headerPosition);
         } else {
-          int headerPosition = (index - 1) * Ints.BYTES;
-          startOffset = headerBuffer.getInt(headerPosition) + Ints.BYTES;
-          endOffset = headerBuffer.getInt(headerPosition + Ints.BYTES);
+          int headerPosition = (index - 1) * Integer.BYTES;
+          startOffset = headerBuffer.getInt(headerPosition) + Integer.BYTES;
+          endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
         }
         int fileNum = index >> logBaseTwoOfElementsPerValueFile;
         return bufferedIndexedGet(copyValueBuffers[fileNum], startOffset, endOffset);

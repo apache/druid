@@ -19,7 +19,6 @@
 
 package io.druid.collections.bitmap;
 
-import com.google.common.primitives.Ints;
 import io.druid.extendedset.intset.ConciseSet;
 import io.druid.extendedset.intset.ImmutableConciseSet;
 import org.roaringbitmap.IntIterator;
@@ -77,7 +76,7 @@ public class WrappedConciseBitmap implements MutableBitmap
   @Override
   public int getSizeInBytes()
   {
-    return bitmap.getWords().length * Ints.BYTES;
+    return bitmap.getWords().length * Integer.BYTES;
   }
 
   @Override

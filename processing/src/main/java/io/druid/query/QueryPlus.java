@@ -28,8 +28,7 @@ import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
- * An immutable composite object of {@link Query} + extra stuff needed in {@link QueryRunner}s. This "extra stuff"
- * is only {@link QueryMetrics} yet.
+ * An immutable composite object of {@link Query} + extra stuff needed in {@link QueryRunner}s.
  */
 @PublicApi
 public final class QueryPlus<T>
@@ -41,16 +40,18 @@ public final class QueryPlus<T>
   public static <T> QueryPlus<T> wrap(Query<T> query)
   {
     Preconditions.checkNotNull(query);
-    return new QueryPlus<>(query, null);
+    return new QueryPlus<>(query, null, null);
   }
 
   private final Query<T> query;
   private final QueryMetrics<?> queryMetrics;
+  private final String identity;
 
-  private QueryPlus(Query<T> query, QueryMetrics<?> queryMetrics)
+  private QueryPlus(Query<T> query, QueryMetrics<?> queryMetrics, String identity)
   {
     this.query = query;
     this.queryMetrics = queryMetrics;
+    this.identity = identity;
   }
 
   public Query<T> getQuery()
@@ -62,6 +63,15 @@ public final class QueryPlus<T>
   public QueryMetrics<?> getQueryMetrics()
   {
     return queryMetrics;
+  }
+
+  /**
+   * Returns the same QueryPlus object with the identity replaced. This new identity will affect future calls to
+   * {@link #withoutQueryMetrics()} but will not affect any currently-existing queryMetrics.
+   */
+  public QueryPlus<T> withIdentity(String identity)
+  {
+    return new QueryPlus<>(query, queryMetrics, identity);
   }
 
   /**
@@ -79,7 +89,13 @@ public final class QueryPlus<T>
     if (queryMetrics != null) {
       return this;
     } else {
-      return new QueryPlus<>(query, ((QueryToolChest) queryToolChest).makeMetrics(query));
+      final QueryMetrics metrics = ((QueryToolChest) queryToolChest).makeMetrics(query);
+
+      if (identity != null) {
+        metrics.identity(identity);
+      }
+
+      return new QueryPlus<>(query, metrics, identity);
     }
   }
 
@@ -104,7 +120,7 @@ public final class QueryPlus<T>
     if (queryMetrics == null) {
       return this;
     } else {
-      return new QueryPlus<>(query, null);
+      return new QueryPlus<>(query, null, identity);
     }
   }
 
@@ -113,7 +129,7 @@ public final class QueryPlus<T>
    */
   public QueryPlus<T> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    return new QueryPlus<>(query.withQuerySegmentSpec(spec), queryMetrics);
+    return new QueryPlus<>(query.withQuerySegmentSpec(spec), queryMetrics, identity);
   }
 
   /**
@@ -121,7 +137,7 @@ public final class QueryPlus<T>
    */
   public <U> QueryPlus<U> withQuery(Query<U> replacementQuery)
   {
-    return new QueryPlus<>(replacementQuery, queryMetrics);
+    return new QueryPlus<>(replacementQuery, queryMetrics, identity);
   }
 
   public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)

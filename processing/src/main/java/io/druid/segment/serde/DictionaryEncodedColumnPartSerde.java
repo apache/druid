@@ -213,7 +213,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             {
               long size = 1 + // version
                           (version.compareTo(VERSION.COMPRESSED) >= 0
-                           ? Ints.BYTES
+                           ? Integer.BYTES
                            : 0); // flag if version >= compressed
               if (dictionaryWriter != null) {
                 size += dictionaryWriter.getSerializedSize();

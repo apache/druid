@@ -85,11 +85,24 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
-      public String getKafkaHost()
+      public String getZookeeperInternalHosts()
       {
-        return dockerIp + ":9092";
+        // docker container name
+        return "druid-zookeeper-kafka:2181";
       }
 
+      @Override
+      public String getKafkaHost()
+      {
+        return dockerIp + ":9093";
+      }
+
+      @Override
+      public String getKafkaInternalHost()
+      {
+        // docker container name
+        return "druid-zookeeper-kafka:9092";
+      }
 
       @Override
       public String getProperty(String prop)

@@ -21,7 +21,6 @@ package io.druid.segment.serde;
 
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Longs;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
@@ -55,8 +54,11 @@ public class LargeColumnSupportedComplexColumnSerializerTest
     HyperUniquesSerdeForTest serde = new HyperUniquesSerdeForTest(Hashing.murmur3_128());
     int[] cases = {1000, 5000, 10000, 20000};
     int[] columnSizes = {
-        Integer.MAX_VALUE, Integer.MAX_VALUE / 2, Integer.MAX_VALUE / 4, 5000 * Longs.BYTES,
-        2500 * Longs.BYTES
+        Integer.MAX_VALUE,
+        Integer.MAX_VALUE / 2,
+        Integer.MAX_VALUE / 4,
+        5000 * Long.BYTES,
+        2500 * Long.BYTES
     };
 
     for (int columnSize : columnSizes) {

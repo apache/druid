@@ -22,7 +22,6 @@ package io.druid.segment.data;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -200,7 +199,7 @@ public class CompressedColumnarIntsSerializerTest
             segmentWriteOutMedium,
             "test",
             compressionStrategy,
-            Longs.BYTES * 10000
+            Long.BYTES * 10000
         )
     );
 

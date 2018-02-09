@@ -21,7 +21,6 @@ package io.druid.collections.spatial;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.search.Bound;
@@ -67,7 +66,7 @@ public final class ImmutableRTree
     Preconditions.checkArgument(data.get(initPosition) == VERSION, "Mismatching versions");
     this.numDims = data.getInt(1 + initPosition) & 0x7FFF;
     this.data = data;
-    this.root = new ImmutableNode(numDims, initPosition, 1 + Ints.BYTES, data, bitmapFactory);
+    this.root = new ImmutableNode(numDims, initPosition, 1 + Integer.BYTES, data, bitmapFactory);
   }
 
   public static ImmutableRTree newImmutableFromMutable(RTree rTree)
@@ -87,7 +86,7 @@ public final class ImmutableRTree
 
   private static int calcNumBytes(RTree tree)
   {
-    int total = 1 + Ints.BYTES; // VERSION and numDims
+    int total = 1 + Integer.BYTES; // VERSION and numDims
 
     total += calcNodeBytes(tree.getRoot());
 

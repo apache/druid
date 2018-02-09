@@ -19,7 +19,6 @@
 
 package io.druid.client.cache;
 
-import com.google.common.primitives.Ints;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -56,7 +55,7 @@ public class LZ4Transcoder extends SerializingTranscoder
 
     getLogger().debug("Compressed %d bytes to %d", in.length, compressedLength);
 
-    return ByteBuffer.allocate(Ints.BYTES + compressedLength)
+    return ByteBuffer.allocate(Integer.BYTES + compressedLength)
                      .putInt(in.length)
                      .put(out, 0, compressedLength)
                      .array();
@@ -72,7 +71,7 @@ public class LZ4Transcoder extends SerializingTranscoder
       int size = ByteBuffer.wrap(in).getInt();
 
       out = new byte[size];
-      decompressor.decompress(in, Ints.BYTES, out, 0, out.length);
+      decompressor.decompress(in, Integer.BYTES, out, 0, out.length);
     }
     return out == null ? null : out;
   }

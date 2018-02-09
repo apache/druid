@@ -19,8 +19,6 @@
 
 package io.druid.collections.spatial;
 
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 
@@ -32,8 +30,8 @@ import java.util.Iterator;
  * Header
  * 0 to 1 : the MSB is a boolean flag for isLeaf, the next 15 bits represent the number of children of a node
  * Body
- * 2 to 2 + numDims * Floats.BYTES : minCoordinates
- * 2 + numDims * Floats.BYTES to 2 + 2 * numDims * Floats.BYTES : maxCoordinates
+ * 2 to 2 + numDims * Float.BYTES : minCoordinates
+ * 2 + numDims * Float.BYTES to 2 + 2 * numDims * Float.BYTES : maxCoordinates
  * concise set
  * rest (children) : Every 4 bytes is storing an offset representing the position of a child.
  *
@@ -70,13 +68,13 @@ public class ImmutableNode
     short header = data.getShort(initialOffset + offsetFromInitial);
     this.isLeaf = (header & 0x8000) != 0;
     this.numChildren = (short) (header & 0x7FFF);
-    final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Floats.BYTES;
+    final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Float.BYTES;
     int bitmapSize = data.getInt(sizePosition);
     this.childrenOffset = initialOffset
                           + offsetFromInitial
                           + HEADER_NUM_BYTES
-                          + 2 * numDims * Floats.BYTES
-                          + Ints.BYTES
+                          + 2 * numDims * Float.BYTES
+                          + Integer.BYTES
                           + bitmapSize;
 
     this.data = data;
@@ -98,13 +96,13 @@ public class ImmutableNode
     this.offsetFromInitial = offsetFromInitial;
     this.numChildren = numChildren;
     this.isLeaf = leaf;
-    final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Floats.BYTES;
+    final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Float.BYTES;
     int bitmapSize = data.getInt(sizePosition);
     this.childrenOffset = initialOffset
                           + offsetFromInitial
                           + HEADER_NUM_BYTES
-                          + 2 * numDims * Floats.BYTES
-                          + Ints.BYTES
+                          + 2 * numDims * Float.BYTES
+                          + Integer.BYTES
                           + bitmapSize;
 
     this.data = data;
@@ -142,14 +140,14 @@ public class ImmutableNode
 
   public float[] getMaxCoordinates()
   {
-    return getCoords(initialOffset + offsetFromInitial + HEADER_NUM_BYTES + numDims * Floats.BYTES);
+    return getCoords(initialOffset + offsetFromInitial + HEADER_NUM_BYTES + numDims * Float.BYTES);
   }
 
   public ImmutableBitmap getImmutableBitmap()
   {
-    final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Floats.BYTES;
+    final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Float.BYTES;
     int numBytes = data.getInt(sizePosition);
-    data.position(sizePosition + Ints.BYTES);
+    data.position(sizePosition + Integer.BYTES);
     ByteBuffer tmpBuffer = data.slice();
     tmpBuffer.limit(numBytes);
     return bitmapFactory.mapImmutableBitmap(tmpBuffer.asReadOnlyBuffer());
@@ -180,7 +178,7 @@ public class ImmutableNode
               return new ImmutablePoint(
                   numDims,
                   initialOffset,
-                  data.getInt(childrenOffset + (count++) * Ints.BYTES),
+                  data.getInt(childrenOffset + (count++) * Integer.BYTES),
                   data,
                   bitmapFactory
               );
@@ -188,7 +186,7 @@ public class ImmutableNode
             return new ImmutableNode(
                 numDims,
                 initialOffset,
-                data.getInt(childrenOffset + (count++) * Ints.BYTES),
+                data.getInt(childrenOffset + (count++) * Integer.BYTES),
                 data,
                 bitmapFactory
             );

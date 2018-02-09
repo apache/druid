@@ -45,7 +45,7 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final int numBytes;
 
-  private final ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
+  private final ByteBuffer helperBuffer = ByteBuffer.allocate(Integer.BYTES);
   private WriteOutBytes valuesOut = null;
   private boolean bufPaddingWritten = false;
 
@@ -68,7 +68,7 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
       throw new IllegalStateException("written out already");
     }
     helperBuffer.putInt(0, val);
-    valuesOut.write(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
+    valuesOut.write(helperBuffer.array(), Integer.BYTES - numBytes, numBytes);
   }
 
   @Override
@@ -89,7 +89,7 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
   private void writeBufPadding() throws IOException
   {
     if (!bufPaddingWritten) {
-      byte[] bufPadding = new byte[Ints.BYTES - numBytes];
+      byte[] bufPadding = new byte[Integer.BYTES - numBytes];
       valuesOut.write(bufPadding);
       bufPaddingWritten = true;
     }
