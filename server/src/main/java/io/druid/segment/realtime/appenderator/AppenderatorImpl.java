@@ -37,8 +37,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
@@ -52,6 +50,8 @@ import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -340,35 +340,37 @@ public class AppenderatorImpl implements Appenderator
     // Drop commit metadata, then abandon all segments.
 
     try {
-      final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
-          new Callable<Object>()
-          {
-            @Override
-            public Object call() throws Exception
+      if (persistExecutor != null) {
+        final ListenableFuture<?> uncommitFuture = persistExecutor.submit(
+            new Callable<Object>()
             {
-              try {
-                commitLock.lock();
-                objectMapper.writeValue(computeCommitFile(), Committed.nil());
+              @Override
+              public Object call() throws Exception
+              {
+                try {
+                  commitLock.lock();
+                  objectMapper.writeValue(computeCommitFile(), Committed.nil());
+                }
+                finally {
+                  commitLock.unlock();
+                }
+                return null;
               }
-              finally {
-                commitLock.unlock();
-              }
-              return null;
             }
-          }
-      );
+        );
 
-      // Await uncommit.
-      uncommitFuture.get();
+        // Await uncommit.
+        uncommitFuture.get();
 
-      // Drop everything.
-      final List<ListenableFuture<?>> futures = Lists.newArrayList();
-      for (Map.Entry<SegmentIdentifier, Sink> entry : sinks.entrySet()) {
-        futures.add(abandonSegment(entry.getKey(), entry.getValue(), true));
+        // Drop everything.
+        final List<ListenableFuture<?>> futures = Lists.newArrayList();
+        for (Map.Entry<SegmentIdentifier, Sink> entry : sinks.entrySet()) {
+          futures.add(abandonSegment(entry.getKey(), entry.getValue(), true));
+        }
+
+        // Await dropping.
+        Futures.allAsList(futures).get();
       }
-
-      // Await dropping.
-      Futures.allAsList(futures).get();
     }
     catch (ExecutionException e) {
       throw Throwables.propagate(e);
@@ -709,6 +711,9 @@ public class AppenderatorImpl implements Appenderator
           intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
           "intermediateTempExecutor not terminated"
       );
+      persistExecutor = null;
+      pushExecutor = null;
+      intermediateTempExecutor = null;
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -757,6 +762,8 @@ public class AppenderatorImpl implements Appenderator
           intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
           "intermediateTempExecutor not terminated"
       );
+      persistExecutor = null;
+      intermediateTempExecutor = null;
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
