@@ -697,6 +697,18 @@ public class AppenderatorImpl implements Appenderator
 
     try {
       shutdownExecutors();
+      Preconditions.checkState(
+          persistExecutor == null || persistExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "persistExecutor not terminated"
+      );
+      Preconditions.checkState(
+          pushExecutor == null || pushExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "pushExecutor not terminated"
+      );
+      Preconditions.checkState(
+          intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "intermediateTempExecutor not terminated"
+      );
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -736,6 +748,15 @@ public class AppenderatorImpl implements Appenderator
     }
     try {
       shutdownExecutors();
+      // We don't wait for pushExecutor to be terminated. See Javadoc for more details.
+      Preconditions.checkState(
+          persistExecutor == null || persistExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "persistExecutor not terminated"
+      );
+      Preconditions.checkState(
+          intermediateTempExecutor == null || intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
+          "intermediateTempExecutor not terminated"
+      );
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -808,7 +829,7 @@ public class AppenderatorImpl implements Appenderator
     }
   }
 
-  private void shutdownExecutors() throws InterruptedException
+  private void shutdownExecutors()
   {
     if (persistExecutor != null) {
       persistExecutor.shutdownNow();
@@ -818,30 +839,6 @@ public class AppenderatorImpl implements Appenderator
     }
     if (intermediateTempExecutor != null) {
       intermediateTempExecutor.shutdownNow();
-    }
-
-    if (persistExecutor != null) {
-      Preconditions.checkState(
-          persistExecutor.awaitTermination(365, TimeUnit.DAYS),
-          "persistExecutor not terminated"
-      );
-      persistExecutor = null;
-    }
-
-    if (pushExecutor != null) {
-      Preconditions.checkState(
-          pushExecutor.awaitTermination(365, TimeUnit.DAYS),
-          "pushExecutor not terminated"
-      );
-      pushExecutor = null;
-    }
-
-    if (intermediateTempExecutor != null) {
-      Preconditions.checkState(
-          intermediateTempExecutor.awaitTermination(365, TimeUnit.DAYS),
-          "intermediateTempExecutor not terminated"
-      );
-      intermediateTempExecutor = null;
     }
   }
 
