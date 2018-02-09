@@ -19,7 +19,6 @@
 
 package io.druid.client.selector;
 
-import io.druid.java.util.common.RE;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -69,18 +68,16 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     synchronized (this) {
       this.segment.set(segment);
       Set<QueryableDruidServer> priorityServers;
-      if (server.getServer().getType() == ServerType.REALTIME) {
-        priorityServers = realtimeServers.computeIfAbsent(
-            server.getServer().getPriority(),
-            p -> new HashSet<>()
-        );
-      } else if (server.getServer().getType() == ServerType.HISTORICAL) {
+      if (server.getServer().getType() == ServerType.HISTORICAL) {
         priorityServers = historicalServers.computeIfAbsent(
             server.getServer().getPriority(),
             p -> new HashSet<>()
         );
       } else {
-        throw new RE("Server type [%s] is unsupported for server[%s]", server.getServer().getType(), server);
+        priorityServers = realtimeServers.computeIfAbsent(
+            server.getServer().getPriority(),
+            p -> new HashSet<>()
+        );
       }
       priorityServers.add(server);
     }
@@ -92,14 +89,12 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers;
       Set<QueryableDruidServer> priorityServers;
       int priority = server.getServer().getPriority();
-      if (server.getServer().getType() == ServerType.REALTIME) {
-        servers = realtimeServers;
-        priorityServers = realtimeServers.get(priority);
-      } else if (server.getServer().getType() == ServerType.HISTORICAL) {
+      if (server.getServer().getType() == ServerType.HISTORICAL) {
         servers = historicalServers;
         priorityServers = historicalServers.get(priority);
       } else {
-        throw new RE("Server type [%s] is unsupported for server[%s]", server.getServer().getType(), server);
+        servers = realtimeServers;
+        priorityServers = realtimeServers.get(priority);
       }
 
       if (priorityServers == null) {
