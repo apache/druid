@@ -412,7 +412,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       int size = endOffset - startOffset;
-      if (size == 0 && copyValueBuffer.get(startOffset - Ints.BYTES) == NULL_VALUE_SIZE_MARKER) {
+      if (size == 0 && copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER) {
         return null;
       }
       lastReadSize = size;
@@ -562,7 +562,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
         final int endOffset;
 
         if (index == 0) {
-          startOffset = Ints.BYTES;
+          startOffset = Integer.BYTES;
           endOffset = headerBuffer.getInt(0);
         } else {
           int headerPosition = (index - 1) * Integer.BYTES;
