@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -40,6 +41,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -159,11 +161,35 @@ public class DefaultLimitSpecTest
     Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
         ImmutableList.<DimensionSpec>of(),
         ImmutableList.<AggregatorFactory>of(),
-        ImmutableList.<PostAggregator>of()
+        ImmutableList.<PostAggregator>of(),
+        Granularities.NONE,
+        false
     );
 
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
+        limitFn.apply(testRowsSequence).toList()
+    );
+  }
+
+  @Test
+  public void testWithSortByDimsFirst()
+  {
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC)),
+        2
+    );
+
+    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
+        ImmutableList.of(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE)),
+        ImmutableList.of(),
+        ImmutableList.of(),
+        Granularities.NONE,
+        true
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
         limitFn.apply(testRowsSequence).toList()
     );
   }
@@ -179,7 +205,9 @@ public class DefaultLimitSpecTest
     Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
         ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("k1", "k1")),
         ImmutableList.<AggregatorFactory>of(),
-        ImmutableList.<PostAggregator>of()
+        ImmutableList.<PostAggregator>of(),
+        Granularities.NONE,
+        false
     );
 
     // Note: This test encodes the fact that limitSpec sorts numbers like strings; we might want to change this
@@ -209,7 +237,9 @@ public class DefaultLimitSpecTest
         ),
         ImmutableList.<PostAggregator>of(
             new ConstantPostAggregator("k3", 1L)
-        )
+        ),
+        Granularities.NONE,
+        false
     );
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
@@ -226,7 +256,9 @@ public class DefaultLimitSpecTest
         ),
         ImmutableList.<PostAggregator>of(
             new ConstantPostAggregator("k3", 1L)
-        )
+        ),
+        Granularities.NONE,
+        false
     );
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
@@ -249,7 +281,9 @@ public class DefaultLimitSpecTest
                     new ConstantPostAggregator("x", 1),
                     new ConstantPostAggregator("y", 1))
             )
-        )
+        ),
+        Granularities.NONE,
+        false
     );
     Assert.assertEquals(
         (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
@@ -260,7 +294,9 @@ public class DefaultLimitSpecTest
     limitFn = limitSpec.build(
         ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("k1", "k1")),
         ImmutableList.<AggregatorFactory>of(new LongSumAggregatorFactory("k2", "k2")),
-        ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE))
+        ImmutableList.<PostAggregator>of(new ExpressionPostAggregator("k1", "1 + 1", null, TestExprMacroTable.INSTANCE)),
+        Granularities.NONE,
+        false
     );
     Assert.assertEquals(
         (List) ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
