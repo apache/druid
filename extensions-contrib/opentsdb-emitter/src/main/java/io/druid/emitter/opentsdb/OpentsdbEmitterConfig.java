@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 public class OpentsdbEmitterConfig
 {
   private static final int DEFAULT_BATCH_SIZE = 100;
-  private static final int DEFAULT_CONNECTION_TIMEOUT = 2000;
-  private static final int DEFAULT_READ_TIMEOUT = 2000;
+  private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 2000;
+  private static final int DEFAULT_READ_TIMEOUT_MILLIS = 2000;
 
   @JsonProperty
   private final String host;
@@ -60,9 +60,10 @@ public class OpentsdbEmitterConfig
     this.host = Preconditions.checkNotNull(host, "host can not be null.");
     this.port = Preconditions.checkNotNull(port, "port can not be null");
     this.connectionTimeout = (connectionTimeout == null || connectionTimeout < 0)
-                             ? DEFAULT_CONNECTION_TIMEOUT
+                             ? DEFAULT_CONNECTION_TIMEOUT_MILLIS
                              : connectionTimeout;
-    this.readTimeout = (readTimeout == null || readTimeout < 0) ? DEFAULT_READ_TIMEOUT : readTimeout;
+    this.readTimeout =
+        (readTimeout == null || readTimeout < 0) ? DEFAULT_READ_TIMEOUT_MILLIS : readTimeout;
     this.batchSize = (batchSize == null || batchSize < 0) ? DEFAULT_BATCH_SIZE : batchSize;
     this.metricMapPath = metricMapPath;
   }
@@ -94,7 +95,8 @@ public class OpentsdbEmitterConfig
     if (batchSize != that.batchSize) {
       return false;
     }
-    return metricMapPath != null ? metricMapPath.equals(that.metricMapPath) : that.metricMapPath == null;
+    return metricMapPath != null ? metricMapPath.equals(that.metricMapPath)
+                                 : that.metricMapPath == null;
   }
 
   @Override
