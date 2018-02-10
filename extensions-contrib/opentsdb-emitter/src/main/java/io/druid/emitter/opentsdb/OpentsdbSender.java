@@ -25,8 +25,9 @@ import com.sun.jersey.api.client.WebResource;
 import io.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.core.MediaType;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class OpentsdbSender
 {
@@ -36,15 +37,16 @@ public class OpentsdbSender
   private static final String PATH = "/api/put";
   private static final Logger log = new Logger(OpentsdbSender.class);
 
+  private final AtomicLong countLostEvents = new AtomicLong(0);
   private final int batchSize;
-  private final List<OpentsdbEvent> events;
+  private final BlockingQueue<OpentsdbEvent> events;
   private final Client client;
   private final WebResource webResource;
 
-  public OpentsdbSender(String host, int port, int connectionTimeout, int readTimeout, int batchSize)
+  public OpentsdbSender(String host, int port, int connectionTimeout, int readTimeout, int batchSize, int maxQueueSize)
   {
     this.batchSize = batchSize;
-    events = new ArrayList<>(batchSize);
+    events = new ArrayBlockingQueue<>(maxQueueSize);
 
     client = Client.create();
     client.setConnectTimeout(connectionTimeout);
@@ -54,7 +56,14 @@ public class OpentsdbSender
 
   public void send(OpentsdbEvent event)
   {
-    events.add(event);
+    if (!events.offer(event)) {
+      if (countLostEvents.getAndIncrement() % 1000 == 0) {
+        log.error(
+            "Lost total of [%s] events because of emitter queue is full. Please increase the capacity.",
+            countLostEvents.get()
+        );
+      }
+    }
     if (events.size() >= batchSize) {
       sendEvents();
     }

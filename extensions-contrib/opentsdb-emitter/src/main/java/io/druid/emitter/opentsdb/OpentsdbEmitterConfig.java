@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 public class OpentsdbEmitterConfig
 {
   private static final int DEFAULT_BATCH_SIZE = 100;
+  private static final int DEFAULT_MAX_QUEUE_SIZE = 1000;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 2000;
   private static final int DEFAULT_READ_TIMEOUT_MILLIS = 2000;
 
@@ -45,6 +46,9 @@ public class OpentsdbEmitterConfig
   private final int batchSize;
 
   @JsonProperty
+  private final int maxQueueSize;
+
+  @JsonProperty
   private final String metricMapPath;
 
   @JsonCreator
@@ -54,6 +58,7 @@ public class OpentsdbEmitterConfig
       @JsonProperty("connectionTimeout") Integer connectionTimeout,
       @JsonProperty("readTimeout") Integer readTimeout,
       @JsonProperty("batchSize") Integer batchSize,
+      @JsonProperty("maxQueueSize") Integer maxQueueSize,
       @JsonProperty("metricMapPath") String metricMapPath
   )
   {
@@ -65,6 +70,7 @@ public class OpentsdbEmitterConfig
     this.readTimeout =
         (readTimeout == null || readTimeout < 0) ? DEFAULT_READ_TIMEOUT_MILLIS : readTimeout;
     this.batchSize = (batchSize == null || batchSize < 0) ? DEFAULT_BATCH_SIZE : batchSize;
+    this.maxQueueSize = (maxQueueSize == null || maxQueueSize < 0) ? DEFAULT_MAX_QUEUE_SIZE : maxQueueSize;
     this.metricMapPath = metricMapPath;
   }
 
@@ -95,6 +101,9 @@ public class OpentsdbEmitterConfig
     if (batchSize != that.batchSize) {
       return false;
     }
+    if (maxQueueSize != that.maxQueueSize) {
+      return false;
+    }
     return metricMapPath != null ? metricMapPath.equals(that.metricMapPath)
                                  : that.metricMapPath == null;
   }
@@ -107,6 +116,7 @@ public class OpentsdbEmitterConfig
     result = 31 * result + connectionTimeout;
     result = 31 * result + readTimeout;
     result = 31 * result + batchSize;
+    result = 31 * result + maxQueueSize;
     result = 31 * result + (metricMapPath != null ? metricMapPath.hashCode() : 0);
     return result;
   }
@@ -134,6 +144,11 @@ public class OpentsdbEmitterConfig
   public int getBatchSize()
   {
     return batchSize;
+  }
+
+  public int getMaxQueueSize()
+  {
+    return maxQueueSize;
   }
 
   public String getMetricMapPath()
