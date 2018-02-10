@@ -20,10 +20,10 @@
 package io.druid.emitter.opentsdb;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.core.Emitter;
 import io.druid.java.util.emitter.core.Event;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
-import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 
@@ -41,7 +41,8 @@ public class OpentsdbEmitter implements Emitter
         config.getPort(),
         config.getConnectionTimeout(),
         config.getReadTimeout(),
-        config.getBatchSize()
+        config.getBatchSize(),
+        config.getMaxQueueSize()
     );
     this.converter = new EventConverter(mapper, config.getMetricMapPath());
   }
