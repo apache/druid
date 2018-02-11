@@ -21,7 +21,9 @@ package io.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.Initialization;
@@ -39,6 +41,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  */
@@ -46,12 +49,20 @@ import java.util.Properties;
 public class StatusResource
 {
 
+  private static final String hiddenPropertyLabel = "druid.hidden.properties";
+
+  private final Set<String> hiddenProperties = Sets.newHashSet();
+
   private final Properties properties;
 
   @Inject
   public StatusResource(Properties properties)
   {
     this.properties = properties;
+    String hiddenPropertiesValues = properties.getProperty(hiddenPropertyLabel);
+    if (org.apache.commons.lang.StringUtils.isNotBlank(hiddenPropertiesValues)) {
+      Splitter.on(",").split(hiddenPropertiesValues).forEach(hiddenProperties::add);
+    }
   }
 
   @GET
@@ -60,7 +71,8 @@ public class StatusResource
   @Produces(MediaType.APPLICATION_JSON)
   public Map<String, String> getProperties()
   {
-    return Maps.fromProperties(properties);
+    Map<String, String> propertiesMap = Maps.fromProperties(properties);
+    return Maps.filterEntries(propertiesMap, (entry) -> !hiddenProperties.contains(entry.getKey()));
   }
 
   @GET
