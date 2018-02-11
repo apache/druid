@@ -22,13 +22,11 @@ package io.druid.query.cache;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
 import io.druid.guice.annotations.PublicApi;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.Cacheable;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -88,7 +86,7 @@ public class CacheKeyBuilder
 
   private static byte[] floatArrayToByteArray(float[] input)
   {
-    final ByteBuffer buffer = ByteBuffer.allocate(Floats.BYTES * input.length);
+    final ByteBuffer buffer = ByteBuffer.allocate(Float.BYTES * input.length);
     buffer.asFloatBuffer().put(input);
     return buffer.array();
   }
@@ -160,7 +158,7 @@ public class CacheKeyBuilder
       }
 
       final Iterator<byte[]> iterator = byteArrayList.iterator();
-      final int bufSize = Ints.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
+      final int bufSize = Integer.BYTES + separator.length * (byteArrayList.size() - 1) + totalByteLength;
       final ByteBuffer buffer = ByteBuffer.allocate(bufSize)
                                           .putInt(byteArrayList.size())
                                           .put(iterator.next());
@@ -245,13 +243,13 @@ public class CacheKeyBuilder
 
   public CacheKeyBuilder appendFloat(float input)
   {
-    appendItem(FLOAT_KEY, ByteBuffer.allocate(Floats.BYTES).putFloat(input).array());
+    appendItem(FLOAT_KEY, ByteBuffer.allocate(Float.BYTES).putFloat(input).array());
     return this;
   }
 
   public CacheKeyBuilder appendDouble(double input)
   {
-    appendItem(DOUBLE_KEY, ByteBuffer.allocate(Doubles.BYTES).putDouble(input).array());
+    appendItem(DOUBLE_KEY, ByteBuffer.allocate(Double.BYTES).putDouble(input).array());
     return this;
   }
 

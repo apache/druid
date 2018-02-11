@@ -21,14 +21,14 @@ package io.druid.server.emitter;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.HttpPostEmitter;
-import com.metamx.emitter.core.ParametrizedUriEmitter;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.AbstractMonitor;
-import com.metamx.metrics.FeedDefiningMonitor;
-import com.metamx.metrics.HttpPostEmitterMonitor;
-import com.metamx.metrics.ParametrizedUriEmitterMonitor;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.HttpPostEmitter;
+import io.druid.java.util.emitter.core.ParametrizedUriEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.AbstractMonitor;
+import io.druid.java.util.metrics.FeedDefiningMonitor;
+import io.druid.java.util.metrics.HttpPostEmitterMonitor;
+import io.druid.java.util.metrics.ParametrizedUriEmitterMonitor;
 
 /**
  * Able to monitor {@link HttpPostEmitter} or {@link ParametrizedUriEmitter}, which is based on the former.

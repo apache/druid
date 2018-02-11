@@ -22,7 +22,7 @@ package io.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.java.util.common.CompressionUtils;

@@ -39,10 +39,10 @@ import io.druid.segment.data.ColumnarIntsSerializer;
 import io.druid.segment.data.ColumnarMultiInts;
 import io.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import io.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
-import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ImmutableRTreeObjectStrategy;
+import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import io.druid.segment.data.VSizeColumnarInts;
 import io.druid.segment.data.VSizeColumnarMultiInts;
 import io.druid.segment.data.WritableSupplier;
@@ -214,7 +214,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             {
               long size = 1 + // version
                           (version.compareTo(VERSION.COMPRESSED) >= 0
-                           ? Ints.BYTES
+                           ? Integer.BYTES
                            : 0); // flag if version >= compressed
               if (dictionaryWriter != null) {
                 size += dictionaryWriter.getSerializedSize();

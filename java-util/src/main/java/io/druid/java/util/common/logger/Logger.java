@@ -38,6 +38,12 @@ public class Logger
     log = LoggerFactory.getLogger(clazz);
   }
 
+  @Override
+  public String toString()
+  {
+    return StringUtils.format("Logger{name=[%s], class[%s]}", log.getName(), log.getClass());
+  }
+
   public void trace(String message, Object... formatArgs)
   {
     if (log.isTraceEnabled()) {

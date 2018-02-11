@@ -28,14 +28,14 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.RE;
-import com.metamx.common.StringUtils;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.io.AppendableByteArrayInputStream;
-import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.InputStreamResponseHandler;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.io.AppendableByteArrayInputStream;
+import io.druid.java.util.http.client.response.ClientResponse;
+import io.druid.java.util.http.client.response.InputStreamResponseHandler;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.coordination.DataSegmentChangeCallback;
@@ -135,7 +135,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     try {
       this.changeRequestURL = new URL(
           new URL(baseUrl),
-          StringUtils.safeFormat(
+          StringUtils.nonStrictFormat(
               "druid-internal/v1/segments/changeRequests?timeout=%d",
               config.getHttpLoadQueuePeonHostTimeout().getMillis()
           )
@@ -272,7 +272,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             {
               log.error(
                   t,
-                  "Request[%s] Failed with code[%s] and status[%s]. Reason[%s].",
+                  "Request[%s] Failed with status[%s]. Reason[%s].",
                   changeRequestURL,
                   responseHandler.status,
                   responseHandler.description

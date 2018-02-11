@@ -35,6 +35,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
+import io.druid.common.config.ConfigManager.SetResult;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskStatusPlus;
@@ -301,17 +302,18 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-    if (!configManager.set(
+    final SetResult setResult = configManager.set(
         WorkerBehaviorConfig.CONFIG_KEY,
         workerBehaviorConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
-    )) {
+    );
+    if (setResult.isOk()) {
+      log.info("Updating Worker configs: %s", workerBehaviorConfig);
+
+      return Response.ok().build();
+    } else {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
-
-    log.info("Updating Worker configs: %s", workerBehaviorConfig);
-
-    return Response.ok().build();
   }
 
   @GET
@@ -517,7 +519,10 @@ public class OverlordResource
             } else {
               workItems = taskRunner.getRunningTasks()
                                     .stream()
-                                    .filter(workitem -> workitem.getTaskType().equals(taskType))
+                                    .filter(workitem -> {
+                                      final String itemType = workitem.getTaskType();
+                                      return itemType != null && itemType.equals(taskType);
+                                    })
                                     .collect(Collectors.toList());
             }
 

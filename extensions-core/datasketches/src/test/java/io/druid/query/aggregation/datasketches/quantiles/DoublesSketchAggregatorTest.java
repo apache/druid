@@ -154,7 +154,7 @@ public class DoublesSketchAggregatorTest
     Object histogramObject = row.getRaw("histogram");
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }
@@ -221,7 +221,7 @@ public class DoublesSketchAggregatorTest
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     Assert.assertEquals(4, histogram.length);
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }
@@ -292,7 +292,7 @@ public class DoublesSketchAggregatorTest
     Object histogramObject = row.getRaw("histogram");
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }
@@ -365,7 +365,7 @@ public class DoublesSketchAggregatorTest
     Object histogramObject = row.getRaw("histogram");
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    for (final double bin: histogram) {
+    for (final double bin : histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
                                                 // distributed into 4 bins
     }

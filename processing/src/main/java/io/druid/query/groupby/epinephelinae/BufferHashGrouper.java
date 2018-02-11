@@ -21,10 +21,9 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
-import com.google.common.primitives.Ints;
-import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
@@ -102,7 +101,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       int hashTableSize = ByteBufferHashTable.calculateTableArenaSizeWithPerBucketAdditionalSize(
           buffer.capacity(),
           bucketSize,
-          Ints.BYTES
+          Integer.BYTES
       );
 
       hashTableBuffer = buffer.duplicate();
@@ -117,7 +116,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
       this.offsetList = new ByteBufferIntList(
           offsetListBuffer,
-          offsetListBuffer.capacity() / Ints.BYTES
+          offsetListBuffer.capacity() / Integer.BYTES
       );
 
       this.hashTable = new ByteBufferHashTable(

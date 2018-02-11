@@ -28,8 +28,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
@@ -43,6 +41,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -339,7 +339,7 @@ public class LookupReferencesManager
   private void takeSnapshot(Map<String, LookupExtractorFactoryContainer> lookupMap)
   {
     if (lookupSnapshotTaker != null) {
-      lookupSnapshotTaker.takeSnapshot(getLookupBeanList(lookupMap));
+      lookupSnapshotTaker.takeSnapshot(lookupListeningAnnouncerConfig.getLookupTier(), getLookupBeanList(lookupMap));
     }
   }
 
@@ -362,8 +362,7 @@ public class LookupReferencesManager
   {
     List<LookupBean> lookupBeanList;
     if (lookupConfig.getEnableLookupSyncOnStartup()) {
-      String tier = lookupListeningAnnouncerConfig.getLookupTier();
-      lookupBeanList = getLookupListFromCoordinator(tier);
+      lookupBeanList = getLookupListFromCoordinator(lookupListeningAnnouncerConfig.getLookupTier());
       if (lookupBeanList == null) {
         LOG.info("Coordinator is unavailable. Loading saved snapshot instead");
         lookupBeanList = getLookupListFromSnapshot();
@@ -455,7 +454,7 @@ public class LookupReferencesManager
   private List<LookupBean> getLookupListFromSnapshot()
   {
     if (lookupSnapshotTaker != null) {
-      return lookupSnapshotTaker.pullExistingSnapshot();
+      return lookupSnapshotTaker.pullExistingSnapshot(lookupListeningAnnouncerConfig.getLookupTier());
     }
     return null;
   }
@@ -626,8 +625,8 @@ public class LookupReferencesManager
       LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
       if (old != null) {
-        if (!old.getLookupExtractorFactory().close()) {
-          throw new ISE("close method returned false for lookup [%s]:[%s]", lookupName, old);
+        if (!old.getLookupExtractorFactory().destroy()) {
+          throw new ISE("destroy method returned false for lookup [%s]:[%s]", lookupName, old);
         }
       }
     }
@@ -659,9 +658,9 @@ public class LookupReferencesManager
       if (lookupExtractorFactoryContainer != null) {
         LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
 
-        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().close()) {
+        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().destroy()) {
           throw new ISE(
-              "close method returned false for lookup [%s]:[%s]",
+              "destroy method returned false for lookup [%s]:[%s]",
               lookupName,
               lookupExtractorFactoryContainer
           );

@@ -19,7 +19,7 @@
 
 package io.druid.query.select;
 
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.query.BitmapResultFactory;

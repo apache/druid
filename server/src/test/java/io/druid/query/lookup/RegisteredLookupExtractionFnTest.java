@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.jackson.JacksonUtils;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -57,16 +58,39 @@ public class RegisteredLookupExtractionFnTest
         LOOKUP_NAME,
         true,
         null,
-        true,
+        false,
         false
     );
     EasyMock.verify(manager);
+
+    Assert.assertEquals(false, fn.isInjective());
+    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getExtractionType());
+
     for (String orig : Arrays.asList("", "foo", "bat")) {
       Assert.assertEquals(LOOKUP_EXTRACTOR.apply(orig), fn.apply(orig));
     }
     Assert.assertEquals("not in the map", fn.apply("not in the map"));
   }
 
+  @Test
+  public void testInheritInjective()
+  {
+    final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+    managerReturnsMap(manager);
+    EasyMock.replay(manager);
+    final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
+        manager,
+        LOOKUP_NAME,
+        true,
+        null,
+        null,
+        false
+    );
+    EasyMock.verify(manager);
+
+    Assert.assertNull(fn.isInjective());
+    Assert.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, fn.getExtractionType());
+  }
 
   @Test
   public void testMissingDelegation()

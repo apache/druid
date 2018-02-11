@@ -52,7 +52,6 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
@@ -252,8 +251,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                   // noop
                 }
               },
-              new DefaultGenericQueryMetricsFactory(jsonMapper),
-              new NoopEscalator()
+              new DefaultGenericQueryMetricsFactory(jsonMapper)
           )
           {
             @Override
@@ -307,6 +305,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assert.assertEquals(
         new URI("http://localhost/"),
         AsyncQueryForwardingServlet.makeURI("http", "localhost", "/", null)
+    );
+
+    // Test reWrite Encoded interval with timezone info
+    // decoded parameters 1900-01-01T00:00:00.000+01.00 -> 1900-01-01T00:00:00.000+01:00
+    Assert.assertEquals(
+        new URI(
+            "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"),
+        AsyncQueryForwardingServlet.makeURI(
+            "http",
+            "localhost:1234",
+            "/some/path",
+            "intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"
+        )
     );
   }
 

@@ -95,8 +95,6 @@ The default values are `replaceMissingValueWith = null` and `retainMissingValue 
 
 It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
 
-A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
-
 A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
 
 The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and coordinator.
@@ -316,11 +314,94 @@ Example for the `__time` dimension:
 JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
 
-### Lookup extraction function
+### Registered lookup extraction function
 
-Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
-For more documentation on using lookups, please see [here](../querying/lookups.html). 
-Explicit lookups allow you to specify a set of keys and values to use when performing the extraction.
+Lookups are a concept in Druid where dimension values are (optionally) replaced with new values.
+For more documentation on using lookups, please see [Lookups](../querying/lookups.html).
+The "registeredLookup" extraction function lets you refer to a lookup that has been registered in the cluster-wide
+configuration.
+
+An example:
+
+```json
+{
+  "type":"registeredLookup",
+  "lookup":"some_lookup_name",
+  "retainMissingValue":true
+}
+```
+
+A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle
+missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the
+property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup.
+The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to
+be treated as missing.
+
+It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
+
+A property of `injective` can override the lookup's own sense of whether or not it is
+[injective](lookups.html#query-execution). If left unspecified, Druid will use the registered cluster-wide lookup
+configuration.
+
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
+The optimization layer will run on the broker and it will rewrite the extraction filter as clause of selector filters.
+For instance the following filter
+
+```json
+{
+    "filter": {
+        "type": "selector",
+        "dimension": "product",
+        "value": "bar_1",
+        "extractionFn": {
+            "type": "registeredLookup",
+            "optimize": true,
+            "lookup": "some_lookup_name"
+        }
+    }
+}
+```
+
+will be rewritten as the following simpler query, assuming a lookup that maps "product_1" and "product_3" to the value
+"bar_1":
+
+```json
+{
+   "filter":{
+      "type":"or",
+      "fields":[
+         {
+            "filter":{
+               "type":"selector",
+               "dimension":"product",
+               "value":"product_1"
+            }
+         },
+         {
+            "filter":{
+               "type":"selector",
+               "dimension":"product",
+               "value":"product_3"
+            }
+         }
+      ]
+   }
+}
+```
+
+A null dimension value can be mapped to a specific value by specifying the empty string as the key in your lookup file.
+This allows distinguishing between a null dimension and a lookup resulting in a null.
+For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["bar", "oof", "baz"]`.
+Omitting the empty string key will cause the missing value to take over. For example, specifying `{"bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["oof", "oof", "baz"]`.
+
+### Inline lookup extraction function
+
+Lookups are a concept in Druid where dimension values are (optionally) replaced with new values.
+For more documentation on using lookups, please see [Lookups](../querying/lookups.html).
+The "lookup" extraction function lets you specify an inline lookup map without registering one in the cluster-wide
+configuration.
+
+Examples:
 
 ```json
 {
@@ -347,108 +428,10 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
 }
 ```
 
-```json
-{
-  "type":"lookup",
-  "lookup":{"type":"namespace","namespace":"some_lookup"},
-  "replaceMissingValueWith":"Unknown",
-  "injective":false
-}
-```
+The inline lookup should be of type `map`.
 
-```json
-{
-  "type":"lookup",
-  "lookup":{"type":"namespace","namespace":"some_lookup"},
-  "retainMissingValue":true,
-  "injective":false
-}
-```
-
-A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. 
-A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
-
-A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
- 
-It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
-
-A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
-
-A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`). 
-The optimization layer will run on the broker and it will rewrite the extraction filter as clause of selector filters.
-For instance the following filter 
-
-```json
-{
-    "filter": {
-        "type": "selector",
-        "dimension": "product",
-        "value": "bar_1",
-        "extractionFn": {
-            "type": "lookup",
-            "optimize": true,
-            "lookup": {
-                "type": "map",
-                "map": {
-                    "product_1": "bar_1",
-                    "product_3": "bar_1"
-                }
-            }
-        }
-    }
-}
-```
-
-will be rewritten as
-
-```json
-{
-   "filter":{
-      "type":"or",
-      "fields":[
-         {
-            "filter":{
-               "type":"selector",
-               "dimension":"product",
-               "value":"product_1"
-            }
-         },
-         {
-            "filter":{
-               "type":"selector",
-               "dimension":"product",
-               "value":"product_3"
-            }
-         }
-      ]
-   }
-}
-```
-
-A null dimension value can be mapped to a specific value by specifying the empty string as the key.
-This allows distinguishing between a null dimension and a lookup resulting in a null.
-For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["bar", "oof", "baz"]`.
-Omitting the empty string key will cause the missing value to take over. For example, specifying `{"bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["oof", "oof", "baz"]`.
-
-### Registered Lookup Extraction Function
-
-While it is recommended that the [lookup dimension spec](#lookup-dimensionspecs) be used whenever possible, any lookup that is registered for use as a lookup dimension spec can be used as a dimension extraction.
-
-The specification for dimension extraction using dimension specification named lookups is formatted as per the following example:
-
-```json
-{
-  "type":"registeredLookup",
-  "lookup":"some_lookup_name",
-  "retainMissingValue":true,
-  "injective":false
-}
-```
-
-All the flags for [lookup extraction function](#lookup-extraction-function) apply here as well.
-
-In general, the dimension specification should be used. This dimension **extraction** implementation is made available for testing, validation, and transitioning from dimension extraction to the dimension specification style lookups.
-There is also a chance that a feature uses dimension extraction in such a way that it is not applied to dimension specification lookups. Such a scenario should be brought to the attention of the development mailing list.
+The properties `retainMissingValue`, `replaceMissingValueWith`, `injective`, and `optimize` behave similarly to the
+[registered lookup extraction function](#registered-lookup-extraction-function).
 
 ### Cascade Extraction Function
 

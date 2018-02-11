@@ -65,7 +65,7 @@ import java.util.Map;
 
 public class ExpressionsTest
 {
-  private static final DateTimeZone LOS_ANGELES = DateTimeZone.forID("America/Los_Angeles");
+  private static final DateTimeZone LOS_ANGELES = DateTimes.inferTzfromString("America/Los_Angeles");
 
   private final PlannerContext plannerContext = PlannerContext.create(
       CalciteTests.createOperatorTable(),

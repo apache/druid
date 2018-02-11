@@ -21,6 +21,7 @@ package io.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -141,7 +142,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
     try {
       LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
       Properties consumerProperties = new Properties();
-      consumerProperties.put("bootstrap.servers", config.getKafkaHost());
+      consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
       addFilteredProperties(consumerProperties);
 
       spec = getTaskAsString(INDEXER_FILE)
@@ -173,7 +174,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
         new StringSerializer()
     );
 
-    DateTimeZone zone = DateTimeZone.forID("UTC");
+    DateTimeZone zone = DateTimes.inferTzfromString("UTC");
     // format for putting into events
     DateTimeFormatter event_fmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 

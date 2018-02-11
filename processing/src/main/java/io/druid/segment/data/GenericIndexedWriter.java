@@ -27,10 +27,10 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
-import io.druid.segment.writeout.WriteOutBytes;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 
@@ -217,7 +217,9 @@ public class GenericIndexedWriter<T> implements Serializer
     // for compatibility with the format (see GenericIndexed javadoc for description of the format), but this field is
     // unused.
     valuesOut.writeInt(0);
-    strategy.writeTo(objectToWrite, valuesOut);
+    if (objectToWrite != null) {
+      strategy.writeTo(objectToWrite, valuesOut);
+    }
 
     if (!requireMultipleFiles) {
       headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
@@ -423,7 +425,7 @@ public class GenericIndexedWriter<T> implements Serializer
   private void writeHeaderLong(FileSmoosher smoosher, int bagSizePower)
       throws IOException
   {
-    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES).order(ByteOrder.nativeOrder());
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.nativeOrder());
 
     int numberOfElementsPerValueFile = 1 << bagSizePower;
     long currentNumBytes = 0;

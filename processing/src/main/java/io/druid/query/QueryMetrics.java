@@ -19,7 +19,7 @@
 
 package io.druid.query;
 
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.guice.annotations.PublicApi;
@@ -30,7 +30,7 @@ import org.joda.time.Interval;
 import java.util.List;
 
 /**
- * Abstraction wrapping {@link com.metamx.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
+ * Abstraction wrapping {@link io.druid.java.util.emitter.service.ServiceMetricEvent.Builder} and allowing to control what
  * metrics are actually emitted, what dimensions do they have, etc.
  *
  *
@@ -138,7 +138,7 @@ import java.util.List;
  *  {@link io.druid.query.metadata.SegmentMetadataQueryQueryToolChest}.
  *
  *  6. Establish injection of SegmentMetadataQueryMetricsFactory using config and provider method in
- *  QueryToolChestModule (see how it is done in {@link io.druid.guice.QueryToolChestModule} for existing query types
+ *  QueryToolChestModule (see how it is done in QueryToolChestModule) for existing query types
  *  with custom metrics, e. g. {@link SearchQueryMetricsFactory}), if the query type
  *  belongs to the core druid-processing, e. g. SegmentMetadataQuery. If the query type defined in an extension, you
  *  can specify `binder.bind(ScanQueryMetricsFactory.class).to(DefaultScanQueryMetricsFactory.class)` in the extension's
