@@ -26,7 +26,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.PropertiesModule;
 import io.druid.initialization.DruidModule;
@@ -34,7 +33,6 @@ import io.druid.initialization.InitializationTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -81,10 +79,11 @@ public class StatusResourceTest
   }
 
   @Test
-  public void testPropertiesWithRestrictedConfigs() {
+  public void testPropertiesWithRestrictedConfigs()
+  {
     Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
         "status.resource.test.runtime.properties"))));
-    Map<String,String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
+    Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
     Set<String> hiddenProperties = Sets.newHashSet();
     Splitter.on(",").split(returnedProperties.get("druid.hidden.properties")).forEach(hiddenProperties::add);
     hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
