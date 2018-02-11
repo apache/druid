@@ -25,8 +25,12 @@ import com.sun.jersey.api.client.WebResource;
 import io.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.core.MediaType;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class OpentsdbSender
@@ -39,33 +43,36 @@ public class OpentsdbSender
 
   private final AtomicLong countLostEvents = new AtomicLong(0);
   private final int batchSize;
-  private final BlockingQueue<OpentsdbEvent> events;
+  private final List<OpentsdbEvent> events;
+  private final BlockingQueue<OpentsdbEvent> eventQueue;
   private final Client client;
   private final WebResource webResource;
+  private final ExecutorService executor = Executors.newFixedThreadPool(1);
+  private volatile boolean running = true;
 
   public OpentsdbSender(String host, int port, int connectionTimeout, int readTimeout, int batchSize, int maxQueueSize)
   {
     this.batchSize = batchSize;
-    events = new ArrayBlockingQueue<>(maxQueueSize);
+    events = new ArrayList<>(batchSize);
+    eventQueue = new ArrayBlockingQueue<>(maxQueueSize);
 
     client = Client.create();
     client.setConnectTimeout(connectionTimeout);
     client.setReadTimeout(readTimeout);
     webResource = client.resource("http://" + host + ":" + port + PATH);
+
+    executor.execute(new EventConsumer());
   }
 
   public void send(OpentsdbEvent event)
   {
-    if (!events.offer(event)) {
+    if (!eventQueue.offer(event)) {
       if (countLostEvents.getAndIncrement() % 1000 == 0) {
         log.error(
             "Lost total of [%s] events because of emitter queue is full. Please increase the capacity.",
             countLostEvents.get()
         );
       }
-    }
-    if (events.size() >= batchSize) {
-      sendEvents();
     }
   }
 
@@ -78,6 +85,8 @@ public class OpentsdbSender
   {
     flush();
     client.destroy();
+    running = false;
+    executor.shutdown();
   }
 
   private void sendEvents()
@@ -91,6 +100,23 @@ public class OpentsdbSender
       }
       finally {
         events.clear();
+      }
+    }
+  }
+
+  private class EventConsumer implements Runnable
+  {
+    @Override
+    public void run()
+    {
+      while (running) {
+        if (!eventQueue.isEmpty()) {
+          OpentsdbEvent event = eventQueue.poll();
+          events.add(event);
+          if (events.size() >= batchSize) {
+            sendEvents();
+          }
+        }
       }
     }
   }
