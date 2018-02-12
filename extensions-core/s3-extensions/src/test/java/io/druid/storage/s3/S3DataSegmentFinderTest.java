@@ -411,6 +411,7 @@ public class S3DataSegmentFinderTest
       return storageObject;
     }
 
+    @Override
     public PutObjectResult putObject(String bucketName, String key, String data)
     {
       return putObject(bucketName, key, new ByteArrayInputStream(StringUtils.toUtf8(data)), null);
