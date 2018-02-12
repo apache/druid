@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -90,7 +92,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
             indexZip = new Path(path.getParent(), "index.zip");
           }
           if (fs.exists(indexZip)) {
-            final DataSegment dataSegment = mapper.readValue(fs.open(path), DataSegment.class);
+            final DataSegment dataSegment = mapper.readValue((DataInput) fs.open(path), DataSegment.class);
             log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
 
             final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
@@ -102,7 +104,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
               loadSpec.put("path", pathWithoutScheme);
               if (updateDescriptor) {
                 log.info("Updating loadSpec in descriptor.json at [%s] with new path [%s]", path, pathWithoutScheme);
-                mapper.writeValue(fs.create(path, true), dataSegment);
+                mapper.writeValue((DataOutput) fs.create(path, true), dataSegment);
               }
             }
             segments.add(dataSegment);

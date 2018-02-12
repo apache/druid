@@ -60,7 +60,7 @@ import io.druid.server.initialization.TLSServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
-import org.apache.http.HttpVersion;
+import io.netty.handler.codec.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;

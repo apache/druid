@@ -20,7 +20,7 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSSessionCredentials;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
@@ -33,8 +33,6 @@ import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
 
 import java.util.List;
 
@@ -102,15 +100,8 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public RestS3Service getRestS3Service(AWSCredentialsProvider provider)
+  public AmazonS3Client getAmazonS3Client(AWSCredentialsProvider provider)
   {
-    if (provider.getCredentials() instanceof AWSSessionCredentials) {
-      return new RestS3Service(new AWSSessionCredentialsAdapter(provider));
-    } else {
-      return new RestS3Service(new AWSCredentials(
-          provider.getCredentials().getAWSAccessKeyId(),
-          provider.getCredentials().getAWSSecretKey()
-      ));
-    }
+    return new AmazonS3Client(provider);
   }
 }

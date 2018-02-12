@@ -19,6 +19,7 @@
 
 package io.druid.server;
 
+import com.amazonaws.thirdparty.apache.http.client.utils.URIBuilder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -26,14 +27,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.selector.Server;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -44,7 +45,6 @@ import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
-import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -57,6 +57,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -444,13 +445,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
                         success
-                        && result.getResponse().getStatus() == javax.ws.rs.core.Response.Status.OK.getStatusCode()
+                        && result.getResponse().getStatus() == Status.OK.getStatusCode()
                     )
                 )
             )
         );
-
-
       }
       catch (Exception e) {
         log.error(e, "Unable to log query [%s]!", query);

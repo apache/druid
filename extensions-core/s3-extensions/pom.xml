@@ -46,16 +46,16 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>java-util</artifactId>
-            <version>${project.parent.version}</version>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>net.java.dev.jets3t</groupId>
-            <artifactId>jets3t</artifactId>
-            <scope>provided</scope>
-        </dependency>
+      <dependency>
+        <groupId>io.druid</groupId>
+        <artifactId>java-util</artifactId>
+        <version>${project.parent.version}</version>
+        <scope>provided</scope>
+      </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>

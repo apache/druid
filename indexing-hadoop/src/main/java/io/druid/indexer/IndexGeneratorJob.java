@@ -73,6 +73,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.io.DataInput;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -113,7 +114,7 @@ public class IndexGeneratorJob implements Jobby
       FileSystem fs = descriptorInfoDir.getFileSystem(conf);
 
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
-        final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
+        final DataSegment segment = jsonMapper.readValue((DataInput) fs.open(status.getPath()), DataSegment.class);
         publishedSegmentsBuilder.add(segment);
         log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
       }

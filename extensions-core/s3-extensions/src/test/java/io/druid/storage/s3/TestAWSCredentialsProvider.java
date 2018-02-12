@@ -58,7 +58,7 @@ public class TestAWSCredentialsProvider
     assertEquals(credentials.getAWSSecretKey(), "secretKeySample");
 
     // try to create
-    s3Module.getRestS3Service(provider);
+    s3Module.getAmazonS3Client(provider);
   }
 
   @Rule
@@ -86,6 +86,6 @@ public class TestAWSCredentialsProvider
     assertEquals(sessionCredentials.getSessionToken(), "sessionTokenSample");
 
     // try to create
-    s3Module.getRestS3Service(provider);
+    s3Module.getAmazonS3Client(provider);
   }
 }

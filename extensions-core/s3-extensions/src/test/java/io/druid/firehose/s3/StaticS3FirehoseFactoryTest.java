@@ -19,8 +19,12 @@
 
 package io.druid.firehose.s3;
 
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.guice.ObjectMapperModule;
 import com.google.common.collect.ImmutableList;
@@ -29,11 +33,10 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import io.druid.initialization.DruidModule;
-import io.druid.jackson.DefaultObjectMapper;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +45,7 @@ import java.util.List;
  */
 public class StaticS3FirehoseFactoryTest
 {
-  private static final RestS3Service SERVICE = new RestS3Service(null);
+  private static final AmazonS3Client SERVICE = new AmazonS3Client();
 
   @Test
   public void testSerde() throws Exception
@@ -75,14 +78,14 @@ public class StaticS3FirehoseFactoryTest
 
   private static ObjectMapper createObjectMapper(DruidModule baseModule)
   {
-    final ObjectMapper baseMapper = new DefaultObjectMapper();
-    baseModule.getJacksonModules().forEach(baseMapper::registerModule);
-
     final Injector injector = Guice.createInjector(
         new ObjectMapperModule(),
         baseModule
     );
-    return injector.getInstance(ObjectMapper.class);
+    final ObjectMapper baseMapper = injector.getInstance(ObjectMapper.class);
+
+    baseModule.getJacksonModules().forEach(baseMapper::registerModule);
+    return baseMapper;
   }
 
   private static class TestS3Module implements DruidModule
@@ -90,7 +93,9 @@ public class StaticS3FirehoseFactoryTest
     @Override
     public List<? extends Module> getJacksonModules()
     {
-      return ImmutableList.of(new SimpleModule());
+      // Deserializer is need for AmazonS3Client even though it is injected.
+      // See https://github.com/FasterXML/jackson-databind/issues/962.
+      return ImmutableList.of(new SimpleModule().addDeserializer(AmazonS3Client.class, new ItemDeserializer()));
     }
 
     @Override
@@ -100,9 +105,30 @@ public class StaticS3FirehoseFactoryTest
     }
 
     @Provides
-    public RestS3Service getRestS3Service()
+    public AmazonS3Client getAmazonS3Client()
     {
       return SERVICE;
+    }
+  }
+
+  public static class ItemDeserializer extends StdDeserializer<AmazonS3Client>
+  {
+    public ItemDeserializer()
+    {
+      this(null);
+    }
+
+    public ItemDeserializer(Class<?> vc)
+    {
+      super(vc);
+    }
+
+    @Override
+    public AmazonS3Client deserialize(
+        JsonParser jp, DeserializationContext ctxt
+    ) throws IOException
+    {
+      throw new UnsupportedOperationException();
     }
   }
 }
