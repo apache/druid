@@ -37,6 +37,7 @@ import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -224,6 +225,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   }
 
   @VisibleForTesting
+  @Nullable
   Batch emitAndReturnBatch(Event event)
   {
     awaitStarted();
@@ -252,6 +254,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       }
       if (batch.tryAddEvent(eventBytes)) {
         return batch;
+      } else {
+        log.debug("Failed to emit an event in batch [%s]", batch);
       }
       // Spin loop, until the thread calling onSealExclusive() updates the concurrentBatch. This update becomes visible
       // eventually, because concurrentBatch.get() is a volatile read.
