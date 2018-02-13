@@ -39,6 +39,7 @@ import io.druid.segment.ConstantColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
+import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -157,6 +158,9 @@ public class ExpressionSelectors
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.
       final ExprEval eval = expression.eval(bindings);
+      if (NullHandling.sqlCompatible() && eval.isNull()) {
+        return NilColumnValueSelector.instance();
+      }
       return new ConstantColumnValueSelector<>(
           eval.asLong(),
           (float) eval.asDouble(),
@@ -198,6 +202,9 @@ public class ExpressionSelectors
     if (baseSelector instanceof ConstantColumnValueSelector) {
       // Optimization for dimension selectors on constants.
       return DimensionSelectorUtils.constantSelector(baseSelector.getObject().asString(), extractionFn);
+    } else if (baseSelector instanceof NilColumnValueSelector) {
+      // Optimization for null dimension selector.
+      return NullDimensionSelector.instance();
     } else if (extractionFn == null) {
       class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
       {

@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.common.utils.SerializerUtils;
@@ -129,7 +130,7 @@ public class DoubleColumnSerializerV2 implements GenericColumnSerializer
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    SerializerUtils.writeInt(channel, (int) writer.getSerializedSize());
+    SerializerUtils.writeInt(channel, Ints.checkedCast(writer.getSerializedSize()));
     writer.writeTo(channel, smoosher);
     if (!nullRowsBitmap.isEmpty()) {
       nullValueBitmapWriter.writeTo(channel, smoosher);

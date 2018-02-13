@@ -181,7 +181,7 @@ public interface BufferAggregator extends HotLoopCallee
   /**
    * returns true if aggregator's output type is primitive long/double/float and aggregated value is null,
    * but when aggregated output type is Object, this method always returns false,
-   * and users are advised to check nullability for the object returned by {@link #get(ByteBuffer, int)} ()}
+   * and users are advised to check nullability for the object returned by {@link BufferAggregator#get(ByteBuffer, int)}
    * method.
    * The default implementation always return false to enable smooth backward compatibility,
    * re-implement if your aggregator is nullable.

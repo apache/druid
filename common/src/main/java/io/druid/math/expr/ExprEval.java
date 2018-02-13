@@ -133,21 +133,18 @@ public abstract class ExprEval<T>
     @Override
     public final int asInt()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
       return value.intValue();
     }
 
     @Override
     public final long asLong()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
       return value.longValue();
     }
 
     @Override
     public final double asDouble()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
       return value.doubleValue();
     }
   }
@@ -254,6 +251,7 @@ public abstract class ExprEval<T>
       }
 
       final Integer theInt = Ints.tryParse(value);
+      assert NullHandling.replaceWithDefault() || theInt != null;
       return theInt == null ? 0 : theInt;
     }
 
@@ -275,6 +273,7 @@ public abstract class ExprEval<T>
       }
 
       final Double theDouble = Doubles.tryParse(value);
+      assert NullHandling.replaceWithDefault() || theDouble != null;
       return theDouble == null ? 0.0 : theDouble;
     }
 

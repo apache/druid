@@ -44,7 +44,7 @@ public class FloatsColumn implements GenericColumn
 
   final ColumnarFloats column;
 
-  protected FloatsColumn(final ColumnarFloats column)
+  FloatsColumn(final ColumnarFloats column)
   {
     this.column = column;
   }

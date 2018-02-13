@@ -102,19 +102,27 @@ public class NilColumnValueSelector implements ColumnValueSelector
 
   private static class SqlCompatibleNilColumnValueSelector extends NilColumnValueSelector
   {
-
+    /**
+     * Always throws IllegalStateException.
+     */
     @Override
     public double getDouble()
     {
       throw new IllegalStateException("Cannot return null value as double");
     }
 
+    /**
+     * Always throws IllegalStateException.
+     */
     @Override
     public float getFloat()
     {
       throw new IllegalStateException("Cannot return null value as float");
     }
 
+    /**
+     * Always throws IllegalStateException.
+     */
     @Override
     public long getLong()
     {

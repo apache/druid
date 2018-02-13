@@ -35,6 +35,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
+
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -56,7 +57,7 @@ import java.util.Iterator;
  * bytes 7-10 =>; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes
- * for value. This field has no meaning, if next offset is strictly greater than the current offset,
+ * for value. Length of value stored has no meaning, if next offset is strictly greater than the current offset,
  * and if they are the same, -1 at this field means null, and 0 at this field means some object
  * (potentially non-null - e. g. in the string case, that is serialized as an empty sequence of bytes).
  * <p>
@@ -101,13 +102,13 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     }
 
     @Override
-    @Nullable
     public String fromByteBuffer(final ByteBuffer buffer, final int numBytes)
     {
-      return NullHandling.emptyToNullIfNeeded(StringUtils.fromUtf8Nullable(buffer, numBytes));
+      return StringUtils.fromUtf8(buffer, numBytes);
     }
 
     @Override
+    @Nullable
     public byte[] toBytes(String val)
     {
       return StringUtils.toUtf8Nullable(NullHandling.nullToEmptyIfNeeded(val));
@@ -370,9 +371,13 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
   private T copyBufferAndGet(ByteBuffer valueBuffer, int startOffset, int endOffset)
   {
     ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
-    final int size = endOffset > startOffset
-                     ? endOffset - startOffset
-                     : copyValueBuffer.get(startOffset - Integer.BYTES);
+    int size = endOffset - startOffset;
+    // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
+    // When SQL compatibility is not enabled return null for both null as well as empty string case.
+    if (size == 0 && (NullHandling.replaceWithDefault()
+                      || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
+      return null;
+    }
     copyValueBuffer.position(startOffset);
     // fromByteBuffer must not modify the buffer limit
     return strategy.fromByteBuffer(copyValueBuffer, size);
@@ -412,7 +417,10 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       int size = endOffset - startOffset;
-      if (size == 0 && copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER) {
+      // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
+      // When SQL compatibility is not enabled return null for both null as well as empty string case.
+      if (size == 0 && (NullHandling.replaceWithDefault()
+                        || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
         return null;
       }
       lastReadSize = size;

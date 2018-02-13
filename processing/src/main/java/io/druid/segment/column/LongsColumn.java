@@ -44,7 +44,7 @@ public class LongsColumn implements GenericColumn
 
   final ColumnarLongs column;
 
-  protected LongsColumn(final ColumnarLongs column)
+  LongsColumn(final ColumnarLongs column)
   {
     this.column = column;
   }

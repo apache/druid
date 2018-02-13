@@ -90,6 +90,7 @@ public class ConstantColumnValueSelector<T> implements ColumnValueSelector<T>
   @Override
   public boolean isNull()
   {
+    // return false always as the primitive values for this selector can never be null.
     return false;
   }
 }
