@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 
 public class OpentsdbEmitterConfig
 {
-  private static final int DEFAULT_BATCH_SIZE = 100;
+  private static final int DEFAULT_FLUSH_THRESHOLD = 100;
   private static final int DEFAULT_MAX_QUEUE_SIZE = 1000;
   private static final int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 2000;
   private static final int DEFAULT_READ_TIMEOUT_MILLIS = 2000;
@@ -43,7 +43,7 @@ public class OpentsdbEmitterConfig
   private final int readTimeout;
 
   @JsonProperty
-  private final int batchSize;
+  private final int flushThreshold;
 
   @JsonProperty
   private final int maxQueueSize;
@@ -57,7 +57,7 @@ public class OpentsdbEmitterConfig
       @JsonProperty("port") Integer port,
       @JsonProperty("connectionTimeout") Integer connectionTimeout,
       @JsonProperty("readTimeout") Integer readTimeout,
-      @JsonProperty("batchSize") Integer batchSize,
+      @JsonProperty("flushThreshold") Integer flushThreshold,
       @JsonProperty("maxQueueSize") Integer maxQueueSize,
       @JsonProperty("metricMapPath") String metricMapPath
   )
@@ -69,7 +69,7 @@ public class OpentsdbEmitterConfig
                              : connectionTimeout;
     this.readTimeout =
         (readTimeout == null || readTimeout < 0) ? DEFAULT_READ_TIMEOUT_MILLIS : readTimeout;
-    this.batchSize = (batchSize == null || batchSize < 0) ? DEFAULT_BATCH_SIZE : batchSize;
+    this.flushThreshold = (flushThreshold == null || flushThreshold < 0) ? DEFAULT_FLUSH_THRESHOLD : flushThreshold;
     this.maxQueueSize = (maxQueueSize == null || maxQueueSize < 0) ? DEFAULT_MAX_QUEUE_SIZE : maxQueueSize;
     this.metricMapPath = metricMapPath;
   }
@@ -98,7 +98,7 @@ public class OpentsdbEmitterConfig
     if (readTimeout != that.readTimeout) {
       return false;
     }
-    if (batchSize != that.batchSize) {
+    if (flushThreshold != that.flushThreshold) {
       return false;
     }
     if (maxQueueSize != that.maxQueueSize) {
@@ -115,7 +115,7 @@ public class OpentsdbEmitterConfig
     result = 31 * result + port;
     result = 31 * result + connectionTimeout;
     result = 31 * result + readTimeout;
-    result = 31 * result + batchSize;
+    result = 31 * result + flushThreshold;
     result = 31 * result + maxQueueSize;
     result = 31 * result + (metricMapPath != null ? metricMapPath.hashCode() : 0);
     return result;
@@ -141,9 +141,9 @@ public class OpentsdbEmitterConfig
     return readTimeout;
   }
 
-  public int getBatchSize()
+  public int getFlushThreshold()
   {
-    return batchSize;
+    return flushThreshold;
   }
 
   public int getMaxQueueSize()

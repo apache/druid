@@ -42,7 +42,7 @@ public class OpentsdbSender
   private static final Logger log = new Logger(OpentsdbSender.class);
 
   private final AtomicLong countLostEvents = new AtomicLong(0);
-  private final int batchSize;
+  private final int flushThreshold;
   private final List<OpentsdbEvent> events;
   private final BlockingQueue<OpentsdbEvent> eventQueue;
   private final Client client;
@@ -50,10 +50,10 @@ public class OpentsdbSender
   private final ExecutorService executor = Executors.newFixedThreadPool(1);
   private volatile boolean running = true;
 
-  public OpentsdbSender(String host, int port, int connectionTimeout, int readTimeout, int batchSize, int maxQueueSize)
+  public OpentsdbSender(String host, int port, int connectionTimeout, int readTimeout, int flushThreshold, int maxQueueSize)
   {
-    this.batchSize = batchSize;
-    events = new ArrayList<>(batchSize);
+    this.flushThreshold = flushThreshold;
+    events = new ArrayList<>(flushThreshold);
     eventQueue = new ArrayBlockingQueue<>(maxQueueSize);
 
     client = Client.create();
@@ -64,7 +64,7 @@ public class OpentsdbSender
     executor.execute(new EventConsumer());
   }
 
-  public void send(OpentsdbEvent event)
+  public void enqueue(OpentsdbEvent event)
   {
     if (!eventQueue.offer(event)) {
       if (countLostEvents.getAndIncrement() % 1000 == 0) {
@@ -113,7 +113,7 @@ public class OpentsdbSender
         if (!eventQueue.isEmpty()) {
           OpentsdbEvent event = eventQueue.poll();
           events.add(event);
-          if (events.size() >= batchSize) {
+          if (events.size() >= flushThreshold) {
             sendEvents();
           }
         }

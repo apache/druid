@@ -41,7 +41,7 @@ public class OpentsdbEmitter implements Emitter
         config.getPort(),
         config.getConnectionTimeout(),
         config.getReadTimeout(),
-        config.getBatchSize(),
+        config.getFlushThreshold(),
         config.getMaxQueueSize()
     );
     this.converter = new EventConverter(mapper, config.getMetricMapPath());
@@ -58,7 +58,7 @@ public class OpentsdbEmitter implements Emitter
     if (event instanceof ServiceMetricEvent) {
       OpentsdbEvent opentsdbEvent = converter.convert((ServiceMetricEvent) event);
       if (opentsdbEvent != null) {
-        sender.send(opentsdbEvent);
+        sender.enqueue(opentsdbEvent);
       } else {
         log.debug(
             "Metric=[%s] has not been configured to be emitted to opentsdb",

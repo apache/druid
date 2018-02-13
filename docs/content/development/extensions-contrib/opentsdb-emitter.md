@@ -20,7 +20,7 @@ All the configuration parameters for the opentsdb emitter are under `druid.emitt
 |`druid.emitter.opentsdb.port`|The port of the OpenTSDB server.|yes|none|
 |`druid.emitter.opentsdb.connectionTimeout`|Connection timeout(in milliseconds).|no|2000|
 |`druid.emitter.opentsdb.readTimeout`|Read timeout(in milliseconds).|no|2000|  
-|`druid.emitter.opentsdb.batchSize`|Number of events to send as one batch.|no|100|
+|`druid.emitter.opentsdb.flushThreshold`|Queue flushing threshold.(Events will be sent as one batch)|no|100|
 |`druid.emitter.opentsdb.maxQueueSize`|Maximum size of the queue used to buffer events.|no|1000|
 |`druid.emitter.opentsdb.metricMapPath`|JSON file defining the desired metrics and dimensions for every Druid metric|no|./src/main/resources/defaultMetrics.json|
 
