@@ -49,7 +49,6 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -147,12 +146,11 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     Map objectMap = mapObjectInspector.getMap(mapObject);
     PrimitiveObjectInspector key = (PrimitiveObjectInspector) mapObjectInspector.getMapKeyObjectInspector();
     PrimitiveObjectInspector value = (PrimitiveObjectInspector) mapObjectInspector.getMapValueObjectInspector();
-    for (Iterator itr = objectMap.entrySet().iterator(); itr.hasNext(); ) {
-      Map.Entry it = (Map.Entry) itr.next();
-      parsedMap.put(prefix + key.getPrimitiveJavaObject(it.getKey()).toString(),
-              value.getPrimitiveJavaObject(it.getValue()));
-    }
 
+    objectMap.forEach((k, v) -> {
+      parsedMap.put(prefix + key.getPrimitiveJavaObject(k).toString(),
+          value.getPrimitiveJavaObject(v));
+    });
   }
 
   @Override
