@@ -40,9 +40,9 @@ import io.druid.query.QueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestCommitterSupplier;
-import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentAllocator;
-import io.druid.segment.realtime.appenderator.AppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestCommitterSupplier;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class AppenderatorDriverFailTest
+public class StreamAppenderatorDriverFailTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
@@ -91,7 +91,7 @@ public class AppenderatorDriverFailTest
 
   SegmentAllocator allocator;
   TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
-  AppenderatorDriver driver;
+  StreamAppenderatorDriver driver;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -121,7 +121,7 @@ public class AppenderatorDriverFailTest
                                     + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
                                     + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
-    driver = new AppenderatorDriver(
+    driver = new StreamAppenderatorDriver(
         createPersistFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -139,11 +139,11 @@ public class AppenderatorDriverFailTest
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
     driver.publish(
-        AppenderatorDriverTest.makeOkPublisher(),
+        StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -158,7 +158,7 @@ public class AppenderatorDriverFailTest
                                     + "[[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123, "
                                     + "foo_2000-01-01T01:00:00.000Z_2000-01-01T02:00:00.000Z_abc123]]");
 
-    driver = new AppenderatorDriver(
+    driver = new StreamAppenderatorDriver(
         createPushFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -176,11 +176,11 @@ public class AppenderatorDriverFailTest
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
     driver.publish(
-        AppenderatorDriverTest.makeOkPublisher(),
+        StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
@@ -195,7 +195,7 @@ public class AppenderatorDriverFailTest
         "Fail test while dropping segment[foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_abc123]"
     );
 
-    driver = new AppenderatorDriver(
+    driver = new StreamAppenderatorDriver(
         createDropFailAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
@@ -213,11 +213,11 @@ public class AppenderatorDriverFailTest
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier).isOk());
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
     }
 
     final SegmentsAndMetadata published = driver.publish(
-        AppenderatorDriverTest.makeOkPublisher(),
+        StreamAppenderatorDriverTest.makeOkPublisher(),
         committerSupplier.get(),
         ImmutableList.of("dummy")
     ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
