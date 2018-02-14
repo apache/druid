@@ -46,6 +46,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Base64;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -607,10 +608,10 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       long deadLineMillis = System.currentTimeMillis() + sendRequestTimeoutMillis(lastFillTimeMillis);
       try {
         RetryUtils.retry(
-            new RetryUtils.Task<Object>()
+            new Callable<Void>()
             {
               @Override
-              public Void perform() throws Exception
+              public Void call() throws Exception
               {
                 send(buffer, length);
                 return null;
