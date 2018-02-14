@@ -76,7 +76,6 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
             );
             while (objectSummaryIterator.hasNext()) {
               final S3ObjectSummary objectSummary = objectSummaryIterator.next();
-              // TODO: what is going on here?
               String keyString = objectSummary.getKey().substring(coords.path.length());
               if (keyString.startsWith("/")) {
                 keyString = keyString.substring(1);

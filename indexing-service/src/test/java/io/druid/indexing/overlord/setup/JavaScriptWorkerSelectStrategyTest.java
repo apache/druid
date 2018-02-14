@@ -86,7 +86,7 @@ public class JavaScriptWorkerSelectStrategyTest
         STRATEGY,
         mapper.readValue(
             mapper.writeValueAsString(STRATEGY),
-            JavaScriptWorkerSelectStrategy.class
+            WorkerSelectStrategy.class
         )
     );
   }

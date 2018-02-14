@@ -178,10 +178,12 @@ public class S3DataSegmentMover implements DataSegmentMover
       final S3ObjectSummary objectSummary = listResult.getObjectSummaries().get(0);
       if (objectSummary.getStorageClass() != null &&
           StorageClass.fromValue(StringUtils.toUpperCase(objectSummary.getStorageClass())).equals(StorageClass.Glacier)) {
-        throw new ISE(
-            "Cannot move file[s3://%s/%s] of storage class glacier, skipping.",
-            s3Bucket,
-            s3Path
+        throw new AmazonServiceException(
+            StringUtils.format(
+                "Cannot move file[s3://%s/%s] of storage class glacier, skipping.",
+                s3Bucket,
+                s3Path
+            )
         );
       } else {
         log.info("Moving file %s", copyMsg);

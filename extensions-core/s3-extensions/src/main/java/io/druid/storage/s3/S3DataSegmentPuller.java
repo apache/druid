@@ -38,6 +38,7 @@ import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -46,6 +47,7 @@ import io.druid.timeline.DataSegment;
 
 import javax.tools.FileObject;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -89,6 +91,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       public InputStream openInputStream() throws IOException
       {
         try {
+          // TODO: check this method can be called by differernt threads
           if (s3Object == null) {
             synchronized (inputStreamOpener) {
               if (s3Object == null) {
@@ -98,57 +101,17 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
             }
           }
 
-          return new InputStream()
+          final InputStream in = s3Object.getObjectContent();
+          final Closer closer = Closer.create();
+          closer.register(in);
+          closer.register(s3Object);
+
+          return new FilterInputStream(in)
           {
-            final InputStream delegate = s3Object.getObjectContent();
-
-            @Override
-            public int read() throws IOException
-            {
-              return delegate.read();
-            }
-
-            @Override
-            public int read(byte[] b, int off, int len) throws IOException
-            {
-              return delegate.read(b, off, len);
-            }
-
-            @Override
-            public long skip(long n) throws IOException
-            {
-              return delegate.skip(n);
-            }
-
-            @Override
-            public int available() throws IOException
-            {
-              return delegate.available();
-            }
-
-            @Override
-            public void reset() throws IOException
-            {
-              delegate.reset();
-            }
-
             @Override
             public void close() throws IOException
             {
-              delegate.close();
-              s3Object.close();
-            }
-
-            @Override
-            public boolean markSupported()
-            {
-              return delegate.markSupported();
-            }
-
-            @Override
-            public void mark(int readlimit)
-            {
-              delegate.mark(readlimit);
+              closer.close();
             }
           };
         }

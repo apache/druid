@@ -163,7 +163,7 @@ public class S3Utils
     };
   }
 
-  static String constructSegmentPath(String baseKey, String storageDir)
+  public static String constructSegmentPath(String baseKey, String storageDir)
   {
     return JOINER.join(
         baseKey.isEmpty() ? null : baseKey,
@@ -234,6 +234,15 @@ public class S3Utils
     return false;
   }
 
+  /**
+   * Gets a single {@link S3ObjectSummary} from s3. Since this method might throw an exception if there are multiple
+   * objets that match the given key, this method should be used only when it's guaranteed that the given key is unique
+   * in the given bucket.
+   *
+   * @param s3Client s3 client
+   * @param bucket   s3 bucket
+   * @param key      unique key for the object to be retrieved
+   */
   public static S3ObjectSummary getSingleObjectSummary(AmazonS3Client s3Client, String bucket, String key)
   {
     final ListObjectsV2Request request = new ListObjectsV2Request()

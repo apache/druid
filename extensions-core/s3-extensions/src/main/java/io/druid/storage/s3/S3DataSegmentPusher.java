@@ -173,7 +173,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       s3Client.putObject(indexFilePutRequest);
     }
 
-    log.info("Deleting file [%s]", file.getAbsolutePath());
+    log.info("Deleting temporary cached file [%s]", file.getAbsolutePath());
     file.delete();
   }
 }
