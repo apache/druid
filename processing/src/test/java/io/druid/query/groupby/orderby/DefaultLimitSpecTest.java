@@ -173,6 +173,28 @@ public class DefaultLimitSpecTest
   }
 
   @Test
+  public void testWithAllGranularity()
+  {
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC)),
+        2
+    );
+
+    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
+        ImmutableList.of(new DefaultDimensionSpec("k1", "k1", ValueType.DOUBLE)),
+        ImmutableList.of(),
+        ImmutableList.of(),
+        Granularities.ALL,
+        true
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
+        limitFn.apply(testRowsSequence).toList()
+    );
+  }
+
+  @Test
   public void testWithSortByDimsFirst()
   {
     DefaultLimitSpec limitSpec = new DefaultLimitSpec(

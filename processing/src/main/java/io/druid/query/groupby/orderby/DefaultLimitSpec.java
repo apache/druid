@@ -169,7 +169,7 @@ public class DefaultLimitSpec implements LimitSpec
 
     if (!sortingNeeded) {
       // If granularity is ALL, sortByDimsFirst doesn't change the sorting order.
-      sortingNeeded = granularity.equals(Granularities.ALL) || sortByDimsFirst;
+      sortingNeeded = !granularity.equals(Granularities.ALL) && sortByDimsFirst;
     }
 
     if (!sortingNeeded) {
