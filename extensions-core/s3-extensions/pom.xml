@@ -45,11 +45,6 @@
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
-            <scope>provided</scope>
-        </dependency>
       <dependency>
         <groupId>io.druid</groupId>
         <artifactId>java-util</artifactId>

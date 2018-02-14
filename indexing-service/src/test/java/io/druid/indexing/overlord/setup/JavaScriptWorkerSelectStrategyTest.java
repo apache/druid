@@ -108,7 +108,7 @@ public class JavaScriptWorkerSelectStrategyTest
     expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
-    mapper.readValue(strategyString, JavaScriptWorkerSelectStrategy.class);
+    mapper.readValue(strategyString, WorkerSelectStrategy.class);
   }
 
   @Test

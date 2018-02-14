@@ -23,6 +23,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -34,6 +35,7 @@ import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.s3.S3Utils;
 
@@ -174,7 +176,11 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   {
     try {
       // Get data of the given object and open an input stream
-      return s3Client.getObject(object.getBucketName(), object.getKey()).getObjectContent();
+      final S3Object s3Object = s3Client.getObject(object.getBucketName(), object.getKey());
+      if (s3Object == null) {
+        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", object.getBucketName(), object.getKey());
+      }
+      return s3Object.getObjectContent();
     }
     catch (AmazonS3Exception e) {
       throw new IOException(e);
@@ -187,7 +193,16 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     final GetObjectRequest request = new GetObjectRequest(object.getBucketName(), object.getKey());
     request.setRange(start);
     try {
-      return s3Client.getObject(request).getObjectContent();
+      final S3Object s3Object = s3Client.getObject(request);
+      if (s3Object == null) {
+        throw new ISE(
+            "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
+            object.getBucketName(),
+            object.getKey(),
+            start
+        );
+      }
+      return s3Object.getObjectContent();
     }
     catch (AmazonS3Exception e) {
       throw new IOException(e);
