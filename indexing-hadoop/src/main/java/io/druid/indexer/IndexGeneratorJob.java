@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -322,7 +321,7 @@ public class IndexGeneratorJob implements Jobby
           new SortableBytes(
               bucket.get().toGroupKey(),
               // sort rows by truncated timestamp and hashed dimensions to help reduce spilling on the reducer side
-              ByteBuffer.allocate(Longs.BYTES + hashedDimensions.length)
+              ByteBuffer.allocate(Long.BYTES + hashedDimensions.length)
                         .putLong(truncatedTimestamp)
                         .put(hashedDimensions)
                         .array()

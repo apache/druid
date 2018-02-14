@@ -102,7 +102,7 @@ public class VarianceAggregatorCollector
 
   static int getMaxIntermediateSize()
   {
-    return Longs.BYTES + Doubles.BYTES + Doubles.BYTES;
+    return Long.BYTES + Double.BYTES + Double.BYTES;
   }
 
   long count; // number of elements
@@ -182,7 +182,7 @@ public class VarianceAggregatorCollector
 
   public ByteBuffer toByteBuffer()
   {
-    return ByteBuffer.allocate(Longs.BYTES + Doubles.BYTES + Doubles.BYTES)
+    return ByteBuffer.allocate(Long.BYTES + Double.BYTES + Double.BYTES)
                      .putLong(count)
                      .putDouble(sum)
                      .putDouble(nvariance);

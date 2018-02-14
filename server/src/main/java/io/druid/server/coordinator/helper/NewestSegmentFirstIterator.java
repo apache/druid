@@ -28,7 +28,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.server.coordinator.CoordinatorCompactionConfig;
+import io.druid.server.coordinator.DataSourceCompactionConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -57,7 +57,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 {
   private static final Logger log = new Logger(NewestSegmentFirstIterator.class);
 
-  private final Map<String, CoordinatorCompactionConfig> compactionConfigs;
+  private final Map<String, DataSourceCompactionConfig> compactionConfigs;
   private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
 
   // dataSource -> intervalToFind
@@ -77,7 +77,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   );
 
   NewestSegmentFirstIterator(
-      Map<String, CoordinatorCompactionConfig> compactionConfigs,
+      Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources
   )
   {
@@ -89,7 +89,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     for (Entry<String, VersionedIntervalTimeline<String, DataSegment>> entry : dataSources.entrySet()) {
       final String dataSource = entry.getKey();
       final VersionedIntervalTimeline<String, DataSegment> timeline = entry.getValue();
-      final CoordinatorCompactionConfig config = compactionConfigs.get(dataSource);
+      final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
 
       if (config != null && !timeline.isEmpty()) {
         final Interval searchInterval = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest());
@@ -98,9 +98,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       }
     }
 
-    for (Entry<String, CoordinatorCompactionConfig> entry : compactionConfigs.entrySet()) {
+    for (Entry<String, DataSourceCompactionConfig> entry : compactionConfigs.entrySet()) {
       final String dataSourceName = entry.getKey();
-      final CoordinatorCompactionConfig config = entry.getValue();
+      final DataSourceCompactionConfig config = entry.getValue();
 
       if (config == null) {
         throw new ISE("Unknown dataSource[%s]", dataSourceName);
@@ -111,9 +111,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @Override
-  public Object2LongOpenHashMap<String> remainingSegments()
+  public Object2LongOpenHashMap<String> remainingSegmentSizeBytes()
   {
     final Object2LongOpenHashMap<String> resultMap = new Object2LongOpenHashMap<>();
+    resultMap.defaultReturnValue(UNKNOWN_REMAINING_SEGMENT_SIZE);
     final Iterator<QueueEntry> iterator = queue.iterator();
     while (iterator.hasNext()) {
       final QueueEntry entry = iterator.next();
@@ -126,7 +127,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           entry.getDataSource(),
           holders.stream()
                  .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-                 .count()
+                 .mapToLong(chunk -> chunk.getObject().getSize())
+                 .sum()
       );
     }
     return resultMap;
@@ -166,7 +168,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    * {@link #searchIntervals} is updated according to the found segments. That is, the interval of the found segments
    * are removed from the searchInterval of the given dataSource.
    */
-  private void updateQueue(String dataSourceName, CoordinatorCompactionConfig config)
+  private void updateQueue(String dataSourceName, DataSourceCompactionConfig config)
   {
     VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(dataSourceName);
 
@@ -219,7 +221,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Interval intervalToSearch,
       final DateTime searchEnd,
-      final CoordinatorCompactionConfig config
+      final DataSourceCompactionConfig config
   )
   {
     final long targetCompactionSize = config.getTargetCompactionSizeBytes();
@@ -361,7 +363,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final VersionedIntervalTimeline<String, DataSegment> timeline,
       final Interval searchInterval,
       final DateTime searchEnd,
-      final CoordinatorCompactionConfig config
+      final DataSourceCompactionConfig config
   )
   {
     if (segmentsToCompact.size() > 0) {

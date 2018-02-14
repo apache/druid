@@ -567,7 +567,6 @@ public class IndexTask extends AbstractTask
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException
-
   {
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final FireDepartment fireDepartmentForMetrics = new FireDepartment(
@@ -651,9 +650,9 @@ public class IndexTask extends AbstractTask
     };
 
     try (
-            final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
-            final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
-            final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
+        final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
+        final BatchAppenderatorDriver driver = newDriver(appenderator, toolbox, segmentAllocator);
+        final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
       driver.startJob();
 

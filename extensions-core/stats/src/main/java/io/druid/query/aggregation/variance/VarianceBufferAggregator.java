@@ -20,8 +20,6 @@
 package io.druid.query.aggregation.variance;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseFloatColumnValueSelector;
@@ -35,8 +33,8 @@ import java.nio.ByteBuffer;
 public abstract class VarianceBufferAggregator implements BufferAggregator
 {
   private static final int COUNT_OFFSET = 0;
-  private static final int SUM_OFFSET = Longs.BYTES;
-  private static final int NVARIANCE_OFFSET = SUM_OFFSET + Doubles.BYTES;
+  private static final int SUM_OFFSET = Long.BYTES;
+  private static final int NVARIANCE_OFFSET = SUM_OFFSET + Double.BYTES;
 
   @Override
   public void init(final ByteBuffer buf, final int position)

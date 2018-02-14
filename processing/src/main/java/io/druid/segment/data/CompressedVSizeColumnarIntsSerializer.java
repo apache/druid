@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
 import io.druid.common.utils.ByteUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.IndexIO;
@@ -111,7 +110,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
     this.isBigEndian = byteOrder.equals(ByteOrder.BIG_ENDIAN);
     this.compression = compression;
     this.flattener = flattener;
-    this.intBuffer = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);
+    this.intBuffer = ByteBuffer.allocate(Integer.BYTES).order(byteOrder);
     CompressionStrategy.Compressor compressor = compression.getCompressor();
     this.endBuffer = compressor.allocateInBuffer(chunkBytes, segmentWriteOutMedium.getCloser()).order(byteOrder);
     this.numInserted = 0;
@@ -142,7 +141,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
     }
     intBuffer.putInt(0, val);
     if (isBigEndian) {
-      endBuffer.put(intBuffer.array(), Ints.BYTES - numBytes, numBytes);
+      endBuffer.put(intBuffer.array(), Integer.BYTES - numBytes, numBytes);
     } else {
       endBuffer.put(intBuffer.array(), 0, numBytes);
     }

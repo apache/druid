@@ -85,7 +85,7 @@ public class IntervalDimFilter implements DimFilter
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
 
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
-    int intervalsBytesSize = intervalLongs.size() * Longs.BYTES * 2 + intervalLongs.size();
+    int intervalsBytesSize = intervalLongs.size() * Long.BYTES * 2 + intervalLongs.size();
 
     ByteBuffer filterCacheKey = ByteBuffer.allocate(3
                                                     + dimensionBytes.length

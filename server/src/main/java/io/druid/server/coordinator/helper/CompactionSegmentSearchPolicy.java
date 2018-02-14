@@ -19,7 +19,7 @@
 
 package io.druid.server.coordinator.helper;
 
-import io.druid.server.coordinator.CoordinatorCompactionConfig;
+import io.druid.server.coordinator.DataSourceCompactionConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 
@@ -34,7 +34,7 @@ public interface CompactionSegmentSearchPolicy
    * Reset the current states of this policy. This method should be called whenever iterating starts.
    */
   CompactionSegmentIterator reset(
-      Map<String, CoordinatorCompactionConfig> compactionConfigs,
+      Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources
   );
 }

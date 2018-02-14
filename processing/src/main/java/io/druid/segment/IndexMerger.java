@@ -27,7 +27,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import com.google.inject.ImplementedBy;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ByteBufferUtils;
@@ -450,7 +449,7 @@ public interface IndexMerger
         }
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
-          int allocationSize = indexed.size() * Ints.BYTES;
+          int allocationSize = indexed.size() * Integer.BYTES;
           log.info("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
           final ByteBuffer conversionDirectBuffer = ByteBuffer.allocateDirect(allocationSize);
           conversions[i] = conversionDirectBuffer.asIntBuffer();
