@@ -17,10 +17,11 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inp
 |type      | String      | This should say `orc`                                                                  | yes|
 |parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Any parse spec that extends ParseSpec is possible but only their TimestampSpec and DimensionsSpec are used. | yes|
 |typeString| String      | String representation of Orc struct type info. If not specified, auto constructed from parseSpec but all metric columns are dropped | no|
+|mapFieldNameFormat| String | String format for resolving the flatten map fields. Default is `<PARENT>_<CHILD>`. | no |
 
 For example of `typeString`, string column col1 and array of string column col2 is represented by `"struct<col1:string,col2:array<string>>"`.
 
-Currently, it only supports java primitive types and array of java primitive types, which means only 'list' of compound types in [ORC types](https://orc.apache.org/docs/types.html) is supported (list of list is not supported).  
+Currently, it only supports java primitive types, array of java primitive types and map of java primitive types. Thus, compound types 'list' and 'map' in [ORC types](https://orc.apache.org/docs/types.html) are supported. Note that, list of list is not supported, nor map of compound types. For map types, values will be exploded to several columns where column names will be resolved via `mapFieldNameFormat`.
 
 For example of hadoop indexing:
 
@@ -62,7 +63,8 @@ For example of hadoop indexing:
             "spatialDimensions": []
           }
         },
-        "typeString": "struct<time:string,name:string>"
+        "typeString": "struct<time:string,name:string>",
+        "mapFieldNameFormat": "<PARENT>_<CHILD>"
       },
       "metricsSpec": [{
         "type": "count",
