@@ -21,7 +21,7 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inp
 
 For example of `typeString`, string column col1 and array of string column col2 is represented by `"struct<col1:string,col2:array<string>>"`.
 
-Currently, it only supports java primitive types, array of java primitive types and map of java primitive types. Thus, compound types 'list' and 'map' in [ORC types](https://orc.apache.org/docs/types.html) are supported. Note that, list of list is not supported, nor map of compond types. For map types, values will be exploded to several columns where column names will be resolved via `mapFieldNameFormat`.
+Currently, it only supports java primitive types, array of java primitive types and map of java primitive types. Thus, compound types 'list' and 'map' in [ORC types](https://orc.apache.org/docs/types.html) are supported. Note that, list of list is not supported, nor map of compound types. For map types, values will be exploded to several columns where column names will be resolved via `mapFieldNameFormat`.
 
 For example of hadoop indexing:
 
