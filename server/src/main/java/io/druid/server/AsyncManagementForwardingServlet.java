@@ -109,12 +109,17 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
           MODIFIED_PATH_ATTRIBUTE, request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
     } else {
-      handleBadRequest(response, "Unsupported proxy destination");
+      handleBadRequest(response, StringUtils.format("Unsupported proxy destination [%s]", request.getRequestURI()));
       return;
     }
 
     if (currentLeader == null) {
-      handleBadRequest(response, "Unable to determine destination; is your coordinator/overlord running?");
+      handleBadRequest(
+          response,
+          StringUtils.format(
+              "Unable to determine destination for [%s]; is your coordinator/overlord running?", request.getRequestURI()
+          )
+      );
       return;
     }
 
