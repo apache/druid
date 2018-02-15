@@ -24,7 +24,6 @@ import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.MapUtils;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -66,9 +65,9 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     try {
       prepareOutDir(outDir);
 
-      log.info(StringUtils.format(
+      log.info(
           "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
-      ));
+      );
 
       boolean blobPathIsHadoop = blobPath.contains(AZURE_STORAGE_HOST_ADDRESS);
       final String actualBlobPath;

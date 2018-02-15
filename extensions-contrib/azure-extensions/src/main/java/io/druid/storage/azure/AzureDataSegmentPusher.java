@@ -79,7 +79,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         AzureDataSegmentPuller.AZURE_STORAGE_HOST_ADDRESS
     );
 
-    log.info(StringUtils.format("Using Azure blob storage Hadoop path: %s", hadoopPath));
+    log.info("Using Azure blob storage Hadoop path: %s", hadoopPath);
 
     return hadoopPath;
   }
@@ -99,7 +99,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         dataSegment.getShardSpec().getPartitionNum()
     );
 
-    log.info(StringUtils.format("DataSegment: [%s]", seg));
+    log.info("DataSegment: [%s]", seg);
 
     // Replace colons with underscores, since they are not supported through wasb:// prefix
     return seg;
