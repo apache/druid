@@ -21,7 +21,7 @@ package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids.TimeseriesQueryBuilder;
 import io.druid.query.aggregation.AggregatorFactory;

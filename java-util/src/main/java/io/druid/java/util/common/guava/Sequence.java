@@ -34,7 +34,7 @@ import java.util.function.Function;
  * methods get called and other resources get cleaned up whenever processing is complete. Without this inversion
  * it is very easy to unintentionally leak resources when iterating over something that is backed by a resource.
  * <p>
- * Sequences also expose {#see com.metamx.common.guava.Yielder} Yielder objects which allow you to implement a
+ * Sequences also expose {#see io.druid.java.util.common.guava.Yielder} Yielder objects which allow you to implement a
  * continuation over the Sequence. Yielder do not offer the same guarantees of automatic resource management
  * as the accumulate method, but they are Closeable and will do the proper cleanup when close() is called on them.
  */

@@ -19,7 +19,7 @@
 
 package io.druid.server.security;
 
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 
 public class NoopEscalator implements Escalator
 {

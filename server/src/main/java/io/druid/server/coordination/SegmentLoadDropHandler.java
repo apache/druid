@@ -35,7 +35,7 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;

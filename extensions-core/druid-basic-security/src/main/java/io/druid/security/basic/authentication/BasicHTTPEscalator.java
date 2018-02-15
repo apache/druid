@@ -22,9 +22,9 @@ package io.druid.security.basic.authentication;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.metamx.http.client.CredentialedHttpClient;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.auth.BasicCredentials;
+import io.druid.java.util.http.client.CredentialedHttpClient;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.auth.BasicCredentials;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
 

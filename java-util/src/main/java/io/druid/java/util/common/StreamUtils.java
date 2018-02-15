@@ -25,6 +25,9 @@ import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,6 +37,31 @@ import java.util.concurrent.Callable;
  */
 public class StreamUtils
 {
+  /**
+   * Copy from an input stream to a file (and buffer it) and close the input stream.
+   * <p>
+   * It is highly recommended to use FileUtils.retryCopy whenever possible, and not use a raw `InputStream`
+   *
+   * @param is   The input stream to copy bytes from. `is` is closed regardless of the copy result.
+   * @param file The file to copy bytes to. Any parent directories are automatically created.
+   *
+   * @return The count of bytes written to the file
+   *
+   * @throws IOException
+   */
+  public static long copyToFileAndClose(InputStream is, File file) throws IOException
+  {
+    file.getParentFile().mkdirs();
+    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(file))) {
+      final long result = ByteStreams.copy(is, os);
+      // Workarround for http://hg.openjdk.java.net/jdk8/jdk8/jdk/rev/759aa847dcaf
+      os.flush();
+      return result;
+    }
+    finally {
+      is.close();
+    }
+  }
 
   /**
    * Copy from `is` to `os` and close the streams regardless of the result.

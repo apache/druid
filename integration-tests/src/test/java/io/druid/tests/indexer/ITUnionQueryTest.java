@@ -22,7 +22,7 @@ package io.druid.tests.indexer;
 import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.DateTimes;

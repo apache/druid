@@ -22,7 +22,7 @@ package io.druid.server.metrics;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.metrics.Monitor;
+import io.druid.java.util.metrics.Monitor;
 import io.druid.query.DruidMetrics;
 
 import javax.validation.constraints.NotNull;

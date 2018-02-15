@@ -33,8 +33,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.metamx</groupId>
+      <groupId>io.druid</groupId>
       <artifactId>java-util</artifactId>
+      <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

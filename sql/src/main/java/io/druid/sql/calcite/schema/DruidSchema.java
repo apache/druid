@@ -28,7 +28,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;

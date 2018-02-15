@@ -20,7 +20,7 @@
 package io.druid.query.topn;
 
 import com.google.common.collect.ImmutableSet;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.CachingEmitter;
 import io.druid.query.DefaultQueryMetricsTest;

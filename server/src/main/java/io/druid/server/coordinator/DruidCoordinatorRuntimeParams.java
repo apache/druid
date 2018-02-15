@@ -21,7 +21,7 @@ package io.druid.server.coordinator;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.metadata.MetadataRuleManager;
