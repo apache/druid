@@ -292,6 +292,24 @@ Returns all compaction configs.
 
 Returns a compaction config of a dataSource.
 
+#### Servers
+
+* `/druid/coordinator/v1/servers`
+
+Returns a list of servers URLs using the format `{hostname}:{port}`. Note that
+nodes that run with different types will appear multiple times with different
+ports.
+
+* `/druid/coordinator/v1/servers?simple`
+
+Returns a list of server data objects in which each object has the following keys:
+- `host`: host URL include (`{hostname}:{port}`)
+- `type`: node type (`indexer-executor`, `historical`)
+- `currSize`: storage size currently used
+- `maxSize`: maximum storage size
+- `priority`
+- `tier`
+
 ### POST
 
 #### Datasources
