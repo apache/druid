@@ -20,6 +20,7 @@
 package io.druid.java.util.emitter.core;
 
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.logger.Logger;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.AbstractQueuedLongSynchronizer;
@@ -44,6 +45,8 @@ import java.util.concurrent.locks.AbstractQueuedLongSynchronizer;
  */
 class Batch extends AbstractQueuedLongSynchronizer
 {
+  private static final Logger log = new Logger(Batch.class);
+
   private static final long PARTY = 1L << 32;
   private static final long SEAL_BIT = 1L << 63;
 
@@ -278,6 +281,9 @@ class Batch extends AbstractQueuedLongSynchronizer
         if (compareAndSetState(state, newState)) {
           // Ensures only one thread calls emitter.onSealExclusive() for each batch.
           if (!isSealed(state)) {
+            log.debug("Unlocked and sealed batch [%d]", batchNumber);
+            debugLogState("old state", state);
+            debugLogState("new state", newState);
             emitter.onSealExclusive(
                 this,
                 firstEventTimestamp > 0 ? System.currentTimeMillis() - firstEventTimestamp : -1
@@ -296,6 +302,9 @@ class Batch extends AbstractQueuedLongSynchronizer
         }
         long newState = state | SEAL_BIT;
         if (compareAndSetState(state, newState)) {
+          log.debug("Sealed batch [%d]", batchNumber);
+          debugLogState("old state", state);
+          debugLogState("new state", newState);
           emitter.onSealExclusive(
               this,
               firstEventTimestamp > 0 ? System.currentTimeMillis() - firstEventTimestamp : -1
@@ -323,10 +332,24 @@ class Batch extends AbstractQueuedLongSynchronizer
   public String toString()
   {
     long state = getState();
-    return "Batch{"
-           + "bufferWatermark=" + bufferWatermark(state) +
+    return "Batch{" +
+           "batchNumber=" + batchNumber +
+           ", bufferWatermark=" + bufferWatermark(state) +
            ", parties=" + parties(state) +
            ", isSealed=" + isSealed(state) +
            "}";
+  }
+
+  private static void debugLogState(String name, long state)
+  {
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "%s[bufferWatermark=%d, parties=%d, isSealed=%s]",
+          name,
+          bufferWatermark(state),
+          parties(state),
+          isSealed(state)
+      );
+    }
   }
 }
