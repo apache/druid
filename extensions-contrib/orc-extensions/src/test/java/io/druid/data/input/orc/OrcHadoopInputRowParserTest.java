@@ -117,7 +117,8 @@ public class OrcHadoopInputRowParserTest
                 null
             )
         ),
-        "struct<timestamp:string,col1:string,col2:array<string>,val1:float>"
+        "struct<timestamp:string,col1:string,col2:array<string>,val1:float>",
+        null
     );
 
     Assert.assertEquals(expected, parser);
@@ -153,7 +154,8 @@ public class OrcHadoopInputRowParserTest
             new TimestampSpec("timestamp", "auto", null),
             new DimensionsSpec(null, null, null)
         ),
-        typeString
+        typeString,
+        "<PARENT>-<CHILD>"
     );
 
     final SettableStructObjectInspector oi = (SettableStructObjectInspector) OrcStruct.createObjectInspector(
@@ -182,6 +184,6 @@ public class OrcHadoopInputRowParserTest
     Assert.assertEquals("col4", 2L, row.getRaw("col4"));
     Assert.assertEquals("col5", 3.5d, row.getRaw("col5"));
     Assert.assertNull("col6", row.getRaw("col6"));
-    Assert.assertEquals("col7_subval7", "subval7", row.getRaw("col7_subcol7"));
+    Assert.assertEquals("col7-subcol7", "subval7", row.getRaw("col7-subcol7"));
   }
 }
