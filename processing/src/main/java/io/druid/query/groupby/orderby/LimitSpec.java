@@ -49,6 +49,12 @@ public interface LimitSpec extends Cacheable
   /**
    * Returns a function that applies a limit to an input sequence that is assumed to be sorted on dimensions.
    *
+   * @param dimensions      query dimensions
+   * @param aggs            query aggregators
+   * @param postAggs        query postAggregators
+   * @param granularity     query granularity
+   * @param sortByDimsFirst 'sortByDimsFirst' value in queryContext
+   *
    * @return limit function
    */
   Function<Sequence<Row>, Sequence<Row>> build(
