@@ -31,7 +31,7 @@
   <parent>
     <groupId>io.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.12.0-rc2-SNAPSHOT</version>
+    <version>0.12.0-rc2</version>
   </parent>
 
   <dependencies>
