@@ -57,14 +57,14 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.transform.ExpressionTransform;
-import io.druid.segment.transform.TransformSpec;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.transform.ExpressionTransform;
+import io.druid.segment.transform.TransformSpec;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -581,7 +581,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfig(2, 2, 2, null, false, false, true),
+            createTuningConfig(2, 2, 2L, null, false, false, true),
             false
         ),
         null
@@ -623,7 +623,7 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, 2, null, false, true, true),
+            createTuningConfig(3, 2, 2L, null, false, true, true),
             false
         ),
         null
@@ -664,7 +664,7 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, 2, null, false, false, true),
+            createTuningConfig(3, 2, 2L, null, false, false, true),
             false
         ),
         null
@@ -1128,7 +1128,7 @@ public class IndexTaskTest
   private static IndexTuningConfig createTuningConfig(
       Integer targetPartitionSize,
       Integer maxRowsInMemory,
-      Integer maxTotalRows,
+      Long maxTotalRows,
       Integer numShards,
       boolean forceExtendableShardSpecs,
       boolean forceGuaranteedRollup,
@@ -1147,6 +1147,7 @@ public class IndexTaskTest
         forceExtendableShardSpecs,
         forceGuaranteedRollup,
         reportParseException,
+        null,
         null,
         null
     );
