@@ -191,7 +191,7 @@ public class DefaultLimitSpecTest
 
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
-        limitFn.apply(testRowsSequence).toList()
+        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<>())
     );
   }
 
@@ -213,7 +213,7 @@ public class DefaultLimitSpecTest
 
     Assert.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
-        limitFn.apply(testRowsSequence).toList()
+        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<>())
     );
   }
 
