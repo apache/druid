@@ -313,12 +313,12 @@ In this way, configuration changes can be applied without requiring any pause in
 ### On the Subject of Segments
 
 Each Kafka Indexing Task puts events consumed from Kafka partitions assigned to it in a single segment for each segment
-granular interval until maxRowsPerSegment limit is reached, at this point a new partition for this segment granularity is
-created for further events. Kafka Indexing Task also does incremental hand-offs which means that all the segments created by a
-task will not be held up till the task duration is over. As soon as maxRowsPerSegment limit is hit, all the segments held
-by the task at that point in time will be handed-off and new set of segments will be created for further events.
-This means that the task can run for longer durations of time without accumulating old segments locally on Middle Manager
-nodes and it is encouraged to do so.
+granular interval until maxRowsPerSegment or intermediateHandoffPeriod limit is reached, at this point a new partition
+for this segment granularity is created for further events. Kafka Indexing Task also does incremental hand-offs which
+means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment
+or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
+and new set of segments will be created for further events. This means that the task can run for longer durations of time
+without accumulating old segments locally on Middle Manager nodes and it is encouraged to do so.
 
 Kafka Indexing Service may still produce some small segments. Lets say the task duration is 4 hours, segment granularity
 is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10, new set of tasks will be started and
