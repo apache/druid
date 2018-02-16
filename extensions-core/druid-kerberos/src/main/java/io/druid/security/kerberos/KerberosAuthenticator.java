@@ -80,6 +80,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -658,8 +659,7 @@ public class KerberosAuthenticator implements Authenticator
 
     if (expires >= 0 && isCookiePersistent) {
       Date date = new Date(expires);
-      SimpleDateFormat df = new SimpleDateFormat("EEE, " +
-                                                 "dd-MMM-yyyy HH:mm:ss zzz");
+      SimpleDateFormat df = new SimpleDateFormat("EEE, dd-MMM-yyyy HH:mm:ss zzz", Locale.ENGLISH);
       df.setTimeZone(TimeZone.getTimeZone("GMT"));
       sb.append("; Expires=").append(df.format(date));
     }
