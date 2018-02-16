@@ -90,8 +90,12 @@ class Batch extends AbstractQueuedLongSynchronizer
 
   /**
    * Ordering number of this batch, as they filled & emitted in {@link HttpPostEmitter} serially, starting from 0.
+   * It's a boxed Integer rather than int, because we want to minimize the number of allocations done in
+   * {@link HttpPostEmitter#onSealExclusive} and so the probability of {@link OutOfMemoryError}.
+   * @see HttpPostEmitter#onSealExclusive
+   * @see HttpPostEmitter#concurrentBatch
    */
-  final int batchNumber;
+  final Integer batchNumber;
 
   /**
    * The number of events in this batch, needed for event count-based batch emitting.
