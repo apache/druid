@@ -33,10 +33,6 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
-import io.druid.java.util.metrics.AbstractMonitor;
-import io.druid.java.util.metrics.MonitorUtils;
 import com.sun.jersey.api.core.DefaultResourceConfig;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.JerseyServletModule;
@@ -53,6 +49,10 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
+import io.druid.java.util.metrics.MonitorUtils;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.ServerConfig;
@@ -108,6 +108,7 @@ public class JettyServerModule extends JerseyServletModule
     serve("/*").with(DruidGuiceContainer.class);
 
     Jerseys.addResource(binder, StatusResource.class);
+    JsonConfigProvider.bind(binder, "druid.security", StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
 
     // Adding empty binding for ServletFilterHolders and Handlers so that injector returns an empty set if none

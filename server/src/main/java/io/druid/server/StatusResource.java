@@ -21,7 +21,6 @@ package io.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -32,11 +31,13 @@ import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.http.security.StateResourceFilter;
 
 import javax.inject.Inject;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -49,9 +50,9 @@ import java.util.Set;
 public class StatusResource
 {
 
-  private static final String hiddenPropertyLabel = "druid.hidden.properties";
-
-  private final Set<String> hiddenProperties = Sets.newHashSet();
+  @JsonProperty
+  @NotNull
+  private final Set<String> hiddenProperties = Sets.newHashSet(Arrays.asList("druid.s3.accessKey", "druid.s3.secretKey", "druid.metadata.storage.connector.passwor"));
 
   private final Properties properties;
 
@@ -59,10 +60,6 @@ public class StatusResource
   public StatusResource(Properties properties)
   {
     this.properties = properties;
-    String hiddenPropertiesValues = properties.getProperty(hiddenPropertyLabel);
-    if (org.apache.commons.lang.StringUtils.isNotBlank(hiddenPropertiesValues)) {
-      Splitter.on(",").split(hiddenPropertiesValues).forEach(hiddenProperties::add);
-    }
   }
 
   @GET
