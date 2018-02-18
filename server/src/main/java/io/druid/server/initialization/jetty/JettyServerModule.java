@@ -108,7 +108,6 @@ public class JettyServerModule extends JerseyServletModule
     serve("/*").with(DruidGuiceContainer.class);
 
     Jerseys.addResource(binder, StatusResource.class);
-    JsonConfigProvider.bind(binder, "druid.security", StatusResource.class);
     binder.bind(StatusResource.class).in(LazySingleton.class);
 
     // Adding empty binding for ServletFilterHolders and Handlers so that injector returns an empty set if none

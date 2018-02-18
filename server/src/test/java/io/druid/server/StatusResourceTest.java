@@ -21,12 +21,9 @@ package io.druid.server;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import io.druid.guice.GuiceInjectors;
 import io.druid.guice.PropertiesModule;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.InitializationTest;
@@ -37,7 +34,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 import static io.druid.server.StatusResource.ModuleVersion;
@@ -67,16 +63,6 @@ public class StatusResourceTest
       Assert.assertTrue("Status resource should contain module " + moduleName, contains);
     }
   }
-  @Test
-  public void testPropertiesEndpoint()
-  {
-    Injector injector = GuiceInjectors.makeStartupInjector();
-    StatusResource statusResource = injector.getInstance(StatusResource.class);
-    Properties properties = injector.getInstance(Properties.class);
-    Map<String, String> map = statusResource.getProperties();
-    MapDifference<String, String> mapDifference = Maps.difference(Maps.fromProperties(properties), map);
-    Assert.assertTrue(mapDifference.areEqual());
-  }
 
   @Test
   public void testPropertiesWithRestrictedConfigs()
@@ -85,7 +71,7 @@ public class StatusResourceTest
         "status.resource.test.runtime.properties"))));
     Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
     Set<String> hiddenProperties = Sets.newHashSet();
-    Splitter.on(",").split(returnedProperties.get("druid.hidden.properties")).forEach(hiddenProperties::add);
+    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
     hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
   }
 }
