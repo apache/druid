@@ -51,8 +51,8 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
   }
 
   private final ByteOrder byteOrder;
-  private final BitmapSerdeFactory bitmapSerdeFactory;
   private Serializer serializer;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
 
   private FloatGenericColumnPartSerdeV2(
       ByteOrder byteOrder,
@@ -126,7 +126,6 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
           }
       );
     }
-
   }
 
   @Override
@@ -155,7 +154,6 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
       builder.setType(ValueType.FLOAT)
              .setHasMultipleValues(false)
              .setGenericColumn(new FloatGenericColumnSupplier(column, bitmap));
-
     };
   }
 }

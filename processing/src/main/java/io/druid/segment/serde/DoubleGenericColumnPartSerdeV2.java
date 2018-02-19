@@ -36,36 +36,27 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ */
 public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
 {
-  private final ByteOrder byteOrder;
-  private Serializer serialize;
-  private final BitmapSerdeFactory bitmapSerdeFactory;
-
   @JsonCreator
   public static DoubleGenericColumnPartSerdeV2 getDoubleGenericColumnPartSerde(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new DoubleGenericColumnPartSerdeV2(byteOrder,
-                                              bitmapSerdeFactory != null
-                                              ? bitmapSerdeFactory
-                                              : new BitmapSerde.LegacyBitmapSerdeFactory(), null
+    return new DoubleGenericColumnPartSerdeV2(
+        byteOrder,
+        bitmapSerdeFactory != null
+        ? bitmapSerdeFactory
+        : new BitmapSerde.LegacyBitmapSerdeFactory(), null
     );
   }
 
-  @JsonProperty
-  public ByteOrder getByteOrder()
-  {
-    return byteOrder;
-  }
-
-  @JsonProperty
-  public BitmapSerdeFactory getBitmapSerdeFactory()
-  {
-    return bitmapSerdeFactory;
-  }
+  private final ByteOrder byteOrder;
+  private Serializer serialize;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
 
   public DoubleGenericColumnPartSerdeV2(
       ByteOrder byteOrder,
@@ -78,34 +69,16 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
     this.serialize = serialize;
   }
 
-  @Override
-  public Serializer getSerializer()
+  @JsonProperty
+  public ByteOrder getByteOrder()
   {
-    return serialize;
+    return byteOrder;
   }
 
-  @Override
-  public Deserializer getDeserializer()
+  @JsonProperty
+  public BitmapSerdeFactory getBitmapSerdeFactory()
   {
-    return (buffer, builder, columnConfig) -> {
-      int offset = buffer.getInt();
-      int initialPos = buffer.position();
-      final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
-          buffer,
-          byteOrder
-      );
-
-      buffer.position(initialPos + offset);
-      final ImmutableBitmap bitmap;
-      if (buffer.hasRemaining()) {
-        bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
-      } else {
-        bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
-      }
-      builder.setType(ValueType.DOUBLE)
-             .setHasMultipleValues(false)
-             .setGenericColumn(new DoubleGenericColumnSupplier(column, bitmap));
-    };
+    return bitmapSerdeFactory;
   }
 
   public static SerializerBuilder serializerBuilder()
@@ -158,5 +131,35 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
           }
       );
     }
+  }
+
+  @Override
+  public Serializer getSerializer()
+  {
+    return serialize;
+  }
+
+  @Override
+  public Deserializer getDeserializer()
+  {
+    return (buffer, builder, columnConfig) -> {
+      int offset = buffer.getInt();
+      int initialPos = buffer.position();
+      final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
+          buffer,
+          byteOrder
+      );
+
+      buffer.position(initialPos + offset);
+      final ImmutableBitmap bitmap;
+      if (buffer.hasRemaining()) {
+        bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
+      } else {
+        bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
+      }
+      builder.setType(ValueType.DOUBLE)
+             .setHasMultipleValues(false)
+             .setGenericColumn(new DoubleGenericColumnSupplier(column, bitmap));
+    };
   }
 }

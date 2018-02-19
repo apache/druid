@@ -43,7 +43,9 @@ public class NilColumnValueSelector implements ColumnValueSelector
   private NilColumnValueSelector() {}
 
   /**
-   * Always returns 0.0.
+   * always returns 0, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
+   * or always throws an exception, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is
+   * set to false.
    */
   @Override
   public double getDouble()
@@ -52,7 +54,9 @@ public class NilColumnValueSelector implements ColumnValueSelector
   }
 
   /**
-   * Always returns 0.0f.
+   * always returns 0.0f, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
+   * or always throws an exception, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is
+   * set to false.
    */
   @Override
   public float getFloat()
@@ -61,7 +65,9 @@ public class NilColumnValueSelector implements ColumnValueSelector
   }
 
   /**
-   * Always returns 0L.
+   * always returns 0L, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
+   * or always throws an exception, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is
+   * set to false.
    */
   @Override
   public long getLong()
@@ -102,27 +108,18 @@ public class NilColumnValueSelector implements ColumnValueSelector
 
   private static class SqlCompatibleNilColumnValueSelector extends NilColumnValueSelector
   {
-    /**
-     * Always throws IllegalStateException.
-     */
     @Override
     public double getDouble()
     {
       throw new IllegalStateException("Cannot return null value as double");
     }
 
-    /**
-     * Always throws IllegalStateException.
-     */
     @Override
     public float getFloat()
     {
       throw new IllegalStateException("Cannot return null value as float");
     }
-
-    /**
-     * Always throws IllegalStateException.
-     */
+    
     @Override
     public long getLong()
     {

@@ -51,8 +51,8 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
   }
 
   private final ByteOrder byteOrder;
-  private final BitmapSerdeFactory bitmapSerdeFactory;
   private Serializer serializer;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
 
   private LongGenericColumnPartSerdeV2(
       ByteOrder byteOrder,
@@ -153,7 +153,6 @@ public class LongGenericColumnPartSerdeV2 implements ColumnPartSerde
       builder.setType(ValueType.LONG)
              .setHasMultipleValues(false)
              .setGenericColumn(new LongGenericColumnSupplier(column, bitmap));
-
     };
   }
 }
