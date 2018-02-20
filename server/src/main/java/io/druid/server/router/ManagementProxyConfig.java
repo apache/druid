@@ -17,50 +17,17 @@
  * under the License.
  */
 
-package io.druid.client;
+package io.druid.server.router;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Sets;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-import java.util.Set;
-
-/**
- */
-public class DruidServerConfig
+public class ManagementProxyConfig
 {
   @JsonProperty
-  @Min(0)
-  private long maxSize = 0;
+  private boolean enabled = false;
 
-  @JsonProperty
-  private String tier = DruidServer.DEFAULT_TIER;
-
-  @JsonProperty
-  private int priority = DruidServer.DEFAULT_PRIORITY;
-
-  @JsonProperty
-  @NotNull
-  private Set<String> hiddenProperties = Sets.newHashSet("druid.s3.accessKey", "druid.s3.secretKey", "druid.metadata.storage.connector.password");
-
-  public long getMaxSize()
+  public boolean isEnabled()
   {
-    return maxSize;
-  }
-
-  public String getTier()
-  {
-    return tier;
-  }
-
-  public int getPriority()
-  {
-    return priority;
-  }
-
-  public Set<String> getHiddenProperties()
-  {
-    return hiddenProperties;
+    return enabled;
   }
 }

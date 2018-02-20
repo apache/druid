@@ -21,7 +21,6 @@ package io.druid.curator.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.guice.annotations.Self;
@@ -29,6 +28,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.DruidNode;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
@@ -38,7 +38,6 @@ import org.apache.curator.framework.recipes.leader.Participant;
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -66,13 +65,21 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     this.curator = curator;
     this.self = self;
     this.latchPath = latchPath;
+
+    // Creating a LeaderLatch here allows us to query for the current leader. We will not be considered for leadership
+    // election until LeaderLatch.start() is called in registerListener(). This allows clients to observe the current
+    // leader without being involved in the election.
+    this.leaderLatch.set(createNewLeaderLatch());
   }
 
   private LeaderLatch createNewLeaderLatch()
   {
-    final LeaderLatch newLeaderLatch = new LeaderLatch(
-        curator, latchPath, self.getServiceScheme() + "://" + self.getHostAndPortToUse()
-    );
+    return new LeaderLatch(curator, latchPath, self.getServiceScheme() + "://" + self.getHostAndPortToUse());
+  }
+
+  private LeaderLatch createNewLeaderLatchWithListener()
+  {
+    final LeaderLatch newLeaderLatch = createNewLeaderLatch();
 
     newLeaderLatch.addListener(
         new LeaderLatchListener()
@@ -94,7 +101,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
 
               // give others a chance to become leader.
-              final LeaderLatch oldLatch = createNewLeaderLatch();
+              final LeaderLatch oldLatch = createNewLeaderLatchWithListener();
               CloseQuietly.close(oldLatch);
               leader = false;
               try {
@@ -138,10 +145,6 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   @Override
   public String getCurrentLeader()
   {
-    if (!lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-      throw new ISE("not started");
-    }
-
     try {
       final LeaderLatch latch = leaderLatch.get();
 
@@ -181,7 +184,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
       this.listener = listener;
       this.listenerExecutor = Execs.singleThreaded(StringUtils.format("LeaderSelector[%s]", latchPath));
 
-      createNewLeaderLatch();
+      createNewLeaderLatchWithListener();
       leaderLatch.get().start();
 
       lifecycleLock.started();

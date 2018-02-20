@@ -21,6 +21,7 @@ package io.druid.data.input.orc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -116,7 +117,8 @@ public class OrcHadoopInputRowParserTest
                 null
             )
         ),
-        "struct<timestamp:string,col1:string,col2:array<string>,val1:float>"
+        "struct<timestamp:string,col1:string,col2:array<string>,val1:float>",
+        null
     );
 
     Assert.assertEquals(expected, parser);
@@ -146,20 +148,21 @@ public class OrcHadoopInputRowParserTest
   @Test
   public void testParse()
   {
-    final String typeString = "struct<timestamp:string,col1:string,col2:array<string>,col3:float,col4:bigint,col5:decimal,col6:array<string>>";
+    final String typeString = "struct<timestamp:string,col1:string,col2:array<string>,col3:float,col4:bigint,col5:decimal,col6:array<string>,col7:map<string,string>>";
     final OrcHadoopInputRowParser parser = new OrcHadoopInputRowParser(
         new TimeAndDimsParseSpec(
             new TimestampSpec("timestamp", "auto", null),
             new DimensionsSpec(null, null, null)
         ),
-        typeString
+        typeString,
+        "<PARENT>-<CHILD>"
     );
 
     final SettableStructObjectInspector oi = (SettableStructObjectInspector) OrcStruct.createObjectInspector(
         TypeInfoUtils.getTypeInfoFromTypeString(typeString)
     );
     final OrcStruct struct = (OrcStruct) oi.create();
-    struct.setNumFields(7);
+    struct.setNumFields(8);
     oi.setStructFieldData(struct, oi.getStructFieldRef("timestamp"), new Text("2000-01-01"));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col1"), new Text("foo"));
     oi.setStructFieldData(struct, oi.getStructFieldRef("col2"), ImmutableList.of(new Text("foo"), new Text("bar")));
@@ -171,6 +174,7 @@ public class OrcHadoopInputRowParserTest
         new HiveDecimalWritable(HiveDecimal.create(BigDecimal.valueOf(3.5d)))
     );
     oi.setStructFieldData(struct, oi.getStructFieldRef("col6"), null);
+    oi.setStructFieldData(struct, oi.getStructFieldRef("col7"), ImmutableMap.of(new Text("subcol7"), new Text("subval7")));
 
     final InputRow row = parser.parseBatch(struct).get(0);
     Assert.assertEquals("timestamp", DateTimes.of("2000-01-01"), row.getTimestamp());
@@ -180,5 +184,6 @@ public class OrcHadoopInputRowParserTest
     Assert.assertEquals("col4", 2L, row.getRaw("col4"));
     Assert.assertEquals("col5", 3.5d, row.getRaw("col5"));
     Assert.assertNull("col6", row.getRaw("col6"));
+    Assert.assertEquals("col7-subcol7", "subval7", row.getRaw("col7-subcol7"));
   }
 }

@@ -50,7 +50,7 @@ Once it finds some segments, it launches a [compact task](../ingestion/tasks.htm
 The maximum number of running compact tasks is `max(sum of worker capacity * slotRatio, maxSlots)`.
 Note that even though `max(sum of worker capacity * slotRatio, maxSlots)` = 1, at least one compact task is always submitted
 once a compaction is configured for a dataSource. See [HTTP Endpoints](#http-endpoints) to set those values.
- 
+
 Compact tasks might fail due to some reasons.
 
 - If the input segments of a compact task are removed or overshadowed before it starts, that compact task fails immediately.
@@ -67,7 +67,7 @@ Please see [Compaction Configuration](../configuration/coordinator.html#compacti
 
 This policy searches the segments of _all dataSources_ in inverse order of their intervals.
 For example, let me assume there are 3 dataSources (`ds1`, `ds2`, `ds3`) and 5 segments (`seg_ds1_2017-10-01_2017-10-02`, `seg_ds1_2017-11-01_2017-11-02`, `seg_ds2_2017-08-01_2017-08-02`, `seg_ds3_2017-07-01_2017-07-02`, `seg_ds3_2017-12-01_2017-12-02`) for those dataSources.
-The segment name indicates its dataSource and interval. The search result of newestSegmentFirstPolicy is [`seg_ds3_2017-12-01_2017-12-02`, `seg_ds1_2017-11-01_2017-11-02`, `seg_ds1_2017-10-01_2017-10-02`, `seg_ds2_2017-08-01_2017-08-02`, `seg_ds3_2017-07-01_2017-07-02`]. 
+The segment name indicates its dataSource and interval. The search result of newestSegmentFirstPolicy is [`seg_ds3_2017-12-01_2017-12-02`, `seg_ds1_2017-11-01_2017-11-02`, `seg_ds1_2017-10-01_2017-10-02`, `seg_ds2_2017-08-01_2017-08-02`, `seg_ds3_2017-07-01_2017-07-02`].
 
 Every run, this policy starts searching from the (very latest interval - [skipOffsetFromLatest](../configuration/coordinator.html#compaction-configuration)).
 This is to handle the late segments ingested to realtime dataSources.
@@ -291,6 +291,24 @@ Returns all compaction configs.
 * `/druid/coordinator/v1/config/compaction/{dataSource}`
 
 Returns a compaction config of a dataSource.
+
+#### Servers
+
+* `/druid/coordinator/v1/servers`
+
+Returns a list of servers URLs using the format `{hostname}:{port}`. Note that
+nodes that run with different types will appear multiple times with different
+ports.
+
+* `/druid/coordinator/v1/servers?simple`
+
+Returns a list of server data objects in which each object has the following keys:
+- `host`: host URL include (`{hostname}:{port}`)
+- `type`: node type (`indexer-executor`, `historical`)
+- `currSize`: storage size currently used
+- `maxSize`: maximum storage size
+- `priority`
+- `tier`
 
 ### POST
 
