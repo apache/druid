@@ -75,25 +75,28 @@ public class ExpressionSelectors
       @Override
       public double getDouble()
       {
+        // No Assert for null handling as baseSelector already have it.
         return baseSelector.getDouble();
-      }
-
-      @Override
-      public boolean isNull()
-      {
-        return baseSelector.getObject().isNull();
       }
 
       @Override
       public float getFloat()
       {
+        // No Assert for null handling as baseSelector already have it.
         return baseSelector.getFloat();
       }
 
       @Override
       public long getLong()
       {
+        // No Assert for null handling as baseSelector already have it.
         return baseSelector.getLong();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return baseSelector.isNull();
       }
 
       @Nullable

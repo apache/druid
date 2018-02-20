@@ -48,9 +48,8 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
   {
     return new DoubleGenericColumnPartSerdeV2(
         byteOrder,
-        bitmapSerdeFactory != null
-        ? bitmapSerdeFactory
-        : new BitmapSerde.LegacyBitmapSerdeFactory(), null
+        bitmapSerdeFactory != null ? bitmapSerdeFactory : new BitmapSerde.LegacyBitmapSerdeFactory(),
+        null
     );
   }
 
