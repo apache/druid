@@ -179,12 +179,14 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
   private final DimensionDictionary dimLookup;
   private final MultiValueHandling multiValueHandling;
+  private final boolean hasBitmapIndexes;
   private SortedDimensionDictionary sortedLookup;
 
-  public StringDimensionIndexer(MultiValueHandling multiValueHandling)
+  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
   {
     this.dimLookup = new DimensionDictionary();
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
+    this.hasBitmapIndexes = hasBitmapIndexes;
   }
 
   @Override
@@ -621,6 +623,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       int[] key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {
+    if (!hasBitmapIndexes) {
+      throw new UnsupportedOperationException("This column does not include bitmap indexes");
+    }
+
     for (int dimValIdx : key) {
       if (bitmapIndexes[dimValIdx] == null) {
         bitmapIndexes[dimValIdx] = factory.makeEmptyMutableBitmap();

@@ -354,7 +354,8 @@ public class CompactionTask extends AbstractTask
               createDimensionSchema(
                   column.getCapabilities().getType(),
                   dimension,
-                  dimensionHandler.getMultivalueHandling()
+                  dimensionHandler.getMultivalueHandling(),
+                  column.getCapabilities().hasBitmapIndexes()
               )
           );
         }
@@ -402,7 +403,8 @@ public class CompactionTask extends AbstractTask
   private static DimensionSchema createDimensionSchema(
       ValueType type,
       String name,
-      MultiValueHandling multiValueHandling
+      MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes
   )
   {
     switch (type) {
@@ -428,7 +430,7 @@ public class CompactionTask extends AbstractTask
         );
         return new DoubleDimensionSchema(name);
       case STRING:
-        return new StringDimensionSchema(name, multiValueHandling);
+        return new StringDimensionSchema(name, multiValueHandling, hasBitmapIndexes);
       default:
         throw new ISE("Unsupported value type[%s] for dimension[%s]", type, name);
     }

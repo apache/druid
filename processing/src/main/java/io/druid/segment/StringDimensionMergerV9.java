@@ -38,14 +38,14 @@ import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.ByteBufferWriter;
-import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
+import io.druid.segment.data.ColumnarIntsSerializer;
 import io.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ImmutableRTreeObjectStrategy;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.ColumnarIntsSerializer;
+import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
 import io.druid.segment.data.VSizeColumnarIntsSerializer;
 import io.druid.segment.data.VSizeColumnarMultiIntsSerializer;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
@@ -272,6 +272,10 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
   @Override
   public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
   {
+    if (!capabilities.hasBitmapIndexes()) {
+      return;
+    }
+
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 

@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class StringDimensionSchema extends DimensionSchema
 {
+  private static final boolean DEFAULT_BITMAP_INDEX = true;
+
   @JsonCreator
   public static StringDimensionSchema create(String name)
   {
@@ -34,15 +36,16 @@ public class StringDimensionSchema extends DimensionSchema
   @JsonCreator
   public StringDimensionSchema(
       @JsonProperty("name") String name,
-      @JsonProperty("multiValueHandling") MultiValueHandling multiValueHandling
+      @JsonProperty("multiValueHandling") MultiValueHandling multiValueHandling,
+      @JsonProperty("bitmapIndex") Boolean bitmapIndex
   )
   {
-    super(name, multiValueHandling);
+    super(name, multiValueHandling, bitmapIndex == null ? DEFAULT_BITMAP_INDEX : bitmapIndex);
   }
 
   public StringDimensionSchema(String name)
   {
-    this(name, null);
+    this(name, null, DEFAULT_BITMAP_INDEX);
   }
 
   @Override

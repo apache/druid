@@ -23,9 +23,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
@@ -39,6 +41,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -83,7 +86,17 @@ public class SelectorFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
+    super(
+        testName,
+        ROWS,
+        indexBuilder.schema(
+            new IncrementalIndexSchema.Builder()
+                .withDimensionsSpec(PARSER.getParseSpec().getDimensionsSpec()).build()
+        ),
+        finisher,
+        cnf,
+        optimize
+    );
   }
 
   @AfterClass

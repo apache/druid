@@ -287,6 +287,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {
+        capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
         DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
             dimName,
             capabilities,

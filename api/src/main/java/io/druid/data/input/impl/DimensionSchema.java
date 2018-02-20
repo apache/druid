@@ -120,11 +120,13 @@ public abstract class DimensionSchema
 
   private final String name;
   private final MultiValueHandling multiValueHandling;
+  private final boolean bitmapIndex;
 
-  protected DimensionSchema(String name, MultiValueHandling multiValueHandling)
+  protected DimensionSchema(String name, MultiValueHandling multiValueHandling, boolean bitmapIndex)
   {
     this.name = Preconditions.checkNotNull(name, "Dimension name cannot be null.");
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
+    this.bitmapIndex = bitmapIndex;
   }
 
   @JsonProperty
@@ -137,6 +139,11 @@ public abstract class DimensionSchema
   public MultiValueHandling getMultiValueHandling()
   {
     return multiValueHandling;
+  }
+
+  public boolean hasBitmapIndex()
+  {
+    return bitmapIndex;
   }
 
   @JsonIgnore
