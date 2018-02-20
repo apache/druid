@@ -237,7 +237,7 @@ public class OverlordTest
 
     // Task payload for task_0 should be present in taskStorage
     response = overlordResource.getTaskPayload(taskId_0);
-    Assert.assertEquals(task_0, ((Map) response.getEntity()).get("payload"));
+    Assert.assertEquals(task_0, ((TaskPayloadResponse) response.getEntity()).getPayload());
 
     // Task not present in taskStorage - should fail
     response = overlordResource.getTaskPayload("whatever");
@@ -245,10 +245,10 @@ public class OverlordTest
 
     // Task status of the submitted task should be running
     response = overlordResource.getTaskStatus(taskId_0);
-    Assert.assertEquals(taskId_0, ((Map) response.getEntity()).get("task"));
+    Assert.assertEquals(taskId_0, ((TaskStatusResponse) response.getEntity()).getTask());
     Assert.assertEquals(
         TaskStatus.running(taskId_0).getStatusCode(),
-        ((TaskStatus) ((Map) response.getEntity()).get("status")).getStatusCode()
+        ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
     );
 
     // Simulate completion of task_0
@@ -296,7 +296,7 @@ public class OverlordTest
   {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);
-      if (status.equals(((TaskStatus) ((Map) response.getEntity()).get("status")).getStatusCode())) {
+      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode())) {
         break;
       }
       Thread.sleep(10);
