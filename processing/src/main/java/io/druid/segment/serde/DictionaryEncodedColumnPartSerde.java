@@ -27,7 +27,6 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
