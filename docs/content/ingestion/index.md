@@ -199,7 +199,7 @@ handle all formatting decisions on their own, without using the ParseSpec.
 A dimension schema specifies the type and name of a dimension to be ingested.
 
 For string columns, the dimension schema can also be used to enable or disable bitmap indexing by setting the
-`bitmapIndex` boolean. By default, bitmap indexes are enabled for all string columns. Only string columns can have
+`createBitmapIndex` boolean. By default, bitmap indexes are enabled for all string columns. Only string columns can have
 bitmap indexes; they are not supported for numeric columns.
 
 For example, the following `dimensionsSpec` section from a `dataSchema` ingests one column as Long (`countryNum`), two
@@ -224,7 +224,7 @@ for the `comment` column.
     {
       "type": "string",
       "name": "comment",
-      "bitmapIndex": false
+      "createBitmapIndex": false
     },
     {
       "type": "long",

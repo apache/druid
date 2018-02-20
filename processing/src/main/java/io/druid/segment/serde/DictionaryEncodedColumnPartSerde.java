@@ -58,6 +58,7 @@ import java.nio.channels.WritableByteChannel;
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
   private static final int NO_FLAGS = 0;
+  private static final int STARTING_FLAGS = Feature.NO_BITMAP_INDEX.getMask();
 
   enum Feature
   {
@@ -144,7 +145,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   public static class SerializerBuilder
   {
     private VERSION version = null;
-    private int flags = Feature.NO_BITMAP_INDEX.getMask();
+    private int flags = STARTING_FLAGS;
     private GenericIndexedWriter<String> dictionaryWriter = null;
     private ColumnarIntsSerializer valueWriter = null;
     private BitmapSerdeFactory bitmapSerdeFactory = null;
