@@ -43,8 +43,8 @@ public class NilColumnValueSelector implements ColumnValueSelector
   private NilColumnValueSelector() {}
 
   /**
-   * always returns 0, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
-   * or always throws an exception, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is
+   * always returns 0, if {@link NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
+   * or always throws an exception, if {@link NullHandling#NULL_HANDLING_CONFIG_STRING} is
    * set to false.
    */
   @Override
@@ -54,8 +54,8 @@ public class NilColumnValueSelector implements ColumnValueSelector
   }
 
   /**
-   * always returns 0.0f, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
-   * or always throws an exception, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is
+   * always returns 0.0f, if {@link NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
+   * or always throws an exception, if {@link NullHandling#NULL_HANDLING_CONFIG_STRING} is
    * set to false.
    */
   @Override
@@ -65,8 +65,8 @@ public class NilColumnValueSelector implements ColumnValueSelector
   }
 
   /**
-   * always returns 0L, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
-   * or always throws an exception, if {@link io.druid.common.config.NullHandling#NULL_HANDLING_CONFIG_STRING} is
+   * always returns 0L, if {@link NullHandling#NULL_HANDLING_CONFIG_STRING} is set to true,
+   * or always throws an exception, if {@link NullHandling#NULL_HANDLING_CONFIG_STRING} is
    * set to false.
    */
   @Override
