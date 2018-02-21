@@ -167,10 +167,10 @@ public class MySQLConnector extends SQLMetadataConnector
         .map(StringMapper.FIRST)
         .first();
 
-    if (!databaseCharset.matches("utf.*")) {
+    if (!databaseCharset.matches("utf8.*")) {
       throw new ISE(
-          "Druid requires its MySQL database to be created with an UTF charset, found `%1$s`.%n" +
-          "The recommended charset is `utf8mb4`.",
+          "Druid requires its MySQL database to be created with an UTF8 charset, found `%1$s`. "
+          + "The recommended charset is `utf8mb4`.",
           databaseCharset
       );
     } else if (!"utf8mb4".equals(databaseCharset)) {
