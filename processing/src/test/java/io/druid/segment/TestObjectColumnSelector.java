@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-public abstract class TestObjectColumnSelector<T> implements ObjectColumnSelector<T>
+public abstract class TestObjectColumnSelector<T> extends ObjectColumnSelector<T>
 {
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
