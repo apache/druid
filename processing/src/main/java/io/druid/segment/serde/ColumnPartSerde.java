@@ -34,7 +34,10 @@ import java.nio.ByteBuffer;
     @JsonSubTypes.Type(name = "float", value = FloatGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "long", value = LongGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "double", value = DoubleGenericColumnPartSerde.class),
-    @JsonSubTypes.Type(name = "stringDictionary", value = DictionaryEncodedColumnPartSerde.class)
+    @JsonSubTypes.Type(name = "stringDictionary", value = DictionaryEncodedColumnPartSerde.class),
+    @JsonSubTypes.Type(name = "floatV2", value = FloatGenericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "longV2", value = LongGenericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "doubleV2", value = DoubleGenericColumnPartSerdeV2.class),
 })
 public interface ColumnPartSerde
 {

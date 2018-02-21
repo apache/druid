@@ -186,6 +186,7 @@ public class KafkaIndexTaskTest
   private boolean resetOffsetAutomatically = false;
   private boolean doHandoff = true;
   private Integer maxRowsPerSegment = null;
+  private Period intermediateHandoffPeriod = null;
 
   private TaskToolboxFactory toolboxFactory;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
@@ -522,6 +523,84 @@ public class KafkaIndexTaskTest
                        && ImmutableList.of("e").equals(readSegmentColumn("dim1", desc5))));
     Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc6));
     Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc7));
+  }
+
+  @Test(timeout = 60_000L)
+  public void testTimeBasedIncrementalHandOff() throws Exception
+  {
+    if (!isIncrementalHandoffSupported) {
+      return;
+    }
+    final String baseSequenceName = "sequence0";
+    // as soon as any segment hits maxRowsPerSegment or intermediateHandoffPeriod, incremental publishing should happen
+    maxRowsPerSegment = Integer.MAX_VALUE;
+    intermediateHandoffPeriod = new Period().withSeconds(0);
+
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : records.subList(0, 2)) {
+        kafkaProducer.send(record).get();
+      }
+    }
+    Map<String, String> consumerProps = kafkaServer.consumerProperties();
+    consumerProps.put("max.poll.records", "1");
+
+    final KafkaPartitions startPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 0L, 1, 0L));
+    // Checkpointing will happen at checkpoint
+    final KafkaPartitions checkpoint = new KafkaPartitions(topic, ImmutableMap.of(0, 1L, 1, 0L));
+    final KafkaPartitions endPartitions = new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L));
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            baseSequenceName,
+            startPartitions,
+            endPartitions,
+            consumerProps,
+            true,
+            false,
+            null,
+            null,
+            false
+        )
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // task will pause for checkpointing
+    while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getCurrentOffsets());
+    Assert.assertTrue(checkpoint.getPartitionOffsetMap().equals(currentOffsets));
+    task.setEndOffsets(currentOffsets, true, false);
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    Assert.assertEquals(1, checkpointRequestsHash.size());
+    Assert.assertTrue(checkpointRequestsHash.contains(
+        Objects.hash(
+            DATA_SCHEMA.getDataSource(),
+            baseSequenceName,
+            new KafkaDataSourceMetadata(startPartitions),
+            new KafkaDataSourceMetadata(new KafkaPartitions(topic, checkpoint.getPartitionOffsetMap()))
+        )
+    ));
+
+    // Check metrics
+    Assert.assertEquals(2, task.getFireDepartmentMetrics().processed());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().thrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new KafkaPartitions(topic, ImmutableMap.of(0, 2L, 1, 0L))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("a"), readSegmentColumn("dim1", desc1));
+    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", desc2));
   }
 
   @Test(timeout = 60_000L)
@@ -1708,7 +1787,8 @@ public class KafkaIndexTaskTest
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
-        null
+        null,
+        intermediateHandoffPeriod
     );
     final Map<String, Object> context = isIncrementalHandoffSupported
                                         ? ImmutableMap.of(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
@@ -1746,6 +1826,7 @@ public class KafkaIndexTaskTest
         reportParseExceptions,
         handoffConditionTimeout,
         resetOffsetAutomatically,
+        null,
         null
     );
     if (isIncrementalHandoffSupported) {

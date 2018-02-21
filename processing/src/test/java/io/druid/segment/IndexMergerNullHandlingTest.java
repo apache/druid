@@ -19,12 +19,12 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Sets;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
@@ -89,9 +89,15 @@ public class IndexMergerNullHandlingTest
     nullFlavors.add(mMissing);
     nullFlavors.add(mEmptyList);
     nullFlavors.add(mNull);
-    nullFlavors.add(mEmptyString);
     nullFlavors.add(mListOfNull);
-    nullFlavors.add(mListOfEmptyString);
+
+    if (NullHandling.replaceWithDefault()) {
+      nullFlavors.add(mEmptyString);
+      nullFlavors.add(mListOfEmptyString);
+    } else {
+      nonNullFlavors.add(mEmptyString);
+      nonNullFlavors.add(mListOfEmptyString);
+    }
 
     Set<Map<String, Object>> allValues = new HashSet<>();
     allValues.addAll(nonNullFlavors);
@@ -174,7 +180,7 @@ public class IndexMergerNullHandlingTest
             final List<Integer> expectedNullRows = new ArrayList<>();
             for (int i = 0; i < index.getNumRows(); i++) {
               final List<String> row = getRow(dictionaryColumn, i);
-              if (row.isEmpty() || row.stream().anyMatch(Strings::isNullOrEmpty)) {
+              if (row.isEmpty() || row.stream().anyMatch(NullHandling::isNullOrEquivalent)) {
                 expectedNullRows.add(i);
               }
             }
@@ -209,19 +215,16 @@ public class IndexMergerNullHandlingTest
     final List<String> retVal = new ArrayList<>();
 
     if (value == null) {
-      if (!hasMultipleValues) {
-        // nulls become nulls in single valued columns, but are empty lists in multi valued columns
-        retVal.add(null);
-      }
+      retVal.add(null);
     } else if (value instanceof String) {
-      retVal.add(Strings.emptyToNull(((String) value)));
+      retVal.add(NullHandling.emptyToNullIfNeeded(((String) value)));
     } else if (value instanceof List) {
       final List<String> list = (List<String>) value;
       if (list.isEmpty() && !hasMultipleValues) {
         // empty lists become nulls in single valued columns
-        retVal.add(null);
+        retVal.add(NullHandling.emptyToNullIfNeeded(null));
       } else {
-        retVal.addAll(list.stream().map(Strings::emptyToNull).collect(Collectors.toList()));
+        retVal.addAll(list.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toList()));
       }
     } else {
       throw new ISE("didn't expect class[%s]", value.getClass());

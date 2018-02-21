@@ -214,9 +214,9 @@ public class GenericIndexedWriter<T> implements Serializer
     }
 
     ++numWritten;
-    // for compatibility with the format (see GenericIndexed javadoc for description of the format), but this field is
-    // unused.
-    valuesOut.writeInt(0);
+    // for compatibility with the format (see GenericIndexed javadoc for description of the format),
+    // this field is used to store nullness marker, but in a better format this info can take 1 bit.
+    valuesOut.writeInt(objectToWrite == null ? GenericIndexed.NULL_VALUE_SIZE_MARKER : 0);
     if (objectToWrite != null) {
       strategy.writeTo(objectToWrite, valuesOut);
     }

@@ -81,9 +81,9 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
-import io.druid.segment.realtime.appenderator.AppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -135,7 +135,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -180,13 +179,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
   private final Map<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
-  private final Map<Integer, Long> maxEndOffsets = new HashMap<>();
   private final Map<Integer, Long> lastPersistedOffsets = new ConcurrentHashMap<>();
 
   private TaskToolbox toolbox;
 
   private volatile Appenderator appenderator = null;
-  private volatile AppenderatorDriver driver = null;
+  private volatile StreamAppenderatorDriver driver = null;
   private volatile FireDepartmentMetrics fireDepartmentMetrics = null;
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -232,6 +230,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private volatile boolean pauseRequested = false;
   private volatile long pauseMillis = 0;
+  private volatile long nextCheckpointTime;
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
@@ -274,12 +273,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     this.authorizerMapper = authorizerMapper;
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
-    this.maxEndOffsets.putAll(endOffsets.entrySet()
-                                        .stream()
-                                        .collect(Collectors.toMap(
-                                            Map.Entry::getKey,
-                                            integerLongEntry -> Long.MAX_VALUE
-                                        )));
     this.topic = ioConfig.getStartPartitions().getTopic();
     this.sequences = new CopyOnWriteArrayList<>();
 
@@ -289,6 +282,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     } else {
       useLegacy = true;
     }
+    resetNextCheckpointTime();
+  }
+
+  private void resetNextCheckpointTime()
+  {
+    nextCheckpointTime = DateTimes.nowUtc().plus(tuningConfig.getIntermediateHandoffPeriod()).getMillis();
   }
 
   @VisibleForTesting
@@ -371,7 +370,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                     Joiner.on(", ").join(
                         result.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
                     ),
-                    result.getCommitMetadata()
+                    Preconditions.checkNotNull(result.getCommitMetadata(), "commitMetadata")
                 );
               }
 
@@ -422,9 +421,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     if (getContext() != null && getContext().get("checkpoints") != null) {
       log.info("Got checkpoints [%s]", (String) getContext().get("checkpoints"));
       final TreeMap<Integer, Map<Integer, Long>> checkpoints = toolbox.getObjectMapper().readValue(
-          (String) getContext().get("checkpoints"), new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+          (String) getContext().get("checkpoints"),
+          new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
           {
-          });
+          }
+      );
 
       Iterator<Map.Entry<Integer, Map<Integer, Long>>> sequenceOffsets = checkpoints.entrySet().iterator();
       Map.Entry<Integer, Map<Integer, Long>> previous = sequenceOffsets.next();
@@ -443,7 +444,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           previous.getKey(),
           StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
           previous.getValue(),
-          maxEndOffsets,
+          endOffsets,
           false
       ));
     } else {
@@ -451,7 +452,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           0,
           StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
           ioConfig.getStartPartitions().getPartitionOffsetMap(),
-          maxEndOffsets,
+          endOffsets,
           false
       ));
     }
@@ -708,7 +709,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
-                      // move the segment out from the active segments of AppenderatorDriver to make a new segment.
+                      // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                       if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
                         if (!sequenceToUse.isCheckpointed()) {
                           sequenceToCheckpoint = sequenceToUse;
@@ -746,7 +747,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                         }
                       }
                   );
-
                 }
               }
               catch (ParseException e) {
@@ -775,7 +775,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             }
           }
 
-          if (sequenceToCheckpoint != null && !ioConfig.isPauseAfterRead()) {
+          if (System.currentTimeMillis() > nextCheckpointTime) {
+            sequenceToCheckpoint = sequences.get(sequences.size() - 1);
+          }
+
+          if (sequenceToCheckpoint != null && stillReading) {
             Preconditions.checkArgument(
                 sequences.get(sequences.size() - 1)
                          .getSequenceName()
@@ -795,6 +799,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             }
           }
         }
+      }
+      catch (Exception e) {
+        log.error(e, "Encountered exception in run() before persisting.");
+        throw e;
       }
       finally {
         log.info("Persisting all pending data");
@@ -849,7 +857,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               Joiner.on(", ").join(
                   handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
               ),
-              handedOff.getCommitMetadata()
+              Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
           );
         }
       }
@@ -939,9 +947,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
 
     try (
-        final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-        final AppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
-        final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
+            final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
+            final StreamAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
+            final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -1103,7 +1111,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
                     if (addResult.isOk()) {
                       // If the number of rows in the segment exceeds the threshold after adding a row,
-                      // move the segment out from the active segments of AppenderatorDriver to make a new segment.
+                      // move the segment out from the active segments of BaseAppenderatorDriver to make a new segment.
                       if (addResult.getNumRowsInSegment() > tuningConfig.getMaxRowsPerSegment()) {
                         segmentsToMoveOut.computeIfAbsent(sequenceName, k -> new HashSet<>())
                                          .add(addResult.getSegmentIdentifier());
@@ -1155,6 +1163,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
         }
       }
+      catch (Exception e) {
+        log.error(e, "Encountered exception in runLegacy() before persisting.");
+        throw e;
+      }
       finally {
         driver.persist(committerSupplier.get()); // persist pending data
       }
@@ -1169,7 +1181,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
       final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
         final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
-            ((Map) commitMetadata).get(METADATA_NEXT_PARTITIONS),
+            ((Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata")).get(METADATA_NEXT_PARTITIONS),
             KafkaPartitions.class
         );
 
@@ -1229,7 +1241,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                     }
                 )
             ),
-            handedOff.getCommitMetadata()
+            Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }
     }
@@ -1268,7 +1280,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   }
 
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
-      throws ExecutionException, InterruptedException
+      throws InterruptedException
   {
     for (SequenceMetadata sequenceMetadata : sequences) {
       sequenceMetadata.updateAssignments(nextOffsets);
@@ -1539,6 +1551,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
         }
 
+        resetNextCheckpointTime();
         latestSequence.setEndOffsets(offsets);
 
         if (finish) {
@@ -1551,7 +1564,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               latestSequence.getSequenceId() + 1,
               StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), latestSequence.getSequenceId() + 1),
               offsets,
-              maxEndOffsets,
+              endOffsets,
               false
           );
           sequences.add(newSequence);
@@ -1792,13 +1805,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
   }
 
-  private AppenderatorDriver newDriver(
+  private StreamAppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
       final FireDepartmentMetrics metrics
   )
   {
-    return new AppenderatorDriver(
+    return new StreamAppenderatorDriver(
         appenderator,
         new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),
@@ -2221,7 +2234,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     {
       return (segments, commitMetadata) -> {
         final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
-            ((Map) commitMetadata).get(METADATA_PUBLISH_PARTITIONS),
+            ((Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata")).get(METADATA_PUBLISH_PARTITIONS),
             KafkaPartitions.class
         );
 

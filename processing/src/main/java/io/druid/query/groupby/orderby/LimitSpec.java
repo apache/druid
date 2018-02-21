@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Function;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.Cacheable;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -48,16 +49,20 @@ public interface LimitSpec extends Cacheable
   /**
    * Returns a function that applies a limit to an input sequence that is assumed to be sorted on dimensions.
    *
-   * @param dimensions query dimensions
-   * @param aggs       query aggregators
-   * @param postAggs   query postAggregators
+   * @param dimensions      query dimensions
+   * @param aggs            query aggregators
+   * @param postAggs        query postAggregators
+   * @param granularity     query granularity
+   * @param sortByDimsFirst 'sortByDimsFirst' value in queryContext
    *
    * @return limit function
    */
   Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggs,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      Granularity granularity,
+      boolean sortByDimsFirst
   );
 
   LimitSpec merge(LimitSpec other);

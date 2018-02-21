@@ -142,7 +142,7 @@ public class SerializerUtils
     out.write(Ints.toByteArray(intValue));
   }
 
-  private void writeInt(WritableByteChannel out, int intValue) throws IOException
+  public static void writeInt(WritableByteChannel out, int intValue) throws IOException
   {
     final ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
     buffer.putInt(intValue);

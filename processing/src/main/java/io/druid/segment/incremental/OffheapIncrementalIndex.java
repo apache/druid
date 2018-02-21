@@ -313,6 +313,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
+  @Override
+  public boolean isNull(int rowOffset, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
+    return agg.isNull(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+  }
+
   /**
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
    */

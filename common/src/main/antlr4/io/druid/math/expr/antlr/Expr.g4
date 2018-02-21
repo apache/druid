@@ -1,6 +1,7 @@
 grammar Expr;
 
-expr : ('-'|'!') expr                                 # unaryOpExpr
+expr : 'null'                                         # null
+     | ('-'|'!') expr                                 # unaryOpExpr
      |<assoc=right> expr '^' expr                     # powOpExpr
      | expr ('*'|'/'|'%') expr                        # mulDivModuloExpr
      | expr ('+'|'-') expr                            # addSubExpr

@@ -22,9 +22,7 @@ package io.druid.segment;
 import com.google.common.base.Throwables;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -35,7 +33,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
 {
   protected String dimensionName;
   protected final IndexSpec indexSpec;
-  protected LongColumnSerializer serializer;
+  protected GenericColumnSerializer serializer;
 
   LongDimensionMergerV9(
       String dimensionName,
@@ -56,9 +54,11 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
 
   protected void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-    this.serializer = LongColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression, longEncoding);
+    this.serializer = IndexMergerV9.createLongColumnSerializer(
+        segmentWriteOutMedium,
+        dimensionName,
+        indexSpec
+    );
     serializer.open();
   }
 
@@ -89,7 +89,6 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   @Override
   public boolean canSkip()
   {
-    // a long column can never be all null
     return false;
   }
 
@@ -98,12 +97,8 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.LONG);
-    builder.addSerde(
-        LongGenericColumnPartSerde.serializerBuilder()
-                                  .withByteOrder(IndexIO.BYTE_ORDER)
-                                  .withDelegate(serializer)
-                                  .build()
-    );
+    ColumnPartSerde serde = IndexMergerV9.createLongColumnPartSerde(serializer, indexSpec);
+    builder.addSerde(serde);
     return builder.build();
   }
 }

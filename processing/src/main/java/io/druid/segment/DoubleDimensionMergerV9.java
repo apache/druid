@@ -21,8 +21,7 @@ package io.druid.segment;
 
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
+import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
@@ -33,7 +32,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
 {
   protected String dimensionName;
   protected final IndexSpec indexSpec;
-  private DoubleColumnSerializer serializer;
+  private GenericColumnSerializer serializer;
 
   public DoubleDimensionMergerV9(
       String dimensionName,
@@ -54,8 +53,12 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
 
   private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
   {
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = DoubleColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
+    this.serializer = IndexMergerV9.createDoubleColumnSerializer(
+        segmentWriteOutMedium,
+        dimensionName,
+        indexSpec
+    );
+
     serializer.open();
   }
 
@@ -86,7 +89,6 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   @Override
   public boolean canSkip()
   {
-    // a double column can never be all null
     return false;
   }
 
@@ -95,12 +97,8 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.DOUBLE);
-    builder.addSerde(
-        DoubleGenericColumnPartSerde.serializerBuilder()
-                                    .withByteOrder(IndexIO.BYTE_ORDER)
-                                    .withDelegate(serializer)
-                                    .build()
-    );
+    ColumnPartSerde serde = IndexMergerV9.createDoubleColumnPartSerde(serializer, indexSpec);
+    builder.addSerde(serde);
     return builder.build();
   }
 }
