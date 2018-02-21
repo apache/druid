@@ -85,6 +85,14 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
       {
         // don't inspect in tests
       }
+
+      @Override
+      public boolean isNull()
+      {
+        return row.get().getMetric(columnName) == null;
+      }
+
+
     };
   }
 

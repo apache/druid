@@ -19,22 +19,36 @@
 
 package io.druid.segment.selector.settable;
 
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
 
 public class SettableDoubleColumnValueSelector implements SettableColumnValueSelector<Double>, DoubleColumnSelector
 {
+  private boolean isNull;
   private double value;
 
   @Override
   public void setValueFrom(ColumnValueSelector selector)
   {
-    value = selector.getDouble();
+    isNull = selector.isNull();
+    if (!isNull) {
+      value = selector.getDouble();
+    } else {
+      value = 0;
+    }
   }
 
   @Override
   public double getDouble()
   {
+    assert NullHandling.replaceWithDefault() || !isNull;
     return value;
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return isNull;
   }
 }

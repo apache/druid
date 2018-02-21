@@ -19,19 +19,27 @@
 
 package io.druid.segment.selector.settable;
 
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
 
 public class SettableLongColumnValueSelector implements SettableColumnValueSelector<Long>, LongColumnSelector
 {
+  private boolean isNull;
   private long value;
 
   @Override
   public void setValueFrom(ColumnValueSelector selector)
   {
-    value = selector.getLong();
+    isNull = selector.isNull();
+    if (!isNull) {
+      value = selector.getLong();
+    } else {
+      value = 0;
+    }
   }
 
+  /** Optimized method for assigning timestamps, that are known to never be null */
   public void setValue(long value)
   {
     this.value = value;
@@ -40,6 +48,13 @@ public class SettableLongColumnValueSelector implements SettableColumnValueSelec
   @Override
   public long getLong()
   {
+    assert NullHandling.replaceWithDefault() || !isNull;
     return value;
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return isNull;
   }
 }

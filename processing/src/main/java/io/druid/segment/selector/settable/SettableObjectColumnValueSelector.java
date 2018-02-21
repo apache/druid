@@ -24,7 +24,8 @@ import io.druid.segment.ObjectColumnSelector;
 
 import javax.annotation.Nullable;
 
-public class SettableObjectColumnValueSelector<T> implements SettableColumnValueSelector<T>, ObjectColumnSelector<T>
+public class SettableObjectColumnValueSelector<T> extends ObjectColumnSelector<T>
+    implements SettableColumnValueSelector<T>
 {
   @Nullable
   private T object;

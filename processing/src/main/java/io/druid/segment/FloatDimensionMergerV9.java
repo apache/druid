@@ -21,27 +21,21 @@ package io.druid.segment;
 
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.FloatGenericColumnPartSerde;
+import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-public class FloatDimensionMergerV9 extends NumericDimensionMergerV9<FloatColumnSerializer>
+public class FloatDimensionMergerV9 extends NumericDimensionMergerV9
 {
 
-  public FloatDimensionMergerV9(
-      String dimensionName,
-      IndexSpec indexSpec,
-      SegmentWriteOutMedium segmentWriteOutMedium
-  )
+  FloatDimensionMergerV9(String dimensionName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
     super(dimensionName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override
-  FloatColumnSerializer setupEncodedValueWriter()
+  GenericColumnSerializer setupEncodedValueWriter()
   {
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    return FloatColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
+    return IndexMergerV9.createFloatColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
   }
 
   @Override
@@ -49,13 +43,8 @@ public class FloatDimensionMergerV9 extends NumericDimensionMergerV9<FloatColumn
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);
-    builder.addSerde(
-        FloatGenericColumnPartSerde
-            .serializerBuilder()
-            .withByteOrder(IndexIO.BYTE_ORDER)
-            .withDelegate(serializer)
-            .build()
-    );
+    ColumnPartSerde serde = IndexMergerV9.createFloatColumnPartSerde(serializer, indexSpec);
+    builder.addSerde(serde);
     return builder.build();
   }
 }

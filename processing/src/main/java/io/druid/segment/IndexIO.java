@@ -31,7 +31,6 @@ import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
@@ -44,6 +43,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
@@ -84,6 +84,7 @@ public class IndexIO
   public static final byte V8_VERSION = 0x8;
   public static final byte V9_VERSION = 0x9;
   public static final int CURRENT_VERSION_ID = V9_VERSION;
+  public static BitmapSerdeFactory LEGACY_FACTORY = new BitmapSerde.LegacyBitmapSerdeFactory();
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
@@ -96,10 +97,15 @@ public class IndexIO
   private final SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory;
 
   @Inject
-  public IndexIO(ObjectMapper mapper, SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory, ColumnConfig columnConfig)
+  public IndexIO(
+      ObjectMapper mapper,
+      SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory,
+      ColumnConfig columnConfig
+  )
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
-    this.defaultSegmentWriteOutMediumFactory = Preconditions.checkNotNull(defaultSegmentWriteOutMediumFactory, "null SegmentWriteOutMediumFactory");
+    this.defaultSegmentWriteOutMediumFactory =
+        Preconditions.checkNotNull(defaultSegmentWriteOutMediumFactory, "null SegmentWriteOutMediumFactory");
     Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     ImmutableMap.Builder<Integer, IndexLoader> indexLoadersBuilder = ImmutableMap.builder();
     LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler(), columnConfig);
@@ -287,24 +293,46 @@ public class IndexIO
         );
       }
 
-      if (dims1[i] instanceof Object[] && dims2[i] instanceof Object[]) {
-        if (!Arrays.equals((Object[]) dims1[i], (Object[]) dims2[i])) {
-          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+      Object vals1 = dims1[i];
+      Object vals2 = dims2[i];
+      if (isNullRow(vals1) ^ isNullRow(vals2)) {
+        throw notEqualValidationException(dim1Name, vals1, vals2);
+      }
+      if (vals1 instanceof Object[] && vals2 instanceof Object[]) {
+        if (!Arrays.equals((Object[]) vals1, (Object[]) vals2)) {
+          throw notEqualValidationException(dim1Name, vals1, vals2);
         }
-      } else if (dims1[i] instanceof Object[]) {
-        if (((Object[]) dims1[i]).length != 1 || !Objects.equals(((Object[]) dims1[i])[0], dims2[i])) {
-          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+      } else if (vals1 instanceof Object[]) {
+        if (((Object[]) vals1).length != 1 || !Objects.equals(((Object[]) vals1)[0], vals2)) {
+          throw notEqualValidationException(dim1Name, vals1, vals2);
         }
-      } else if (dims2[i] instanceof Object[]) {
-        if (((Object[]) dims2[i]).length != 1 || !Objects.equals(((Object[]) dims2[i])[0], dims1[i])) {
-          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+      } else if (vals2 instanceof Object[]) {
+        if (((Object[]) vals2).length != 1 || !Objects.equals(((Object[]) vals2)[0], vals1)) {
+          throw notEqualValidationException(dim1Name, vals1, vals2);
         }
       } else {
-        if (!Objects.equals(dims1[i], dims2[i])) {
-          throw notEqualValidationException(dim1Name, dims1[i], dims2[i]);
+        if (!Objects.equals(vals1, vals2)) {
+          throw notEqualValidationException(dim1Name, vals1, vals2);
         }
       }
     }
+  }
+
+  private static boolean isNullRow(@Nullable Object row)
+  {
+    if (row == null) {
+      return true;
+    }
+    if (!(row instanceof Object[])) {
+      return false;
+    }
+    for (Object v : (Object[]) row) {
+      //noinspection VariableNotUsedInsideIf
+      if (v != null) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static SegmentValidationException notEqualValidationException(String dimName, Object v1, Object v2)
@@ -466,11 +494,7 @@ public class IndexIO
                 )
             );
         if (index.getSpatialIndexes().get(dimension) != null) {
-          builder.setSpatialIndex(
-              new SpatialIndexColumnPartSupplier(
-                  index.getSpatialIndexes().get(dimension)
-              )
-          );
+          builder.setSpatialIndex(new SpatialIndexColumnPartSupplier(index.getSpatialIndexes().get(dimension)));
         }
         columns.put(
             dimension,
@@ -485,7 +509,12 @@ public class IndexIO
               metric,
               new ColumnBuilder()
                   .setType(ValueType.FLOAT)
-                  .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType))
+                  .setGenericColumn(
+                      new FloatGenericColumnSupplier(
+                          metricHolder.floatType,
+                          LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+                      )
+                  )
                   .build()
           );
         } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {
@@ -495,7 +524,8 @@ public class IndexIO
                   .setType(ValueType.COMPLEX)
                   .setComplexColumn(
                       new ComplexColumnPartSupplier(
-                          metricHolder.getTypeName(), (GenericIndexed) metricHolder.complexType
+                          metricHolder.getTypeName(),
+                          (GenericIndexed) metricHolder.complexType
                       )
                   )
                   .build()
@@ -515,7 +545,12 @@ public class IndexIO
           Column.TIME_COLUMN_NAME,
           new ColumnBuilder()
               .setType(ValueType.LONG)
-              .setGenericColumn(new LongGenericColumnSupplier(index.timestamps))
+              .setGenericColumn(
+                  new LongGenericColumnSupplier(
+                      index.timestamps,
+                      LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+                  )
+              )
               .build()
       );
       return new SimpleQueryableIndex(

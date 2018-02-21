@@ -52,6 +52,13 @@ public class IncrementalIndexRowHolder implements LongColumnSelector
   }
 
   @Override
+  public boolean isNull()
+  {
+    // Time column is never null
+    return false;
+  }
+
+  @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect

@@ -149,6 +149,13 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
     return 0L;
   }
 
+  @Deprecated
+  @Override
+  default boolean isNull()
+  {
+    return false;
+  }
+
   /**
    * Converts the current result of {@link #getRow()} into null, if the row is empty, a String, if the row has size 1,
    * or a String[] array, if the row has size > 1, using {@link #lookupName(int)}.

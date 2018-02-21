@@ -21,27 +21,21 @@ package io.druid.segment;
 
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
+import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-public class DoubleDimensionMergerV9 extends NumericDimensionMergerV9<DoubleColumnSerializer>
+public class DoubleDimensionMergerV9 extends NumericDimensionMergerV9
 {
 
-  public DoubleDimensionMergerV9(
-      String dimensionName,
-      IndexSpec indexSpec,
-      SegmentWriteOutMedium segmentWriteOutMedium
-  )
+  DoubleDimensionMergerV9(String dimensionName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
     super(dimensionName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override
-  DoubleColumnSerializer setupEncodedValueWriter()
+  GenericColumnSerializer setupEncodedValueWriter()
   {
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    return DoubleColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression);
+    return IndexMergerV9.createDoubleColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
   }
 
   @Override
@@ -49,13 +43,8 @@ public class DoubleDimensionMergerV9 extends NumericDimensionMergerV9<DoubleColu
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.DOUBLE);
-    builder.addSerde(
-        DoubleGenericColumnPartSerde
-            .serializerBuilder()
-            .withByteOrder(IndexIO.BYTE_ORDER)
-            .withDelegate(serializer)
-            .build()
-    );
+    ColumnPartSerde serde = IndexMergerV9.createDoubleColumnPartSerde(serializer, indexSpec);
+    builder.addSerde(serde);
     return builder.build();
   }
 }

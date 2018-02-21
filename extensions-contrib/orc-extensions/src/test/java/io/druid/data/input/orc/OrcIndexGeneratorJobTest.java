@@ -134,7 +134,8 @@ public class OrcIndexGeneratorJobTest
           new TimestampSpec("timestamp", "yyyyMMddHH", null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null)
       ),
-      "struct<timestamp:string,host:string,visited_num:int>"
+      "struct<timestamp:string,host:string,visited_num:int>",
+      null
   );
 
   private File writeDataToLocalOrcFile(File outputDir, List<String> data) throws IOException

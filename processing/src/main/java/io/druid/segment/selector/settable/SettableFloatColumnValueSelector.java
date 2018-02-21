@@ -19,22 +19,36 @@
 
 package io.druid.segment.selector.settable;
 
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.FloatColumnSelector;
 
 public class SettableFloatColumnValueSelector implements SettableColumnValueSelector<Float>, FloatColumnSelector
 {
+  private boolean isNull;
   private float value;
 
   @Override
   public void setValueFrom(ColumnValueSelector selector)
   {
-    this.value = selector.getFloat();
+    isNull = selector.isNull();
+    if (!isNull) {
+      value = selector.getFloat();
+    } else {
+      value = 0;
+    }
   }
 
   @Override
   public float getFloat()
   {
+    assert NullHandling.replaceWithDefault() || !isNull;
     return value;
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return isNull;
   }
 }

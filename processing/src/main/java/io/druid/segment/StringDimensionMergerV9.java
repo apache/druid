@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
@@ -29,6 +28,7 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.collections.spatial.RTree;
 import io.druid.collections.spatial.split.LinearGutmanSplitStrategy;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -70,7 +70,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
 {
   private static final Logger log = new Logger(StringDimensionMergerV9.class);
 
-  private static final Indexed<String> EMPTY_STR_DIM_VAL = new ArrayIndexed<>(new String[]{""}, String.class);
+  private static final Indexed<String> NULL_STR_DIM_VAL = new ArrayIndexed<>(new String[]{null}, String.class);
   private static final Splitter SPLITTER = Splitter.on(",");
 
   private ColumnarIntsSerializer encodedValueSerializer;
@@ -150,7 +150,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
      */
     if (convertMissingValues && !hasNull) {
       hasNull = true;
-      dimValueLookups[adapters.size()] = dimValueLookup = EMPTY_STR_DIM_VAL;
+      dimValueLookups[adapters.size()] = dimValueLookup = NULL_STR_DIM_VAL;
       numMergeIndex++;
     }
 
@@ -189,7 +189,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   {
     for (String value : dictionaryValues) {
       dictionaryWriter.write(value);
-      value = Strings.emptyToNull(value);
+      value = NullHandling.emptyToNullIfNeeded(value);
       if (dictionarySize == 0) {
         firstDictionaryValue = value;
       }

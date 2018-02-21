@@ -29,6 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import io.druid.common.config.NullHandling;
 import io.druid.io.ZeroCopyByteArrayOutputStream;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
@@ -45,18 +46,20 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.loading.MMappedQueryableSegmentizerFactory;
+import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.serde.DoubleGenericColumnPartSerde;
+import io.druid.segment.serde.DoubleGenericColumnPartSerdeV2;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
+import io.druid.segment.serde.FloatGenericColumnPartSerdeV2;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -182,7 +185,7 @@ public class IndexMergerV9 implements IndexMerger
           mergers
       );
       closer.register(timeAndDimsIterator);
-      final LongColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
+      final GenericColumnSerializer timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       final ArrayList<GenericColumnSerializer> metricWriters =
           setupMetricsWriters(segmentWriteOutMedium, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec);
       List<IntBuffer> rowNumConversions = mergeIndexesAndWriteColumns(
@@ -198,8 +201,16 @@ public class IndexMergerV9 implements IndexMerger
       /************ Create Inverted Indexes and Finalize Build Columns *************/
       final String section = "build inverted index and columns";
       progress.startSection(section);
-      makeTimeColumn(v9Smoosher, progress, timeWriter);
-      makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metricWriters);
+      makeTimeColumn(v9Smoosher, progress, timeWriter, indexSpec);
+      makeMetricsColumns(
+          v9Smoosher,
+          progress,
+          mergedMetrics,
+          metricsValueTypes,
+          metricTypeNames,
+          metricWriters,
+          indexSpec
+      );
 
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
@@ -310,7 +321,8 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedMetrics,
       final Map<String, ValueType> metricsValueTypes,
       final Map<String, String> metricTypeNames,
-      final List<GenericColumnSerializer> metWriters
+      final List<GenericColumnSerializer> metWriters,
+      final IndexSpec indexSpec
   ) throws IOException
   {
     final String section = "make metric columns";
@@ -327,33 +339,15 @@ public class IndexMergerV9 implements IndexMerger
       switch (type) {
         case LONG:
           builder.setValueType(ValueType.LONG);
-          builder.addSerde(
-              LongGenericColumnPartSerde
-                  .serializerBuilder()
-                  .withByteOrder(IndexIO.BYTE_ORDER)
-                  .withDelegate((LongColumnSerializer) writer)
-                  .build()
-          );
+          builder.addSerde(createLongColumnPartSerde(writer, indexSpec));
           break;
         case FLOAT:
           builder.setValueType(ValueType.FLOAT);
-          builder.addSerde(
-              FloatGenericColumnPartSerde
-                  .serializerBuilder()
-                  .withByteOrder(IndexIO.BYTE_ORDER)
-                  .withDelegate((FloatColumnSerializer) writer)
-                  .build()
-          );
+          builder.addSerde(createFloatColumnPartSerde(writer, indexSpec));
           break;
         case DOUBLE:
           builder.setValueType(ValueType.DOUBLE);
-          builder.addSerde(
-              DoubleGenericColumnPartSerde
-                  .serializerBuilder()
-                  .withByteOrder(IndexIO.BYTE_ORDER)
-                  .withDelegate((DoubleColumnSerializer) writer)
-                  .build()
-          );
+          builder.addSerde(createDoubleColumnPartSerde(writer, indexSpec));
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
@@ -376,10 +370,62 @@ public class IndexMergerV9 implements IndexMerger
     progress.stopSection(section);
   }
 
+  static ColumnPartSerde createLongColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
+  {
+    // If using default values for null use LongGenericColumnPartSerde to allow rollback to previous versions.
+    if (NullHandling.replaceWithDefault()) {
+      return LongGenericColumnPartSerde.serializerBuilder()
+                                       .withByteOrder(IndexIO.BYTE_ORDER)
+                                       .withDelegate(serializer)
+                                       .build();
+    } else {
+      return LongGenericColumnPartSerdeV2.serializerBuilder()
+                                         .withByteOrder(IndexIO.BYTE_ORDER)
+                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                         .withDelegate(serializer)
+                                         .build();
+    }
+  }
+
+  static ColumnPartSerde createDoubleColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
+  {
+    // If using default values for null use DoubleGenericColumnPartSerde to allow rollback to previous versions.
+    if (NullHandling.replaceWithDefault()) {
+      return DoubleGenericColumnPartSerde.serializerBuilder()
+                                         .withByteOrder(IndexIO.BYTE_ORDER)
+                                         .withDelegate(serializer)
+                                         .build();
+    } else {
+      return DoubleGenericColumnPartSerdeV2.serializerBuilder()
+                                           .withByteOrder(IndexIO.BYTE_ORDER)
+                                           .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                           .withDelegate(serializer)
+                                           .build();
+    }
+  }
+
+  static ColumnPartSerde createFloatColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
+  {
+    // If using default values for null use FloatGenericColumnPartSerde to allow rollback to previous versions.
+    if (NullHandling.replaceWithDefault()) {
+      return FloatGenericColumnPartSerde.serializerBuilder()
+                                        .withByteOrder(IndexIO.BYTE_ORDER)
+                                        .withDelegate(serializer)
+                                        .build();
+    } else {
+      return FloatGenericColumnPartSerdeV2.serializerBuilder()
+                                          .withByteOrder(IndexIO.BYTE_ORDER)
+                                          .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
+                                          .withDelegate(serializer)
+                                          .build();
+    }
+  }
+
   private void makeTimeColumn(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
-      final LongColumnSerializer timeWriter
+      final GenericColumnSerializer timeWriter,
+      final IndexSpec indexSpec
   ) throws IOException
   {
     final String section = "make time column";
@@ -389,12 +435,7 @@ public class IndexMergerV9 implements IndexMerger
     final ColumnDescriptor serdeficator = ColumnDescriptor
         .builder()
         .setValueType(ValueType.LONG)
-        .addSerde(
-            LongGenericColumnPartSerde.serializerBuilder()
-                                      .withByteOrder(IndexIO.BYTE_ORDER)
-                                      .withDelegate(timeWriter)
-                                      .build()
-        )
+        .addSerde(createLongColumnPartSerde(timeWriter, indexSpec))
         .build();
     makeColumn(v9Smoosher, Column.TIME_COLUMN_NAME, serdeficator);
     log.info("Completed time column in %,d millis.", System.currentTimeMillis() - startTime);
@@ -426,7 +467,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<IndexableAdapter> adapters,
       final ProgressIndicator progress,
       final TimeAndDimsIterator timeAndDimsIterator,
-      final LongColumnSerializer timeWriter,
+      final GenericColumnSerializer timeWriter,
       final ArrayList<GenericColumnSerializer> metricWriters,
       final List<DimensionMerger> mergers,
       final boolean fillRowNumConversions
@@ -511,13 +552,13 @@ public class IndexMergerV9 implements IndexMerger
     return rowNumConversions;
   }
 
-  private LongColumnSerializer setupTimeWriter(SegmentWriteOutMedium segmentWriteOutMedium, IndexSpec indexSpec) throws IOException
+  private GenericColumnSerializer setupTimeWriter(SegmentWriteOutMedium segmentWriteOutMedium, IndexSpec indexSpec)
+      throws IOException
   {
-    LongColumnSerializer timeWriter = LongColumnSerializer.create(
+    GenericColumnSerializer timeWriter = createLongColumnSerializer(
         segmentWriteOutMedium,
         "little_end_time",
-        CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY,
-        indexSpec.getLongEncoding()
+        indexSpec
     );
     // we will close this writer after we added all the timestamps
     timeWriter.open();
@@ -533,20 +574,19 @@ public class IndexMergerV9 implements IndexMerger
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
+
     for (String metric : mergedMetrics) {
       ValueType type = metricsValueTypes.get(metric);
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = LongColumnSerializer.create(segmentWriteOutMedium, metric, metCompression, longEncoding);
+          writer = createLongColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         case FLOAT:
-          writer = FloatColumnSerializer.create(segmentWriteOutMedium, metric, metCompression);
+          writer = createFloatColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         case DOUBLE:
-          writer = DoubleColumnSerializer.create(segmentWriteOutMedium, metric, metCompression);
+          writer = createDoubleColumnSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
@@ -564,6 +604,77 @@ public class IndexMergerV9 implements IndexMerger
       metWriters.add(writer);
     }
     return metWriters;
+  }
+
+  static GenericColumnSerializer createLongColumnSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String columnName,
+      IndexSpec indexSpec
+  )
+  {
+    // If using default values for null use LongColumnSerializer to allow rollback to previous versions.
+    if (NullHandling.replaceWithDefault()) {
+      return LongColumnSerializer.create(
+          segmentWriteOutMedium,
+          columnName,
+          indexSpec.getMetricCompression(),
+          indexSpec.getLongEncoding()
+      );
+    } else {
+      return LongColumnSerializerV2.create(
+          segmentWriteOutMedium,
+          columnName,
+          indexSpec.getMetricCompression(),
+          indexSpec.getLongEncoding(),
+          indexSpec.getBitmapSerdeFactory()
+      );
+    }
+  }
+
+  static GenericColumnSerializer createDoubleColumnSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String columnName,
+      IndexSpec indexSpec
+  )
+  {
+    // If using default values for null use DoubleColumnSerializer to allow rollback to previous versions.
+    if (NullHandling.replaceWithDefault()) {
+      return DoubleColumnSerializer.create(
+          segmentWriteOutMedium,
+          columnName,
+          indexSpec.getMetricCompression()
+      );
+    } else {
+      return DoubleColumnSerializerV2.create(
+          segmentWriteOutMedium,
+          columnName,
+          indexSpec.getMetricCompression(),
+          indexSpec.getBitmapSerdeFactory()
+      );
+    }
+  }
+
+  static GenericColumnSerializer createFloatColumnSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String columnName,
+      IndexSpec indexSpec
+  )
+  {
+    // If using default values for null use FloatColumnSerializer to allow rollback to previous versions.
+    if (NullHandling.replaceWithDefault()) {
+      return FloatColumnSerializer.create(
+          segmentWriteOutMedium,
+          columnName,
+          indexSpec.getMetricCompression()
+      );
+    } else {
+      return FloatColumnSerializerV2.create(
+          segmentWriteOutMedium,
+          columnName,
+          indexSpec.getMetricCompression(),
+          indexSpec.getBitmapSerdeFactory()
+      );
+    }
   }
 
   private void writeDimValueAndSetupDimConversion(

@@ -29,13 +29,13 @@ import java.util.List;
 /**
  * Common base of {@link LongDimensionMergerV9}, {@link DoubleDimensionMergerV9} and {@link FloatDimensionMergerV9}.
  */
-public abstract class NumericDimensionMergerV9<T extends GenericColumnSerializer> implements DimensionMergerV9
+public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
 {
   protected final String dimensionName;
   protected final IndexSpec indexSpec;
   protected final SegmentWriteOutMedium segmentWriteOutMedium;
 
-  protected final T serializer;
+  protected final GenericColumnSerializer serializer;
 
   NumericDimensionMergerV9(
       String dimensionName,
@@ -56,10 +56,10 @@ public abstract class NumericDimensionMergerV9<T extends GenericColumnSerializer
     }
   }
 
-  abstract T setupEncodedValueWriter() throws IOException;
+  abstract GenericColumnSerializer setupEncodedValueWriter() throws IOException;
 
   @Override
-  public final void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
+  public final void writeMergedValueMetadata(List<IndexableAdapter> adapters)
   {
     // numeric values have no additional metadata
   }
@@ -80,7 +80,7 @@ public abstract class NumericDimensionMergerV9<T extends GenericColumnSerializer
   }
 
   @Override
-  public final void writeIndexes(@Nullable List<IntBuffer> segmentRowNumConversions) throws IOException
+  public final void writeIndexes(@Nullable List<IntBuffer> segmentRowNumConversions)
   {
     // numeric values have no indices to write
   }
@@ -88,7 +88,6 @@ public abstract class NumericDimensionMergerV9<T extends GenericColumnSerializer
   @Override
   public final boolean canSkip()
   {
-    // a numeric column can never be all null
     return false;
   }
 }

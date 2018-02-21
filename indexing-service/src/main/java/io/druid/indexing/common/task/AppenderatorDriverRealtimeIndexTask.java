@@ -59,10 +59,10 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
-import io.druid.segment.realtime.appenderator.AppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import io.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
@@ -213,7 +213,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
-    AppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics);
+    StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics);
 
     try {
       toolbox.getDataSegmentServerAnnouncer().announce();
@@ -425,7 +425,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   }
 
   private void publishSegments(
-      AppenderatorDriver driver,
+      StreamAppenderatorDriver driver,
       TransactionalSegmentPublisher publisher,
       Supplier<Committer> committerSupplier,
       String sequenceName
@@ -458,7 +458,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     }
   }
 
-  private void persistAndWait(AppenderatorDriver driver, Committer committer)
+  private void persistAndWait(StreamAppenderatorDriver driver, Committer committer)
   {
     try {
       final CountDownLatch persistLatch = new CountDownLatch(1);
@@ -533,14 +533,14 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     );
   }
 
-  private static AppenderatorDriver newDriver(
+  private static StreamAppenderatorDriver newDriver(
       final DataSchema dataSchema,
       final Appenderator appenderator,
       final TaskToolbox toolbox,
       final FireDepartmentMetrics metrics
   )
   {
-    return new AppenderatorDriver(
+    return new StreamAppenderatorDriver(
         appenderator,
         new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),

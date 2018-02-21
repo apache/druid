@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.collections.NonBlockingPool;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
@@ -149,21 +150,33 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           return new ColumnValueSelector()
           {
             @Override
+            public boolean isNull()
+            {
+              return in.get().getMetric(column) == null;
+            }
+
+            @Override
             public long getLong()
             {
-              return in.get().getMetric(column).longValue();
+              Number metric = in.get().getMetric(column);
+              assert NullHandling.replaceWithDefault() || metric != null;
+              return DimensionHandlerUtils.nullToZero(metric).longValue();
             }
 
             @Override
             public float getFloat()
             {
-              return in.get().getMetric(column).floatValue();
+              Number metric = in.get().getMetric(column);
+              assert NullHandling.replaceWithDefault() || metric != null;
+              return DimensionHandlerUtils.nullToZero(metric).floatValue();
             }
 
             @Override
             public double getDouble()
             {
-              return in.get().getMetric(column).doubleValue();
+              Number metric = in.get().getMetric(column);
+              assert NullHandling.replaceWithDefault() || metric != null;
+              return DimensionHandlerUtils.nullToZero(metric).doubleValue();
             }
 
             @Override
@@ -457,6 +470,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
 
   protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+
+  protected abstract boolean isNull(int rowOffset, int aggOffset);
+
 
   @Override
   public void close()
@@ -1266,6 +1282,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public long getLong()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return getMetricLongValue(currEntry.get().getRowIndex(), metricIndex);
     }
 
@@ -1274,9 +1291,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       inspector.visit("index", IncrementalIndex.this);
     }
+
+    @Override
+    public boolean isNull()
+    {
+      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+    }
   }
 
-  private class ObjectMetricColumnSelector implements ObjectColumnSelector
+  private class ObjectMetricColumnSelector extends ObjectColumnSelector
   {
     private final IncrementalIndexRowHolder currEntry;
     private final int metricIndex;
@@ -1327,6 +1350,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public float getFloat()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return getMetricFloatValue(currEntry.get().getRowIndex(), metricIndex);
     }
 
@@ -1334,6 +1358,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("index", IncrementalIndex.this);
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
     }
   }
 
@@ -1351,7 +1381,14 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public double getDouble()
     {
+      assert NullHandling.replaceWithDefault() || !isNull();
       return getMetricDoubleValue(currEntry.get().getRowIndex(), metricIndex);
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
     }
 
     @Override

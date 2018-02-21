@@ -22,6 +22,7 @@ package io.druid.segment.serde;
 import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.GenericIndexed;
 
@@ -77,7 +78,7 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       public int getIndex(String value)
       {
         // GenericIndexed.indexOf satisfies contract needed by BitmapIndex.indexOf
-        return dictionary.indexOf(value);
+        return dictionary.indexOf(NullHandling.emptyToNullIfNeeded(value));
       }
 
       @Override

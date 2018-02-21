@@ -136,8 +136,13 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private Function<Sequence<Row>, Sequence<Row>> makePostProcessingFn()
   {
-    Function<Sequence<Row>, Sequence<Row>> postProcessingFn =
-        limitSpec.build(dimensions, aggregatorSpecs, postAggregatorSpecs);
+    Function<Sequence<Row>, Sequence<Row>> postProcessingFn = limitSpec.build(
+        dimensions,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getGranularity(),
+        getContextSortByDimsFirst()
+    );
 
     if (havingSpec != null) {
       postProcessingFn = Functions.compose(

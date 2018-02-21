@@ -286,6 +286,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return concurrentGet(rowOffset)[aggOffset].getDouble();
   }
 
+  @Override
+  public boolean isNull(int rowOffset, int aggOffset)
+  {
+    return concurrentGet(rowOffset)[aggOffset].isNull();
+  }
+
   /**
    * Clear out maps to allow GC
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing

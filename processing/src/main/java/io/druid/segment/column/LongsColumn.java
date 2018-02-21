@@ -19,18 +19,32 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.IndexIO;
 import io.druid.segment.data.ColumnarLongs;
 import io.druid.segment.data.ReadableOffset;
 
 /**
-*/
+ */
 public class LongsColumn implements GenericColumn
 {
-  private final ColumnarLongs column;
+  /**
+   * Factory method to create LongsColumn.
+   */
+  public static LongsColumn create(ColumnarLongs column, ImmutableBitmap nullValueBitmap)
+  {
+    if (nullValueBitmap.isEmpty()) {
+      return new LongsColumn(column);
+    } else {
+      return new LongsColumnWithNulls(column, nullValueBitmap);
+    }
+  }
 
-  public LongsColumn(final ColumnarLongs column)
+  final ColumnarLongs column;
+
+  LongsColumn(final ColumnarLongs column)
   {
     this.column = column;
   }
@@ -44,13 +58,20 @@ public class LongsColumn implements GenericColumn
   @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
-    return column.makeColumnValueSelector(offset);
+    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory()
+                                                                        .makeEmptyImmutableBitmap());
   }
 
   @Override
   public long getLongSingleValueRow(int rowNum)
   {
     return column.get(rowNum);
+  }
+
+  @Override
+  public boolean isNull(int rowNum)
+  {
+    return false;
   }
 
   @Override

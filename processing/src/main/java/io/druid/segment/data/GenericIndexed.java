@@ -19,9 +19,9 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Strings;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
@@ -35,8 +35,8 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
 import io.druid.segment.serde.Serializer;
 import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -57,7 +57,9 @@ import java.util.Iterator;
  * bytes 7-10 =>; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
  * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes
- * for value
+ * for value. Length of value stored has no meaning, if next offset is strictly greater than the current offset,
+ * and if they are the same, -1 at this field means null, and 0 at this field means some object
+ * (potentially non-null - e. g. in the string case, that is serialized as an empty sequence of bytes).
  * <p>
  * V2 Storage Format
  * Meta, header and value files are separate and header file stored in native endian byte order.
@@ -80,6 +82,8 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
   static final byte VERSION_TWO = 0x2;
   static final byte REVERSE_LOOKUP_ALLOWED = 0x1;
   static final byte REVERSE_LOOKUP_DISALLOWED = 0x0;
+
+  static final int NULL_VALUE_SIZE_MARKER = -1;
 
   private static final MetaSerdeHelper<GenericIndexed> metaSerdeHelper = MetaSerdeHelper
       .firstWriteByte((GenericIndexed x) -> VERSION_ONE)
@@ -104,12 +108,10 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     }
 
     @Override
+    @Nullable
     public byte[] toBytes(String val)
     {
-      if (Strings.isNullOrEmpty(val)) {
-        return ByteArrays.EMPTY_ARRAY;
-      }
-      return StringUtils.toUtf8(val);
+      return StringUtils.toUtf8Nullable(NullHandling.nullToEmptyIfNeeded(val));
     }
 
     @Override
@@ -309,8 +311,6 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
       throw new UnsupportedOperationException("Reverse lookup not allowed.");
     }
 
-    value = (value != null && value.equals("")) ? null : value;
-
     int minIndex = 0;
     int maxIndex = size - 1;
     while (minIndex <= maxIndex) {
@@ -370,11 +370,14 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
   private T copyBufferAndGet(ByteBuffer valueBuffer, int startOffset, int endOffset)
   {
-    final int size = endOffset - startOffset;
-    if (size == 0) {
+    ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
+    int size = endOffset - startOffset;
+    // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
+    // When SQL compatibility is not enabled return null for both null as well as empty string case.
+    if (size == 0 && (NullHandling.replaceWithDefault()
+                      || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
       return null;
     }
-    ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
     copyValueBuffer.position(startOffset);
     // fromByteBuffer must not modify the buffer limit
     return strategy.fromByteBuffer(copyValueBuffer, size);
@@ -428,11 +431,15 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
     T bufferedIndexedGet(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
-      final int size = endOffset - startOffset;
-      lastReadSize = size;
-      if (size == 0) {
+      int size = endOffset - startOffset;
+      // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
+      // When SQL compatibility is not enabled return null for both null as well as empty string case.
+      if (size == 0 && (NullHandling.replaceWithDefault()
+                        || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
         return null;
       }
+      lastReadSize = size;
+
       // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
       // position() call in the next line could throw an exception, if the position is set beyond the new limit. clear()
       // sets the limit to the maximum possible, the capacity. It is safe to reset the limit to capacity, because the
@@ -511,11 +518,11 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
           allowReverseLookup = false;
         }
 
-        // for compatibility with the format, but this field is unused
-        valuesOut.writeInt(0);
+        valuesOut.writeInt(next == null ? NULL_VALUE_SIZE_MARKER : 0);
         if (next != null) {
           strategy.writeTo(next, valuesOut);
         }
+
         headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
 
         if (prevVal instanceof Closeable) {
@@ -578,7 +585,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
         final int endOffset;
 
         if (index == 0) {
-          startOffset = 4;
+          startOffset = Integer.BYTES;
           endOffset = headerBuffer.getInt(0);
         } else {
           int headerPosition = (index - 1) * Integer.BYTES;

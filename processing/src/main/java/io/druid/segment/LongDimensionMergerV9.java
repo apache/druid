@@ -21,29 +21,21 @@ package io.druid.segment;
 
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.serde.LongGenericColumnPartSerde;
+import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-public class LongDimensionMergerV9 extends NumericDimensionMergerV9<LongColumnSerializer>
+public class LongDimensionMergerV9 extends NumericDimensionMergerV9
 {
 
-  LongDimensionMergerV9(
-      String dimensionName,
-      IndexSpec indexSpec,
-      SegmentWriteOutMedium segmentWriteOutMedium
-  )
+  LongDimensionMergerV9(String dimensionName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
     super(dimensionName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override
-  LongColumnSerializer setupEncodedValueWriter()
+  GenericColumnSerializer setupEncodedValueWriter()
   {
-    final CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
-    return LongColumnSerializer.create(segmentWriteOutMedium, dimensionName, metCompression, longEncoding);
+    return IndexMergerV9.createLongColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
   }
 
   @Override
@@ -51,13 +43,8 @@ public class LongDimensionMergerV9 extends NumericDimensionMergerV9<LongColumnSe
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.LONG);
-    builder.addSerde(
-        LongGenericColumnPartSerde
-            .serializerBuilder()
-            .withByteOrder(IndexIO.BYTE_ORDER)
-            .withDelegate(serializer)
-            .build()
-    );
+    ColumnPartSerde serde = IndexMergerV9.createLongColumnPartSerde(serializer, indexSpec);
+    builder.addSerde(serde);
     return builder.build();
   }
 }
