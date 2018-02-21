@@ -22,19 +22,17 @@ package io.druid.storage.hdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -92,7 +90,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
             indexZip = new Path(path.getParent(), "index.zip");
           }
           if (fs.exists(indexZip)) {
-            final DataSegment dataSegment = mapper.readValue((DataInput) fs.open(path), DataSegment.class);
+            final DataSegment dataSegment = mapper.readValue(fs.open(path), DataSegment.class);
             log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
 
             final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
@@ -104,7 +102,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
               loadSpec.put("path", pathWithoutScheme);
               if (updateDescriptor) {
                 log.info("Updating loadSpec in descriptor.json at [%s] with new path [%s]", path, pathWithoutScheme);
-                mapper.writeValue((DataOutput) fs.create(path, true), dataSegment);
+                mapper.writeValue(fs.create(path, true), dataSegment);
               }
             }
             segments.add(dataSegment);

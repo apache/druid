@@ -43,7 +43,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -177,12 +176,12 @@ public class HdfsDataSegmentFinderTest
     indexZip5 = new Path(descriptor5.getParent(), "1_" + INDEX_ZIP);
 
 
-    mapper.writeValue((DataOutput) fs.create(descriptor1), SEGMENT_1);
-    mapper.writeValue((DataOutput) fs.create(descriptor2), SEGMENT_2);
-    mapper.writeValue((DataOutput) fs.create(descriptor3), SEGMENT_3);
-    mapper.writeValue((DataOutput) fs.create(descriptor4_0), SEGMENT_4_0);
-    mapper.writeValue((DataOutput) fs.create(descriptor4_1), SEGMENT_4_1);
-    mapper.writeValue((DataOutput) fs.create(descriptor5), SEGMENT_5);
+    mapper.writeValue(fs.create(descriptor1), SEGMENT_1);
+    mapper.writeValue(fs.create(descriptor2), SEGMENT_2);
+    mapper.writeValue(fs.create(descriptor3), SEGMENT_3);
+    mapper.writeValue(fs.create(descriptor4_0), SEGMENT_4_0);
+    mapper.writeValue(fs.create(descriptor4_1), SEGMENT_4_1);
+    mapper.writeValue(fs.create(descriptor5), SEGMENT_5);
 
     create(indexZip1);
     create(indexZip2);
