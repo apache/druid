@@ -39,6 +39,7 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.java.util.common.DateTimes;
+import io.druid.segment.TestHelper;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
@@ -87,7 +88,8 @@ public class OverlordResourceTest
         Optional.of(taskRunner)
     ).anyTimes();
 
-    AuthorizerMapper authMapper = new AuthorizerMapper(null) {
+    AuthorizerMapper authMapper = new AuthorizerMapper(null)
+    {
       @Override
       public Authorizer getAuthorizer(String name)
       {
@@ -280,7 +282,12 @@ public class OverlordResourceTest
 
     EasyMock.expect(taskMaster.isLeader()).andReturn(true);
     EasyMock
-        .expect(indexerMetadataStorageAdapter.deletePendingSegments(EasyMock.eq("allow"), EasyMock.anyObject(Interval.class)))
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
         .andReturn(2);
 
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
@@ -289,6 +296,61 @@ public class OverlordResourceTest
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req)
         .getEntity();
     Assert.assertEquals(2, response.get("numDeleted").intValue());
+  }
+
+  @Test
+  public void testGetTaskPayload() throws Exception
+  {
+    expectAuthorizationTokenCheck();
+    final NoopTask task = NoopTask.create("mydatasource");
+    EasyMock.expect(taskStorageQueryAdapter.getTask("mytask"))
+            .andReturn(Optional.of(task));
+
+    EasyMock.expect(taskStorageQueryAdapter.getTask("othertask"))
+            .andReturn(Optional.absent());
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+
+    final Response response1 = overlordResource.getTaskPayload("mytask");
+    final TaskPayloadResponse taskPayloadResponse1 = TestHelper.makeJsonMapper().readValue(
+        TestHelper.makeJsonMapper().writeValueAsString(response1.getEntity()),
+        TaskPayloadResponse.class
+    );
+    Assert.assertEquals(new TaskPayloadResponse("mytask", task), taskPayloadResponse1);
+
+    final Response response2 = overlordResource.getTaskPayload("othertask");
+    final TaskPayloadResponse taskPayloadResponse2 = TestHelper.makeJsonMapper().readValue(
+        TestHelper.makeJsonMapper().writeValueAsString(response2.getEntity()),
+        TaskPayloadResponse.class
+    );
+    Assert.assertEquals(new TaskPayloadResponse("othertask", null), taskPayloadResponse2);
+  }
+
+  @Test
+  public void testGetTaskStatus() throws Exception
+  {
+    expectAuthorizationTokenCheck();
+    EasyMock.expect(taskStorageQueryAdapter.getStatus("mytask"))
+            .andReturn(Optional.of(TaskStatus.success("mytask")));
+
+    EasyMock.expect(taskStorageQueryAdapter.getStatus("othertask"))
+            .andReturn(Optional.absent());
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+
+    final Response response1 = overlordResource.getTaskStatus("mytask");
+    final TaskStatusResponse taskStatusResponse1 = TestHelper.makeJsonMapper().readValue(
+        TestHelper.makeJsonMapper().writeValueAsString(response1.getEntity()),
+        TaskStatusResponse.class
+    );
+    Assert.assertEquals(new TaskStatusResponse("mytask", TaskStatus.success("mytask")), taskStatusResponse1);
+
+    final Response response2 = overlordResource.getTaskStatus("othertask");
+    final TaskStatusResponse taskStatusResponse2 = TestHelper.makeJsonMapper().readValue(
+        TestHelper.makeJsonMapper().writeValueAsString(response2.getEntity()),
+        TaskStatusResponse.class
+    );
+    Assert.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
   }
 
   @After
