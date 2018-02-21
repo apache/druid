@@ -27,7 +27,7 @@ import java.util.Objects;
 
 public class TaskStatusResponse
 {
-  private final String task;
+  private final String task; // Task ID, named "task" in the JSONification of this class.
   private final TaskStatus status;
 
   @JsonCreator
