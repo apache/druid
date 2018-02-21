@@ -27,9 +27,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
@@ -99,7 +99,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     try {
       return S3Utils.retryS3Operation(
           () -> {
-            uploadFileAndClear(s3Client, config.getBucket(), s3Path, zipOutFile, replaceExisting);
+            uploadFileIfPossibleAndClear(s3Client, config.getBucket(), s3Path, zipOutFile, replaceExisting);
 
             final DataSegment outSegment = inSegment.withSize(indexSize)
                                                     .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
@@ -110,7 +110,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
             // runtime, and because Guava deletes methods over time, that causes incompatibilities.
             Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
 
-            uploadFileAndClear(
+            uploadFileIfPossibleAndClear(
                 s3Client,
                 config.getBucket(),
                 S3Utils.descriptorPathForSegmentPath(s3Path),
@@ -155,20 +155,24 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  private void uploadFileAndClear(AmazonS3Client s3Client, String bucket, String key, File file, boolean replaceExisting)
+  private void uploadFileIfPossibleAndClear(
+      AmazonS3Client s3Client,
+      String bucket,
+      String key,
+      File file,
+      boolean replaceExisting
+  )
   {
-    final PutObjectRequest indexFilePutRequest = new PutObjectRequest(bucket, key, file);
-
-    if (!config.getDisableAcl()) {
-      indexFilePutRequest.setAccessControlList(
-          S3Utils.grantFullControlToBucketOwver(s3Client, bucket)
-      );
-    }
-
-    // TODO: maybe the below check can be moved out to the caller
     if (!replaceExisting && S3Utils.isObjectInBucketIgnoringPermission(s3Client, bucket, key)) {
       log.info("Skipping push because key [%s] exists && replaceExisting == false", key);
     } else {
+      final PutObjectRequest indexFilePutRequest = new PutObjectRequest(bucket, key, file);
+
+      if (!config.getDisableAcl()) {
+        indexFilePutRequest.setAccessControlList(
+            S3Utils.grantFullControlToBucketOwver(s3Client, bucket)
+        );
+      }
       log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
       s3Client.putObject(indexFilePutRequest);
     }

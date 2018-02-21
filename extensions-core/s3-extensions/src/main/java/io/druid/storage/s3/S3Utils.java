@@ -52,7 +52,6 @@ public class S3Utils
   static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
-    // TODO: check the below error codes
     final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
     return isIOException || isTimeout;
   }
@@ -87,7 +86,6 @@ public class S3Utils
   static boolean isObjectInBucketIgnoringPermission(AmazonS3Client s3Client, String bucketName, String objectKey)
   {
     try {
-      // TODO: check the below error codes
       return s3Client.doesObjectExist(bucketName, objectKey);
     }
     catch (AmazonS3Exception e) {
@@ -205,7 +203,6 @@ public class S3Utils
     return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
   }
 
-  // TODO: check this is possible with the official sdk
   // Copied from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder()
   public static boolean isDirectoryPlaceholder(String key, ObjectMetadata objectMetadata)
   {
