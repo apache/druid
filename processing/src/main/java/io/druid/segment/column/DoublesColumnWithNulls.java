@@ -45,9 +45,10 @@ class DoublesColumnWithNulls extends DoublesColumn
   }
 
   @Override
-  public boolean isNull(int rowNum)
+  public long getLongSingleValueRow(int rowNum)
   {
-    return nullValueBitmap.get(rowNum);
+    assert !nullValueBitmap.get(rowNum);
+    return super.getLongSingleValueRow(rowNum);
   }
 
   @Override
@@ -56,12 +57,4 @@ class DoublesColumnWithNulls extends DoublesColumn
     super.inspectRuntimeShape(inspector);
     inspector.visit("nullValueBitmap", nullValueBitmap);
   }
-
-  @Override
-  public long getLongSingleValueRow(int rowNum)
-  {
-    assert !isNull(rowNum);
-    return super.getLongSingleValueRow(rowNum);
-  }
-
 }

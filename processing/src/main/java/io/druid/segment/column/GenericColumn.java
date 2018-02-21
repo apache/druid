@@ -31,9 +31,6 @@ public interface GenericColumn extends BaseColumn, HotLoopCallee
   @CalledFromHotLoop
   long getLongSingleValueRow(int rowNum);
 
-  @CalledFromHotLoop
-  boolean isNull(int rowNum);
-
   @Override
   void close();
 }

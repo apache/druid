@@ -45,17 +45,16 @@ class LongsColumnWithNulls extends LongsColumn
   }
 
   @Override
+  public long getLongSingleValueRow(int rowNum)
+  {
+    assert !nullValueBitmap.get(rowNum);
+    return super.getLongSingleValueRow(rowNum);
+  }
+
+  @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     super.inspectRuntimeShape(inspector);
     inspector.visit("nullValueBitmap", nullValueBitmap);
   }
-
-  @Override
-  public long getLongSingleValueRow(int rowNum)
-  {
-    assert !isNull(rowNum);
-    return super.getLongSingleValueRow(rowNum);
-  }
-
 }

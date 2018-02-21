@@ -68,12 +68,6 @@ public class FloatsColumn implements GenericColumn
   }
 
   @Override
-  public boolean isNull(int rowNum)
-  {
-    return false;
-  }
-
-  @Override
   public void close()
   {
     column.close();
