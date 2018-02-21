@@ -195,7 +195,9 @@ public final class DimensionSelectorUtils
             } else {
               matches = predicate.apply(selector.lookupName(id));
               checkedIds.set(id);
-              matchingIds.set(id, matches);
+              if (matches) {
+                matchingIds.set(id);
+              }
             }
 
             if (matches) {

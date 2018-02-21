@@ -278,7 +278,9 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
               } else {
                 final boolean matches = predicate.apply(lookupName(id));
                 checkedIds.set(id);
-                matchingIds.set(id, matches);
+                if (matches) {
+                  matchingIds.set(id);
+                }
                 return matches;
               }
             }
