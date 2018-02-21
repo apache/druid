@@ -19,6 +19,7 @@
 
 package io.druid.server;
 
+import com.amazonaws.thirdparty.apache.http.client.utils.URIBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -33,7 +34,6 @@ import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.security.AuthConfig;
-import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
