@@ -20,10 +20,10 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Iterators;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
@@ -206,7 +206,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubqueryWithLimitPushDown()
       // in GroupByQueryRunnerTest)
-      return CloseableIterators.withEmptyBaggage(Iterators.<Entry<KeyType>>emptyIterator());
+      return CloseableIterators.withEmptyBaggage(EmptyIterator.<Entry<KeyType>>instance());
     }
 
     if (sortHasNonGroupingFields) {
@@ -378,6 +378,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
           aggregatorFactories,
           aggregatorOffsets
       );
+
       @Override
       public int compare(Integer o1, Integer o2)
       {
@@ -453,7 +454,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       subHashTable2Buffer.limit(tableArenaSize);
       subHashTable2Buffer = subHashTable2Buffer.slice();
 
-      subHashTableBuffers = new ByteBuffer[] {subHashTable1Buffer, subHashTable2Buffer};
+      subHashTableBuffers = new ByteBuffer[]{subHashTable1Buffer, subHashTable2Buffer};
     }
 
     @Override

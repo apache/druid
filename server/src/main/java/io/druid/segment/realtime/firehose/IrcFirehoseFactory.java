@@ -21,7 +21,6 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.ircclouds.irc.api.Callback;
 import com.ircclouds.irc.api.IRCApi;
@@ -37,6 +36,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
@@ -189,7 +189,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
     return new Firehose()
     {
       InputRow nextRow = null;
-      Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      Iterator<InputRow> nextIterator = EmptyIterator.instance();
 
       @Override
       public boolean hasMore()

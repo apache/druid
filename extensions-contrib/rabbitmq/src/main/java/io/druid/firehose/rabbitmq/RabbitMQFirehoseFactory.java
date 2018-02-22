@@ -21,7 +21,6 @@ package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterators;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -35,6 +34,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.logger.Logger;
 import net.jodah.lyra.ConnectionOptions;
 import net.jodah.lyra.Connections;
@@ -205,7 +205,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
        */
       private long lastDeliveryTag;
 
-      private Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      private Iterator<InputRow> nextIterator = EmptyIterator.instance();
 
       @Override
       public boolean hasMore()

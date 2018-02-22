@@ -23,12 +23,12 @@ package io.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.logger.Logger;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
@@ -108,7 +108,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
 
     return new Firehose()
     {
-      Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      Iterator<InputRow> nextIterator = EmptyIterator.instance();
 
       @Override
       public boolean hasMore()

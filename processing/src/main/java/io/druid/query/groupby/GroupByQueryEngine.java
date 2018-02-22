@@ -22,7 +22,6 @@ package io.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -33,6 +32,7 @@ import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.FunctionalIterator;
@@ -320,7 +320,7 @@ public class GroupByQueryEngine
       this.maxIntermediateRows = querySpecificConfig.getMaxIntermediateRows();
 
       unprocessedKeys = null;
-      delegate = Iterators.emptyIterator();
+      delegate = EmptyIterator.instance();
       dimensionSpecs = query.getDimensions();
       dimensions = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
       dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());

@@ -26,8 +26,10 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -70,6 +72,7 @@ import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import org.apache.commons.io.FileUtils;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.Map;
@@ -388,9 +391,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   /**
    * Is a firehose from this factory drainable by closing it? If so, we should drain on stopGracefully rather than
    * abruptly stopping.
-   *
+   * <p>
    * This is a hack to get around the fact that the Firehose and FirehoseFactory interfaces do not help us do this.
-   *
+   * <p>
    * Protected for tests.
    */
   protected boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
@@ -431,19 +434,45 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
       String sequenceName
   )
   {
-    ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
         publisher,
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
+    final SettableFuture<SegmentsAndMetadata> handoffDoneFuture = SettableFuture.create();
+    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
+    {
+      @Override
+      public void onSuccess(@Nullable SegmentsAndMetadata result)
+      {
+        final ListenableFuture<SegmentsAndMetadata> handoffFuture = driver.registerHandoff(result);
+        Futures.addCallback(handoffFuture, new FutureCallback<SegmentsAndMetadata>()
+        {
+          @Override
+          public void onSuccess(@Nullable SegmentsAndMetadata result)
+          {
+            handoffDoneFuture.set(result);
+          }
 
-    ListenableFuture<SegmentsAndMetadata> handoffFuture = Futures.transform(publishFuture, driver::registerHandoff);
+          @Override
+          public void onFailure(Throwable t)
+          {
+            handoffDoneFuture.setException(t);
+          }
+        });
+      }
 
-    pendingHandoffs.add(handoffFuture);
+      @Override
+      public void onFailure(Throwable t)
+      {
+        handoffDoneFuture.setException(t);
+      }
+    });
+    pendingHandoffs.add(handoffDoneFuture);
   }
 
   private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,
-                                                                 TimeoutException
+                                                                    TimeoutException
   {
     if (!pendingHandoffs.isEmpty()) {
       ListenableFuture<?> allHandoffs = Futures.allAsList(pendingHandoffs);

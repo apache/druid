@@ -19,9 +19,9 @@
 
 package io.druid.query.groupby.orderby;
 
-import com.google.common.collect.Iterators;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
+import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
@@ -43,7 +43,7 @@ public class TopNSequence<T> extends BaseSequence<T, Iterator<T>>
           public Iterator<T> make()
           {
             if (limit <= 0) {
-              return Iterators.emptyIterator();
+              return EmptyIterator.instance();
             }
 
             // Materialize the topN values

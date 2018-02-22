@@ -20,11 +20,9 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -54,11 +52,11 @@ import java.util.stream.Collectors;
 
 /**
  * This class is specialized for streaming ingestion. In streaming ingestion, the segment lifecycle is like:
- *
+ * <p>
  * <pre>
  * APPENDING -> APPEND_FINISHED -> PUBLISHED
  * </pre>
- *
+ * <p>
  * <ul>
  * <li>APPENDING: Segment is available for appending.</li>
  * <li>APPEND_FINISHED: Segment cannot be updated (data cannot be added anymore) and is waiting for being published.</li>
@@ -269,23 +267,43 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = Futures.transform(
-        pushInBackground(wrapCommitter(committer), theSegments),
-        (AsyncFunction<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> publishInBackground(
-            segmentsAndMetadata,
+    final SettableFuture<SegmentsAndMetadata> publishCompleted = SettableFuture.create();
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = pushInBackground(wrapCommitter(committer), theSegments);
+    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
+    {
+      @Override
+      public void onSuccess(@Nullable SegmentsAndMetadata result)
+      {
+        final ListenableFuture<SegmentsAndMetadata> publishMoreFuture = publishInBackground(
+            result,
             publisher
-        )
-    );
-
-    return Futures.transform(
-        publishFuture,
-        (Function<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> {
-          synchronized (segments) {
-            sequenceNames.forEach(segments::remove);
+        );
+        Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
+        {
+          @Override
+          public void onSuccess(@Nullable SegmentsAndMetadata result)
+          {
+            synchronized (segments) {
+              sequenceNames.forEach(segments::remove);
+            }
+            publishCompleted.set(result);
           }
-          return segmentsAndMetadata;
-        }
-    );
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            publishCompleted.setException(t);
+          }
+        });
+      }
+
+      @Override
+      public void onFailure(Throwable t)
+      {
+        publishCompleted.setException(t);
+      }
+    });
+    return publishCompleted;
   }
 
   /**
@@ -378,10 +396,23 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    return Futures.transform(
-        publish(publisher, committer, sequenceNames),
-        this::registerHandoff
-    );
+    final SettableFuture<SegmentsAndMetadata> publishDoneFuture = SettableFuture.create();
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = publish(publisher, committer, sequenceNames);
+    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
+    {
+      @Override
+      public void onSuccess(@Nullable SegmentsAndMetadata result)
+      {
+        publishDoneFuture.set(result);
+      }
+
+      @Override
+      public void onFailure(Throwable t)
+      {
+        publishDoneFuture.setException(t);
+      }
+    });
+    return publishDoneFuture;
   }
 
   @Override
