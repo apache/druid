@@ -223,11 +223,12 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 .values()
                 .stream()
                 .flatMap(SegmentsForSequence::segmentStateStream)
-                .map(segmentWithState -> Preconditions.checkNotNull(
-                    segmentWithState.getDataSegment(),
-                    "dataSegment for segmentId[%s]",
-                    segmentWithState.getSegmentIdentifier()
-                     )
+                .map(segmentWithState -> Preconditions
+                    .checkNotNull(
+                        segmentWithState.getDataSegment(),
+                        "dataSegment for segmentId[%s]",
+                        segmentWithState.getSegmentIdentifier()
+                    )
                 )
                 .collect(Collectors.toList()),
             null
