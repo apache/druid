@@ -1770,18 +1770,21 @@ public class KafkaSupervisor implements Supervisor
     final String checkpoints = sortingMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
     {
     }).writeValueAsString(taskGroups.get(groupId).sequenceOffsets);
-    final Map<String, Object> context = spec.getContext() == null
-                                        ? ImmutableMap.of(
-        "checkpoints",
-        checkpoints,
-        IS_INCREMENTAL_HANDOFF_SUPPORTED,
-        true
-    )
-                                        : ImmutableMap.<String, Object>builder()
-                                            .put("checkpoints", checkpoints)
-                                            .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
-                                            .putAll(spec.getContext())
-                                            .build();
+    final Map<String, Object> context;
+    if (spec.getContext() == null) {
+      context = ImmutableMap.of(
+          "checkpoints",
+          checkpoints,
+          IS_INCREMENTAL_HANDOFF_SUPPORTED,
+          true
+      );
+    } else {
+      context = ImmutableMap.<String, Object>builder()
+          .put("checkpoints", checkpoints)
+          .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
+          .putAll(spec.getContext())
+          .build();
+    }
     for (int i = 0; i < replicas; i++) {
       String taskId = Joiner.on("_").join(sequenceName, getRandomId());
       KafkaIndexTask indexTask = new KafkaIndexTask(

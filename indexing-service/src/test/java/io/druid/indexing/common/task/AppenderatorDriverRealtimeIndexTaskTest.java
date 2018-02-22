@@ -361,19 +361,20 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey()
-                                                                                                                .equals(
-                                                                                                                    new SegmentDescriptor(
-                                                                                                                        publishedSegment
-                                                                                                                            .getInterval(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getVersion(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getShardSpec()
-                                                                                                                            .getPartitionNum()
-                                                                                                                    )))
-                                                                                                  .findFirst();
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks
+          .entrySet().stream()
+          .filter(e -> e.getKey()
+                        .equals(
+                            new SegmentDescriptor(
+                                publishedSegment
+                                    .getInterval(),
+                                publishedSegment
+                                    .getVersion(),
+                                publishedSegment
+                                    .getShardSpec()
+                                    .getPartitionNum()
+                            )))
+          .findFirst();
 
       Assert.assertTrue(
           publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
