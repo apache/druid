@@ -32,7 +32,6 @@ import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.FunctionalIterator;
@@ -58,6 +57,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -320,7 +320,7 @@ public class GroupByQueryEngine
       this.maxIntermediateRows = querySpecificConfig.getMaxIntermediateRows();
 
       unprocessedKeys = null;
-      delegate = EmptyIterator.instance();
+      delegate = Collections.emptyIterator();
       dimensionSpecs = query.getDimensions();
       dimensions = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());
       dimNames = Lists.newArrayListWithExpectedSize(dimensionSpecs.size());

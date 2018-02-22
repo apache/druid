@@ -31,7 +31,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
-import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -117,7 +116,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
                   {
                     try {
                       if (cachedResult.length == 0) {
-                        return EmptyIterator.instance();
+                        return Collections.emptyIterator();
                       }
 
                       return mapper.readValues(

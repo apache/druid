@@ -48,7 +48,6 @@ import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.LazySequence;
@@ -513,7 +512,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
               {
                 try {
                   if (cachedResult.length == 0) {
-                    return EmptyIterator.instance();
+                    return Collections.emptyIterator();
                   }
 
                   return objectMapper.readValues(

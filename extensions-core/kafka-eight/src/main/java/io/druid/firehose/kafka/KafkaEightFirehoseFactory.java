@@ -28,7 +28,6 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.logger.Logger;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
@@ -41,6 +40,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -108,7 +108,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
 
     return new Firehose()
     {
-      Iterator<InputRow> nextIterator = EmptyIterator.instance();
+      Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()

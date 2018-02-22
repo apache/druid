@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
@@ -206,7 +205,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubqueryWithLimitPushDown()
       // in GroupByQueryRunnerTest)
-      return CloseableIterators.withEmptyBaggage(EmptyIterator.<Entry<KeyType>>instance());
+      return CloseableIterators.withEmptyBaggage(Collections.<Entry<KeyType>>emptyIterator());
     }
 
     if (sortHasNonGroupingFields) {

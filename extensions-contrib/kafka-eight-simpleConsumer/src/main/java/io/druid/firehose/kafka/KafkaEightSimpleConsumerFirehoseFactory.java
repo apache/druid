@@ -31,13 +31,13 @@ import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.firehose.kafka.KafkaSimpleConsumer.BytesMessageWithOffset;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.emitter.EmittingLogger;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -177,7 +177,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       private volatile boolean stopped;
       private volatile BytesMessageWithOffset msg = null;
       private volatile InputRow row = null;
-      private volatile Iterator<InputRow> nextIterator = EmptyIterator.instance();
+      private volatile Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       {
         lastOffsetPartitions = Maps.newHashMap();
@@ -212,7 +212,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
               msg = messageQueue.take();
               final byte[] message = msg.message();
               nextIterator = message == null
-                             ? EmptyIterator.instance()
+                             ? Collections.emptyIterator()
                              : firehoseParser.parseBatch(ByteBuffer.wrap(message)).iterator();
               continue;
             }

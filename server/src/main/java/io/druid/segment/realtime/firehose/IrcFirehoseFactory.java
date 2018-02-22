@@ -36,13 +36,13 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.collect.EmptyIterator;
 import io.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -189,7 +189,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
     return new Firehose()
     {
       InputRow nextRow = null;
-      Iterator<InputRow> nextIterator = EmptyIterator.instance();
+      Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
