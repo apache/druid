@@ -30,7 +30,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;

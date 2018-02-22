@@ -21,7 +21,6 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.java.util.common.Intervals;

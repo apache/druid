@@ -151,7 +151,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class AppenderatorDriverRealtimeIndexTaskTest
@@ -216,7 +215,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     @Override
     public Runnable commit()
     {
-      return () -> {};
+      return () -> {
+      };
     }
 
     @Override
@@ -362,11 +362,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     for (DataSegment publishedSegment : publishedSegments) {
       Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
+                                                                                                  .filter(e -> e.getKey()
+                                                                                                                .equals(
+                                                                                                                    new SegmentDescriptor(
+                                                                                                                        publishedSegment
+                                                                                                                            .getInterval(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getVersion(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getShardSpec()
+                                                                                                                            .getPartitionNum()
+                                                                                                                    )))
                                                                                                   .findFirst();
 
       Assert.assertTrue(
@@ -426,11 +432,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     for (DataSegment publishedSegment : publishedSegments) {
       Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
+                                                                                                  .filter(e -> e.getKey()
+                                                                                                                .equals(
+                                                                                                                    new SegmentDescriptor(
+                                                                                                                        publishedSegment
+                                                                                                                            .getInterval(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getVersion(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getShardSpec()
+                                                                                                                            .getPartitionNum()
+                                                                                                                    )))
                                                                                                   .findFirst();
 
       Assert.assertTrue(
@@ -493,11 +505,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     for (DataSegment publishedSegment : publishedSegments) {
       Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
+                                                                                                  .filter(e -> e.getKey()
+                                                                                                                .equals(
+                                                                                                                    new SegmentDescriptor(
+                                                                                                                        publishedSegment
+                                                                                                                            .getInterval(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getVersion(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getShardSpec()
+                                                                                                                            .getPartitionNum()
+                                                                                                                    )))
                                                                                                   .findFirst();
 
       Assert.assertTrue(
@@ -565,11 +583,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     for (DataSegment publishedSegment : publishedSegments) {
       Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
+                                                                                                  .filter(e -> e.getKey()
+                                                                                                                .equals(
+                                                                                                                    new SegmentDescriptor(
+                                                                                                                        publishedSegment
+                                                                                                                            .getInterval(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getVersion(),
+                                                                                                                        publishedSegment
+                                                                                                                            .getShardSpec()
+                                                                                                                            .getPartitionNum()
+                                                                                                                    )))
                                                                                                   .findFirst();
 
       Assert.assertTrue(
