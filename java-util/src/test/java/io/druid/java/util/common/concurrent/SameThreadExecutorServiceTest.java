@@ -62,7 +62,8 @@ public class SameThreadExecutorServiceTest
   }
 
   @Test
-  public void testMultiShutdownIsFine() {
+  public void testMultiShutdownIsFine()
+  {
     final SameThreadExecutorService service = new SameThreadExecutorService();
     Assert.assertFalse(service.isShutdown());
     service.shutdown();

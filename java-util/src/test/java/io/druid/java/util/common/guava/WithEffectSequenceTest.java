@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.concurrent.Execs;
 import org.junit.Assert;
 import org.junit.Test;

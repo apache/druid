@@ -51,7 +51,8 @@ public class Execs
     return DummyExecutorService.INSTANCE;
   }
 
-  public static ListeningExecutorService sameThreadExecutor() {
+  public static ListeningExecutorService sameThreadExecutor()
+  {
     return MoreExecutors.listeningDecorator(new SameThreadExecutorService());
   }
 
