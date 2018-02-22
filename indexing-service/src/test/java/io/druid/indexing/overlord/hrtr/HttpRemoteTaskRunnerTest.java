@@ -27,8 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.http.client.HttpClient;
 import io.druid.common.guava.DSuppliers;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
@@ -48,6 +46,8 @@ import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.segment.TestHelper;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -90,7 +90,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -104,7 +105,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -182,7 +184,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -196,7 +199,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -281,7 +285,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -295,7 +300,8 @@ public class HttpRemoteTaskRunnerTest
         taskStorageMock,
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -313,7 +319,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -412,7 +419,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -426,7 +434,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -444,7 +453,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -575,7 +585,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public Period getTaskCleanupTimeout()
           {
@@ -589,7 +600,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -607,7 +619,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -775,7 +788,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -891,9 +905,10 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
     Assert.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
 
-    Assert.assertEquals("host3:8080",
-                        Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), Integer.MAX_VALUE))
-                                 .getHost()
+    Assert.assertEquals(
+        "host3:8080",
+        Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), Integer.MAX_VALUE))
+                 .getHost()
     );
   }
 
@@ -946,7 +961,9 @@ public class HttpRemoteTaskRunnerTest
 
     // Another "rogue-worker" reports running it, and gets asked to shutdown the task
     WorkerHolder rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     rogueWorkerHolder.shutdownTask(task.getId());
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -959,7 +976,9 @@ public class HttpRemoteTaskRunnerTest
 
     // "rogue-worker" reports FAILURE for the task, ignored
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task,
@@ -980,7 +999,9 @@ public class HttpRemoteTaskRunnerTest
 
     // "rogue-worker" reports running it, and gets asked to shutdown the task
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     rogueWorkerHolder.shutdownTask(task.getId());
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -993,7 +1014,9 @@ public class HttpRemoteTaskRunnerTest
 
     // "rogue-worker" reports FAILURE for the tasks, ignored
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task,
@@ -1206,7 +1229,7 @@ public class HttpRemoteTaskRunnerTest
               listenerNotificationsAccumulator.add(ImmutableList.of(taskId, status));
             }
           },
-          MoreExecutors.sameThreadExecutor()
+          Execs.sameThreadExecutor()
       );
     }
 

@@ -20,7 +20,6 @@
 package io.druid.server.coordination.broker;
 
 import com.google.common.base.Predicates;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.ServerView;
@@ -28,6 +27,7 @@ import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.server.DruidNode;
@@ -53,7 +53,7 @@ public class DruidBroker
     this.serviceAnnouncer = serviceAnnouncer;
 
     serverInventoryView.registerSegmentCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.sameThreadExecutor(),
         new ServerView.BaseSegmentCallback()
         {
           @Override

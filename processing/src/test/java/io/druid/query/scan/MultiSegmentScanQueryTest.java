@@ -22,8 +22,8 @@ package io.druid.query.scan;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
@@ -166,7 +166,10 @@ public class MultiSegmentScanQueryTest
   @Parameterized.Parameters(name = "limit={0},batchSize={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.cartesian(Arrays.asList(0, 1, 3, 7, 10, 20, 1000), Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000));
+    return QueryRunnerTestHelper.cartesian(
+        Arrays.asList(0, 1, 3, 7, 10, 20, 1000),
+        Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000)
+    );
   }
 
   private final int limit;
@@ -195,8 +198,9 @@ public class MultiSegmentScanQueryTest
     ScanQuery query = newBuilder().build();
     List<ScanResultValue> results = factory
         .mergeRunners(
-            MoreExecutors.sameThreadExecutor(),
-            ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1)))
+            Execs.sameThreadExecutor(),
+            ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1))
+        )
         .run(QueryPlus.wrap(query), new HashMap<>())
         .toList();
     int totalCount = 0;
@@ -214,7 +218,8 @@ public class MultiSegmentScanQueryTest
   public void testMergeResultsWithLimit()
   {
     QueryRunner<ScanResultValue> runner = toolChest.mergeResults(
-        new QueryRunner<ScanResultValue>() {
+        new QueryRunner<ScanResultValue>()
+        {
           @Override
           public Sequence<ScanResultValue> run(
               QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext

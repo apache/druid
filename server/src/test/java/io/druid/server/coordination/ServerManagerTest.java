@@ -26,8 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
@@ -35,6 +33,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
@@ -42,6 +41,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.java.util.common.guava.YieldingSequenceBase;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.DefaultQueryMetrics;
 import io.druid.query.Druids;
@@ -55,8 +55,8 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
-import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchResultValue;
 import io.druid.segment.AbstractSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
@@ -152,7 +152,7 @@ public class ServerManagerTest
         },
         new NoopServiceEmitter(),
         serverManagerExec,
-        MoreExecutors.sameThreadExecutor(),
+        Execs.sameThreadExecutor(),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),

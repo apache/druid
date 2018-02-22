@@ -20,6 +20,7 @@
 package io.druid.java.util.common.guava;
 
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.java.util.common.concurrent.Execs;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,11 +41,11 @@ public class WithEffectSequenceTest
         .simple(Arrays.asList(1, 2, 3))
         .withEffect(
             () -> effect1.set(counter.incrementAndGet()),
-            MoreExecutors.sameThreadExecutor()
+            Execs.sameThreadExecutor()
         )
         .withEffect(
             () -> effect2.set(counter.incrementAndGet()),
-            MoreExecutors.sameThreadExecutor()
+            Execs.sameThreadExecutor()
         );
     // Run sequence via accumulate
     sequence.toList();
@@ -70,7 +71,7 @@ public class WithEffectSequenceTest
     });
     final AtomicBoolean effectExecuted = new AtomicBoolean();
     Sequence<Integer> seqWithEffect =
-        throwingSeq.withEffect(() -> effectExecuted.set(true), MoreExecutors.sameThreadExecutor());
+        throwingSeq.withEffect(() -> effectExecuted.set(true), Execs.sameThreadExecutor());
     try {
       seqWithEffect.toList();
       Assert.fail("expected RuntimeException");

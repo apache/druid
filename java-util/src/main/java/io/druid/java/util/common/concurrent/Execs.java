@@ -21,6 +21,8 @@ package io.druid.java.util.common.concurrent;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nullable;
@@ -47,6 +49,10 @@ public class Execs
   public static ExecutorService dummy()
   {
     return DummyExecutorService.INSTANCE;
+  }
+
+  public static ListeningExecutorService sameThreadExecutor() {
+    return MoreExecutors.listeningDecorator(new SameThreadExecutorService());
   }
 
   public static ExecutorService singleThreaded(@NotNull String nameFormat)

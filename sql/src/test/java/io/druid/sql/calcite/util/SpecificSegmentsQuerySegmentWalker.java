@@ -25,9 +25,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.UOE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -224,7 +224,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     return new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.sameThreadExecutor(),
                 FunctionalIterable
                     .create(specs)
                     .transformCat(

@@ -23,13 +23,13 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.curator.CuratorTestBase;
 import io.druid.curator.announcement.Announcer;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -69,7 +69,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     Announcer announcer = new Announcer(
         curator,
-        MoreExecutors.sameThreadExecutor()
+        Execs.sameThreadExecutor()
     );
     announcer.start();
 

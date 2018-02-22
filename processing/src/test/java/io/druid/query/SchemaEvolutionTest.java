@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.MapInputRowParser;
@@ -32,6 +31,7 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -87,11 +87,22 @@ public class SchemaEvolutionTest
         )
     );
     return ImmutableList.of(
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-01", "c1", "9", "c2", ImmutableList.of("a"))).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-02", "c1", "10.1", "c2", ImmutableList.of())).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-03", "c1", "2", "c2", ImmutableList.of(""))).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-01", "c1", "1", "c2", ImmutableList.of("a", "c"))).get(0),
-        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-02", "c1", "4", "c2", ImmutableList.of("abc"))).get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-01", "c1", "9", "c2", ImmutableList.of("a")))
+              .get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-02", "c1", "10.1", "c2", ImmutableList.of()))
+              .get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-03", "c1", "2", "c2", ImmutableList.of("")))
+              .get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of(
+            "t",
+            "2001-01-01",
+            "c1",
+            "1",
+            "c2",
+            ImmutableList.of("a", "c")
+        )).get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-02", "c1", "4", "c2", ImmutableList.of("abc")))
+              .get(0),
         parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-03", "c1", "5")).get(0)
     );
   }
@@ -105,7 +116,7 @@ public class SchemaEvolutionTest
     final Sequence<T> results = new FinalizeResultsQueryRunner<>(
         factory.getToolchest().mergeResults(
             factory.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.sameThreadExecutor(),
                 FunctionalIterable
                     .create(indexes)
                     .transform(

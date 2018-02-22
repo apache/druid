@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheStats;
@@ -34,10 +32,12 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -106,7 +106,7 @@ public class CachingQueryRunnerTest
     if (numBackgroundThreads > 0) {
       backgroundExecutorService = Executors.newFixedThreadPool(numBackgroundThreads);
     } else {
-      backgroundExecutorService = MoreExecutors.sameThreadExecutor();
+      backgroundExecutorService = Execs.sameThreadExecutor();
     }
   }
 

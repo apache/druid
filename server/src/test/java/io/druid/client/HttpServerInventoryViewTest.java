@@ -24,23 +24,23 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.segment.TestHelper;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.ChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
-import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
-import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -197,7 +197,7 @@ public class HttpServerInventoryViewTest
     );
 
     httpServerInventoryView.registerSegmentCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.sameThreadExecutor(),
         new ServerView.SegmentCallback()
         {
           @Override
@@ -229,7 +229,7 @@ public class HttpServerInventoryViewTest
 
     final CountDownLatch serverRemovedCalled = new CountDownLatch(1);
     httpServerInventoryView.registerServerRemovedCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.sameThreadExecutor(),
         new ServerView.ServerRemovedCallback()
         {
           @Override
@@ -258,8 +258,10 @@ public class HttpServerInventoryViewTest
     segmentDropLatches.get(segment2.getIdentifier()).await();
 
     DruidServer druidServer = httpServerInventoryView.getInventoryValue("host:8080");
-    Assert.assertEquals(ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4),
-                        druidServer.getSegments());
+    Assert.assertEquals(
+        ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4),
+        druidServer.getSegments()
+    );
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));
 
@@ -320,7 +322,10 @@ public class HttpServerInventoryViewTest
 
       if (requestNum.get() == 2) {
         //fail scenario where request is sent to server but we got an unexpected response.
-        HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        HttpResponse httpResponse = new DefaultHttpResponse(
+            HttpVersion.HTTP_1_1,
+            HttpResponseStatus.INTERNAL_SERVER_ERROR
+        );
         httpResponse.setContent(ChannelBuffers.buffer(0));
         httpResponseHandler.handleResponse(httpResponse);
         return Futures.immediateFailedFuture(new RuntimeException("server error"));

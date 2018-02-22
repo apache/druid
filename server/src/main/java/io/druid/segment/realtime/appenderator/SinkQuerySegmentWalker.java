@@ -23,16 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.CPUTimeMetricQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
@@ -201,7 +201,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                         sinkSegmentIdentifier,
                                         descriptor.getInterval().getStart(),
                                         factory.mergeRunners(
-                                            MoreExecutors.sameThreadExecutor(),
+                                            Execs.sameThreadExecutor(),
                                             Iterables.transform(
                                                 theSink,
                                                 new Function<FireHydrant, QueryRunner<T>>()
@@ -235,7 +235,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                                             cache,
                                                             toolChest,
                                                             baseRunner,
-                                                            MoreExecutors.sameThreadExecutor(),
+                                                            Execs.sameThreadExecutor(),
                                                             cacheConfig
                                                         );
                                                       } else {

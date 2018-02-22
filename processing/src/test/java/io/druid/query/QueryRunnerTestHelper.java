@@ -24,16 +24,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.core.NoopEmitter;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -82,7 +82,8 @@ import java.util.Map;
 public class QueryRunnerTestHelper
 {
 
-  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
+  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {
+  };
 
   public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
@@ -528,7 +529,7 @@ public class QueryRunnerTestHelper
   public static IntervalChunkingQueryRunnerDecorator sameThreadIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.sameThreadExecutor(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter())
     );

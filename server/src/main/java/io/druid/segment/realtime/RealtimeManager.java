@@ -27,18 +27,17 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -175,7 +174,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
     return partitionChiefs == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
         factory.mergeRunners(
-            MoreExecutors.sameThreadExecutor(),
+            Execs.sameThreadExecutor(),
             // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
             Iterables.transform(
                 partitionChiefs.values(), new Function<FireChief, QueryRunner<T>>()
@@ -202,7 +201,7 @@ public class RealtimeManager implements QuerySegmentWalker
            ? new NoopQueryRunner<T>()
            : factory.getToolchest().mergeResults(
                factory.mergeRunners(
-                   MoreExecutors.sameThreadExecutor(),
+                   Execs.sameThreadExecutor(),
                    Iterables.transform(
                        specs,
                        new Function<SegmentDescriptor, QueryRunner<T>>()

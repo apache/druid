@@ -26,13 +26,13 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
@@ -142,7 +142,7 @@ public class DruidSchema extends AbstractSchema
     this.escalator = escalator;
 
     serverView.registerTimelineCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.sameThreadExecutor(),
         new TimelineServerView.TimelineCallback()
         {
           @Override

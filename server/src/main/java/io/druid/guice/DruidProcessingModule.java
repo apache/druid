@@ -19,7 +19,6 @@
 
 package io.druid.guice;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -36,6 +35,7 @@ import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Processing;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -80,7 +80,7 @@ public class DruidProcessingModule implements Module
               .build()
       );
     } else {
-      return MoreExecutors.sameThreadExecutor();
+      return Execs.sameThreadExecutor();
     }
   }
 

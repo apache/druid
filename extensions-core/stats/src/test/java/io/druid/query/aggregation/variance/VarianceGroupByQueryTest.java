@@ -21,8 +21,8 @@ package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -68,12 +68,17 @@ public class VarianceGroupByQueryTest
     return GroupByQueryRunnerTest.constructorFeeder();
   }
 
-  public VarianceGroupByQueryTest(String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public VarianceGroupByQueryTest(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
     this.testName = testName;
     this.config = config;
     this.factory = factory;
-    this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
+    this.runner = factory.mergeRunners(Execs.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
   }
 
   @Test

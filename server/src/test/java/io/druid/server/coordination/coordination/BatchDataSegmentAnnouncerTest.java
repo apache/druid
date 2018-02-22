@@ -27,16 +27,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.segment.TestHelper;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
-import io.druid.server.coordination.DataSegmentChangeRequest;
-import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
+import io.druid.server.coordination.DataSegmentChangeRequest;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -96,7 +96,7 @@ public class BatchDataSegmentAnnouncerTest
 
     announcer = new Announcer(
         cf,
-        MoreExecutors.sameThreadExecutor()
+        Execs.sameThreadExecutor()
     );
     announcer.start();
 

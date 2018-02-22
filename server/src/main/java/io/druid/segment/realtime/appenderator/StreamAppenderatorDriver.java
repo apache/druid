@@ -28,11 +28,11 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -54,11 +54,11 @@ import java.util.stream.Collectors;
 
 /**
  * This class is specialized for streaming ingestion. In streaming ingestion, the segment lifecycle is like:
- *
+ * <p>
  * <pre>
  * APPENDING -> APPEND_FINISHED -> PUBLISHED
  * </pre>
- *
+ * <p>
  * <ul>
  * <li>APPENDING: Segment is available for appending.</li>
  * <li>APPEND_FINISHED: Segment cannot be updated (data cannot be added anymore) and is waiting for being published.</li>
@@ -331,7 +331,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                 segmentIdentifier.getVersion(),
                 segmentIdentifier.getShardSpec().getPartitionNum()
             ),
-            MoreExecutors.sameThreadExecutor(),
+            Execs.sameThreadExecutor(),
             () -> {
               log.info("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
               metrics.incrementHandOffCount();

@@ -22,11 +22,11 @@ package io.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -81,7 +81,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                   {
                     TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
                     QueryRunner<Row> newRunner = factory.mergeRunners(
-                        MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(input)
+                        Execs.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(input)
                     );
                     QueryToolChest toolChest = factory.getToolchest();
 

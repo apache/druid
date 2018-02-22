@@ -299,7 +299,9 @@ public class IndexGeneratorJob implements Jobby
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
-      final long truncatedTimestamp = granularitySpec.getQueryGranularity().bucketStart(inputRow.getTimestamp()).getMillis();
+      final long truncatedTimestamp = granularitySpec.getQueryGranularity()
+                                                     .bucketStart(inputRow.getTimestamp())
+                                                     .getMillis();
       final byte[] hashedDimensions = hashFunction.hashBytes(
           HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(
@@ -472,7 +474,8 @@ public class IndexGeneratorJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
-      if ("local".equals(config.get("mapreduce.jobtracker.address")) || "local".equals(config.get("mapred.job.tracker"))) {
+      if ("local".equals(config.get("mapreduce.jobtracker.address"))
+          || "local".equals(config.get("mapred.job.tracker"))) {
         return shardNum % numPartitions;
       } else {
         if (shardNum >= numPartitions) {
@@ -620,7 +623,7 @@ public class IndexGeneratorJob implements Jobby
           );
           persistExecutor = MoreExecutors.listeningDecorator(executorService);
         } else {
-          persistExecutor = MoreExecutors.sameThreadExecutor();
+          persistExecutor = Execs.sameThreadExecutor();
         }
 
         for (final BytesWritable bw : values) {
@@ -730,7 +733,10 @@ public class IndexGeneratorJob implements Jobby
         // ShardSpec to be published.
         final ShardSpec shardSpecForPublishing;
         if (config.isForceExtendableShardSpecs()) {
-          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(), config.getShardSpecCount(bucket));
+          shardSpecForPublishing = new NumberedShardSpec(
+              shardSpecForPartitioning.getPartitionNum(),
+              config.getShardSpecCount(bucket)
+          );
         } else {
           shardSpecForPublishing = shardSpecForPartitioning;
         }

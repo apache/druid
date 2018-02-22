@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -41,6 +40,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.BaseQuery;
@@ -1087,7 +1087,7 @@ public class RealtimeManagerTest
         return factory.getToolchest()
                       .mergeResults(
                           factory.mergeRunners(
-                              MoreExecutors.sameThreadExecutor(),
+                              Execs.sameThreadExecutor(),
                               Iterables.transform(
                                   baseQuery.getIntervals(),
                                   new Function<Interval, QueryRunner<T>>()

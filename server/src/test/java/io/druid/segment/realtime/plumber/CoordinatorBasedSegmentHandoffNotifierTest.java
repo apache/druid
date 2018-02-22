@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.query.SegmentDescriptor;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
@@ -91,7 +92,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     notifier.registerSegmentHandoffCallback(
-        descriptor, MoreExecutors.sameThreadExecutor(), new Runnable()
+        descriptor, Execs.sameThreadExecutor(), new Runnable()
         {
           @Override
           public void run()
@@ -148,7 +149,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     );
 
     notifier.registerSegmentHandoffCallback(
-        descriptor, MoreExecutors.sameThreadExecutor(), new Runnable()
+        descriptor, Execs.sameThreadExecutor(), new Runnable()
         {
           @Override
           public void run()

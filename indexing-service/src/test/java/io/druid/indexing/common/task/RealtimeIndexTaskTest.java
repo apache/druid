@@ -207,7 +207,8 @@ public class RealtimeIndexTaskTest
     @Override
     public Runnable commit()
     {
-      return () -> {};
+      return () -> {
+      };
     }
 
     @Override
@@ -1076,7 +1077,7 @@ public class RealtimeIndexTaskTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> conglomerate,
-        MoreExecutors.sameThreadExecutor(), // queryExecutorService
+        Execs.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())

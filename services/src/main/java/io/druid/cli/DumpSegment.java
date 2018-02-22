@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -48,6 +47,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
@@ -484,7 +484,7 @@ public class DumpSegment extends GuiceRunnable
     final QueryRunnerFactory factory = conglomerate.findFactory(query);
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
     final Sequence results = factory.getToolchest().mergeResults(
-        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner>of(runner))
+        factory.mergeRunners(Execs.sameThreadExecutor(), ImmutableList.<QueryRunner>of(runner))
     ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
     return (Sequence<T>) results;
   }

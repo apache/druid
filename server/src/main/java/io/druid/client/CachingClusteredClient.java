@@ -40,21 +40,21 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
@@ -255,7 +255,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
-      @Nullable TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+      @Nullable
+      TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
       if (timeline == null) {
         return Sequences.empty();
       }
@@ -265,10 +266,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
-      @Nullable final byte[] queryCacheKey = computeQueryCacheKey();
+      @Nullable
+      final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
-        @Nullable final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
-        @Nullable final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
+        @Nullable
+        final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+        @Nullable
+        final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
           return Sequences.empty();
         }
@@ -616,7 +620,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
                     toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply
                 );
             if (cachePopulator != null) {
-              res = res.withEffect(cachePopulator::populate, MoreExecutors.sameThreadExecutor());
+              res = res.withEffect(cachePopulator::populate, Execs.sameThreadExecutor());
             }
             return res;
           })

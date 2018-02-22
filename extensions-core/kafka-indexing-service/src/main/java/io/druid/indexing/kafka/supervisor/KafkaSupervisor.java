@@ -547,7 +547,7 @@ public class KafkaSupervisor implements Supervisor
             {
               notices.add(new RunNotice());
             }
-          }, MoreExecutors.sameThreadExecutor()
+          }, Execs.sameThreadExecutor()
       );
 
       listenerRegistered = true;
@@ -1771,7 +1771,12 @@ public class KafkaSupervisor implements Supervisor
     {
     }).writeValueAsString(taskGroups.get(groupId).sequenceOffsets);
     final Map<String, Object> context = spec.getContext() == null
-                                        ? ImmutableMap.of("checkpoints", checkpoints, IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
+                                        ? ImmutableMap.of(
+        "checkpoints",
+        checkpoints,
+        IS_INCREMENTAL_HANDOFF_SUPPORTED,
+        true
+    )
                                         : ImmutableMap.<String, Object>builder()
                                             .put("checkpoints", checkpoints)
                                             .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)

@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -76,6 +75,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -527,8 +527,11 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(emitter);
 
     taskLockbox = new TaskLockbox(taskStorage);
-    tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
-        SupervisorManager.class)));
+    tac = new LocalTaskActionClientFactory(
+        taskStorage,
+        new TaskActionToolbox(taskLockbox, mdc, emitter, EasyMock.createMock(
+            SupervisorManager.class))
+    );
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
 
@@ -598,7 +601,7 @@ public class TaskLifecycleTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
-        MoreExecutors.sameThreadExecutor(), // query executor service
+        Execs.sameThreadExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
@@ -1094,7 +1097,22 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null, null, null)
+            new IndexTuningConfig(
+                10000,
+                10,
+                null,
+                null,
+                null,
+                indexSpec,
+                null,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
         ),
         null
     );

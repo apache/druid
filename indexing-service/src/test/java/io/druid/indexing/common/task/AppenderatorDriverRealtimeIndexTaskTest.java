@@ -151,6 +151,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class AppenderatorDriverRealtimeIndexTaskTest
@@ -1229,7 +1230,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         return Lists.newArrayList();
       }
     };
-
     taskToolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -1242,7 +1242,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> conglomerate,
-        MoreExecutors.sameThreadExecutor(), // queryExecutorService
+        Execs.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
