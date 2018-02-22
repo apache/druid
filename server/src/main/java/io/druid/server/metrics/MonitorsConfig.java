@@ -22,6 +22,7 @@ package io.druid.server.metrics;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.metrics.Monitor;
 import io.druid.query.DruidMetrics;
 
@@ -35,6 +36,8 @@ import java.util.Properties;
  */
 public class MonitorsConfig
 {
+  private static final Logger log = new Logger(MonitorsConfig.class);
+
   public static final String METRIC_DIMENSION_PREFIX = "druid.metrics.emitter.dimension.";
 
   /**
@@ -113,6 +116,14 @@ public class MonitorsConfig
     try {
       for (String monitorName : monitorNames) {
         String effectiveMonitorName = monitorName.replace(OLD_METAMX_PACKAGE_NAME, NEW_DRUID_PACKAGE_NAME);
+        if (!effectiveMonitorName.equals(monitorName)) {
+          log.warn(
+              "Deprecated Monitor class name [%s] found, please use package %s instead of %s",
+              monitorName,
+              NEW_DRUID_PACKAGE_NAME,
+              OLD_METAMX_PACKAGE_NAME
+          );
+        }
         Class<? extends Monitor> monitorClass = (Class<? extends Monitor>) Class.forName(effectiveMonitorName);
         monitors.add(monitorClass);
       }
