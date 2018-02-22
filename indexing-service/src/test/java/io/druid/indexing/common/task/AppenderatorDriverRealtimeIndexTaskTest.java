@@ -363,17 +363,16 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     for (DataSegment publishedSegment : publishedSegments) {
       Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks
           .entrySet().stream()
-          .filter(e -> e.getKey()
-                        .equals(
-                            new SegmentDescriptor(
-                                publishedSegment
-                                    .getInterval(),
-                                publishedSegment
-                                    .getVersion(),
-                                publishedSegment
-                                    .getShardSpec()
-                                    .getPartitionNum()
-                            )))
+          .filter(e -> e
+              .getKey()
+              .equals(
+                  new SegmentDescriptor(
+                      publishedSegment.getInterval(),
+                      publishedSegment.getVersion(),
+                      publishedSegment.getShardSpec().getPartitionNum()
+                  )
+              )
+          )
           .findFirst();
 
       Assert.assertTrue(
@@ -432,19 +431,19 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey()
-                                                                                                                .equals(
-                                                                                                                    new SegmentDescriptor(
-                                                                                                                        publishedSegment
-                                                                                                                            .getInterval(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getVersion(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getShardSpec()
-                                                                                                                            .getPartitionNum()
-                                                                                                                    )))
-                                                                                                  .findFirst();
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks
+          .entrySet().stream()
+          .filter(e -> e
+              .getKey()
+              .equals(
+                  new SegmentDescriptor(
+                      publishedSegment.getInterval(),
+                      publishedSegment.getVersion(),
+                      publishedSegment.getShardSpec().getPartitionNum()
+                  )
+              )
+          )
+          .findFirst();
 
       Assert.assertTrue(
           publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
@@ -505,19 +504,19 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey()
-                                                                                                                .equals(
-                                                                                                                    new SegmentDescriptor(
-                                                                                                                        publishedSegment
-                                                                                                                            .getInterval(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getVersion(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getShardSpec()
-                                                                                                                            .getPartitionNum()
-                                                                                                                    )))
-                                                                                                  .findFirst();
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks
+          .entrySet().stream()
+          .filter(e -> e
+              .getKey()
+              .equals(
+                  new SegmentDescriptor(
+                      publishedSegment.getInterval(),
+                      publishedSegment.getVersion(),
+                      publishedSegment.getShardSpec().getPartitionNum()
+                  )
+              )
+          )
+          .findFirst();
 
       Assert.assertTrue(
           publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
@@ -583,19 +582,19 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey()
-                                                                                                                .equals(
-                                                                                                                    new SegmentDescriptor(
-                                                                                                                        publishedSegment
-                                                                                                                            .getInterval(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getVersion(),
-                                                                                                                        publishedSegment
-                                                                                                                            .getShardSpec()
-                                                                                                                            .getPartitionNum()
-                                                                                                                    )))
-                                                                                                  .findFirst();
+      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks
+          .entrySet().stream()
+          .filter(e -> e
+              .getKey()
+              .equals(
+                  new SegmentDescriptor(
+                      publishedSegment.getInterval(),
+                      publishedSegment.getVersion(),
+                      publishedSegment.getShardSpec().getPartitionNum()
+                  )
+              )
+          )
+          .findFirst();
 
       Assert.assertTrue(
           publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
@@ -1287,16 +1286,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   public long sumMetric(final Task task, final DimFilter filter, final String metric) throws Exception
   {
     // Do a query.
-    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource("test_ds")
-                                  .filters(filter)
-                                  .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
-                                          new LongSumAggregatorFactory(metric, metric)
-                                      )
-                                  ).granularity(Granularities.ALL)
-                                  .intervals("2000/3000")
-                                  .build();
+    TimeseriesQuery query = Druids
+        .newTimeseriesQueryBuilder()
+        .dataSource("test_ds")
+        .filters(filter)
+        .aggregators(
+            ImmutableList.<AggregatorFactory>of(
+                new LongSumAggregatorFactory(metric, metric)
+            )
+        ).granularity(Granularities.ALL)
+        .intervals("2000/3000")
+        .build();
 
     List<Result<TimeseriesResultValue>> results =
         task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
