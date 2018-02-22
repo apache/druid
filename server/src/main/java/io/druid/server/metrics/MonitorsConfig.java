@@ -37,13 +37,31 @@ public class MonitorsConfig
 {
   public static final String METRIC_DIMENSION_PREFIX = "druid.metrics.emitter.dimension.";
 
+  /**
+   * Prior to 0.12.0, Druid used Monitor classes from the `com.metamx.metrics` package.
+   * In 0.12.0, these Monitor classes were moved into Druid under `io.druid.java.util.metrics`.
+   * See https://github.com/druid-io/druid/pull/5289 for details.
+   *
+   * We automatically adjust old `com.metamx.metrics` package references to `io.druid.java.util.metrics`
+   * for backwards compatibility purposes, easing the upgrade process for users.
+   */
+  public static final String OLD_METAMX_PACKAGE_NAME = "com.metamx.metrics";
+  public static final String NEW_DRUID_PACKAGE_NAME = "io.druid.java.util.metrics";
+
   @JsonProperty("monitors")
   @NotNull
-  private List<Class<? extends Monitor>> monitors = Lists.newArrayList();
+  private List<Class<? extends Monitor>> monitors;
 
   public List<Class<? extends Monitor>> getMonitors()
   {
     return monitors;
+  }
+
+  public MonitorsConfig(
+      @JsonProperty("monitors") List<String> monitorNames
+  )
+  {
+    monitors = getMonitorsFromNames(monitorNames);
   }
 
   @Override
@@ -53,7 +71,6 @@ public class MonitorsConfig
            "monitors=" + monitors +
            '}';
   }
-
 
   public static Map<String, String[]> mapOfDatasourceAndTaskID(
       final String datasource,
@@ -85,5 +102,24 @@ public class MonitorsConfig
       }
     }
     return dimensionsMap;
+  }
+
+  private static List<Class<? extends Monitor>> getMonitorsFromNames(List<String> monitorNames)
+  {
+    List<Class<? extends Monitor>> monitors = Lists.newArrayList();
+    if (monitorNames == null) {
+      return monitors;
+    }
+    try {
+      for (String monitorName : monitorNames) {
+        String effectiveMonitorName = monitorName.replace(OLD_METAMX_PACKAGE_NAME, NEW_DRUID_PACKAGE_NAME);
+        Class<? extends Monitor> monitorClass = (Class<? extends Monitor>) Class.forName(effectiveMonitorName);
+        monitors.add(monitorClass);
+      }
+      return monitors;
+    }
+    catch (ClassNotFoundException cnfe) {
+      throw new RuntimeException(cnfe);
+    }
   }
 }
