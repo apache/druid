@@ -29,7 +29,11 @@ import java.util.function.Function;
 
 public class ListenableFutures
 {
-  public static <I, O> ListenableFuture<O> transform(final ListenableFuture<I> inFuture, final Function<I, ListenableFuture<O>> transform) {
+  public static <I, O> ListenableFuture<O> transform(
+      final ListenableFuture<I> inFuture,
+      final Function<I, ListenableFuture<O>> transform
+  )
+  {
     final SettableFuture<O> finalFuture = SettableFuture.create();
     Futures.addCallback(inFuture, new FutureCallback<I>()
     {
