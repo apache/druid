@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -267,43 +268,21 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
-    final SettableFuture<SegmentsAndMetadata> publishCompleted = SettableFuture.create();
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = pushInBackground(wrapCommitter(committer), theSegments);
-    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
-    {
-      @Override
-      public void onSuccess(@Nullable SegmentsAndMetadata result)
-      {
-        final ListenableFuture<SegmentsAndMetadata> publishMoreFuture = publishInBackground(
-            result,
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = ListenableFutures.transform(
+        pushInBackground(wrapCommitter(committer), theSegments),
+        sam -> publishInBackground(
+            sam,
             publisher
-        );
-        Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
-        {
-          @Override
-          public void onSuccess(@Nullable SegmentsAndMetadata result)
-          {
-            synchronized (segments) {
-              sequenceNames.forEach(segments::remove);
-            }
-            publishCompleted.set(result);
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            publishCompleted.setException(t);
-          }
-        });
+        )
+    );
+    return ListenableFutures.transform(publishFuture, sam -> {
+      synchronized (segments) {
+        sequenceNames.forEach(segments::remove);
       }
-
-      @Override
-      public void onFailure(Throwable t)
-      {
-        publishCompleted.setException(t);
-      }
+      final SettableFuture<SegmentsAndMetadata> future = SettableFuture.create();
+      future.set(sam);
+      return future;
     });
-    return publishCompleted;
   }
 
   /**
@@ -396,23 +375,11 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    final SettableFuture<SegmentsAndMetadata> publishDoneFuture = SettableFuture.create();
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = publish(publisher, committer, sequenceNames);
-    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
-    {
-      @Override
-      public void onSuccess(@Nullable SegmentsAndMetadata result)
-      {
-        publishDoneFuture.set(result);
-      }
-
-      @Override
-      public void onFailure(Throwable t)
-      {
-        publishDoneFuture.setException(t);
-      }
-    });
-    return publishDoneFuture;
+    return ListenableFutures
+        .transform(
+            publish(publisher, committer, sequenceNames),
+            this::registerHandoff
+        );
   }
 
   @Override

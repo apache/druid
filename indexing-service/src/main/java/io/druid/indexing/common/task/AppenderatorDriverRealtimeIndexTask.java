@@ -26,10 +26,8 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -48,6 +46,7 @@ import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -72,7 +71,6 @@ import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import org.apache.commons.io.FileUtils;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.Map;
@@ -439,36 +437,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-    final SettableFuture<SegmentsAndMetadata> handoffDoneFuture = SettableFuture.create();
-    Futures.addCallback(publishFuture, new FutureCallback<SegmentsAndMetadata>()
-    {
-      @Override
-      public void onSuccess(@Nullable SegmentsAndMetadata result)
-      {
-        final ListenableFuture<SegmentsAndMetadata> handoffFuture = driver.registerHandoff(result);
-        Futures.addCallback(handoffFuture, new FutureCallback<SegmentsAndMetadata>()
-        {
-          @Override
-          public void onSuccess(@Nullable SegmentsAndMetadata result)
-          {
-            handoffDoneFuture.set(result);
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            handoffDoneFuture.setException(t);
-          }
-        });
-      }
-
-      @Override
-      public void onFailure(Throwable t)
-      {
-        handoffDoneFuture.setException(t);
-      }
-    });
-    pendingHandoffs.add(handoffDoneFuture);
+    pendingHandoffs.add(ListenableFutures.transform(publishFuture, driver::registerHandoff));
   }
 
   private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,

@@ -22,11 +22,10 @@ package io.druid.segment.realtime.appenderator;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.timeline.DataSegment;
 
@@ -35,7 +34,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -134,40 +132,15 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
-    final CompletableFuture<SegmentsAndMetadata> chainEndFuture = new CompletableFuture<>();
-    final ListenableFuture<SegmentsAndMetadata> pushFuture = pushInBackground(null, segmentIdentifierList);
-    Futures.addCallback(pushFuture, new FutureCallback<SegmentsAndMetadata>()
-    {
-      @Override
-      public void onSuccess(@Nullable SegmentsAndMetadata result)
-      {
-        final ListenableFuture<SegmentsAndMetadata> droFuture = dropInBackground(result);
-        Futures.addCallback(droFuture, new FutureCallback<SegmentsAndMetadata>()
-        {
-          @Override
-          public void onSuccess(@Nullable SegmentsAndMetadata result)
-          {
-            chainEndFuture.complete(result);
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            chainEndFuture.completeExceptionally(t);
-          }
-        });
-      }
-
-      @Override
-      public void onFailure(Throwable t)
-      {
-        chainEndFuture.completeExceptionally(t);
-      }
-    });
+    final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures
+        .transform(
+            pushInBackground(null, segmentIdentifierList),
+            this::dropInBackground
+        );
 
     final SegmentsAndMetadata segmentsAndMetadata = pushAndClearTimeoutMs == 0L ?
-                                                    chainEndFuture.get() :
-                                                    chainEndFuture.get(pushAndClearTimeoutMs, TimeUnit.MILLISECONDS);
+                                                    future.get() :
+                                                    future.get(pushAndClearTimeoutMs, TimeUnit.MILLISECONDS);
 
     // Sanity check
     final Map<SegmentIdentifier, DataSegment> pushedSegmentIdToSegmentMap = segmentsAndMetadata
