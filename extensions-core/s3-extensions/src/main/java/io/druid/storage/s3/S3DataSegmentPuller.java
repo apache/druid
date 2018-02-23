@@ -71,7 +71,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
 
     return new FileObject()
     {
-      final Object inputStreamOpener = new Object();
       S3Object s3Object = null;
 
       @Override
@@ -87,18 +86,16 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
         return Files.getNameWithoutExtension(path) + (Strings.isNullOrEmpty(ext) ? "" : ("." + ext));
       }
 
+      /**
+       * Returns an input stream for a s3 object. The returned input stream is not thread-safe.
+       */
       @Override
       public InputStream openInputStream() throws IOException
       {
         try {
-          // TODO: check this method can be called by differernt threads
           if (s3Object == null) {
-            synchronized (inputStreamOpener) {
-              if (s3Object == null) {
-                // lazily promote to full GET
-                s3Object = s3Client.getObject(objectSummary.getBucketName(), objectSummary.getKey());
-              }
-            }
+            // lazily promote to full GET
+            s3Object = s3Client.getObject(objectSummary.getBucketName(), objectSummary.getKey());
           }
 
           final InputStream in = s3Object.getObjectContent();
