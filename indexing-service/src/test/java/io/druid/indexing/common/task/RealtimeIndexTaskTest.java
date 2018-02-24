@@ -119,6 +119,7 @@ import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
+import io.druid.utils.Runnables;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
@@ -207,8 +208,7 @@ public class RealtimeIndexTaskTest
     @Override
     public Runnable commit()
     {
-      return () -> {
-      };
+      return Runnables.getNoopRunnable();
     }
 
     @Override

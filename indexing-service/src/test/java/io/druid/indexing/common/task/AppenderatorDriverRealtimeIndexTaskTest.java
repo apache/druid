@@ -120,6 +120,7 @@ import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
+import io.druid.utils.Runnables;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
@@ -215,8 +216,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     @Override
     public Runnable commit()
     {
-      return () -> {
-      };
+      return Runnables.getNoopRunnable();
     }
 
     @Override
