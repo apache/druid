@@ -19,72 +19,53 @@
 
 package io.druid.java.util.common.concurrent;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * A simple class that implements the ExecutorService interface, but runs the code on a call to submit
+ */
 public class SameThreadExecutorService extends AbstractExecutorService
 {
-  private final AtomicBoolean shutdownLeader = new AtomicBoolean(true);
-  private final Phaser shutdownPhaser = new Phaser(0);
-  private final int initialPhase = shutdownPhaser.register();
 
   @Override
   public void shutdown()
   {
-    if (shutdownLeader.getAndSet(false)) {
-      shutdownPhaser.arriveAndDeregister();
-    }
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public List<Runnable> shutdownNow()
   {
-    shutdown();
-    return Collections.emptyList();
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public boolean isShutdown()
   {
-    return !shutdownLeader.get();
+    return false;
   }
 
   @Override
   public boolean isTerminated()
   {
-    return isShutdown() && shutdownPhaser.getRegisteredParties() < 1;
+    return false;
   }
 
   @Override
   public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException
   {
-    try {
-      shutdownPhaser.awaitAdvanceInterruptibly(initialPhase, timeout, unit);
-      return true;
-    }
-    catch (TimeoutException ignored) {
-      return false;
-    }
+    final long nanos = TimeUnit.NANOSECONDS.convert(timeout, unit);
+    final long millis = TimeUnit.MILLISECONDS.convert(timeout, unit);
+    final int sleepNanos = (int) (nanos - millis * 1_000_000L);
+    Thread.sleep(millis, sleepNanos);
+    return false;
   }
 
   @Override
   public void execute(Runnable command)
   {
-    shutdownPhaser.register();
-    try {
-      if (isShutdown()) {
-        throw new RejectedExecutionException();
-      }
-      command.run();
-    }
-    finally {
-      shutdownPhaser.arriveAndDeregister();
-    }
+    command.run();
   }
 }
