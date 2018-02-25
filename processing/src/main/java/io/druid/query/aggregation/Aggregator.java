@@ -21,6 +21,7 @@ package io.druid.query.aggregation;
 
 import io.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -36,7 +37,8 @@ import java.io.Closeable;
 public interface Aggregator extends Closeable
 {
   void aggregate();
-  void reset();
+
+  @Nullable
   Object get();
   float getFloat();
   long getLong();
@@ -49,6 +51,19 @@ public interface Aggregator extends Closeable
   default double getDouble()
   {
     return (double) getFloat();
+  }
+
+  /**
+   * returns true if aggregator's output type is primitive long/double/float and aggregated value is null,
+   * but when aggregated output type is Object, this method always returns false,
+   * and users are advised to check nullability for the object returned by {@link #get()}
+   * method.
+   * The default implementation always return false to enable smooth backward compatibility,
+   * re-implement if your aggregator is nullable.
+   */
+  default boolean isNull()
+  {
+    return false;
   }
 
   @Override

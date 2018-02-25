@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 /**
  * Used by ResetCluster to delete the Hadoop Working Path.
  */
+@SuppressWarnings("unused")
 public class HadoopWorkingDirCleaner
 {
   private static final Logger log = new Logger(HadoopWorkingDirCleaner.class);

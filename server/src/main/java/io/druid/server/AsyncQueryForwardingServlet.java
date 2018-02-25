@@ -26,13 +26,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.selector.Server;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.IAE;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -42,6 +43,8 @@ import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
+import io.druid.server.security.AuthConfig;
+import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -55,10 +58,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -75,6 +77,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String HOST_ATTRIBUTE = "io.druid.proxy.to.host";
   private static final String SCHEME_ATTRIBUTE = "io.druid.proxy.to.host.scheme";
   private static final String QUERY_ATTRIBUTE = "io.druid.proxy.query";
+  private static final String AVATICA_QUERY_ATTRIBUTE = "io.druid.proxy.avaticaQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
   private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
@@ -142,7 +145,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     // Note that httpClientProvider is setup to return same HttpClient instance on each get() so
     // it is same http client as that is used by parent ProxyServlet.
-    broadcastClient = httpClientProvider.get();
+    broadcastClient = newHttpClient();
     try {
       broadcastClient.start();
     }
@@ -175,30 +178,45 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     request.setAttribute(HOST_ATTRIBUTE, defaultServer.getHost());
     request.setAttribute(SCHEME_ATTRIBUTE, defaultServer.getScheme());
 
-    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2");
+    // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
+    // them as a generic request.
+    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2")
+                                    && !request.getRequestURI().startsWith("/druid/v2/sql");
 
-    if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
+    final boolean isAvatica = request.getRequestURI().startsWith("/druid/v2/sql/avatica");
+
+    if (isAvatica) {
+      Map<String, Object> requestMap = objectMapper.readValue(request.getInputStream(), Map.class);
+      String connectionId = getAvaticaConnectionId(requestMap);
+      Server targetServer = hostFinder.findServerAvatica(connectionId);
+      byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
+      request.setAttribute(HOST_ATTRIBUTE, targetServer.getHost());
+      request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
+      request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
+    } else if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
       // query cancellation request
-      for (final Server server: hostFinder.getAllServers()) {
+      for (final Server server : hostFinder.getAllServers()) {
         // send query cancellation to all brokers this query may have gone to
         // to keep the code simple, the proxy servlet will also send a request to one of the default brokers
         if (!server.getHost().equals(defaultServer.getHost())) {
           // issue async requests
-          broadcastClient
+          Response.CompleteListener completeListener = result -> {
+            if (result.isFailed()) {
+              log.warn(
+                  result.getFailure(),
+                  "Failed to forward cancellation request to [%s]",
+                  server.getHost()
+              );
+            }
+          };
+
+          Request broadcastReq = broadcastClient
               .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
               .method(HttpMethod.DELETE)
-              .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-              .send(
-                  result -> {
-                    if (result.isFailed()) {
-                      log.warn(
-                          result.getFailure(),
-                          "Failed to forward cancellation request to [%s]",
-                          server.getHost()
-                      );
-                    }
-                  }
-              );
+              .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+
+          copyRequestHeaders(request, broadcastReq);
+          broadcastReq.send(completeListener);
         }
         interruptedQueryCount.incrementAndGet();
       }
@@ -255,6 +273,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
     proxyRequest.idleTimeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
 
+    byte[] avaticaQuery = (byte[]) clientRequest.getAttribute(AVATICA_QUERY_ATTRIBUTE);
+    if (avaticaQuery != null) {
+      proxyRequest.content(new BytesContentProvider(avaticaQuery));
+    }
+
     final Query query = (Query) clientRequest.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {
       final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
@@ -265,6 +288,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         Throwables.propagate(e);
       }
     }
+
+    // Since we can't see the request object on the remote side, we can't check whether the remote side actually
+    // performed an authorization check here, so always set this to true for the proxy servlet.
+    // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
+    // will log that on the remote node.
+    clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
 
     super.sendProxyRequest(
         clientRequest,
@@ -300,15 +329,15 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   protected static URI makeURI(String scheme, String host, String requestURI, String rawQueryString)
   {
     try {
-      return new URI(
-          scheme,
-          host,
-          requestURI,
-          rawQueryString == null ? null : URLDecoder.decode(rawQueryString, "UTF-8"),
-          null
-      );
+      return new URIBuilder()
+          .setScheme(scheme)
+          .setHost(host)
+          .setPath(requestURI)
+          // No need to encode-decode queryString, it is already encoded
+          .setQuery(rawQueryString)
+          .build();
     }
-    catch (UnsupportedEncodingException | URISyntaxException e) {
+    catch (URISyntaxException e) {
       log.error(e, "Unable to rewrite URI [%s]", e.getMessage());
       throw Throwables.propagate(e);
     }
@@ -357,6 +386,18 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
+  private static String getAvaticaConnectionId(Map<String, Object> requestMap) throws IOException
+  {
+    Object connectionIdObj = requestMap.get("connectionId");
+    if (connectionIdObj == null) {
+      throw new IAE("Received an Avatica request without a connectionId.");
+    }
+    if (!(connectionIdObj instanceof String)) {
+      throw new IAE("Received an Avatica request with a non-String connectionId.");
+    }
+
+    return (String) connectionIdObj;
+  }
 
   private class MetricsEmittingProxyResponseListener extends ProxyResponseListener
   {

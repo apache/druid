@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
  * which expect appropriate implementation available in guice annotated with @IndexingService and @Coordinator
  * respectively.
  *
- * Usage is as follow.
+ * Usage is as follows:
  * On lifecycle start:
  *  druidLeaderSelector.registerListener(myListener);
  *
@@ -35,7 +35,6 @@ import javax.annotation.Nullable;
  */
 public interface DruidLeaderSelector
 {
-
   /**
    * Get ID of current Leader. Returns NULL if it can't find the leader.
    * Note that it is possible for leadership to change right after this call returns, so caller would get wrong
@@ -73,14 +72,14 @@ public interface DruidLeaderSelector
   interface Listener
   {
     /**
-     * Notification that this node should start activities to be done by the leader. if this method throws
-     * exception then implementation would try to resign its leadership in the underlying system such as curator.
+     * Notification that this node should start activities to be done by the leader. If this method throws an
+     * exception, the implementation should resign leadership in the underlying system such as curator.
      */
     void becomeLeader();
 
     /**
-     * Notification that shid node should stop acitivities which are done by the leader. If this method throws
-     * exception then an alert is created.
+     * Notification that this node should stop activities which are done by the leader. If this method throws
+     * an exception, an alert should be created.
      */
     void stopBeingLeader();
   }

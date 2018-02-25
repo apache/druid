@@ -75,7 +75,7 @@ public class LookupDimensionSpecTest
         LOOKUP_REF_MANAGER
     );
     String serLookup = mapper.writeValueAsString(lookupDimSpec);
-    Assert.assertEquals(lookupDimSpec, mapper.reader(DimensionSpec.class).with(injectableValues).readValue(serLookup));
+    Assert.assertEquals(lookupDimSpec, mapper.reader(LookupDimensionSpec.class).with(injectableValues).readValue(serLookup));
   }
 
   private Object[] parametersForTestSerDesr()
@@ -159,8 +159,7 @@ public class LookupDimensionSpecTest
   @Parameters
   public void testApply(DimensionSpec dimensionSpec, Map<String, String> map)
   {
-    for (Map.Entry<String, String> entry : map.entrySet()
-        ) {
+    for (Map.Entry<String, String> entry : map.entrySet()) {
       Assert.assertEquals(Strings.emptyToNull(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
     }
   }

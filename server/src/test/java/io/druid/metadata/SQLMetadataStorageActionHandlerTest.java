@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -36,6 +37,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 public class SQLMetadataStorageActionHandlerTest
@@ -59,13 +61,11 @@ public class SQLMetadataStorageActionHandlerTest
     final String logTable = "logs";
     final String lockTable = "locks";
 
-
     connector.createEntryTable(entryTable);
     connector.createLockTable(lockTable, entryType);
     connector.createLogTable(logTable, entryType);
 
-
-    handler = new SQLMetadataStorageActionHandler<>(
+    handler = new DerbyMetadataStorageActionHandler<>(
         connector,
         jsonMapper,
         new MetadataStorageActionHandlerTypes<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>>()
@@ -179,6 +179,44 @@ public class SQLMetadataStorageActionHandlerTest
     );
   }
 
+  @Test
+  public void testGetRecentStatuses() throws EntryExistsException
+  {
+    for (int i = 1; i < 11; i++) {
+      final String entryId = "abcd_" + i;
+      final Map<String, Integer> entry = ImmutableMap.of("a", i);
+      final Map<String, Integer> status = ImmutableMap.of("count", i * 10);
+
+      handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
+    }
+
+    final List<Map<String, Integer>> statuses = handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"), 7);
+    Assert.assertEquals(7, statuses.size());
+    int i = 10;
+    for (Map<String, Integer> status : statuses) {
+      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status);
+    }
+  }
+
+  @Test
+  public void testGetRecentStatuses2() throws EntryExistsException
+  {
+    for (int i = 1; i < 6; i++) {
+      final String entryId = "abcd_" + i;
+      final Map<String, Integer> entry = ImmutableMap.of("a", i);
+      final Map<String, Integer> status = ImmutableMap.of("count", i * 10);
+
+      handler.insert(entryId, DateTimes.of(StringUtils.format("2014-01-%02d", i)), "test", entry, false, status);
+    }
+
+    final List<Map<String, Integer>> statuses = handler.getInactiveStatusesSince(DateTimes.of("2014-01-01"), 10);
+    Assert.assertEquals(5, statuses.size());
+    int i = 5;
+    for (Map<String, Integer> status : statuses) {
+      Assert.assertEquals(ImmutableMap.of("count", i-- * 10), status);
+    }
+  }
+
   @Test(timeout = 10_000L)
   public void testRepeatInsert() throws Exception
   {
@@ -267,5 +305,63 @@ public class SQLMetadataStorageActionHandlerTest
         new HashSet<>(updated.values())
     );
     Assert.assertEquals(updated.keySet(), locks.keySet());
+  }
+
+  @Test
+  public void testReplaceLock() throws EntryExistsException
+  {
+    final String entryId = "ABC123";
+    Map<String, Integer> entry = ImmutableMap.of("a", 1);
+    Map<String, Integer> status = ImmutableMap.of("count", 42);
+
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks("non_exist_entry")
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks(entryId)
+    );
+
+    final ImmutableMap<String, Integer> lock1 = ImmutableMap.of("lock", 1);
+    final ImmutableMap<String, Integer> lock2 = ImmutableMap.of("lock", 2);
+
+    Assert.assertTrue(handler.addLock(entryId, lock1));
+
+    final Long lockId1 = handler.getLockId(entryId, lock1);
+    Assert.assertNotNull(lockId1);
+
+    Assert.assertTrue(handler.replaceLock(entryId, lockId1, lock2));
+  }
+
+  @Test
+  public void testGetLockId() throws EntryExistsException
+  {
+    final String entryId = "ABC123";
+    Map<String, Integer> entry = ImmutableMap.of("a", 1);
+    Map<String, Integer> status = ImmutableMap.of("count", 42);
+
+    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status);
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks("non_exist_entry")
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Long, Map<String, Integer>>of(),
+        handler.getLocks(entryId)
+    );
+
+    final ImmutableMap<String, Integer> lock1 = ImmutableMap.of("lock", 1);
+    final ImmutableMap<String, Integer> lock2 = ImmutableMap.of("lock", 2);
+
+    Assert.assertTrue(handler.addLock(entryId, lock1));
+
+    Assert.assertNotNull(handler.getLockId(entryId, lock1));
+    Assert.assertNull(handler.getLockId(entryId, lock2));
   }
 }

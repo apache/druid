@@ -21,7 +21,6 @@ package io.druid.query.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.search.search.RegexSearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
 

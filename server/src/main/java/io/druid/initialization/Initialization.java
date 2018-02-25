@@ -53,14 +53,21 @@ import io.druid.guice.ServerViewModule;
 import io.druid.guice.StartupLoggingModule;
 import io.druid.guice.StorageNodeModule;
 import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
+import io.druid.guice.security.AuthenticatorModule;
+import io.druid.guice.security.AuthorizerModule;
 import io.druid.guice.security.DruidAuthModule;
+import io.druid.guice.security.EscalatorModule;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
-import io.druid.server.initialization.EmitterModule;
+import io.druid.segment.writeout.SegmentWriteOutMediumModule;
+import io.druid.server.emitter.EmitterModule;
+import io.druid.server.initialization.AuthenticatorMapperModule;
+import io.druid.server.initialization.AuthorizerMapperModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
 import org.apache.commons.io.FileUtils;
@@ -91,11 +98,11 @@ public class Initialization
   private static final Logger log = new Logger(Initialization.class);
   private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
-  private final static Map<Class, Collection> extensionsMap = Maps.newHashMap();
+  private static final Map<Class, Collection> extensionsMap = Maps.newHashMap();
 
   /**
    * @param clazz service class
-   * @param <T> the service type
+   * @param <T>   the service type
    *
    * @return Returns a collection of implementations loaded.
    */
@@ -126,14 +133,14 @@ public class Initialization
    * ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if he/she
    * does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
-   * @param config        Extensions configuration
-   * @param serviceClass  The class to look the implementations of (e.g., DruidModule)
+   * @param config       Extensions configuration
+   * @param serviceClass The class to look the implementations of (e.g., DruidModule)
    *
    * @return A collection that contains implementations (of distinct concrete classes) of the given class. The order of
    * elements in the returned collection is not specified and not guaranteed to be the same for different calls to
    * getFromExtensions().
    */
-  public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
+  public static synchronized <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
   {
     Collection<T> modulesToLoad = new ServiceLoadingFromExtensions<>(config, serviceClass).implsToLoad;
     extensionsMap.put(serviceClass, modulesToLoad);
@@ -169,7 +176,10 @@ public class Initialization
       for (File extension : getExtensionFilesToLoad(extensionsConfig)) {
         log.info("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
-          final URLClassLoader loader = getClassLoaderForExtension(extension);
+          final URLClassLoader loader = getClassLoaderForExtension(
+              extension,
+              extensionsConfig.isUseExtensionClassloaderFirst()
+          );
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
@@ -280,25 +290,40 @@ public class Initialization
    * @param extension The File instance of the extension we want to load
    *
    * @return a URLClassLoader that loads all the jars on which the extension is dependent
-   *
-   * @throws MalformedURLException
    */
-  public static URLClassLoader getClassLoaderForExtension(File extension) throws MalformedURLException
+  public static URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
-    URLClassLoader loader = loadersMap.get(extension);
-    if (loader == null) {
-      final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
-      final URL[] urls = new URL[jars.size()];
+    return loadersMap.computeIfAbsent(
+        extension,
+        theExtension -> makeClassLoaderForExtension(theExtension, useExtensionClassloaderFirst)
+    );
+  }
+
+  private static URLClassLoader makeClassLoaderForExtension(
+      final File extension,
+      final boolean useExtensionClassloaderFirst
+  )
+  {
+    final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
+    final URL[] urls = new URL[jars.size()];
+
+    try {
       int i = 0;
       for (File jar : jars) {
         final URL url = jar.toURI().toURL();
-        log.info("added URL[%s]", url);
+        log.info("added URL[%s] for extension[%s]", url, extension.getName());
         urls[i++] = url;
       }
-      loadersMap.putIfAbsent(extension, new URLClassLoader(urls, Initialization.class.getClassLoader()));
-      loader = loadersMap.get(extension);
     }
-    return loader;
+    catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
+
+    if (useExtensionClassloaderFirst) {
+      return new ExtensionFirstClassLoader(urls, Initialization.class.getClassLoader());
+    } else {
+      return new URLClassLoader(urls, Initialization.class.getClassLoader());
+    }
   }
 
   public static List<URL> getURLsForClasspath(String cp)
@@ -347,11 +372,14 @@ public class Initialization
         new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.global(),
+        HttpClientModule.escalatedGlobal(),
         new HttpClientModule("druid.broker.http", Client.class),
+        new HttpClientModule("druid.broker.http", EscalatedClient.class),
         new CuratorModule(),
         new AnnouncerModule(),
         new AWSModule(),
         new MetricsModule(),
+        new SegmentWriteOutMediumModule(),
         new ServerModule(),
         new DruidProcessingConfigModule(),
         new StorageNodeModule(),
@@ -368,6 +396,11 @@ public class Initialization
         new FirehoseModule(),
         new ParsersModule(),
         new JavaScriptModule(),
+        new AuthenticatorModule(),
+        new AuthenticatorMapperModule(),
+        new EscalatorModule(),
+        new AuthorizerModule(),
+        new AuthorizerMapperModule(),
         new StartupLoggingModule()
     );
 

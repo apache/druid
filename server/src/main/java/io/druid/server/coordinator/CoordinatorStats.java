@@ -19,11 +19,12 @@
 
 package io.druid.server.coordinator;
 
-import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap.Entry;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.ObjLongConsumer;
@@ -33,17 +34,24 @@ import java.util.function.ObjLongConsumer;
 public class CoordinatorStats
 {
   private final Map<String, Object2LongOpenHashMap<String>> perTierStats;
+  private final Map<String, Object2LongOpenHashMap<String>> perDataSourceStats;
   private final Object2LongOpenHashMap<String> globalStats;
 
   public CoordinatorStats()
   {
-    perTierStats = Maps.newHashMap();
+    perTierStats = new HashMap<>();
+    perDataSourceStats = new HashMap<>();
     globalStats = new Object2LongOpenHashMap<>();
   }
 
   public boolean hasPerTierStats()
   {
     return !perTierStats.isEmpty();
+  }
+
+  public boolean hasPerDataSourceStats()
+  {
+    return !perDataSourceStats.isEmpty();
   }
 
   public Set<String> getTiers(final String statName)
@@ -53,6 +61,15 @@ public class CoordinatorStats
       return Collections.emptySet();
     }
     return Collections.unmodifiableSet(theStat.keySet());
+  }
+
+  public Set<String> getDataSources(String statName)
+  {
+    final Object2LongOpenHashMap<String> stat = perDataSourceStats.get(statName);
+    if (stat == null) {
+      return Collections.emptySet();
+    }
+    return Collections.unmodifiableSet(stat.keySet());
   }
 
   /**
@@ -77,6 +94,21 @@ public class CoordinatorStats
     }
   }
 
+  public long getDataSourceStat(String statName, String dataSource)
+  {
+    return perDataSourceStats.get(statName).getLong(dataSource);
+  }
+
+  public void forEachDataSourceStat(String statName, ObjLongConsumer<String> consumer)
+  {
+    final Object2LongOpenHashMap<String> stat = perDataSourceStats.get(statName);
+    if (stat != null) {
+      for (Entry<String> entry : stat.object2LongEntrySet()) {
+        consumer.accept(entry.getKey(), entry.getLongValue());
+      }
+    }
+  }
+
   public long getGlobalStat(final String statName)
   {
     return globalStats.getLong(statName);
@@ -86,6 +118,12 @@ public class CoordinatorStats
   {
     perTierStats.computeIfAbsent(statName, ignored -> new Object2LongOpenHashMap<>())
                 .addTo(tier, value);
+  }
+
+  public void addToDataSourceStat(String statName, String dataSource, long value)
+  {
+    perDataSourceStats.computeIfAbsent(statName, k -> new Object2LongOpenHashMap<>())
+                      .addTo(dataSource, value);
   }
 
   public void addToGlobalStat(final String statName, final long value)
@@ -103,6 +141,19 @@ public class CoordinatorStats
           );
 
           for (final Object2LongMap.Entry<String> entry : urStat.object2LongEntrySet()) {
+            myStat.addTo(entry.getKey(), entry.getLongValue());
+          }
+        }
+    );
+
+    stats.perDataSourceStats.forEach(
+        (statName, urStat) -> {
+          final Object2LongOpenHashMap<String> myStat = perDataSourceStats.computeIfAbsent(
+              statName,
+              k -> new Object2LongOpenHashMap<>()
+          );
+
+          for (Entry<String> entry : urStat.object2LongEntrySet()) {
             myStat.addTo(entry.getKey(), entry.getLongValue());
           }
         }

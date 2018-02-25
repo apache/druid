@@ -100,12 +100,7 @@ public class DataSourceQueryQueryToolChest
       {
         DataSourceMetadataQuery query = (DataSourceMetadataQuery) input.getQuery();
         return Sequences.simple(
-            query.mergeResults(
-                Sequences.toList(
-                    baseRunner.run(input, context),
-                    Lists.<Result<DataSourceMetadataResultValue>>newArrayList()
-                )
-            )
+            query.mergeResults(baseRunner.run(input, context).toList())
         );
       }
     };

@@ -24,7 +24,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class RetryUtilsTest
@@ -43,14 +42,9 @@ public class RetryUtilsTest
   {
     final AtomicInteger count = new AtomicInteger();
     final String result = RetryUtils.retry(
-        new Callable<String>()
-        {
-          @Override
-          public String call() throws Exception
-          {
-            count.incrementAndGet();
-            return "hey";
-          }
+        () -> {
+          count.incrementAndGet();
+          return "hey";
         },
         isTransient,
         2
@@ -66,14 +60,9 @@ public class RetryUtilsTest
     boolean threwExpectedException = false;
     try {
       RetryUtils.retry(
-          new Callable<String>()
-          {
-            @Override
-            public String call() throws Exception
-            {
-              count.incrementAndGet();
-              throw new IOException("what");
-            }
+          () -> {
+            count.incrementAndGet();
+            throw new IOException("what");
           },
           isTransient,
           2
@@ -91,16 +80,11 @@ public class RetryUtilsTest
   {
     final AtomicInteger count = new AtomicInteger();
     final String result = RetryUtils.retry(
-        new Callable<String>()
-        {
-          @Override
-          public String call() throws Exception
-          {
-            if (count.incrementAndGet() >= 2) {
-              return "hey";
-            } else {
-              throw new IOException("what");
-            }
+        () -> {
+          if (count.incrementAndGet() >= 2) {
+            return "hey";
+          } else {
+            throw new IOException("what");
           }
         },
         isTransient,
@@ -117,16 +101,11 @@ public class RetryUtilsTest
     boolean threwExpectedException = false;
     try {
       RetryUtils.retry(
-          new Callable<String>()
-          {
-            @Override
-            public String call() throws Exception
-            {
-              if (count.incrementAndGet() >= 2) {
-                return "hey";
-              } else {
-                throw new IOException("uhh");
-              }
+          () -> {
+            if (count.incrementAndGet() >= 2) {
+              return "hey";
+            } else {
+              throw new IOException("uhh");
             }
           },
           isTransient,
@@ -139,5 +118,4 @@ public class RetryUtilsTest
     Assert.assertTrue("threw expected exception", threwExpectedException);
     Assert.assertEquals("count", 1, count.get());
   }
-
 }

@@ -28,15 +28,15 @@ import java.util.List;
 
 public interface AuditManager
 {
-  public static final String X_DRUID_AUTHOR = "X-Druid-Author";
+  String X_DRUID_AUTHOR = "X-Druid-Author";
 
-  public static final String X_DRUID_COMMENT = "X-Druid-Comment";
+  String X_DRUID_COMMENT = "X-Druid-Comment";
 
   /**
    * inserts an audit Entry in the Audit Table
    * @param auditEntry
    */
-  public void doAudit(AuditEntry auditEntry);
+  void doAudit(AuditEntry auditEntry);
 
   /**
    * inserts an audit Entry in audit table using the handler provided
@@ -45,7 +45,7 @@ public interface AuditManager
    * @param handler
    * @throws IOException
    */
-  public void doAudit(AuditEntry auditEntry, Handle handler) throws IOException;
+  void doAudit(AuditEntry auditEntry, Handle handler) throws IOException;
 
   /**
    * provides audit history for given key, type and interval
@@ -54,7 +54,7 @@ public interface AuditManager
    * @param interval
    * @return list of AuditEntries satisfying the passed parameters
    */
-  public List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval);
+  List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval);
 
   /**
    * provides audit history for given type and interval
@@ -62,7 +62,7 @@ public interface AuditManager
    * @param interval interval for which to fetch auditHistory
    * @return list of AuditEntries satisfying the passed parameters
    */
-  public List<AuditEntry> fetchAuditHistory(String type, Interval interval);
+  List<AuditEntry> fetchAuditHistory(String type, Interval interval);
 
   /**
    * Provides last N entries of audit history for given key, type
@@ -71,7 +71,7 @@ public interface AuditManager
    * @param limit
    * @return list of AuditEntries satisfying the passed parameters
    */
-  public List<AuditEntry> fetchAuditHistory(String key, String type, int limit);
+  List<AuditEntry> fetchAuditHistory(String key, String type, int limit);
 
   /**
    * Provides last N entries of audit history for given type
@@ -79,6 +79,5 @@ public interface AuditManager
    * @param limit
    * @return list of AuditEntries satisfying the passed parameters
    */
-  public List<AuditEntry> fetchAuditHistory(String type, int limit);
-
+  List<AuditEntry> fetchAuditHistory(String type, int limit);
 }

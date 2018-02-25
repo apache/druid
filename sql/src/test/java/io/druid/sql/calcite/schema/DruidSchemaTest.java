@@ -24,14 +24,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
@@ -87,7 +88,7 @@ public class DruidSchemaTest
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
-                                              .indexMerger(TestHelper.getTestIndexMergerV9())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(
@@ -103,7 +104,7 @@ public class DruidSchemaTest
 
     final QueryableIndex index2 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "2"))
-                                              .indexMerger(TestHelper.getTestIndexMergerV9())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
@@ -139,11 +140,13 @@ public class DruidSchemaTest
         index2
     );
 
+
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker),
         new TestServerInventoryView(walker.getSegments()),
         PLANNER_CONFIG_DEFAULT,
-        new NoopViewManager()
+        new NoopViewManager(),
+        new NoopEscalator()
     );
 
     schema.start();

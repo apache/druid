@@ -56,9 +56,6 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
       final HttpServletResponse response
   ) throws IOException, ServletException
   {
-    // This is not integrated with the experimental authorization framework.
-    // (Non-trivial since we don't know the dataSources up-front)
-
     if (request.getRequestURI().equals(AVATICA_PATH)) {
       super.handle(target, baseRequest, request, response);
     }

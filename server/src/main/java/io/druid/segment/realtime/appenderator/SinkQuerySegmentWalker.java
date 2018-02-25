@@ -24,8 +24,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -309,6 +309,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
   public static String makeHydrantCacheIdentifier(FireHydrant input)
   {
-    return input.getSegment().getIdentifier() + "_" + input.getCount();
+    return input.getSegmentIdentifier() + "_" + input.getCount();
   }
 }

@@ -31,6 +31,8 @@ import javax.validation.constraints.NotNull;
  */
 public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 {
+  // This default value is kept to take MM restart into consideration just in case it was
+  // restarted right after task assignment.
   @JsonProperty
   @NotNull
   private Period taskAssignmentTimeout = new Period("PT5M");

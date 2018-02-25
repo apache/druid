@@ -224,6 +224,48 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     }
   }
 
+  public boolean isEmpty()
+  {
+    try {
+      lock.readLock().lock();
+      return completePartitionsTimeline.isEmpty();
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  public TimelineObjectHolder<VersionType, ObjectType> first()
+  {
+    try {
+      lock.readLock().lock();
+      return timelineEntryToObjectHolder(completePartitionsTimeline.firstEntry().getValue());
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  public TimelineObjectHolder<VersionType, ObjectType> last()
+  {
+    try {
+      lock.readLock().lock();
+      return timelineEntryToObjectHolder(completePartitionsTimeline.lastEntry().getValue());
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  private TimelineObjectHolder<VersionType, ObjectType> timelineEntryToObjectHolder(TimelineEntry entry)
+  {
+    return new TimelineObjectHolder<>(
+        entry.getTrueInterval(),
+        entry.getVersion(),
+        new PartitionHolder<>(entry.getPartitionHolder())
+    );
+  }
+
   public Set<TimelineObjectHolder<VersionType, ObjectType>> findOvershadowed()
   {
     try {
@@ -260,13 +302,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
       for (Map.Entry<Interval, Map<VersionType, TimelineEntry>> versionEntry : overShadowed.entrySet()) {
         for (Map.Entry<VersionType, TimelineEntry> entry : versionEntry.getValue().entrySet()) {
           TimelineEntry object = entry.getValue();
-          retVal.add(
-              new TimelineObjectHolder<VersionType, ObjectType>(
-                  object.getTrueInterval(),
-                  object.getVersion(),
-                  new PartitionHolder<ObjectType>(object.getPartitionHolder())
-              )
-          );
+          retVal.add(timelineEntryToObjectHolder(object));
         }
       }
 
@@ -557,14 +593,14 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     private final VersionType version;
     private final PartitionHolder<ObjectType> partitionHolder;
 
-    public TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
+    TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
     {
       this.trueInterval = Preconditions.checkNotNull(trueInterval);
       this.version = Preconditions.checkNotNull(version);
       this.partitionHolder = Preconditions.checkNotNull(partitionHolder);
     }
 
-    public Interval getTrueInterval()
+    Interval getTrueInterval()
     {
       return trueInterval;
     }

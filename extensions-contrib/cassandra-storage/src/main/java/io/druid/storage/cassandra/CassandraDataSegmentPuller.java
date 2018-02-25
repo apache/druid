@@ -22,7 +22,6 @@ package io.druid.storage.cassandra;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
-import com.netflix.astyanax.recipes.storage.ObjectMetadata;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.ISE;
@@ -36,7 +35,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.Callable;
 
 /**
  * Cassandra Segment Puller
@@ -78,20 +76,15 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
     final FileUtils.FileCopyResult localResult;
     try {
       localResult = RetryUtils.retry(
-          new Callable<FileUtils.FileCopyResult>()
-          {
-            @Override
-            public FileUtils.FileCopyResult call() throws Exception
-            {
-              try (OutputStream os = new FileOutputStream(tmpFile)) {
-                final ObjectMetadata meta = ChunkedStorage
-                    .newReader(indexStorage, key, os)
-                    .withBatchSize(BATCH_SIZE)
-                    .withConcurrencyLevel(CONCURRENCY)
-                    .call();
-              }
-              return new FileUtils.FileCopyResult(tmpFile);
+          () -> {
+            try (OutputStream os = new FileOutputStream(tmpFile)) {
+              ChunkedStorage
+                  .newReader(indexStorage, key, os)
+                  .withBatchSize(BATCH_SIZE)
+                  .withConcurrencyLevel(CONCURRENCY)
+                  .call();
             }
+            return new FileUtils.FileCopyResult(tmpFile);
           },
           Predicates.<Throwable>alwaysTrue(),
           10

@@ -21,15 +21,15 @@ package io.druid.segment;
 
 import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 
@@ -48,6 +48,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   public String getDimensionName()
   {
     return dimensionName;
+  }
+
+  @Override
+  public MultiValueHandling getMultivalueHandling()
+  {
+    return multiValueHandling;
   }
 
   @Override
@@ -72,6 +78,20 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
     return retVal;
   }
 
+  private boolean isNullRow(@Nullable int[] row, Indexed<String> encodings)
+  {
+    if (row == null) {
+      return true;
+    }
+    for (int value : row) {
+      if (encodings.get(value) != null) {
+        // Non-Null value
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public void validateSortedEncodedKeyComponents(
       int[] lhs,
@@ -81,7 +101,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   ) throws SegmentValidationException
   {
     if (lhs == null || rhs == null) {
-      if (lhs != null || rhs != null) {
+      if (!isNullRow(lhs, lhsEncodings) || !isNullRow(rhs, rhsEncodings)) {
         throw new SegmentValidationException(
             "Expected nulls, found %s and %s",
             Arrays.toString(lhs),
@@ -193,13 +213,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
-      File outDir,
-      IOPeon ioPeon,
+      SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
   {
-    return new StringDimensionMergerV9(dimensionName, indexSpec, outDir, ioPeon, capabilities, progress);
+    return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress);
   }
 
 }

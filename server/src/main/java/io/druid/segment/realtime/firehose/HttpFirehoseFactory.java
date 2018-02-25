@@ -21,18 +21,27 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
+import org.apache.http.HttpHeaders;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLConnection;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
+  private static final Logger log = new Logger(HttpFirehoseFactory.class);
   private final List<URI> uris;
+  private final boolean supportContentRange;
 
   @JsonCreator
   public HttpFirehoseFactory(
@@ -42,10 +51,15 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry
-  )
+  ) throws IOException
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
     this.uris = uris;
+
+    Preconditions.checkArgument(uris.size() > 0, "Empty URIs");
+    final URLConnection connection = uris.get(0).toURL().openConnection();
+    final String acceptRanges = connection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
+    this.supportContentRange = acceptRanges != null && acceptRanges.equalsIgnoreCase("bytes");
   }
 
   @JsonProperty
@@ -67,8 +81,69 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   }
 
   @Override
+  protected InputStream openObjectStream(URI object, long start) throws IOException
+  {
+    if (supportContentRange) {
+      final URLConnection connection = object.toURL().openConnection();
+      // Set header for range request.
+      // Since we need to set only the start offset, the header is "bytes=<range-start>-".
+      // See https://tools.ietf.org/html/rfc7233#section-2.1
+      connection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
+      return connection.getInputStream();
+    } else {
+      log.warn(
+          "Since the input source doesn't support range requests, the object input stream is opened from the start and "
+          + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
+          + " a lot."
+      );
+      final InputStream in = openObjectStream(object);
+      in.skip(start);
+      return in;
+    }
+  }
+
+  @Override
   protected InputStream wrapObjectStream(URI object, InputStream stream) throws IOException
   {
     return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final HttpFirehoseFactory that = (HttpFirehoseFactory) o;
+    return Objects.equals(uris, that.uris) &&
+           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
+           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
+           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
+           getFetchTimeout() == that.getFetchTimeout() &&
+           getMaxFetchRetry() == that.getMaxFetchRetry();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        uris,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return e -> e instanceof IOException;
   }
 }

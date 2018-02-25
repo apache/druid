@@ -19,17 +19,11 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.LongColumnSelector;
 
 /**
  * Specialization of {@link AggregateCombiner} for primitive long aggregations.
  */
-public abstract class LongAggregateCombiner implements AggregateCombiner, LongColumnSelector
+public abstract class LongAggregateCombiner implements AggregateCombiner<Long>, LongColumnSelector
 {
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // Usually AggregateCombiner has nothing to inspect
-  }
 }

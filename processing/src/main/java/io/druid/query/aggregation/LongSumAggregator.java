@@ -20,7 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -42,11 +42,11 @@ public class LongSumAggregator implements Aggregator
     return ((Number) lhs).longValue() + ((Number) rhs).longValue();
   }
 
-  private final LongColumnSelector selector;
+  private final BaseLongColumnValueSelector selector;
 
   private long sum;
 
-  public LongSumAggregator(LongColumnSelector selector)
+  public LongSumAggregator(BaseLongColumnValueSelector selector)
   {
     this.selector = selector;
 
@@ -57,12 +57,6 @@ public class LongSumAggregator implements Aggregator
   public void aggregate()
   {
     sum += selector.getLong();
-  }
-
-  @Override
-  public void reset()
-  {
-    sum = 0;
   }
 
   @Override

@@ -22,7 +22,7 @@ package io.druid.server;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
@@ -34,7 +34,6 @@ import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -236,16 +235,8 @@ public class SegmentManager
             if (oldQueryable != null) {
               dataSourceState.removeSegment(segment);
 
-              try {
-                log.info("Attempting to close segment %s", segment.getIdentifier());
-                oldQueryable.close();
-              }
-              catch (IOException e) {
-                log.makeAlert(e, "Exception closing segment")
-                   .addData("dataSource", dataSourceName)
-                   .addData("segmentId", segment.getIdentifier())
-                   .emit();
-              }
+              log.info("Attempting to close segment %s", segment.getIdentifier());
+              oldQueryable.close();
             } else {
               log.info(
                   "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",

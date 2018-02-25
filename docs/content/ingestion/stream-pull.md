@@ -12,8 +12,7 @@ the [stream push method](stream-push.html).
 Another option is *stream pull*. With this approach, a Druid Realtime Node ingests data from a
 [Firehose](../ingestion/firehose.html) connected to the data you want to
 read. The Druid quickstart and tutorials do not include information about how to set up standalone realtime nodes, but 
-they can be used in place for Tranquility server and the indexing service. Please note that Realtime nodes have very properties than 
-the indexing service.
+they can be used in place for Tranquility server and the indexing service. Please note that Realtime nodes have different properties and roles than the indexing service.
 
 ## Realtime Node Ingestion
 
@@ -155,6 +154,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion. If false, unparseable rows and fields will be skipped. If an entire row is skipped, the "unparseable" counter will be incremented. If some fields in a row were parseable and some were not, the parseable fields will be indexed and the "unparseable" counter will not be incremented.|no (default == false)|
 |handoffConditionTimeout|long|Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.|no (default == 0)|
 |alertTimeout|long|Milliseconds timeout after which an alert is created if the task isn't finished by then. This allows users to monitor tasks that are failing to finish and give up the worker slot for any unexpected errors.|no (default == 0)|
+|segmentWriteOutMediumFactory|String|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used)|
 |indexSpec|Object|Tune how data is indexed. See below for more information.|no|
 
 Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/druid-io/druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
@@ -335,3 +335,10 @@ This can be difficult to manage at scale, especially with multiple partitions.
 
 Each standalone realtime node has its own set of logs. Diagnosing errors across many partitions across many servers may be 
 difficult to manage and track at scale.
+
+## Deployment Notes
+
+Stream ingestion may generate a large number of small segments because it's difficult to optimize the segment size at
+ingestion time. The number of segments will increase over time, and this might cause the query performance issue. 
+
+Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).

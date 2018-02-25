@@ -19,10 +19,9 @@
 
 package io.druid.sql.avatica;
 
-import com.google.common.collect.Maps;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.calcite.avatica.metrics.Counter;
 import org.apache.calcite.avatica.metrics.Gauge;
@@ -32,6 +31,7 @@ import org.apache.calcite.avatica.metrics.MetricsSystem;
 import org.apache.calcite.avatica.metrics.Timer;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -40,8 +40,8 @@ public class AvaticaMonitor extends AbstractMonitor implements MetricsSystem
 {
   private static final Logger log = new Logger(AvaticaMonitor.class);
 
-  private final ConcurrentMap<String, AtomicLong> counters = Maps.newConcurrentMap();
-  private final ConcurrentMap<String, Gauge<?>> gauges = Maps.newConcurrentMap();
+  private final ConcurrentMap<String, AtomicLong> counters = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Gauge<?>> gauges = new ConcurrentHashMap<>();
 
   @Override
   public boolean doMonitor(final ServiceEmitter emitter)

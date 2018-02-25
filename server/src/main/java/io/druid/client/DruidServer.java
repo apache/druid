@@ -24,13 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -167,9 +167,10 @@ public class DruidServer implements Comparable
     return segments.get(segmentName);
   }
 
-  public DruidServer addDataSegment(String segmentId, DataSegment segment)
+  public DruidServer addDataSegment(DataSegment segment)
   {
     synchronized (lock) {
+      final String segmentId = segment.getIdentifier();
       DataSegment shouldNotExist = segments.get(segmentId);
 
       if (shouldNotExist != null) {
@@ -188,7 +189,7 @@ public class DruidServer implements Comparable
         dataSources.put(dataSourceName, dataSource);
       }
 
-      dataSource.addSegment(segmentId, segment);
+      dataSource.addSegment(segment);
 
       segments.put(segmentId, segment);
       currSize += segment.getSize();
@@ -199,9 +200,7 @@ public class DruidServer implements Comparable
   public DruidServer addDataSegments(DruidServer server)
   {
     synchronized (lock) {
-      for (Map.Entry<String, DataSegment> entry : server.segments.entrySet()) {
-        addDataSegment(entry.getKey(), entry.getValue());
-      }
+      server.segments.values().forEach(this::addDataSegment);
     }
     return this;
   }
@@ -246,7 +245,7 @@ public class DruidServer implements Comparable
     return dataSources.get(dataSource);
   }
 
-  public Iterable<DruidDataSource> getDataSources()
+  public Collection<DruidDataSource> getDataSources()
   {
     return dataSources.values();
   }
@@ -272,7 +271,7 @@ public class DruidServer implements Comparable
 
     DruidServer that = (DruidServer) o;
 
-    if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
+    if (!metadata.equals(that.metadata)) {
       return false;
     }
 
@@ -282,7 +281,7 @@ public class DruidServer implements Comparable
   @Override
   public int hashCode()
   {
-    return getName() != null ? getName().hashCode() : 0;
+    return metadata.hashCode();
   }
 
   @Override

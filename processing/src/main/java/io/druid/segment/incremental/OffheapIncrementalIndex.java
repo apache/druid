@@ -27,12 +27,14 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -144,7 +146,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       AtomicInteger numEntries,
       TimeAndDims key,
       ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier
+      Supplier<InputRow> rowSupplier,
+      boolean skipMaxRowsInMemoryCheck // ignored, we always want to check this for offheap
   ) throws IndexSizeExceededException
   {
     ByteBuffer aggBuffer;
@@ -310,6 +313,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
+  @Override
+  public boolean isNull(int rowOffset, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
+    return agg.isNull(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+  }
+
   /**
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
    */
@@ -324,9 +336,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       selectors.clear();
     }
 
-    RuntimeException ex = null;
-    for (ResourceHolder<ByteBuffer> buffHolder : aggBuffers) {
-      buffHolder.close();
+    Closer c = Closer.create();
+    aggBuffers.forEach(c::register);
+    try {
+      c.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
     aggBuffers.clear();
   }

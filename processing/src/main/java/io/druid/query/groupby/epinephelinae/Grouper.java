@@ -22,13 +22,14 @@ package io.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.List;
 import java.util.function.ToIntFunction;
 
 /**
@@ -100,13 +101,13 @@ public interface Grouper<KeyType> extends Closeable
   /**
    * Iterate through entries.
    * <p>
-   * Once this method is called, writes are no longer safe. After you are done with the iterator returned by this
-   * method, you should either call {@link #close()} (if you are done with the Grouper), {@link #reset()} (if you
-   * want to reuse it), or {@link #iterator(boolean)} again if you want another iterator. This method is not thread-safe
-   * and must not be called by multiple threads concurrently.
+   * Some implementations allow writes even after this method is called.  After you are done with the iterator
+   * returned by this method, you should either call {@link #close()} (if you are done with the Grouper) or
+   * {@link #reset()} (if you want to reuse it).  Some implementations allow calling {@link #iterator(boolean)} again if
+   * you want another iterator. But, this method must not be called by multiple threads concurrently.
    * <p>
    * If "sorted" is true then the iterator will return sorted results. It will use KeyType's natural ordering on
-   * deserialized objects, and will use the {@link KeySerde#comparator()} on serialized objects. Woe be unto you
+   * deserialized objects, and will use the {@link KeySerde#bufferComparator()} on serialized objects. Woe be unto you
    * if these comparators are not equivalent.
    * <p>
    * Callers must process and discard the returned {@link Entry}s immediately because some implementations can reuse the
@@ -116,7 +117,7 @@ public interface Grouper<KeyType> extends Closeable
    *
    * @return entry iterator
    */
-  Iterator<Entry<KeyType>> iterator(final boolean sorted);
+  CloseableIterator<Entry<KeyType>> iterator(boolean sorted);
 
   class Entry<T>
   {
@@ -186,9 +187,21 @@ public interface Grouper<KeyType> extends Closeable
   interface KeySerdeFactory<T>
   {
     /**
-     * Create a new KeySerde, which may be stateful.
+     * Return max dictionary size threshold.
+     *
+     * @return max dictionary size
+     */
+    long getMaxDictionarySize();
+
+    /**
+     * Create a new {@link KeySerde}, which may be stateful.
      */
     KeySerde<T> factorize();
+
+    /**
+     * Create a new {@link KeySerde} with the given dictionary.
+     */
+    KeySerde<T> factorizeWithDictionary(List<String> dictionary);
 
     /**
      * Return an object that knows how to compare two serialized key instances. Will be called by the
@@ -218,7 +231,12 @@ public interface Grouper<KeyType> extends Closeable
     Class<T> keyClazz();
 
     /**
-     * Serialize a key. This will be called by the {@link #aggregate(Comparable)} method. The buffer will not
+     * Return the dictionary of this KeySerde.  The return value should not be null.
+     */
+    List<String> getDictionary();
+
+    /**
+     * Serialize a key. This will be called by the {@link #aggregate(Object)} method. The buffer will not
      * be retained after the aggregate method returns, so reusing buffers is OK.
      * <p>
      * This method may return null, which indicates that some internal resource limit has been reached and

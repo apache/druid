@@ -45,6 +45,7 @@ import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.indexing.worker.WorkerTaskMonitor;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.indexing.worker.http.TaskManagementResource;
 import io.druid.indexing.worker.http.WorkerResource;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -58,7 +59,7 @@ import java.util.List;
  */
 @Command(
     name = "middleManager",
-    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service."
+    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service, see http://druid.io/docs/latest/design/middlemanager.html for a description"
 )
 public class CliMiddleManager extends ServerRunnable
 {
@@ -98,6 +99,7 @@ public class CliMiddleManager extends ServerRunnable
             LifecycleModule.register(binder, WorkerTaskMonitor.class);
             binder.bind(JettyServerInitializer.class).toInstance(new MiddleManagerJettyServerInitializer());
             Jerseys.addResource(binder, WorkerResource.class);
+            Jerseys.addResource(binder, TaskManagementResource.class);
 
             LifecycleModule.register(binder, Server.class);
 

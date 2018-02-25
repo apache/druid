@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
+import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.expression.ExprUtils;
@@ -32,7 +33,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.Set;
@@ -51,7 +52,7 @@ public class ExpressionFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(final ColumnSelectorFactory factory)
   {
-    final LongColumnSelector selector = ExpressionSelectors.makeLongColumnSelector(factory, expr, 0L);
+    final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(factory, expr);
     return new ValueMatcher()
     {
       @Override

@@ -44,20 +44,20 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
-import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
@@ -94,7 +94,7 @@ public class HadoopDruidIndexerConfig
   public static final Joiner TAB_JOINER = Joiner.on("\t");
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
-  public static final IndexMergerV9 INDEX_MERGER_V9;
+  public static final IndexMerger INDEX_MERGER_V9;
   public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
@@ -111,7 +111,7 @@ public class HadoopDruidIndexerConfig
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null, null, true, false)
                 );
                 JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }
@@ -126,7 +126,7 @@ public class HadoopDruidIndexerConfig
     DATA_SEGMENT_PUSHER = injector.getInstance(DataSegmentPusher.class);
   }
 
-  public static enum IndexJobCounters
+  public enum IndexJobCounters
   {
     INVALID_ROW_COUNTER
   }
@@ -309,12 +309,6 @@ public class HadoopDruidIndexerConfig
   public boolean isIgnoreInvalidRows()
   {
     return schema.getTuningConfig().isIgnoreInvalidRows();
-  }
-
-  public void setVersion(String version)
-  {
-    this.schema = schema.withTuningConfig(schema.getTuningConfig().withVersion(version));
-    this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public void setShardSpecs(Map<Long, List<HadoopyShardSpec>> shardSpecs)
@@ -579,13 +573,6 @@ public class HadoopDruidIndexerConfig
 
   public void verify()
   {
-    try {
-      log.info("Running with config:%n%s", JSON_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(this));
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-
     Preconditions.checkNotNull(schema.getDataSchema().getDataSource(), "dataSource");
     Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec(), "parseSpec");
     Preconditions.checkNotNull(schema.getDataSchema().getParser().getParseSpec().getTimestampSpec(), "timestampSpec");

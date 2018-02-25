@@ -22,10 +22,12 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
+
+import javax.annotation.Nullable;
 
 /**
  * A holder for a task and different components associated with the task
@@ -85,6 +87,12 @@ public abstract class TaskRunnerWorkItem
   }
 
   public abstract TaskLocation getLocation();
+
+  /**
+   * Returns the type of task. The return value can be null for backward compatibility.
+   */
+  @Nullable
+  public abstract String getTaskType();
 
   @Override
   public String toString()

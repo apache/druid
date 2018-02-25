@@ -21,7 +21,7 @@ package io.druid.emitter.graphite;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -29,7 +29,7 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.metamx.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Emitter;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.DruidModule;
@@ -57,17 +57,23 @@ public class GraphiteEmitterModule implements DruidModule
   @Named(EMITTER_TYPE)
   public Emitter getEmitter(GraphiteEmitterConfig graphiteEmitterConfig, ObjectMapper mapper, final Injector injector)
   {
-    List<Emitter> emitters = Lists.transform(
-        graphiteEmitterConfig.getAlertEmitters(),
-        new Function<String, Emitter>()
-        {
-          @Override
-          public Emitter apply(String s)
-          {
-            return injector.getInstance(Key.get(Emitter.class, Names.named(s)));
-          }
-        }
+    List<Emitter> emitters = ImmutableList.copyOf(
+        Lists.transform(
+            graphiteEmitterConfig.getAlertEmitters(),
+            alertEmitterName -> {
+              return injector.getInstance(Key.get(Emitter.class, Names.named(alertEmitterName)));
+            }
+        )
     );
-    return new GraphiteEmitter(graphiteEmitterConfig, emitters);
+
+    List<Emitter> requestLogEmitters = ImmutableList.copyOf(
+        Lists.transform(
+            graphiteEmitterConfig.getRequestLogEmitters(),
+            requestLogEmitterName -> {
+              return injector.getInstance(Key.get(Emitter.class, Names.named(requestLogEmitterName)));
+            }
+        )
+    );
+    return new GraphiteEmitter(graphiteEmitterConfig, emitters, requestLogEmitters);
   }
 }

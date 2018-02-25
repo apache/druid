@@ -160,42 +160,4 @@ public class DelimitedParseSpec extends ParseSpec
     );
   }
 
-  public ParseSpec withDelimiter(String delim)
-  {
-    return new DelimitedParseSpec(
-        getTimestampSpec(),
-        getDimensionsSpec(),
-        delim,
-        listDelimiter,
-        columns,
-        hasHeaderRow,
-        skipHeaderRows
-    );
-  }
-
-  public ParseSpec withListDelimiter(String delim)
-  {
-    return new DelimitedParseSpec(
-        getTimestampSpec(),
-        getDimensionsSpec(),
-        delimiter,
-        delim,
-        columns,
-        hasHeaderRow,
-        skipHeaderRows
-    );
-  }
-
-  public ParseSpec withColumns(List<String> cols)
-  {
-    return new DelimitedParseSpec(
-        getTimestampSpec(),
-        getDimensionsSpec(),
-        delimiter,
-        listDelimiter,
-        cols,
-        hasHeaderRow,
-        skipHeaderRows
-    );
-  }
 }

@@ -26,7 +26,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.11.0-SNAPSHOT</version>
+        <version>0.13.0-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -80,6 +80,11 @@
                     <artifactId>kafka-clients</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.druid.extensions</groupId>
+            <artifactId>druid-basic-security</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>io.druid</groupId>
@@ -198,10 +203,15 @@
                             </execution>
                         </executions>
                         <configuration>
+                            <properties>
+                                <property>
+                                    <name>testrunfactory</name>
+                                    <value>org.testng.DruidTestRunnerFactory</value>
+                                </property>
+                            </properties>
                             <argLine>
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
-                                -Dtestrunfactory=org.testng.DruidTestRunnerFactory
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
@@ -218,6 +228,7 @@
                             <signaturesFiles>
                                 <!-- Needed because of https://github.com/policeman-tools/forbidden-apis/issues/126 -->
                                 <signaturesFile>../codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                                <signaturesFile>../codestyle/druid-forbidden-apis.txt</signaturesFile>
                             </signaturesFiles>
                         </configuration>
                     </plugin>
@@ -242,10 +253,15 @@
                             </execution>
                         </executions>
                         <configuration>
+                            <properties>
+                                <property>
+                                    <name>testrunfactory</name>
+                                    <value>org.testng.DruidTestRunnerFactory</value>
+                                </property>
+                            </properties>
                             <argLine>
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
-                                -Dtestrunfactory=org.testng.DruidTestRunnerFactory
                                 -Ddruid.test.config.type=configFile
                                 -Ddruid.test.config.configFile=${env.CONFIG_FILE}
                             </argLine>
@@ -261,6 +277,7 @@
                             <signaturesFiles>
                                 <!-- Needed because of https://github.com/policeman-tools/forbidden-apis/issues/126 -->
                                 <signaturesFile>../codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                                <signaturesFile>../codestyle/druid-forbidden-apis.txt</signaturesFile>
                             </signaturesFiles>
                         </configuration>
                     </plugin>

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -55,7 +54,6 @@ import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.LimitSpec;
 import io.druid.query.groupby.orderby.NoopLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
-import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -70,6 +68,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,9 +80,9 @@ import java.util.stream.Collectors;
  */
 public class GroupByQuery extends BaseQuery<Row>
 {
-  public final static String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
+  public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
 
-  private final static Comparator<Row> NON_GRANULAR_TIME_COMP = (Row lhs, Row rhs) -> Longs.compare(
+  private static final Comparator<Row> NON_GRANULAR_TIME_COMP = (Row lhs, Row rhs) -> Longs.compare(
       lhs.getTimestampFromEpoch(),
       rhs.getTimestampFromEpoch()
   );
@@ -97,12 +96,10 @@ public class GroupByQuery extends BaseQuery<Row>
   private final LimitSpec limitSpec;
   private final HavingSpec havingSpec;
   private final DimFilter dimFilter;
-  private final Granularity granularity;
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
-  private final Function<Sequence<Row>, Sequence<Row>> limitFn;
   private final boolean applyLimitPushDown;
   private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
 
@@ -139,14 +136,20 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private Function<Sequence<Row>, Sequence<Row>> makePostProcessingFn()
   {
-    Function<Sequence<Row>, Sequence<Row>> postProcessingFn =
-        limitSpec.build(dimensions, aggregatorSpecs, postAggregatorSpecs);
+    Function<Sequence<Row>, Sequence<Row>> postProcessingFn = limitSpec.build(
+        dimensions,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getGranularity(),
+        getContextSortByDimsFirst()
+    );
 
     if (havingSpec != null) {
       postProcessingFn = Functions.compose(
           postProcessingFn,
           (Sequence<Row> input) -> {
             havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
+            havingSpec.setAggregators(getAggregatorsMap(aggregatorSpecs));
             return Sequences.filter(input, havingSpec::eval);
           }
       );
@@ -172,15 +175,15 @@ public class GroupByQuery extends BaseQuery<Row>
       final Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, false, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
-    this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.of() : dimensions;
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
     }
+
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
         this.dimensions.stream().map(DimensionSpec::getOutputName).collect(Collectors.toList()),
@@ -190,7 +193,6 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
 
-    Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.
@@ -201,42 +203,6 @@ public class GroupByQuery extends BaseQuery<Row>
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
     this.applyLimitPushDown = determineApplyLimitPushDown();
-
-    // On an inner query, we may sometimes get a LimitSpec so that row orderings can be determined for limit push down
-    // However, it's not necessary to build the real limitFn from it at this stage.
-    Function<Sequence<Row>, Sequence<Row>> postProcFn;
-    if (getContextBoolean(GroupByStrategyV2.CTX_KEY_OUTERMOST, true)) {
-      postProcFn = this.limitSpec.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-    } else {
-      postProcFn = NoopLimitSpec.INSTANCE.build(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
-    }
-
-    if (havingSpec != null) {
-      postProcFn = Functions.compose(
-          postProcFn,
-          new Function<Sequence<Row>, Sequence<Row>>()
-          {
-            @Override
-            public Sequence<Row> apply(Sequence<Row> input)
-            {
-              GroupByQuery.this.havingSpec.setRowSignature(GroupByQueryHelper.rowSignatureFor(GroupByQuery.this));
-              return Sequences.filter(
-                  input,
-                  new Predicate<Row>()
-                  {
-                    @Override
-                    public boolean apply(Row input)
-                    {
-                      return GroupByQuery.this.havingSpec.eval(input);
-                    }
-                  }
-              );
-            }
-          }
-      );
-    }
-
-    limitFn = postProcFn;
   }
 
   @JsonProperty
@@ -249,12 +215,6 @@ public class GroupByQuery extends BaseQuery<Row>
   public DimFilter getDimFilter()
   {
     return dimFilter;
-  }
-
-  @JsonProperty
-  public Granularity getGranularity()
-  {
-    return granularity;
   }
 
   @JsonProperty
@@ -348,7 +308,7 @@ public class GroupByQuery extends BaseQuery<Row>
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
       }
 
-      if (((DefaultLimitSpec) limitSpec).getLimit() == Integer.MAX_VALUE) {
+      if (!((DefaultLimitSpec) limitSpec).isLimited()) {
         throw new IAE("When forcing limit push down, the provided limit spec must have a limit.");
       }
 
@@ -373,7 +333,7 @@ public class GroupByQuery extends BaseQuery<Row>
       DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) limitSpec;
 
       // If only applying an orderby without a limit, don't try to push down
-      if (defaultLimitSpec.getLimit() == Integer.MAX_VALUE) {
+      if (!defaultLimitSpec.isLimited()) {
         return false;
       }
 
@@ -555,12 +515,12 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private Comparator<Row> getTimeComparator(boolean granular)
   {
-    if (Granularities.ALL.equals(granularity)) {
+    if (Granularities.ALL.equals(getGranularity())) {
       return null;
     } else if (granular) {
       return (lhs, rhs) -> Longs.compare(
-          granularity.bucketStart(lhs.getTimestamp()).getMillis(),
-          granularity.bucketStart(rhs.getTimestamp()).getMillis()
+          getGranularity().bucketStart(lhs.getTimestamp()).getMillis(),
+          getGranularity().bucketStart(rhs.getTimestamp()).getMillis()
       );
     } else {
       return NON_GRANULAR_TIME_COMP;
@@ -626,10 +586,10 @@ public class GroupByQuery extends BaseQuery<Row>
       }
 
       if (isNumericField.get(i)) {
-        if (comparator == StringComparators.NUMERIC) {
+        if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
-              rhs.getRaw(fieldName),
-              lhs.getRaw(fieldName)
+              lhs.getRaw(fieldName),
+              rhs.getRaw(fieldName)
           );
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
@@ -692,11 +652,6 @@ public class GroupByQuery extends BaseQuery<Row>
     return new Builder(this).setLimitSpec(limitSpec).build();
   }
 
-  public GroupByQuery withAggregatorSpecs(final List<AggregatorFactory> aggregatorSpecs)
-  {
-    return new Builder(this).setAggregatorSpecs(aggregatorSpecs).build();
-  }
-
   public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
     return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
@@ -733,6 +688,13 @@ public class GroupByQuery extends BaseQuery<Row>
           Column.TIME_COLUMN_NAME
       );
     }
+  }
+
+  private static Map<String, AggregatorFactory> getAggregatorsMap(List<AggregatorFactory> aggregatorSpecs)
+  {
+    Map<String, AggregatorFactory> map = new HashMap<>(aggregatorSpecs.size());
+    aggregatorSpecs.stream().forEach(v -> map.put(v.getName(), v));
+    return map;
   }
 
   public static class Builder
@@ -833,12 +795,6 @@ public class GroupByQuery extends BaseQuery<Row>
     public Builder setVirtualColumns(VirtualColumns virtualColumns)
     {
       this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
-      return this;
-    }
-
-    public Builder setVirtualColumns(List<VirtualColumn> virtualColumns)
-    {
-      this.virtualColumns = VirtualColumns.create(virtualColumns);
       return this;
     }
 
@@ -961,17 +917,6 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
-    public Builder addPostAggregator(PostAggregator postAgg)
-    {
-      if (postAggregatorSpecs == null) {
-        postAggregatorSpecs = Lists.newArrayList();
-      }
-
-      postAggregatorSpecs.add(postAgg);
-      this.postProcessingFn = null;
-      return this;
-    }
-
     public Builder setPostAggregatorSpecs(List<PostAggregator> postAggregatorSpecs)
     {
       this.postAggregatorSpecs = Lists.newArrayList(postAggregatorSpecs);
@@ -1042,7 +987,7 @@ public class GroupByQuery extends BaseQuery<Row>
            ", virtualColumns=" + virtualColumns +
            ", limitSpec=" + limitSpec +
            ", dimFilter=" + dimFilter +
-           ", granularity=" + granularity +
+           ", granularity=" + getGranularity() +
            ", dimensions=" + dimensions +
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
@@ -1067,7 +1012,6 @@ public class GroupByQuery extends BaseQuery<Row>
            Objects.equals(limitSpec, that.limitSpec) &&
            Objects.equals(havingSpec, that.havingSpec) &&
            Objects.equals(dimFilter, that.dimFilter) &&
-           Objects.equals(granularity, that.granularity) &&
            Objects.equals(dimensions, that.dimensions) &&
            Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
            Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
@@ -1082,7 +1026,6 @@ public class GroupByQuery extends BaseQuery<Row>
         limitSpec,
         havingSpec,
         dimFilter,
-        granularity,
         dimensions,
         aggregatorSpecs,
         postAggregatorSpecs

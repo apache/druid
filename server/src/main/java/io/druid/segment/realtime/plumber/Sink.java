@@ -26,12 +26,12 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -111,7 +111,13 @@ public class Sink implements Iterable<FireHydrant>
         throw new ISE("hydrant[%s] not the right count[%s]", hydrant, i);
       }
       maxCount = hydrant.getCount();
-      numRowsExcludingCurrIndex.addAndGet(hydrant.getSegment().asQueryableIndex().getNumRows());
+      ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
+      try {
+        numRowsExcludingCurrIndex.addAndGet(segment.asQueryableIndex().getNumRows());
+      }
+      finally {
+        segment.decrement();
+      }
     }
     this.hydrants.addAll(hydrants);
 
@@ -133,7 +139,7 @@ public class Sink implements Iterable<FireHydrant>
     return currHydrant;
   }
 
-  public int add(InputRow row) throws IndexSizeExceededException
+  public int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
   {
     if (currHydrant == null) {
       throw new IAE("No currHydrant but given row[%s]", row);
@@ -148,7 +154,7 @@ public class Sink implements Iterable<FireHydrant>
       if (index == null) {
         return ADD_FAILED; // the hydrant was swapped without being replaced
       }
-      return index.add(row);
+      return index.add(row, skipMaxRowsInMemoryCheck);
     }
   }
 
@@ -272,10 +278,16 @@ public class Sink implements Iterable<FireHydrant>
             Map<String, ColumnCapabilitiesImpl> oldCapabilities;
             if (lastHydrant.hasSwapped()) {
               oldCapabilities = Maps.newHashMap();
-              QueryableIndex oldIndex = lastHydrant.getSegment().asQueryableIndex();
-              for (String dim : oldIndex.getAvailableDimensions()) {
-                dimOrder.add(dim);
-                oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumn(dim).getCapabilities());
+              ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
+              try {
+                QueryableIndex oldIndex = segment.asQueryableIndex();
+                for (String dim : oldIndex.getAvailableDimensions()) {
+                  dimOrder.add(dim);
+                  oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumn(dim).getCapabilities());
+                }
+              }
+              finally {
+                segment.decrement();
               }
             } else {
               IncrementalIndex oldIndex = lastHydrant.getIndex();

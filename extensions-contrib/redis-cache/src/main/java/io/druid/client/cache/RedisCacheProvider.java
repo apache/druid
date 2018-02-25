@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 @JsonTypeName("redis")
 public class RedisCacheProvider extends RedisCacheConfig implements CacheProvider
 {
-    @Override
-    public Cache get()
-    {
-        return RedisCache.create(this);
-    }
+  @Override
+  public Cache get()
+  {
+    return RedisCache.create(this);
+  }
 }

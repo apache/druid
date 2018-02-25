@@ -26,8 +26,8 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
@@ -139,29 +139,31 @@ public class ExecutorLifecycle
       throw Throwables.propagate(e);
     }
 
-    // Spawn monitor thread to keep a watch on parent's stdin
-    // If stdin reaches eof, the parent is gone, and we should shut down
-    parentMonitorExec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
+    if (taskExecutorConfig.isParentStreamDefined()) {
+      // Spawn monitor thread to keep a watch on parent's stdin
+      // If stdin reaches eof, the parent is gone, and we should shut down
+      parentMonitorExec.submit(
+          new Runnable()
           {
-            try {
-              while (parentStream.read() != -1) {
-                // Toss the byte
+            @Override
+            public void run()
+            {
+              try {
+                while (parentStream.read() != -1) {
+                  // Toss the byte
+                }
               }
-            }
-            catch (Exception e) {
-              log.error(e, "Failed to read from stdin");
-            }
+              catch (Exception e) {
+                log.error(e, "Failed to read from stdin");
+              }
 
-            // Kind of gross, but best way to kill the JVM as far as I know
-            log.info("Triggering JVM shutdown.");
-            System.exit(2);
+              // Kind of gross, but best way to kill the JVM as far as I know
+              log.info("Triggering JVM shutdown.");
+              System.exit(2);
+            }
           }
-        }
-    );
+      );
+    }
 
     // Won't hurt in remote mode, and is required for setting up locks in local mode:
     try {

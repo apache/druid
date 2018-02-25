@@ -23,15 +23,15 @@ package io.druid.curator.inventory;
  */
 public interface CuratorInventoryManagerStrategy<ContainerClass, InventoryClass>
 {
-  public ContainerClass deserializeContainer(byte[] bytes);
+  ContainerClass deserializeContainer(byte[] bytes);
 
-  public InventoryClass deserializeInventory(byte[] bytes);
+  InventoryClass deserializeInventory(byte[] bytes);
 
-  public void newContainer(ContainerClass newContainer);
-  public void deadContainer(ContainerClass deadContainer);
-  public ContainerClass updateContainer(ContainerClass oldContainer, ContainerClass newContainer);
-  public ContainerClass addInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
-  public ContainerClass updateInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
-  public ContainerClass removeInventory(ContainerClass container, String inventoryKey);
-  public void inventoryInitialized();
+  void newContainer(ContainerClass newContainer);
+  void deadContainer(ContainerClass deadContainer);
+  ContainerClass updateContainer(ContainerClass oldContainer, ContainerClass newContainer);
+  ContainerClass addInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
+  ContainerClass updateInventory(ContainerClass container, String inventoryKey, InventoryClass inventory);
+  ContainerClass removeInventory(ContainerClass container, String inventoryKey);
+  void inventoryInitialized();
 }

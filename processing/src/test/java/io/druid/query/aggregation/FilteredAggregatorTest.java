@@ -38,21 +38,17 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.IdLookup;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.SingleIndexedInt;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,9 +74,7 @@ public class FilteredAggregatorTest
         new SelectorDimFilter("dim", "a", null)
     );
 
-    FilteredAggregator agg = (FilteredAggregator) factory.factorize(
-     makeColumnSelector(selector)
-    );
+    FilteredAggregator agg = (FilteredAggregator) factory.factorize(makeColumnSelector(selector));
 
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
@@ -98,7 +92,6 @@ public class FilteredAggregatorTest
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
         final String dimensionName = dimensionSpec.getDimension();
-        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
         if (dimensionName.equals("dim")) {
           return dimensionSpec.decorate(
@@ -107,11 +100,13 @@ public class FilteredAggregatorTest
                 @Override
                 public IndexedInts getRow()
                 {
+                  SingleIndexedInt row = new SingleIndexedInt();
                   if (selector.getIndex() % 3 == 2) {
-                    return ArrayBasedIndexedInts.of(new int[]{1});
+                    row.setValue(1);
                   } else {
-                    return ArrayBasedIndexedInts.of(new int[]{0});
+                    row.setValue(0);
                   }
+                  return row;
                 }
 
                 @Override
@@ -172,6 +167,19 @@ public class FilteredAggregatorTest
                   };
                 }
 
+                @Nullable
+                @Override
+                public Object getObject()
+                {
+                  return defaultGetObject();
+                }
+
+                @Override
+                public Class classOfObject()
+                {
+                  return Object.class;
+                }
+
                 @Override
                 public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                 {
@@ -185,48 +193,13 @@ public class FilteredAggregatorTest
       }
 
       @Override
-      public LongColumnSelector makeLongColumnSelector(String columnName)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public FloatColumnSelector makeFloatColumnSelector(String columnName)
+      public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
       {
         if (columnName.equals("value")) {
           return selector;
         } else {
           throw new UnsupportedOperationException();
         }
-      }
-
-      @Override
-      public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
-      {
-        if (columnName.equals("value")) {
-          return new DoubleColumnSelector()
-          {
-            @Override
-            public double getDouble()
-            {
-              return ((ColumnValueSelector) selector).getDouble();
-            }
-
-            @Override
-            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-            {
-
-            }
-          };
-        } else {
-          throw new UnsupportedOperationException();
-        }
-      }
-
-      @Override
-      public ObjectColumnSelector makeObjectColumnSelector(String columnName)
-      {
-        throw new UnsupportedOperationException();
       }
 
       @Override

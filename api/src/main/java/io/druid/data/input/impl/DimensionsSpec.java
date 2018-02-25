@@ -121,7 +121,8 @@ public class DimensionsSpec
     return dimensionExclusions;
   }
 
-  @Deprecated @JsonIgnore
+  @Deprecated
+  @JsonIgnore
   public List<SpatialDimensionSchema> getSpatialDimensions()
   {
     Iterable<NewSpatialDimensionSchema> filteredList = Iterables.filter(
@@ -161,6 +162,7 @@ public class DimensionsSpec
     );
   }
 
+  @PublicApi
   public DimensionSchema getSchema(String dimension)
   {
     return dimensionSchemaMap.get(dimension);
@@ -171,6 +173,7 @@ public class DimensionsSpec
     return !(dimensions == null || dimensions.isEmpty());
   }
 
+  @PublicApi
   public DimensionsSpec withDimensions(List<DimensionSchema> dims)
   {
     return new DimensionsSpec(dims, ImmutableList.copyOf(dimensionExclusions), null);
@@ -243,5 +246,14 @@ public class DimensionsSpec
     int result = dimensions.hashCode();
     result = 31 * result + dimensionExclusions.hashCode();
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DimensionsSpec{" +
+           "dimensions=" + dimensions +
+           ", dimensionExclusions=" + dimensionExclusions +
+           '}';
   }
 }

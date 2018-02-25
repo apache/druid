@@ -92,7 +92,10 @@ public class HdfsDataSegmentPusherTest
   }
   static {
     objectMapper = new TestObjectMapper();
-    objectMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, objectMapper));
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ObjectMapper.class, objectMapper);
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    objectMapper.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -158,7 +161,7 @@ public class HdfsDataSegmentPusherTest
         size
     );
 
-    DataSegment segment = pusher.push(segmentDir, segmentToPush);
+    DataSegment segment = pusher.push(segmentDir, segmentToPush, true);
 
 
     String indexUri = StringUtils.format(
@@ -198,7 +201,7 @@ public class HdfsDataSegmentPusherTest
     File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
     outDir.setReadOnly();
     try {
-      pusher.push(segmentDir, segmentToPush);
+      pusher.push(segmentDir, segmentToPush, true);
     }
     catch (IOException e) {
       Assert.fail("should not throw exception");
@@ -243,7 +246,7 @@ public class HdfsDataSegmentPusherTest
     }
 
     for (int i = 0; i < numberOfSegments; i++) {
-      final DataSegment pushedSegment = pusher.push(segmentDir, segments[i]);
+      final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], true);
 
       String indexUri = StringUtils.format(
           "%s/%s/%d_index.zip",
@@ -305,7 +308,7 @@ public class HdfsDataSegmentPusherTest
       File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
       outDir.setReadOnly();
       try {
-        pusher.push(segmentDir, segments[i]);
+        pusher.push(segmentDir, segments[i], true);
       }
       catch (IOException e) {
         Assert.fail("should not throw exception");
@@ -382,23 +385,23 @@ public class HdfsDataSegmentPusherTest
     try {
       schema = objectMapper.readValue(
       "{\n"
-      + "    \"dataSchema\": {\n"
-      + "        \"dataSource\": \"source\",\n"
-      + "        \"metricsSpec\": [],\n"
-      + "        \"granularitySpec\": {\n"
-      + "            \"type\": \"uniform\",\n"
-      + "            \"segmentGranularity\": \"hour\",\n"
-      + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
-      + "        }\n"
-      + "    },\n"
-      + "    \"ioConfig\": {\n"
-      + "        \"type\": \"hadoop\",\n"
-      + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
-      + "    }\n"
-      + "}",
-      HadoopIngestionSpec.class
-  );
-  }
+            + "    \"dataSchema\": {\n"
+            + "        \"dataSource\": \"source\",\n"
+            + "        \"metricsSpec\": [],\n"
+            + "        \"granularitySpec\": {\n"
+            + "            \"type\": \"uniform\",\n"
+            + "            \"segmentGranularity\": \"hour\",\n"
+            + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
+            + "        }\n"
+            + "    },\n"
+            + "    \"ioConfig\": {\n"
+            + "        \"type\": \"hadoop\",\n"
+            + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
+            + "    }\n"
+            + "}",
+          HadoopIngestionSpec.class
+      );
+    }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }

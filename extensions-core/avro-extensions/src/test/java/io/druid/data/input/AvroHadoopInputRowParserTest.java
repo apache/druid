@@ -18,24 +18,29 @@
  */
 package io.druid.data.input;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
+import io.druid.data.input.avro.AvroExtensionsModule;
 import io.druid.java.util.common.StringUtils;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.file.FileReader;
 import org.apache.avro.generic.GenericDatumReader;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.commons.io.FileUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
+import org.apache.pig.backend.executionengine.ExecJob;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
+import static io.druid.data.input.AvroStreamInputRowParserTest.DIMENSIONS;
 import static io.druid.data.input.AvroStreamInputRowParserTest.PARSE_SPEC;
 import static io.druid.data.input.AvroStreamInputRowParserTest.assertInputRowCorrect;
 import static io.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatum;
@@ -43,6 +48,14 @@ import static io.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatu
 public class AvroHadoopInputRowParserTest
 {
   private final ObjectMapper jsonMapper = new ObjectMapper();
+
+  @Before
+  public void setUp()
+  {
+    for (Module jacksonModule : new AvroExtensionsModule().getJacksonModules()) {
+      jsonMapper.registerModule(jacksonModule);
+    }
+  }
 
   @Test
   public void testParseNotFromPigAvroStorage() throws IOException
@@ -69,8 +82,8 @@ public class AvroHadoopInputRowParserTest
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
     );
-    InputRow inputRow = parser2.parse(record);
-    assertInputRowCorrect(inputRow);
+    InputRow inputRow = parser2.parseBatch(record).get(0);
+    assertInputRowCorrect(inputRow, DIMENSIONS);
   }
 
 
@@ -97,12 +110,13 @@ public class AvroHadoopInputRowParserTest
     try {
       // 0. write avro object into temp file.
       File someAvroDatumFile = new File(tmpDir, "someAvroDatum.avro");
-      DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(
-          new GenericDatumWriter<GenericRecord>()
+      DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(
+          new SpecificDatumWriter<>()
       );
       dataFileWriter.create(SomeAvroDatum.getClassSchema(), someAvroDatumFile);
       dataFileWriter.append(datum);
       dataFileWriter.close();
+
       // 1. read avro files into Pig
       pigServer = new PigServer(ExecType.LOCAL);
       pigServer.registerQuery(
@@ -112,15 +126,27 @@ public class AvroHadoopInputRowParserTest
               inputStorage
           )
       );
+
       // 2. write new avro file using AvroStorage
       File outputDir = new File(tmpDir, "output");
-      pigServer.store("A", String.valueOf(outputDir), outputStorage);
+      ExecJob job = pigServer.store("A", String.valueOf(outputDir), outputStorage);
+
+      while (!job.hasCompleted()) {
+        Thread.sleep(100);
+      }
+
+      assert (job.getStatus() == ExecJob.JOB_STATUS.COMPLETED);
+
       // 3. read avro object from AvroStorage
       reader = DataFileReader.openReader(
           new File(outputDir, "part-m-00000.avro"),
           new GenericDatumReader<GenericRecord>()
       );
+
       return reader.next();
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
     finally {
       if (pigServer != null) {

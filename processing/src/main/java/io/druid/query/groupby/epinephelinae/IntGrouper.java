@@ -30,10 +30,10 @@ public interface IntGrouper extends Grouper<Integer>
 {
   default AggregateResult aggregate(int key)
   {
-    return aggregate(key, hashFunction().apply(key));
+    return aggregateKeyHash(hashFunction().apply(key));
   }
 
-  AggregateResult aggregate(int key, int keyHash);
+  AggregateResult aggregateKeyHash(int keyHash);
 
   /**
    * {@inheritDoc}
@@ -51,14 +51,14 @@ public interface IntGrouper extends Grouper<Integer>
   /**
    * {@inheritDoc}
    *
-   * @deprecated Please use {@link #aggregate(int, int)} instead.
+   * @deprecated Please use {@link #aggregateKeyHash(int)} instead.
    */
   @Deprecated
   @Override
   default AggregateResult aggregate(Integer key, int keyHash)
   {
     Preconditions.checkNotNull(key);
-    return aggregate(key.intValue(), keyHash);
+    return aggregateKeyHash(keyHash);
   }
 
   @Override

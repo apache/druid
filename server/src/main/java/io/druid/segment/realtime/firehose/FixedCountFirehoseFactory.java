@@ -27,6 +27,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 
@@ -74,6 +75,7 @@ public class FixedCountFirehoseFactory implements FirehoseFactory
         return i < count && delegateFirehose.hasMore();
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {

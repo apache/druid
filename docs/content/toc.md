@@ -34,6 +34,7 @@ layout: toc
   * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
   * [Search](/docs/VERSION/querying/searchquery.html)
   * [Select](/docs/VERSION/querying/select-query.html)
+  * [Scan](/docs/VERSION/querying/scan-query.html)
   * Components
     * [Datasources](/docs/VERSION/querying/datasource.html)
     * [Filters](/docs/VERSION/querying/filters.html)
@@ -89,6 +90,7 @@ layout: toc
   * [Broker](/docs/VERSION/configuration/broker.html)
   * [Realtime](/docs/VERSION/configuration/realtime.html)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
+  * [Configuring Authentication and Authorization](/docs/VERSION/configuration/auth.html)
   
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)

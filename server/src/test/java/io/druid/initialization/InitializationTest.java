@@ -34,7 +34,6 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.ISE;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
@@ -142,7 +141,7 @@ public class InitializationTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
                 );
               }
             }
@@ -161,7 +160,7 @@ public class InitializationTest
     a_jar.createNewFile();
     b_jar.createNewFile();
     c_jar.createNewFile();
-    final URLClassLoader loader = Initialization.getClassLoaderForExtension(some_extension_dir);
+    final URLClassLoader loader = Initialization.getClassLoaderForExtension(some_extension_dir, false);
     final URL[] expectedURLs = new URL[]{a_jar.toURI().toURL(), b_jar.toURI().toURL(), c_jar.toURI().toURL()};
     final URL[] actualURLs = loader.getURLs();
     Arrays.sort(
@@ -452,8 +451,8 @@ public class InitializationTest
     Assert.assertTrue(jar1.createNewFile());
     Assert.assertTrue(jar2.createNewFile());
 
-    final ClassLoader classLoader1 = Initialization.getClassLoaderForExtension(extension1);
-    final ClassLoader classLoader2 = Initialization.getClassLoaderForExtension(extension2);
+    final ClassLoader classLoader1 = Initialization.getClassLoaderForExtension(extension1, false);
+    final ClassLoader classLoader2 = Initialization.getClassLoaderForExtension(extension2, false);
 
     Assert.assertArrayEquals(new URL[]{jar1.toURL()}, ((URLClassLoader) classLoader1).getURLs());
     Assert.assertArrayEquals(new URL[]{jar2.toURL()}, ((URLClassLoader) classLoader2).getURLs());

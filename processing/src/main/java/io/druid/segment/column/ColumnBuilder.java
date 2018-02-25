@@ -31,7 +31,6 @@ public class ColumnBuilder
   private boolean hasMultipleValues = false;
 
   private Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn = null;
-  private Supplier<RunLengthColumn> runLengthColumn = null;
   private Supplier<GenericColumn> genericColumn = null;
   private Supplier<ComplexColumn> complexColumn = null;
   private Supplier<BitmapIndex> bitmapIndex = null;
@@ -64,12 +63,6 @@ public class ColumnBuilder
   public ColumnBuilder setDictionaryEncodedColumn(Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn)
   {
     this.dictionaryEncodedColumn = dictionaryEncodedColumn;
-    return this;
-  }
-
-  public ColumnBuilder setRunLengthColumn(Supplier<RunLengthColumn> runLengthColumn)
-  {
-    this.runLengthColumn = runLengthColumn;
     return this;
   }
 
@@ -107,10 +100,8 @@ public class ColumnBuilder
             .setDictionaryEncoded(dictionaryEncodedColumn != null)
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
-            .setRunLengthEncoded(runLengthColumn != null)
             .setHasMultipleValues(hasMultipleValues),
         dictionaryEncodedColumn,
-        runLengthColumn,
         genericColumn,
         complexColumn,
         bitmapIndex,

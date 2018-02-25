@@ -22,6 +22,7 @@ package io.druid.query.aggregation.distinctcount;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.IndexedInts;
 
 public class DistinctCountAggregator implements Aggregator
 {
@@ -41,15 +42,11 @@ public class DistinctCountAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    for (final Integer index : selector.getRow()) {
+    IndexedInts row = selector.getRow();
+    for (int i = 0; i < row.size(); i++) {
+      int index = row.get(i);
       mutableBitmap.add(index);
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    mutableBitmap.clear();
   }
 
   @Override

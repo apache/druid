@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import io.druid.indexing.overlord.autoscaling.ProvisioningSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningStrategy;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.joda.time.Period;
 import org.junit.After;
@@ -34,11 +35,11 @@ public class OverlordBlinkLeadershipTest
 {
   private RemoteTaskRunnerTestUtils rtrUtils;
   private final TestRemoteTaskRunnerConfig remoteTaskRunnerConfig = new TestRemoteTaskRunnerConfig(new Period("PT5M"));
-  private final WorkerBehaviorConfig defaultWorkerBehaviourConfig = WorkerBehaviorConfig.defaultConfig();
+  private final DefaultWorkerBehaviorConfig defaultWorkerBehaviourConfig = DefaultWorkerBehaviorConfig.defaultConfig();
   private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier = new Supplier<WorkerBehaviorConfig>()
   {
     @Override
-    public WorkerBehaviorConfig get()
+    public DefaultWorkerBehaviorConfig get()
     {
       return defaultWorkerBehaviourConfig;
     }
@@ -64,7 +65,7 @@ public class OverlordBlinkLeadershipTest
 
   /**
    * Test that we can start taskRunner, then stop it (emulating "losing leadership", see {@link
-   * TaskMaster#stopLeading()}), then creating a new taskRunner from {@link
+   * TaskMaster#stop()}), then creating a new taskRunner from {@link
    * org.apache.curator.framework.recipes.leader.LeaderSelectorListener#takeLeadership} implementation in
    * {@link TaskMaster} and start it again.
    */

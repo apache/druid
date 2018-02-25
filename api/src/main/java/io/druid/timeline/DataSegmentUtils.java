@@ -21,19 +21,15 @@ package io.druid.timeline;
 
 import com.google.common.base.Function;
 import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.Objects;
 
-/**
- * identifier to DataSegment.
- */
 @PublicApi
 public class DataSegmentUtils
 {
@@ -83,11 +79,9 @@ public class DataSegmentUtils
       return null;
     }
 
-    DateTimeFormatter formatter = ISODateTimeFormat.dateTime();
-
     try {
-      DateTime start = formatter.parseDateTime(splits[0]);
-      DateTime end = formatter.parseDateTime(splits[1]);
+      DateTime start = DateTimes.ISO_DATE_TIME.parse(splits[0]);
+      DateTime end = DateTimes.ISO_DATE_TIME.parse(splits[1]);
       String version = splits[2];
       String trail = splits.length > 3 ? join(splits, DataSegment.delimiter, 3, splits.length) : null;
 
@@ -114,7 +108,7 @@ public class DataSegmentUtils
     return segmentDesc.withInterval(newInterval).toString();
   }
 
-  static class SegmentIdentifierParts
+  public static class SegmentIdentifierParts
   {
     private final String dataSource;
     private final Interval interval;
@@ -129,6 +123,7 @@ public class DataSegmentUtils
       this.trail = trail;
     }
 
+    @PublicApi
     public String getDataSource()
     {
       return dataSource;
@@ -139,6 +134,7 @@ public class DataSegmentUtils
       return interval;
     }
 
+    @PublicApi
     public String getVersion()
     {
       return version;

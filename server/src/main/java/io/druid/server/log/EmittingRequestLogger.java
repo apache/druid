@@ -22,9 +22,9 @@ package io.druid.server.log;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
-import com.metamx.emitter.core.Event;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceEventBuilder;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import io.druid.query.Query;
 import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
@@ -50,7 +50,16 @@ public class EmittingRequestLogger implements RequestLogger
     emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }
 
-  private static class RequestLogEvent implements Event
+  @Override
+  public String toString()
+  {
+    return "EmittingRequestLogger{" +
+           "emitter=" + emitter +
+           ", feed='" + feed + '\'' +
+           '}';
+  }
+
+  public static class RequestLogEvent implements Event
   {
     final ImmutableMap<String, String> serviceDimensions;
     final String feed;

@@ -113,5 +113,6 @@
   {"source": "tutorials/tutorial-all-about-queries.html", "target": "quickstart.html"},
   {"source": "tutorials/tutorial-loading-batch-data.html", "target": "tutorial-batch.html"},
   {"source": "tutorials/tutorial-loading-streaming-data.html", "target": "tutorial-streams.html"},
-  {"source": "tutorials/tutorial-the-druid-cluster.html", "target": "cluster.html"}
+  {"source": "tutorials/tutorial-the-druid-cluster.html", "target": "cluster.html"},
+  {"source": "development/extensions-core/caffeine-cache.html", "target":"../../configuration/caching.html"}
 ]

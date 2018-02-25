@@ -19,18 +19,19 @@
 
 package io.druid.timeline;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.base.Function;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
-import com.google.common.collect.Iterables;
+import com.google.inject.Inject;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.jackson.CommaListJoinDeserializer;
 import io.druid.jackson.CommaListJoinSerializer;
@@ -38,12 +39,15 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.SegmentDescriptor;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -52,15 +56,13 @@ public class DataSegment implements Comparable<DataSegment>
 {
   public static String delimiter = "_";
   private final Integer binaryVersion;
-  private static final Interner<String> interner = Interners.newWeakInterner();
-  private static final Function<String, String> internFun = new Function<String, String>()
-  {
-    @Override
-    public String apply(String input)
-    {
-      return interner.intern(input);
-    }
-  };
+  private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
+  private static final Interner<List<String>> DIMENSIONS_INTERNER = Interners.newWeakInterner();
+  private static final Interner<List<String>> METRICS_INTERNER = Interners.newWeakInterner();
+  private static final Map<String, Object> PRUNED_LOAD_SPEC = ImmutableMap.of(
+      "load spec is pruned, because it's not needed on Brokers, but eats a lot of heap space",
+      ""
+  );
 
   public static String makeDataSegmentIdentifier(
       String dataSource,
@@ -84,9 +86,23 @@ public class DataSegment implements Comparable<DataSegment>
     return sb.toString();
   }
 
+  /**
+   * This class is needed for optional injection of pruneLoadSpec, see
+   * github.com/google/guice/wiki/FrequentlyAskedQuestions#how-can-i-inject-optional-parameters-into-a-constructor
+   */
+  @VisibleForTesting
+  public static class PruneLoadSpecHolder
+  {
+    @VisibleForTesting
+    public static final PruneLoadSpecHolder DEFAULT = new PruneLoadSpecHolder();
+
+    @Inject(optional = true) @PruneLoadSpec boolean pruneLoadSpec = false;
+  }
+
   private final String dataSource;
   private final Interval interval;
   private final String version;
+  @Nullable
   private final Map<String, Object> loadSpec;
   private final List<String> dimensions;
   private final List<String> metrics;
@@ -94,40 +110,63 @@ public class DataSegment implements Comparable<DataSegment>
   private final long size;
   private final String identifier;
 
+  public DataSegment(
+      String dataSource,
+      Interval interval,
+      String version,
+      Map<String, Object> loadSpec,
+      List<String> dimensions,
+      List<String> metrics,
+      ShardSpec shardSpec,
+      Integer binaryVersion,
+      long size
+  )
+  {
+    this(
+        dataSource,
+        interval,
+        version,
+        loadSpec,
+        dimensions,
+        metrics,
+        shardSpec,
+        binaryVersion,
+        size,
+        PruneLoadSpecHolder.DEFAULT
+    );
+  }
+
   @JsonCreator
   public DataSegment(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
-      @JsonProperty("loadSpec") Map<String, Object> loadSpec,
-      @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) List<String> dimensions,
-      @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) List<String> metrics,
-      @JsonProperty("shardSpec") ShardSpec shardSpec,
+      @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
+      @JsonProperty("dimensions")
+      @JsonDeserialize(using = CommaListJoinDeserializer.class)
+      @Nullable
+          List<String> dimensions,
+      @JsonProperty("metrics")
+      @JsonDeserialize(using = CommaListJoinDeserializer.class)
+      @Nullable
+          List<String> metrics,
+      @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("binaryVersion") Integer binaryVersion,
-      @JsonProperty("size") long size
+      @JsonProperty("size") long size,
+      @JacksonInject PruneLoadSpecHolder pruneLoadSpecHolder
   )
   {
-    final Predicate<String> nonEmpty = new Predicate<String>()
-    {
-      @Override
-      public boolean apply(String input)
-      {
-        return input != null && !input.isEmpty();
-      }
-    };
-
-    // dataSource, dimensions & metrics are stored as canonical string values to decrease memory required for storing large numbers of segments.
-    this.dataSource = interner.intern(dataSource);
+    // dataSource, dimensions & metrics are stored as canonical string values to decrease memory required for storing
+    // large numbers of segments.
+    this.dataSource = STRING_INTERNER.intern(dataSource);
     this.interval = interval;
-    this.loadSpec = loadSpec;
+    this.loadSpec = pruneLoadSpecHolder.pruneLoadSpec ? PRUNED_LOAD_SPEC : prepareLoadSpec(loadSpec);
     this.version = version;
-    this.dimensions = dimensions == null
-                      ? ImmutableList.<String>of()
-                      : ImmutableList.copyOf(Iterables.transform(Iterables.filter(dimensions, nonEmpty), internFun));
-    this.metrics = metrics == null
-                   ? ImmutableList.<String>of()
-                   : ImmutableList.copyOf(Iterables.transform(Iterables.filter(metrics, nonEmpty), internFun));
+    // Deduplicating dimensions and metrics lists as a whole because they are very likely the same for the same
+    // dataSource
+    this.dimensions = prepareDimensionsOrMetrics(dimensions, DIMENSIONS_INTERNER);
+    this.metrics = prepareDimensionsOrMetrics(metrics, METRICS_INTERNER);
     this.shardSpec = (shardSpec == null) ? NoneShardSpec.instance() : shardSpec;
     this.binaryVersion = binaryVersion;
     this.size = size;
@@ -139,6 +178,35 @@ public class DataSegment implements Comparable<DataSegment>
         this.version,
         this.shardSpec
     );
+  }
+
+  @Nullable
+  private Map<String, Object> prepareLoadSpec(@Nullable Map<String, Object> loadSpec)
+  {
+    if (loadSpec == null) {
+      return null;
+    }
+    // Load spec is just of 3 entries on average; HashMap/LinkedHashMap consumes much more memory than ArrayMap
+    Map<String, Object> result = new Object2ObjectArrayMap<>(loadSpec.size());
+    for (Map.Entry<String, Object> e : loadSpec.entrySet()) {
+      result.put(STRING_INTERNER.intern(e.getKey()), e.getValue());
+    }
+    return result;
+  }
+
+  private List<String> prepareDimensionsOrMetrics(@Nullable List<String> list, Interner<List<String>> interner)
+  {
+    if (list == null) {
+      return ImmutableList.of();
+    } else {
+      List<String> result = list
+          .stream()
+          .filter(s -> !Strings.isNullOrEmpty(s))
+          .map(STRING_INTERNER::intern)
+          // TODO replace with ImmutableList.toImmutableList() when updated to Guava 21+
+          .collect(Collectors.collectingAndThen(Collectors.toList(), ImmutableList::copyOf));
+      return interner.intern(result);
+    }
   }
 
   /**
@@ -158,6 +226,7 @@ public class DataSegment implements Comparable<DataSegment>
     return interval;
   }
 
+  @Nullable
   @JsonProperty
   public Map<String, Object> getLoadSpec()
   {

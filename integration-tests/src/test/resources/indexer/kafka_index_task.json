@@ -52,16 +52,7 @@
         "count": "%%COUNT%%",
         "delegate": {
           "type": "kafka-0.8",
-	    "consumerProps": {
-            "zookeeper.connect": "%%ZOOKEEPER_SERVER%%",
-            "zookeeper.connection.timeout.ms" : "15000",
-            "zookeeper.session.timeout.ms" : "15000",
-            "zookeeper.sync.time.ms" : "5000",
-            "group.id": "%%GROUP_ID%%",
-            "fetch.message.max.bytes" : "1048586",
-            "auto.offset.reset": "smallest",
-            "auto.commit.enable": "false"
-          },
+	    "consumerProps": %%CONSUMER_PROPERTIES%%,
           "feed": "%%TOPIC%%"
         }
       }

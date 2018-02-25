@@ -50,7 +50,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
-import java.util.concurrent.Callable;
 
 /**
  */
@@ -185,41 +184,36 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 
         try {
           return RetryUtils.retry(
-              new Callable<FileUtils.FileCopyResult>()
-              {
-                @Override
-                public FileUtils.FileCopyResult call() throws Exception
-                {
-                  if (!fs.exists(path)) {
-                    throw new SegmentLoadingException("No files found at [%s]", path.toString());
-                  }
-
-                  final RemoteIterator<LocatedFileStatus> children = fs.listFiles(path, false);
-                  final FileUtils.FileCopyResult result = new FileUtils.FileCopyResult();
-                  while (children.hasNext()) {
-                    final LocatedFileStatus child = children.next();
-                    final Path childPath = child.getPath();
-                    final String fname = childPath.getName();
-                    if (fs.isDirectory(childPath)) {
-                      log.warn("[%s] is a child directory, skipping", childPath.toString());
-                    } else {
-                      final File outFile = new File(outDir, fname);
-                      final FSDataInputStream in = fs.open(childPath);
-
-                      NativeIO.chunkedCopy(in, outFile);
-
-                      result.addFile(outFile);
-                    }
-                  }
-                  log.info(
-                      "Copied %d bytes from [%s] to [%s]",
-                      result.size(),
-                      path.toString(),
-                      outDir.getAbsolutePath()
-                  );
-                  return result;
+              () -> {
+                if (!fs.exists(path)) {
+                  throw new SegmentLoadingException("No files found at [%s]", path.toString());
                 }
 
+                final RemoteIterator<LocatedFileStatus> children = fs.listFiles(path, false);
+                final FileUtils.FileCopyResult result = new FileUtils.FileCopyResult();
+                while (children.hasNext()) {
+                  final LocatedFileStatus child = children.next();
+                  final Path childPath = child.getPath();
+                  final String fname = childPath.getName();
+                  if (fs.isDirectory(childPath)) {
+                    log.warn("[%s] is a child directory, skipping", childPath.toString());
+                  } else {
+                    final File outFile = new File(outDir, fname);
+                    final FSDataInputStream in = fs.open(childPath);
+
+                    // Actual copy
+                    NativeIO.chunkedCopy(in, outFile);
+
+                    result.addFile(outFile);
+                  }
+                }
+                log.info(
+                    "Copied %d bytes from [%s] to [%s]",
+                    result.size(),
+                    path.toString(),
+                    outDir.getAbsolutePath()
+                );
+                return result;
               },
               shouldRetryPredicate(),
               DEFAULT_RETRY_COUNT

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.jackson.SegmentizerModule;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.column.ColumnConfig;
 import org.junit.Assert;
@@ -42,14 +43,18 @@ public class SegmentizerFactoryTest
     FileOutputStream fos = new FileOutputStream(factoryFile);
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerModule(new SegmentizerModule());
-    IndexIO indexIO = new IndexIO(mapper, new ColumnConfig()
-    {
-      @Override
-      public int columnCacheSizeBytes()
-      {
-        return 777;
-      }
-    });
+    IndexIO indexIO = new IndexIO(
+        mapper,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        new ColumnConfig()
+        {
+          @Override
+          public int columnCacheSizeBytes()
+          {
+            return 777;
+          }
+        }
+    );
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             IndexIO.class,

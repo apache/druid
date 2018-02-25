@@ -26,6 +26,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,6 +70,7 @@ public abstract class AggregatorFactory implements Cacheable
    * @see AggregateCombiner
    * @see io.druid.segment.IndexMerger
    */
+  @SuppressWarnings("unused") // Going to be used when https://github.com/druid-io/druid/projects/2 is complete
   public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("[%s] does not implement makeAggregateCombiner()", this.getClass().getName());
@@ -92,7 +94,12 @@ public abstract class AggregatorFactory implements Cacheable
    */
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    throw new UOE("[%s] does not implement getMergingFactory(..)", this.getClass().getName());
+    final AggregatorFactory combiningFactory = this.getCombiningFactory();
+    if (other.getName().equals(this.getName()) && combiningFactory.equals(other.getCombiningFactory())) {
+      return combiningFactory;
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
   }
 
   /**
@@ -153,6 +160,17 @@ public abstract class AggregatorFactory implements Cacheable
       return null;
     }
 
+    if (aggregatorsList.size() == 1) {
+      final AggregatorFactory[] aggregatorFactories = aggregatorsList.get(0);
+      if (aggregatorFactories != null) {
+        final AggregatorFactory[] combiningFactories = new AggregatorFactory[aggregatorFactories.length];
+        Arrays.setAll(combiningFactories, i -> aggregatorFactories[i].getCombiningFactory());
+        return combiningFactories;
+      } else {
+        return null;
+      }
+    }
+
     Map<String, AggregatorFactory> mergedAggregators = new LinkedHashMap<>();
 
     for (AggregatorFactory[] aggregators : aggregatorsList) {
@@ -163,7 +181,9 @@ public abstract class AggregatorFactory implements Cacheable
           if (mergedAggregators.containsKey(name)) {
             AggregatorFactory other = mergedAggregators.get(name);
             try {
-              mergedAggregators.put(name, other.getMergingFactory(aggregator));
+              // the order of aggregator matters when calling getMergingFactory()
+              // because it returns a combiningAggregator which can be different from the original aggregator.
+              mergedAggregators.put(name, aggregator.getMergingFactory(other));
             }
             catch (AggregatorFactoryNotMergeableException ex) {
               log.warn(ex, "failed to merge aggregator factories");

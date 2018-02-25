@@ -29,17 +29,19 @@ public class StatsDEmitterConfig
 {
 
   @JsonProperty
-  final private String hostname;
+  private final String hostname;
   @JsonProperty
-  final private Integer port;
+  private final Integer port;
   @JsonProperty
-  final private String prefix;
+  private final String prefix;
   @JsonProperty
-  final private String separator;
+  private final String separator;
   @JsonProperty
-  final private Boolean includeHost;
+  private final Boolean includeHost;
   @JsonProperty
-  final private String dimensionMapPath;
+  private final String dimensionMapPath;
+  @JsonProperty
+  private final String blankHolder;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -48,7 +50,9 @@ public class StatsDEmitterConfig
       @JsonProperty("prefix") String prefix,
       @JsonProperty("separator") String separator,
       @JsonProperty("includeHost") Boolean includeHost,
-      @JsonProperty("dimensionMapPath") String dimensionMapPath)
+      @JsonProperty("dimensionMapPath") String dimensionMapPath,
+      @JsonProperty("blankHolder") String blankHolder
+  )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
     this.port = Preconditions.checkNotNull(port, "StatsD port cannot be null.");
@@ -56,6 +60,7 @@ public class StatsDEmitterConfig
     this.separator = separator != null ? separator : ".";
     this.includeHost = includeHost != null ? includeHost : false;
     this.dimensionMapPath = dimensionMapPath;
+    this.blankHolder = blankHolder != null ? blankHolder : "-";
   }
 
   @Override
@@ -98,6 +103,7 @@ public class StatsDEmitterConfig
     result = 31 * result + (separator != null ? separator.hashCode() : 0);
     result = 31 * result + (includeHost != null ? includeHost.hashCode() : 0);
     result = 31 * result + (dimensionMapPath != null ? dimensionMapPath.hashCode() : 0);
+    result = 31 * result + (blankHolder != null ? blankHolder.hashCode() : 0);
     return result;
   }
 
@@ -135,5 +141,11 @@ public class StatsDEmitterConfig
   public String getDimensionMapPath()
   {
     return dimensionMapPath;
+  }
+
+  @JsonProperty
+  public String getBlankHolder()
+  {
+    return blankHolder;
   }
 }

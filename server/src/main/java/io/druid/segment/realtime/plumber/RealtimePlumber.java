@@ -29,16 +29,15 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.common.utils.VMUtils;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
@@ -49,6 +48,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.io.Closer;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -79,6 +79,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -86,6 +87,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -106,7 +108,7 @@ public class RealtimePlumber implements Plumber
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifier handoffNotifier;
   private final Object handoffCondition = new Object();
-  private final Map<Long, Sink> sinks = Maps.newConcurrentMap();
+  private final Map<Long, Sink> sinks = new ConcurrentHashMap<>();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<String, Sink>(
       String.CASE_INSENSITIVE_ORDER
   );
@@ -214,7 +216,7 @@ public class RealtimePlumber implements Plumber
       return -1;
     }
 
-    final int numRows = sink.add(row);
+    final int numRows = sink.add(row, false);
 
     if (!sink.canAppendRow() || System.currentTimeMillis() > nextFlush) {
       persist(committerSupplier.get());
@@ -408,21 +410,33 @@ public class RealtimePlumber implements Plumber
               final long mergeThreadCpuTime = VMUtils.safeGetThreadCpuTime();
               mergeStopwatch = Stopwatch.createStarted();
 
+              final File mergedFile;
               List<QueryableIndex> indexes = Lists.newArrayList();
-              for (FireHydrant fireHydrant : sink) {
-                Segment segment = fireHydrant.getSegment();
-                final QueryableIndex queryableIndex = segment.asQueryableIndex();
-                log.info("Adding hydrant[%s]", fireHydrant);
-                indexes.add(queryableIndex);
-              }
+              Closer closer = Closer.create();
+              try {
+                for (FireHydrant fireHydrant : sink) {
+                  Pair<Segment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+                  final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+                  log.info("Adding hydrant[%s]", fireHydrant);
+                  indexes.add(queryableIndex);
+                  closer.register(segmentAndCloseable.rhs);
+                }
 
-              final File mergedFile = indexMerger.mergeQueryableIndex(
-                  indexes,
-                  schema.getGranularitySpec().isRollup(),
-                  schema.getAggregators(),
-                  mergedTarget,
-                  config.getIndexSpec()
-              );
+                mergedFile = indexMerger.mergeQueryableIndex(
+                    indexes,
+                    schema.getGranularitySpec().isRollup(),
+                    schema.getAggregators(),
+                    mergedTarget,
+                    config.getIndexSpec(),
+                    config.getSegmentWriteOutMediumFactory()
+                );
+              }
+              catch (Throwable t) {
+                throw closer.rethrow(t);
+              }
+              finally {
+                closer.close();
+              }
 
               // emit merge metrics before publishing segment
               metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
@@ -430,9 +444,17 @@ public class RealtimePlumber implements Plumber
 
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
 
+              // The realtime plumber can generate segments with the same identifier (i.e. replica tasks) but does not
+              // have any strict requirement that the contents of these segments be identical. It is possible that two
+              // tasks generate a segment with the same identifier containing different data, and in this situation we
+              // want to favor the data from the task which pushed first. This is because it is possible that one
+              // historical could load the segment after the first task pushed and another historical load the same
+              // segment after the second task pushed. If the second task's segment overwrote the first one, the second
+              // historical node would be serving different data from the first. Hence set replaceExisting == false.
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
-                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+                  false
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
               segmentPublisher.publishSegment(segment);
@@ -755,41 +777,38 @@ public class RealtimePlumber implements Plumber
         )
     );
 
-    ScheduledExecutors
-        .scheduleAtFixedRate(
-            scheduledExecutor,
-            new Duration(
-                System.currentTimeMillis(),
-                segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
-            ),
-            new Duration(truncatedNow, segmentGranularity.increment(truncatedNow)),
-            new ThreadRenamingCallable<ScheduledExecutors.Signal>(
-                StringUtils.format(
-                    "%s-overseer-%d",
-                    schema.getDataSource(),
-                    config.getShardSpec().getPartitionNum()
-                )
-            )
-            {
-              @Override
-              public ScheduledExecutors.Signal doCall()
-              {
-                if (stopped) {
-                  log.info("Stopping merge-n-push overseer thread");
-                  return ScheduledExecutors.Signal.STOP;
-                }
-
-                mergeAndPush();
-
-                if (stopped) {
-                  log.info("Stopping merge-n-push overseer thread");
-                  return ScheduledExecutors.Signal.STOP;
-                } else {
-                  return ScheduledExecutors.Signal.REPEAT;
-                }
-              }
+    String threadName = StringUtils.format(
+        "%s-overseer-%d",
+        schema.getDataSource(),
+        config.getShardSpec().getPartitionNum()
+    );
+    ThreadRenamingCallable<ScheduledExecutors.Signal> threadRenamingCallable =
+        new ThreadRenamingCallable<ScheduledExecutors.Signal>(threadName)
+        {
+          @Override
+          public ScheduledExecutors.Signal doCall()
+          {
+            if (stopped) {
+              log.info("Stopping merge-n-push overseer thread");
+              return ScheduledExecutors.Signal.STOP;
             }
-        );
+
+            mergeAndPush();
+
+            if (stopped) {
+              log.info("Stopping merge-n-push overseer thread");
+              return ScheduledExecutors.Signal.STOP;
+            } else {
+              return ScheduledExecutors.Signal.REPEAT;
+            }
+          }
+        };
+    Duration initialDelay = new Duration(
+        System.currentTimeMillis(),
+        segmentGranularity.increment(truncatedNow).getMillis() + windowMillis
+    );
+    Duration rate = new Duration(truncatedNow, segmentGranularity.increment(truncatedNow));
+    ScheduledExecutors.scheduleAtFixedRate(scheduledExecutor, initialDelay, rate, threadRenamingCallable);
   }
 
   private void mergeAndPush()
@@ -857,7 +876,7 @@ public class RealtimePlumber implements Plumber
         );
         for (FireHydrant hydrant : sink) {
           cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
-          hydrant.getSegment().close();
+          hydrant.swapSegment(null);
         }
         synchronized (handoffCondition) {
           handoffCondition.notifyAll();
@@ -931,12 +950,13 @@ public class RealtimePlumber implements Plumber
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            indexSpec
+            indexSpec,
+            config.getSegmentWriteOutMediumFactory()
         );
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
-                indexToPersist.getSegment().getIdentifier(),
+                indexToPersist.getSegmentIdentifier(),
                 indexIO.loadIndex(persistedFile)
             )
         );

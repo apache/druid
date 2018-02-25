@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
  */
 class TestDimensionSelector implements DimensionSelector
 {
-  public final static TestDimensionSelector instance = new TestDimensionSelector();
+  public static final TestDimensionSelector instance = new TestDimensionSelector();
 
   private TestDimensionSelector()
   {
@@ -47,7 +47,7 @@ class TestDimensionSelector implements DimensionSelector
   @Override
   public IndexedInts getRow()
   {
-    return ArrayBasedIndexedInts.of(new int[]{2, 4, 6});
+    return new ArrayBasedIndexedInts(new int[]{2, 4, 6});
   }
 
   @Override
@@ -92,6 +92,19 @@ class TestDimensionSelector implements DimensionSelector
         return name.charAt(0) - 'a';
       }
     };
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return defaultGetObject();
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return Object.class;
   }
 
   @Override

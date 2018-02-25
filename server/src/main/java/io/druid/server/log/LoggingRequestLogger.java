@@ -103,4 +103,13 @@ public class LoggingRequestLogger implements RequestLogger
   {
     return setContextMDC;
   }
+
+  @Override
+  public String toString()
+  {
+    return "LoggingRequestLogger{" +
+           "setMDC=" + setMDC +
+           ", setContextMDC=" + setContextMDC +
+           '}';
+  }
 }

@@ -19,6 +19,7 @@
 package io.druid.data.input.orc;
 
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
@@ -90,7 +91,7 @@ public class DruidOrcInputFormatTest
 
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
     RecordReader reader = inputFormat.createRecordReader(split, context);
-    OrcHadoopInputRowParser parser = (OrcHadoopInputRowParser) config.getParser();
+    InputRowParser<OrcStruct> parser = (InputRowParser<OrcStruct>) config.getParser();
 
     reader.initialize(split, context);
 
@@ -98,7 +99,7 @@ public class DruidOrcInputFormatTest
 
     OrcStruct data = (OrcStruct) reader.getCurrentValue();
 
-    MapBasedInputRow row = (MapBasedInputRow) parser.parse(data);
+    MapBasedInputRow row = (MapBasedInputRow) parser.parseBatch(data).get(0);
 
     Assert.assertTrue(row.getEvent().keySet().size() == 4);
     Assert.assertEquals(DateTimes.of(timestamp), row.getTimestamp());

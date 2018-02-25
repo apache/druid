@@ -21,6 +21,7 @@ package io.druid.segment.realtime.appenderator;
 
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Set;
 
@@ -35,6 +36,6 @@ public interface TransactionalSegmentPublisher
    */
   boolean publishSegments(
       Set<DataSegment> segments,
-      Object commitMetadata
+      @Nullable Object commitMetadata
   ) throws IOException;
 }

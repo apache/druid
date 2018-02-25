@@ -25,6 +25,6 @@ import io.druid.timeline.DataSegment;
  */
 public interface DataSegmentChangeHandler
 {
-  public void addSegment(DataSegment segment, DataSegmentChangeCallback callback);
-  public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback);
+  void addSegment(DataSegment segment, DataSegmentChangeCallback callback);
+  void removeSegment(DataSegment segment, DataSegmentChangeCallback callback);
 }

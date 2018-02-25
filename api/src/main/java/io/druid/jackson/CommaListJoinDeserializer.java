@@ -32,7 +32,7 @@ import java.util.List;
  */
 public class CommaListJoinDeserializer extends StdScalarDeserializer<List<String>>
 {
-    protected CommaListJoinDeserializer()
+  protected CommaListJoinDeserializer()
   {
     super(List.class);
   }

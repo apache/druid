@@ -21,16 +21,64 @@ package io.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleWrappingDimensionSelector;
+import io.druid.segment.FloatWrappingDimensionSelector;
+import io.druid.segment.LongWrappingDimensionSelector;
 
 /**
-*/
+ * Should be the same as {@link io.druid.data.input.impl.DimensionSchema.ValueType}.
+ * TODO merge them when druid-api is merged back into the main repo
+ */
 public enum ValueType
 {
-  FLOAT,
-  DOUBLE,
-  LONG,
+  FLOAT {
+    @Override
+    public DimensionSelector makeNumericWrappingDimensionSelector(
+        ColumnValueSelector numericColumnValueSelector,
+        ExtractionFn extractionFn
+    )
+    {
+      return new FloatWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
+    }
+  },
+  DOUBLE {
+    @Override
+    public DimensionSelector makeNumericWrappingDimensionSelector(
+        ColumnValueSelector numericColumnValueSelector,
+        ExtractionFn extractionFn
+    )
+    {
+      return new DoubleWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
+    }
+  },
+  LONG {
+    @Override
+    public DimensionSelector makeNumericWrappingDimensionSelector(
+        ColumnValueSelector numericColumnValueSelector,
+        ExtractionFn extractionFn
+    )
+    {
+      return new LongWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
+    }
+  },
   STRING,
   COMPLEX;
+
+  public DimensionSelector makeNumericWrappingDimensionSelector(
+      ColumnValueSelector numericColumnValueSelector,
+      ExtractionFn extractionFn
+  )
+  {
+    throw new UnsupportedOperationException("Not a numeric value type: " + name());
+  }
+
+  public boolean isNumeric()
+  {
+    return isNumeric(this);
+  }
 
   @JsonCreator
   public static ValueType fromString(String name)

@@ -24,12 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.java.util.common.parsers.JSONPathParser;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.java.util.common.parsers.Parser;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -49,7 +50,7 @@ public class JSONParseSpec extends ParseSpec
   {
     super(timestampSpec, dimensionsSpec);
     this.objectMapper = new ObjectMapper();
-    this.flattenSpec = flattenSpec != null ? flattenSpec : new JSONPathSpec(true, null);
+    this.flattenSpec = flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT;
     this.featureSpec = (featureSpec == null) ? new HashMap<String, Boolean>() : featureSpec;
     for (Map.Entry<String, Boolean> entry : this.featureSpec.entrySet()) {
       Feature feature = Feature.valueOf(entry.getKey());
@@ -71,11 +72,7 @@ public class JSONParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new JSONPathParser(
-        convertFieldSpecs(flattenSpec.getFields()),
-        flattenSpec.isUseFieldDiscovery(),
-        objectMapper
-    );
+    return new JSONPathParser(flattenSpec, objectMapper);
   }
 
   @Override
@@ -102,29 +99,37 @@ public class JSONParseSpec extends ParseSpec
     return featureSpec;
   }
 
-  private List<JSONPathParser.FieldSpec> convertFieldSpecs(List<JSONPathFieldSpec> druidFieldSpecs)
+  @Override
+  public boolean equals(final Object o)
   {
-    List<JSONPathParser.FieldSpec> newSpecs = new ArrayList<>();
-    for (JSONPathFieldSpec druidSpec : druidFieldSpecs) {
-      JSONPathParser.FieldType type;
-      switch (druidSpec.getType()) {
-        case ROOT:
-          type = JSONPathParser.FieldType.ROOT;
-          break;
-        case PATH:
-          type = JSONPathParser.FieldType.PATH;
-          break;
-        default:
-          throw new IllegalArgumentException("Invalid type for field " + druidSpec.getName());
-      }
-
-      JSONPathParser.FieldSpec newSpec = new JSONPathParser.FieldSpec(
-          type,
-          druidSpec.getName(),
-          druidSpec.getExpr()
-      );
-      newSpecs.add(newSpec);
+    if (this == o) {
+      return true;
     }
-    return newSpecs;
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    final JSONParseSpec that = (JSONParseSpec) o;
+    return Objects.equals(flattenSpec, that.flattenSpec) &&
+           Objects.equals(featureSpec, that.featureSpec);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), flattenSpec, featureSpec);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JSONParseSpec{" +
+           "timestampSpec=" + getTimestampSpec() +
+           ", dimensionsSpec=" + getDimensionsSpec() +
+           ", flattenSpec=" + flattenSpec +
+           ", featureSpec=" + featureSpec +
+           '}';
   }
 }

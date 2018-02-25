@@ -270,7 +270,6 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Object value,
         Context context,
         boolean reportParseExceptions
     ) throws IOException, InterruptedException
@@ -352,7 +351,6 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Object value,
         Context context,
         boolean reportParseExceptions
     ) throws IOException, InterruptedException
@@ -470,7 +468,7 @@ public class DeterminePartitionsJob implements Jobby
     }
   }
 
-  private static abstract class DeterminePartitionsDimSelectionBaseReducer
+  private abstract static class DeterminePartitionsDimSelectionBaseReducer
       extends Reducer<BytesWritable, Text, BytesWritable, Text>
   {
     protected volatile HadoopDruidIndexerConfig config = null;

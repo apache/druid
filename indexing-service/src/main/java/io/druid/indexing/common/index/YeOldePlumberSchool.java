@@ -130,7 +130,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           return -1;
         }
 
-        final int numRows = sink.add(row);
+        final int numRows = sink.add(row, false);
 
         if (!sink.canAppendRow()) {
           persist(committerSupplier.get());
@@ -182,7 +182,14 @@ public class YeOldePlumberSchool implements PlumberSchool
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            indexMergerV9.mergeQueryableIndex(indexes, schema.getGranularitySpec().isRollup(), schema.getAggregators(), fileToUpload, config.getIndexSpec());
+            indexMergerV9.mergeQueryableIndex(
+                indexes,
+                schema.getGranularitySpec().isRollup(),
+                schema.getAggregators(),
+                fileToUpload,
+                config.getIndexSpec(),
+                config.getSegmentWriteOutMediumFactory()
+            );
           }
 
           // Map merged segment so we can extract dimensions
@@ -192,7 +199,10 @@ public class YeOldePlumberSchool implements PlumberSchool
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
                                                      .withBinaryVersion(SegmentUtils.getVersionFromDir(fileToUpload));
 
-          dataSegmentPusher.push(fileToUpload, segmentToUpload);
+          // This plumber is only used in batch ingestion situations where you do not have replica tasks pushing
+          // segments with the same identifier but potentially different contents. In case of conflict, favor the most
+          // recently pushed segment (replaceExisting == true).
+          dataSegmentPusher.push(fileToUpload, segmentToUpload, true);
 
           log.info(
               "Uploaded segment[%s]",
@@ -230,7 +240,8 @@ public class YeOldePlumberSchool implements PlumberSchool
             indexMergerV9.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
-                config.getIndexSpec()
+                config.getIndexSpec(),
+                config.getSegmentWriteOutMediumFactory()
             );
 
             indexToPersist.swapSegment(null);

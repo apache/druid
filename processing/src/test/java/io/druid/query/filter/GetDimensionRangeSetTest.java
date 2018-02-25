@@ -27,7 +27,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.segment.column.Column;
 import org.junit.Assert;
 import org.junit.Test;

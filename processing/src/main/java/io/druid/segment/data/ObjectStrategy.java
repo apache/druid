@@ -20,14 +20,17 @@
 package io.druid.segment.data;
 
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.segment.writeout.WriteOutBytes;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 @ExtensionPoint
 public interface ObjectStrategy<T> extends Comparator<T>
 {
-  public Class<? extends T> getClazz();
+  Class<? extends T> getClazz();
 
   /**
    * Convert values from their underlying byte representation.
@@ -42,6 +45,30 @@ public interface ObjectStrategy<T> extends Comparator<T>
    * @param numBytes number of bytes used to store the value, starting at buffer.position()
    * @return an object created from the given byte buffer representation
    */
-  public T fromByteBuffer(ByteBuffer buffer, int numBytes);
-  public byte[] toBytes(T val);
+  @Nullable
+  T fromByteBuffer(ByteBuffer buffer, int numBytes);
+
+  @Nullable
+  byte[] toBytes(@Nullable T val);
+
+  /**
+   * Reads 4-bytes numBytes from the given buffer, and then delegates to {@link #fromByteBuffer(ByteBuffer, int)}.
+   */
+  default T fromByteBufferWithSize(ByteBuffer buffer)
+  {
+    int size = buffer.getInt();
+    ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
+    bufferToUse.limit(bufferToUse.position() + size);
+    buffer.position(bufferToUse.limit());
+
+    return fromByteBuffer(bufferToUse, size);
+  }
+
+  default void writeTo(T val, WriteOutBytes out) throws IOException
+  {
+    byte[] bytes = toBytes(val);
+    if (bytes != null) {
+      out.write(toBytes(val));
+    }
+  }
 }

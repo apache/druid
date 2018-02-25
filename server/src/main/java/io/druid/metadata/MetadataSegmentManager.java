@@ -19,9 +19,10 @@
 
 package io.druid.metadata;
 
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,19 +35,20 @@ public interface MetadataSegmentManager
 
   void stop();
 
-  boolean enableDatasource(final String ds);
+  boolean enableDatasource(String ds);
 
-  boolean enableSegment(final String segmentId);
+  boolean enableSegment(String segmentId);
 
-  boolean removeDatasource(final String ds);
+  boolean removeDatasource(String ds);
 
-  boolean removeSegment(String ds, final String segmentID);
+  boolean removeSegment(String ds, String segmentID);
 
   boolean isStarted();
 
-  DruidDataSource getInventoryValue(String key);
+  @Nullable
+  ImmutableDruidDataSource getInventoryValue(String key);
 
-  Collection<DruidDataSource> getInventory();
+  Collection<ImmutableDruidDataSource> getInventory();
 
   Collection<String> getAllDatasourceNames();
 
@@ -54,10 +56,10 @@ public interface MetadataSegmentManager
    * Returns top N unused segment intervals in given interval when ordered by segment start time, end time.
    */
   List<Interval> getUnusedSegmentIntervals(
-      final String dataSource,
-      final Interval interval,
-      final int limit
+      String dataSource,
+      Interval interval,
+      int limit
   );
 
-  public void poll();
+  void poll();
 }

@@ -32,6 +32,8 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -110,20 +112,23 @@ public class DefaultLimitSpec implements LimitSpec
     return limit;
   }
 
+  public boolean isLimited()
+  {
+    return limit < Integer.MAX_VALUE;
+  }
+
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggs,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      Granularity granularity,
+      boolean sortByDimsFirst
   )
   {
     // Can avoid re-sorting if the natural ordering is good enough.
 
-    boolean sortingNeeded = false;
-
-    if (dimensions.size() < columns.size()) {
-      sortingNeeded = true;
-    }
+    boolean sortingNeeded = dimensions.size() < columns.size();
 
     final Set<String> aggAndPostAggNames = Sets.newHashSet();
     for (AggregatorFactory agg : aggs) {
@@ -163,16 +168,21 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     if (!sortingNeeded) {
-      return limit == Integer.MAX_VALUE ? Functions.<Sequence<Row>>identity() : new LimitingFn(limit);
+      // If granularity is ALL, sortByDimsFirst doesn't change the sorting order.
+      sortingNeeded = !granularity.equals(Granularities.ALL) && sortByDimsFirst;
+    }
+
+    if (!sortingNeeded) {
+      return isLimited() ? new LimitingFn(limit) : Functions.identity();
     }
 
     // Materialize the Comparator first for fast-fail error checking.
-    final Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs);
+    final Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs, sortByDimsFirst);
 
-    if (limit == Integer.MAX_VALUE) {
-      return new SortingFn(ordering);
-    } else {
+    if (isLimited()) {
       return new TopNFunction(ordering, limit);
+    } else {
+      return new SortingFn(ordering);
     }
   }
 
@@ -194,10 +204,13 @@ public class DefaultLimitSpec implements LimitSpec
   }
 
   private Ordering<Row> makeComparator(
-      List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggs,
+      List<PostAggregator> postAggs,
+      boolean sortByDimsFirst
   )
   {
-    Ordering<Row> ordering = new Ordering<Row>()
+    Ordering<Row> timeOrdering = new Ordering<Row>()
     {
       @Override
       public int compare(Row left, Row right)
@@ -221,6 +234,7 @@ public class DefaultLimitSpec implements LimitSpec
       postAggregatorsMap.put(postAgg.getName(), postAgg);
     }
 
+    Ordering<Row> ordering = null;
     for (OrderByColumnSpec columnSpec : columns) {
       String columnName = columnSpec.getDimension();
       Ordering<Row> nextOrdering = null;
@@ -241,7 +255,13 @@ public class DefaultLimitSpec implements LimitSpec
         nextOrdering = nextOrdering.reverse();
       }
 
-      ordering = ordering.compound(nextOrdering);
+      ordering = ordering == null ? nextOrdering : ordering.compound(nextOrdering);
+    }
+
+    if (ordering != null) {
+      ordering = sortByDimsFirst ? ordering.compound(timeOrdering) : timeOrdering.compound(ordering);
+    } else {
+      ordering = timeOrdering;
     }
 
     return ordering;
@@ -276,11 +296,9 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     @Override
-    public Sequence<Row> apply(
-        Sequence<Row> input
-    )
+    public Sequence<Row> apply(Sequence<Row> input)
     {
-      return Sequences.limit(input, limit);
+      return input.limit(limit);
     }
   }
 

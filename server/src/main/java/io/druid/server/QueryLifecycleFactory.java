@@ -20,14 +20,14 @@
 package io.druid.server;
 
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.guice.LazySingleton;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizerMapper;
 
 @LazySingleton
 public class QueryLifecycleFactory
@@ -37,8 +37,7 @@ public class QueryLifecycleFactory
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
-  private final ServerConfig serverConfig;
-  private final AuthConfig authConfig;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public QueryLifecycleFactory(
@@ -47,8 +46,8 @@ public class QueryLifecycleFactory
       final GenericQueryMetricsFactory queryMetricsFactory,
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
-      final ServerConfig serverConfig,
-      final AuthConfig authConfig
+      final AuthConfig authConfig,
+      final AuthorizerMapper authorizerMapper
   )
   {
     this.warehouse = warehouse;
@@ -56,8 +55,7 @@ public class QueryLifecycleFactory
     this.queryMetricsFactory = queryMetricsFactory;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
-    this.serverConfig = serverConfig;
-    this.authConfig = authConfig;
+    this.authorizerMapper = authorizerMapper;
   }
 
   public QueryLifecycle factorize()
@@ -68,8 +66,7 @@ public class QueryLifecycleFactory
         queryMetricsFactory,
         emitter,
         requestLogger,
-        serverConfig,
-        authConfig,
+        authorizerMapper,
         System.currentTimeMillis(),
         System.nanoTime()
     );

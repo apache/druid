@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,7 +35,7 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryTest
 {
-  private static final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
@@ -58,13 +57,8 @@ public class TimeseriesQueryTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.dayGran)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .aggregators(
-            Arrays.asList(
-                QueryRunnerTestHelper.rowsCount,
-                QueryRunnerTestHelper.indexDoubleSum
-            )
-        )
-        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .aggregators(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
+        .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .descending(descending)
         .build();
 

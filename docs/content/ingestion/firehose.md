@@ -79,7 +79,7 @@ A sample ingest firehose spec is shown below -
 |interval|A String representing ISO-8601 Interval. This defines the time range to fetch the data over.|yes|
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
-|filter| See [Filters](../querying/filters.html)|yes|
+|filter| See [Filters](../querying/filters.html)|no|
 
 #### CombiningFirehose
 

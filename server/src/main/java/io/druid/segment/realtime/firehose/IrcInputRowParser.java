@@ -22,14 +22,15 @@ package io.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.ImmutableList;
 import com.ircclouds.irc.api.domain.messages.ChannelPrivMsg;
-
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.java.util.common.Pair;
-
 import org.joda.time.DateTime;
+
+import java.util.List;
 
 /**
  * <p><b>Example Usage</b></p>
@@ -86,9 +87,9 @@ public class IrcInputRowParser implements InputRowParser<Pair<DateTime, ChannelP
   }
 
   @Override
-  public InputRow parse(Pair<DateTime, ChannelPrivMsg> msg)
+  public List<InputRow> parseBatch(Pair<DateTime, ChannelPrivMsg> msg)
   {
-    return decoder.decodeMessage(msg.lhs, msg.rhs.getChannelName(), msg.rhs.getText());
+    return ImmutableList.of(decoder.decodeMessage(msg.lhs, msg.rhs.getChannelName(), msg.rhs.getText()));
   }
 
   @JsonProperty

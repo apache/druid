@@ -29,7 +29,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.11.0-SNAPSHOT</version>
+        <version>0.13.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -79,8 +79,6 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-avro-extensions</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-caffeine-cache</argument>
-                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-datasketches</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-hdfs-storage</argument>
@@ -112,6 +110,8 @@
                                 <argument>io.druid.extensions:druid-examples</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:simple-client-sslcontext</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-basic-security</argument>
                                 <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>
@@ -224,6 +224,8 @@
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
+                                        <argument>io.druid.extensions.contrib:druid-opentsdb-emitter</argument>
+                                        <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-orc-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-parquet-extensions</argument>
@@ -231,8 +233,6 @@
                                         <argument>io.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-redis-cache</argument>
-                                        <argument>-c</argument>
-                                        <argument>io.druid.extensions.contrib:scan-query</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:sqlserver-metadata-storage</argument>
                                         <argument>-c</argument>

@@ -23,9 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.segment.ColumnSelectorFactory;
@@ -63,8 +63,8 @@ public class TimestampGroupByAggregationTest
     final List<Object[]> constructors = Lists.newArrayList();
 
     final List<List<Object>> partialConstructors = ImmutableList.<List<Object>>of(
-        ImmutableList.<Object>of("timeMin", "tmin", "time_min", TimestampMinAggregatorFactory.class, DateTime.parse("2011-01-12T01:00:00.000Z")),
-        ImmutableList.<Object>of("timeMax", "tmax", "time_max", TimestampMaxAggregatorFactory.class, DateTime.parse("2011-01-31T01:00:00.000Z"))
+        ImmutableList.<Object>of("timeMin", "tmin", "time_min", DateTimes.of("2011-01-12T01:00:00.000Z")),
+        ImmutableList.<Object>of("timeMax", "tmax", "time_max", DateTimes.of("2011-01-31T01:00:00.000Z"))
     );
 
     for (final List<Object> partialConstructor : partialConstructors) {
@@ -81,7 +81,6 @@ public class TimestampGroupByAggregationTest
   private final String aggType;
   private final String aggField;
   private final String groupByField;
-  private final Class<? extends TimestampAggregatorFactory> aggClass;
   private final DateTime expected;
   private final GroupByQueryConfig config;
 
@@ -89,7 +88,6 @@ public class TimestampGroupByAggregationTest
       String aggType,
       String aggField,
       String groupByField,
-      Class<? extends TimestampAggregatorFactory> aggClass,
       DateTime expected,
       GroupByQueryConfig config
   )
@@ -97,7 +95,6 @@ public class TimestampGroupByAggregationTest
     this.aggType = aggType;
     this.aggField = aggField;
     this.groupByField = groupByField;
-    this.aggClass = aggClass;
     this.expected = expected;
     this.config = config;
   }
@@ -111,9 +108,9 @@ public class TimestampGroupByAggregationTest
         temporaryFolder
     );
 
-    selector = new TestObjectColumnSelector(values);
+    selector = new TestObjectColumnSelector<>(values);
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(selectorFactory.makeObjectColumnSelector("test")).andReturn(selector);
+    EasyMock.expect(selectorFactory.makeColumnValueSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);
 
   }
@@ -180,7 +177,7 @@ public class TimestampGroupByAggregationTest
         groupBy
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(36, results.size());
     Assert.assertEquals(expected, ((MapBasedRow) results.get(0)).getEvent().get(groupByField));
   }

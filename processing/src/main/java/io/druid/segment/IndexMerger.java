@@ -19,15 +19,16 @@
 
 package io.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import com.google.inject.ImplementedBy;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
@@ -37,9 +38,9 @@ import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
@@ -52,10 +53,10 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -157,7 +158,12 @@ public interface IndexMerger
     return Lists.newArrayList(retVal);
   }
 
-  File persist(IncrementalIndex index, File outDir, IndexSpec indexSpec) throws IOException;
+  File persist(
+      IncrementalIndex index,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
 
   /**
    * This is *not* thread-safe and havok will ensue if this is called and writes are still occurring
@@ -171,22 +177,21 @@ public interface IndexMerger
    *
    * @throws IOException if an IO error occurs persisting the index
    */
-  File persist(IncrementalIndex index, Interval dataInterval, File outDir, IndexSpec indexSpec) throws IOException;
+  File persist(
+      IncrementalIndex index,
+      Interval dataInterval,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
 
   File persist(
       IncrementalIndex index,
       Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
-      ProgressIndicator progress
-  ) throws IOException;
-
-  File mergeQueryableIndex(
-      List<QueryableIndex> indexes,
-      boolean rollup,
-      AggregatorFactory[] metricAggs,
-      File outDir,
-      IndexSpec indexSpec
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   File mergeQueryableIndex(
@@ -195,41 +200,45 @@ public interface IndexMerger
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      ProgressIndicator progress
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
+  File mergeQueryableIndex(
+      List<QueryableIndex> indexes,
+      boolean rollup,
+      AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
+
+  @VisibleForTesting
   File merge(
       List<IndexableAdapter> indexes,
       boolean rollup,
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec
-  ) throws IOException;
-
-  File merge(
-      List<IndexableAdapter> indexes,
-      boolean rollup,
-      AggregatorFactory[] metricAggs,
-      File outDir,
-      IndexSpec indexSpec,
-      ProgressIndicator progress
   ) throws IOException;
 
   // Faster than IndexMaker
   File convert(File inDir, File outDir, IndexSpec indexSpec) throws IOException;
 
-  File convert(File inDir, File outDir, IndexSpec indexSpec, ProgressIndicator progress)
-      throws IOException;
-
-  File append(List<IndexableAdapter> indexes, AggregatorFactory[] aggregators, File outDir, IndexSpec indexSpec)
-      throws IOException;
+  File convert(
+      File inDir,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
 
   File append(
       List<IndexableAdapter> indexes,
       AggregatorFactory[] aggregators,
       File outDir,
       IndexSpec indexSpec,
-      ProgressIndicator progress
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   interface IndexSeeker
@@ -301,7 +310,6 @@ public interface IndexMerger
     private final Iterable<Rowboat> index;
     private final List<String> convertedDims;
     private final int indexNumber;
-    private final List<ColumnCapabilitiesImpl> dimCapabilities;
     private final List<DimensionMerger> mergers;
 
 
@@ -309,20 +317,13 @@ public interface IndexMerger
         Iterable<Rowboat> index,
         List<String> convertedDims,
         int indexNumber,
-        final List<ColumnCapabilitiesImpl> dimCapabilities,
         final List<DimensionMerger> mergers
     )
     {
       this.index = index;
       this.convertedDims = convertedDims;
       this.indexNumber = indexNumber;
-      this.dimCapabilities = dimCapabilities;
       this.mergers = mergers;
-    }
-
-    public Iterable<Rowboat> getIndex()
-    {
-      return index;
     }
 
     @Override
@@ -411,7 +412,8 @@ public interface IndexMerger
           Int2ObjectMap.Entry<IntSortedSet> entry = entryIterator.next();
 
           for (IntIterator setIterator = entry.getValue().iterator(); setIterator.hasNext(); /* NOP */) {
-            retVal.addRow(entry.getIntKey(), setIterator.nextInt());
+            int rowNum = setIterator.nextInt();
+            retVal.addRow(entry.getIntKey(), rowNum);
           }
         }
       }
@@ -430,16 +432,10 @@ public interface IndexMerger
 
     DictionaryMergeIterator(Indexed<String>[] dimValueLookups, boolean useDirect)
     {
+      final Ordering<String> stringOrdering = Comparators.naturalNullsFirst();
       pQueue = new PriorityQueue<>(
           dimValueLookups.length,
-          new Comparator<Pair<Integer, PeekingIterator<String>>>()
-          {
-            @Override
-            public int compare(Pair<Integer, PeekingIterator<String>> lhs, Pair<Integer, PeekingIterator<String>> rhs)
-            {
-              return lhs.rhs.peek().compareTo(rhs.rhs.peek());
-            }
-          }
+          (lhs, rhs) -> stringOrdering.compare(lhs.rhs.peek(), rhs.rhs.peek())
       );
       conversions = new IntBuffer[dimValueLookups.length];
       for (int i = 0; i < conversions.length; i++) {
@@ -448,7 +444,7 @@ public interface IndexMerger
         }
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
-          int allocationSize = indexed.size() * Ints.BYTES;
+          int allocationSize = indexed.size() * Integer.BYTES;
           log.info("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
           final ByteBuffer conversionDirectBuffer = ByteBuffer.allocateDirect(allocationSize);
           conversions[i] = conversionDirectBuffer.asIntBuffer();
@@ -460,14 +456,7 @@ public interface IndexMerger
         final PeekingIterator<String> iter = Iterators.peekingIterator(
             Iterators.transform(
                 indexed.iterator(),
-                new Function<String, String>()
-                {
-                  @Override
-                  public String apply(@Nullable String input)
-                  {
-                    return Strings.nullToEmpty(input);
-                  }
-                }
+                NullHandling::nullToEmptyIfNeeded
             )
         );
         if (iter.hasNext()) {
@@ -491,7 +480,7 @@ public interface IndexMerger
       }
       final String value = writeTranslate(smallest, counter);
 
-      while (!pQueue.isEmpty() && value.equals(pQueue.peek().rhs.peek())) {
+      while (!pQueue.isEmpty() && Objects.equals(value, pQueue.peek().rhs.peek())) {
         writeTranslate(pQueue.remove(), counter);
       }
       counter++;

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LockListAction;
@@ -90,6 +91,7 @@ public class SameIntervalMergeTaskTest
         true,
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -124,10 +126,12 @@ public class SameIntervalMergeTaskTest
           Assert.assertEquals(mergeTask.getInterval(), ((LockTryAcquireAction) taskAction).getInterval());
           isRedayCountDown.countDown();
           taskLock = new TaskLock(
+              TaskLockType.EXCLUSIVE,
               mergeTask.getGroupId(),
               mergeTask.getDataSource(),
               mergeTask.getInterval(),
-              version
+              version,
+              Tasks.DEFAULT_TASK_PRIORITY
           );
           return (RetType) taskLock;
         }
@@ -140,101 +144,121 @@ public class SameIntervalMergeTaskTest
 
     mergeTask.run(
         new TaskToolbox(
-            null, new TaskActionClient()
-        {
-          @Override
-          public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
-          {
-            if (taskAction instanceof LockListAction) {
-              Assert.assertNotNull("taskLock should be acquired before list", taskLock);
-              return (RetType) Arrays.asList(taskLock);
-            }
-            if (taskAction instanceof SegmentListUsedAction) {
-              List<DataSegment> segments = ImmutableList.of(
-                  DataSegment.builder()
-                             .dataSource(mergeTask.getDataSource())
-                             .interval(Intervals.of("2010-01-01/PT1H"))
-                             .version("oldVersion")
-                             .shardSpec(new LinearShardSpec(0))
-                             .build(),
-                  DataSegment.builder()
-                             .dataSource(mergeTask.getDataSource())
-                             .interval(Intervals.of("2010-01-01/PT1H"))
-                             .version("oldVersion")
-                             .shardSpec(new LinearShardSpec(0))
-                             .build(),
-                  DataSegment.builder()
-                             .dataSource(mergeTask.getDataSource())
-                             .interval(Intervals.of("2010-01-01/PT2H"))
-                             .version("oldVersion")
-                             .shardSpec(new LinearShardSpec(0))
-                             .build()
-              );
-              return (RetType) segments;
-            }
-            if (taskAction instanceof SegmentInsertAction) {
-              publishCountDown.countDown();
-              return null;
-            }
+            null,
+            new TaskActionClient()
+            {
+              @Override
+              public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+              {
+                if (taskAction instanceof LockListAction) {
+                  Assert.assertNotNull("taskLock should be acquired before list", taskLock);
+                  return (RetType) Arrays.asList(taskLock);
+                }
+                if (taskAction instanceof SegmentListUsedAction) {
+                  List<DataSegment> segments = ImmutableList.of(
+                      DataSegment.builder()
+                                 .dataSource(mergeTask.getDataSource())
+                                 .interval(Intervals.of("2010-01-01/PT1H"))
+                                 .version("oldVersion")
+                                 .shardSpec(new LinearShardSpec(0))
+                                 .build(),
+                      DataSegment.builder()
+                                 .dataSource(mergeTask.getDataSource())
+                                 .interval(Intervals.of("2010-01-01/PT1H"))
+                                 .version("oldVersion")
+                                 .shardSpec(new LinearShardSpec(0))
+                                 .build(),
+                      DataSegment.builder()
+                                 .dataSource(mergeTask.getDataSource())
+                                 .interval(Intervals.of("2010-01-01/PT2H"))
+                                 .version("oldVersion")
+                                 .shardSpec(new LinearShardSpec(0))
+                                 .build()
+                  );
+                  return (RetType) segments;
+                }
+                if (taskAction instanceof SegmentInsertAction) {
+                  publishCountDown.countDown();
+                  return null;
+                }
 
-            return null;
-          }
-        }, new NoopServiceEmitter(), new DataSegmentPusher()
-        {
-          @Deprecated
-          @Override
-          public String getPathForHadoop(String dataSource)
-          {
-            return getPathForHadoop();
-          }
+                return null;
+              }
+            },
+            new NoopServiceEmitter(), new DataSegmentPusher()
+            {
+              @Deprecated
+              @Override
+              public String getPathForHadoop(String dataSource)
+              {
+                return getPathForHadoop();
+              }
 
-          @Override
-          public String getPathForHadoop()
-          {
-            return null;
-          }
+              @Override
+              public String getPathForHadoop()
+              {
+                return null;
+              }
 
-          @Override
-          public DataSegment push(File file, DataSegment segment) throws IOException
-          {
-            // the merged segment is pushed to storage
-            segments.add(segment);
-            return segment;
-          }
-          @Override
-          public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
-          {
-            return null;
-          }
+              @Override
+              public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+              {
+                // the merged segment is pushed to storage
+                segments.add(segment);
+                return segment;
+              }
+              @Override
+              public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
+              {
+                return null;
+              }
 
-        }, null, null, null, null, null, null, null, null, null, new SegmentLoader()
-        {
-          @Override
-          public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
-          {
-            return false;
-          }
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            new SegmentLoader()
+            {
+              @Override
+              public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+              {
+                return false;
+              }
 
-          @Override
-          public Segment getSegment(DataSegment segment) throws SegmentLoadingException
-          {
-            return null;
-          }
+              @Override
+              public Segment getSegment(DataSegment segment) throws SegmentLoadingException
+              {
+                return null;
+              }
 
-          @Override
-          public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
-          {
-            // dummy file to represent the downloaded segment's dir
-            return new File("" + segment.getShardSpec().getPartitionNum());
-          }
+              @Override
+              public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+              {
+                // dummy file to represent the downloaded segment's dir
+                return new File("" + segment.getShardSpec().getPartitionNum());
+              }
 
-          @Override
-          public void cleanup(DataSegment segment) throws SegmentLoadingException
-          {
-          }
-        }, jsonMapper, temporaryFolder.newFolder(),
-            indexIO, null, null, EasyMock.createMock(IndexMergerV9.class),
-            null, null, null, null
+              @Override
+              public void cleanup(DataSegment segment) throws SegmentLoadingException
+              {
+              }
+            },
+            jsonMapper,
+            temporaryFolder.newFolder(),
+            indexIO,
+            null,
+            null,
+            EasyMock.createMock(IndexMergerV9.class),
+            null,
+            null,
+            null,
+            null
         )
     );
 

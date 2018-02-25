@@ -105,22 +105,12 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
   @Override
   public Iterable<Map.Entry<String, String>> fetchAll()
   {
-    return inReadOnlyTransaction(new TransactionCallback<List<Map.Entry<String, String>>>()
-                                 {
-                                   @Override
-                                   public List<Map.Entry<String, String>> inTransaction(
-                                       Handle handle,
-                                       TransactionStatus status
-                                   ) throws Exception
-                                   {
-                                     return handle.createQuery(fetchAllQuery)
-                                                  .setFetchSize(streamingFetchSize)
-                                                  .map(new KeyValueResultSetMapper(keyColumn, valueColumn))
-                                                  .list();
-                                   }
-
-                                 }
-    );
+    return inReadOnlyTransaction((handle, status) -> {
+      return handle.createQuery(fetchAllQuery)
+                   .setFetchSize(streamingFetchSize)
+                   .map(new KeyValueResultSetMapper(keyColumn, valueColumn))
+                   .list();
+    });
   }
 
   @Override

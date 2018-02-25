@@ -19,12 +19,11 @@
 
 package io.druid.server.coordinator;
 
+import io.druid.java.util.common.config.Config;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 import org.skife.config.ConfigurationObjectFactory;
-
-import io.druid.java.util.common.config.Config;
 
 import java.util.Properties;
 
@@ -46,6 +45,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertFalse(config.isMergeSegments());
     Assert.assertFalse(config.isConvertSegments());
     Assert.assertFalse(config.isKillSegments());
+    Assert.assertFalse(config.isKillPendingSegments());
     Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
     Assert.assertEquals(-1000, config.getCoordinatorKillDurationToRetain().getMillis());
     Assert.assertEquals(0, config.getCoordinatorKillMaxSegments());
@@ -64,6 +64,7 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.kill.period", "PT1s");
     props.setProperty("druid.coordinator.kill.durationToRetain", "PT1s");
     props.setProperty("druid.coordinator.kill.maxSegments", "10000");
+    props.setProperty("druid.coordinator.kill.pendingSegments.on", "true");
     props.setProperty("druid.coordinator.load.timeout", "PT1s");
     props.setProperty("druid.coordinator.console.static", "test");
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
@@ -77,6 +78,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertTrue(config.isMergeSegments());
     Assert.assertTrue(config.isConvertSegments());
     Assert.assertTrue(config.isKillSegments());
+    Assert.assertTrue(config.isKillPendingSegments());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPeriod());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());

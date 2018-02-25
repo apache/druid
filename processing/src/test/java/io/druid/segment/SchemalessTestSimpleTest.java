@@ -26,6 +26,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -42,8 +43,8 @@ import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.search.SearchResultValue;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.SearchHit;
+import io.druid.query.search.SearchQuery;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -60,6 +61,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -73,33 +75,21 @@ public class SchemalessTestSimpleTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
-    final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
-    final QueryableIndex mergedIncrementalIndex = SchemalessIndexTest.getMergedIncrementalIndex();
-
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IncrementalIndexSegment(incrementalIndex, null)
-            },
-            {
-                new QueryableIndexSegment(
-                    null, persistedIncrementalIndex
-                )
-            },
-            {
-                new QueryableIndexSegment(
-                    null, mergedIncrementalIndex
-                )
-            }
-        }
-    );
+    List<Object[]> argumentArrays = new ArrayList<>();
+    for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
+      SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
+      final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
+      final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+      final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
+      argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, persistedIncrementalIndex)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedIncrementalIndex)});
+    }
+    return argumentArrays;
   }
 
   final String dataSource = "testing";
   final Granularity allGran = Granularities.ALL;
-  final String dimensionValue = "dimension";
-  final String valueValue = "value";
   final String marketDimension = "market";
   final String qualityDimension = "quality";
   final String placementDimension = "placement";
@@ -148,7 +138,7 @@ public class SchemalessTestSimpleTest
                                           )
                                       )
                                   )
-                                  .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+                                  .postAggregators(addRowsIndexConstant)
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
@@ -174,6 +164,7 @@ public class SchemalessTestSimpleTest
 
   //  @Test TODO: Handling of null values is inconsistent right now, need to make it all consistent and re-enable test
   // TODO: Complain to Eric when you see this.  It shouldn't be like this...
+  @SuppressWarnings("unused")
   public void testFullOnTopN()
   {
     TopNQuery query = new TopNQueryBuilder()

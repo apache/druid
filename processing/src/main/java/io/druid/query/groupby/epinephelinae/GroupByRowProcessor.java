@@ -66,7 +66,8 @@ public class GroupByRowProcessor
       final GroupByQueryConfig config,
       final GroupByQueryResource resource,
       final ObjectMapper spillMapper,
-      final String processingTmpDir
+      final String processingTmpDir,
+      final int mergeBufferSize
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -157,7 +158,8 @@ public class GroupByRowProcessor
                   },
                   temporaryStorage,
                   spillMapper,
-                  aggregatorFactories
+                  aggregatorFactories,
+                  mergeBufferSize
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;

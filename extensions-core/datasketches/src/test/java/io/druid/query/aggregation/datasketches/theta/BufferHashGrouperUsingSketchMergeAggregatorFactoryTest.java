@@ -54,7 +54,8 @@ public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
         },
         Integer.MAX_VALUE,
         0.75f,
-        initialBuckets
+        initialBuckets,
+        true
     );
     grouper.init();
     return grouper;
@@ -68,7 +69,7 @@ public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
     try {
       final int expectedMaxSize = 5;
 
-      SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().build(16));
+      SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
       UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
       updateSketch.update(1);
 

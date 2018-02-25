@@ -21,30 +21,28 @@ package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 public class FloatFirstAggregator implements Aggregator
 {
 
-  private final FloatColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
-  private final String name;
+  private final BaseFloatColumnValueSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
 
   protected long firstTime;
   protected float firstValue;
 
   public FloatFirstAggregator(
-      String name,
-      LongColumnSelector timeSelector,
-      FloatColumnSelector valueSelector
+      BaseLongColumnValueSelector timeSelector,
+      BaseFloatColumnValueSelector valueSelector
   )
   {
-    this.name = name;
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 
-    reset();
+    firstTime = Long.MAX_VALUE;
+    firstValue = 0;
   }
 
   @Override
@@ -55,13 +53,6 @@ public class FloatFirstAggregator implements Aggregator
       firstTime = time;
       firstValue = valueSelector.getFloat();
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    firstTime = Long.MAX_VALUE;
-    firstValue = 0;
   }
 
   @Override

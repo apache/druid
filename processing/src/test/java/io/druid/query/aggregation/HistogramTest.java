@@ -86,7 +86,7 @@ public class HistogramTest
     Double[] visualBreaks = {-1.0, -0.5, 0.0, 0.5, 1.0};
     Double[] visualCounts = {123., 4., 56., 7.};
 
-    ObjectMapper objectMapper = TestHelper.getJsonMapper();
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     String json = objectMapper.writeValueAsString(h.asVisual());
 
     Map<String, Object> expectedObj = Maps.newLinkedHashMap();

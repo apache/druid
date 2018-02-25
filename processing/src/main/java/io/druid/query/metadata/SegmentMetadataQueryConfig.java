@@ -57,11 +57,6 @@ public class SegmentMetadataQueryConfig
     return defaultHistory;
   }
 
-  public void setDefaultHistory(String period)
-  {
-    this.defaultHistory = ISO_FORMATTER.parsePeriod(period);
-  }
-
   public EnumSet<SegmentMetadataQuery.AnalysisType> getDefaultAnalysisTypes()
   {
     return defaultAnalysisTypes;

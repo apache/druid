@@ -21,9 +21,6 @@ package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -158,7 +155,7 @@ public class Histogram
   public byte[] toBytes()
   {
     ByteBuffer buf = ByteBuffer.allocate(
-        Ints.BYTES + Floats.BYTES * breaks.length + Longs.BYTES * bins.length + Floats.BYTES * 2
+        Integer.BYTES + Float.BYTES * breaks.length + Long.BYTES * bins.length + Float.BYTES * 2
     );
 
     buf.putInt(breaks.length);

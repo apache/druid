@@ -23,16 +23,19 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Ordering;
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-import io.druid.query.search.search.SearchQuery;
+import io.druid.query.search.SearchQuery;
+import io.druid.query.scan.ScanQuery;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.topn.TopNQuery;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -46,6 +49,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = Query.SEARCH, value = SearchQuery.class),
     @JsonSubTypes.Type(name = Query.TIME_BOUNDARY, value = TimeBoundaryQuery.class),
     @JsonSubTypes.Type(name = Query.GROUP_BY, value = GroupByQuery.class),
+    @JsonSubTypes.Type(name = Query.SCAN, value = ScanQuery.class),
     @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
@@ -58,6 +62,7 @@ public interface Query<T>
   String SEARCH = "search";
   String TIME_BOUNDARY = "timeBoundary";
   String GROUP_BY = "groupBy";
+  String SCAN = "scan";
   String SEGMENT_METADATA = "segmentMetadata";
   String SELECT = "select";
   String TOPN = "topN";
@@ -71,11 +76,17 @@ public interface Query<T>
 
   String getType();
 
-  QueryRunner<T> getRunner(QuerySegmentWalker walker, Map<String, Object> context);
+  QueryRunner<T> getRunner(QuerySegmentWalker walker);
 
   List<Interval> getIntervals();
 
   Duration getDuration();
+
+  // currently unused, but helping enforce the idea that all queries have a Granularity
+  @SuppressWarnings("unused")
+  Granularity getGranularity();
+
+  DateTimeZone getTimezone();
 
   Map<String, Object> getContext();
 

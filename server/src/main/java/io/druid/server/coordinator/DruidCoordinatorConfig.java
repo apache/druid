@@ -57,6 +57,12 @@ public abstract class DruidCoordinatorConfig
     return false;
   }
 
+  @Config("druid.coordinator.kill.pendingSegments.on")
+  public boolean isKillPendingSegments()
+  {
+    return false;
+  }
+
   @Config("druid.coordinator.kill.period")
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();
@@ -85,5 +91,29 @@ public abstract class DruidCoordinatorConfig
   public Duration getLoadQueuePeonRepeatDelay()
   {
     return Duration.millis(50);
+  }
+
+  @Config("druid.coordinator.loadqueuepeon.type")
+  public String getLoadQueuePeonType()
+  {
+    return "curator";
+  }
+
+  @Config("druid.coordinator.loadqueuepeon.http.repeatDelay")
+  public Duration getHttpLoadQueuePeonRepeatDelay()
+  {
+    return Duration.millis(60000);
+  }
+
+  @Config("druid.coordinator.loadqueuepeon.http.hostTimeout")
+  public Duration getHttpLoadQueuePeonHostTimeout()
+  {
+    return Duration.millis(300000);
+  }
+
+  @Config("druid.coordinator.loadqueuepeon.http.batchSize")
+  public int getHttpLoadQueuePeonBatchSize()
+  {
+    return 1;
   }
 }

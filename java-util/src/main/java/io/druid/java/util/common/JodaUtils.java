@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -29,7 +28,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.TreeSet;
+import java.util.SortedSet;
 
 /**
  */
@@ -43,9 +42,15 @@ public class JodaUtils
   {
     ArrayList<Interval> retVal = Lists.newArrayList();
 
-    TreeSet<Interval> sortedIntervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
-    for (Interval interval : intervals) {
-      sortedIntervals.add(interval);
+    final SortedSet<Interval> sortedIntervals;
+
+    if (intervals instanceof SortedSet) {
+      sortedIntervals = (SortedSet<Interval>) intervals;
+    } else {
+      sortedIntervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+      for (Interval interval : intervals) {
+        sortedIntervals.add(interval);
+      }
     }
 
     if (sortedIntervals.isEmpty()) {
@@ -97,16 +102,7 @@ public class JodaUtils
 
   public static boolean overlaps(final Interval i, Iterable<Interval> intervals)
   {
-    return Iterables.any(
-        intervals, new Predicate<Interval>()
-    {
-      @Override
-      public boolean apply(Interval input)
-      {
-        return input.overlaps(i);
-      }
-    }
-    );
+    return Iterables.any(intervals, input -> input.overlaps(i));
 
   }
 

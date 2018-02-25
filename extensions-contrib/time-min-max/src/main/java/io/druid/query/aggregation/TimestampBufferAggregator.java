@@ -21,20 +21,20 @@ package io.druid.query.aggregation;
 
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 public class TimestampBufferAggregator implements BufferAggregator
 {
-  private final ObjectColumnSelector selector;
+  private final BaseObjectColumnValueSelector selector;
   private final TimestampSpec timestampSpec;
   private final Comparator<Long> comparator;
   private final Long initValue;
 
   public TimestampBufferAggregator(
-      ObjectColumnSelector selector,
+      BaseObjectColumnValueSelector selector,
       TimestampSpec timestampSpec,
       Comparator<Long> comparator,
       Long initValue)
@@ -54,7 +54,7 @@ public class TimestampBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    Long newTime = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
+    Long newTime = TimestampAggregatorFactory.convertLong(timestampSpec, selector.getObject());
     if (newTime != null) {
       long prev = buf.getLong(position);
       buf.putLong(position, comparator.compare(prev, newTime) > 0 ? prev : newTime);

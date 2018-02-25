@@ -31,7 +31,6 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.Result;
@@ -83,13 +82,22 @@ public class AppenderatorTest
 
       // add
       commitMetadata.put("x", "1");
-      Assert.assertEquals(1, appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier));
+      Assert.assertEquals(1,
+                          appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier)
+                                      .getNumRowsInSegment()
+      );
 
       commitMetadata.put("x", "2");
-      Assert.assertEquals(2, appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier));
+      Assert.assertEquals(2,
+                          appenderator.add(IDENTIFIERS.get(0), IR("2000", "bar", 2), committerSupplier)
+                                      .getNumRowsInSegment()
+      );
 
       commitMetadata.put("x", "3");
-      Assert.assertEquals(1, appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 4), committerSupplier));
+      Assert.assertEquals(1,
+                          appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 4), committerSupplier)
+                                      .getNumRowsInSegment()
+      );
 
       // getSegments
       Assert.assertEquals(IDENTIFIERS.subList(0, 2), sorted(appenderator.getSegments()));
@@ -188,6 +196,52 @@ public class AppenderatorTest
     }
   }
 
+  @Test
+  public void testMaxRowsInMemoryDisallowIncrementalPersists() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(3, false)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of("eventCount", eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            // Do nothing
+          }
+        };
+      };
+
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.startJob();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier, false);
+      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier, false);
+      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier, false);
+      Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(IDENTIFIERS.get(0), IR("2000", "baz", 1), committerSupplier, false);
+      Assert.assertEquals(3, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(IDENTIFIERS.get(1), IR("2000", "qux", 1), committerSupplier, false);
+      Assert.assertEquals(4, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 1), committerSupplier, false);
+      Assert.assertEquals(5, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.persist(ImmutableList.of(IDENTIFIERS.get(1)), committerSupplier.get());
+      Assert.assertEquals(3, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.close();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+    }
+  }
   @Test
   public void testRestoreFromDisk() throws Exception
   {
@@ -313,8 +367,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
-      Sequences.toList(QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()), results1);
+      final List<Result<TimeseriesResultValue>> results1 =
+          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -339,8 +393,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
-      Sequences.toList(QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()), results2);
+      final List<Result<TimeseriesResultValue>> results2 =
+          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -369,8 +423,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
-      Sequences.toList(QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()), results3);
+      final List<Result<TimeseriesResultValue>> results3 =
+          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -403,8 +457,8 @@ public class AppenderatorTest
                                            .granularity(Granularities.DAY)
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results4 = Lists.newArrayList();
-      Sequences.toList(QueryPlus.wrap(query4).run(appenderator, ImmutableMap.of()), results4);
+      final List<Result<TimeseriesResultValue>> results4 =
+          QueryPlus.wrap(query4).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           ImmutableList.of(
               new Result<>(
@@ -459,8 +513,8 @@ public class AppenderatorTest
                                            )
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results1 = Lists.newArrayList();
-      Sequences.toList(QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()), results1);
+      final List<Result<TimeseriesResultValue>> results1 =
+          QueryPlus.wrap(query1).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query1",
           ImmutableList.of(
@@ -495,8 +549,8 @@ public class AppenderatorTest
                                            )
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results2 = Lists.newArrayList();
-      Sequences.toList(QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()), results2);
+      final List<Result<TimeseriesResultValue>> results2 =
+          QueryPlus.wrap(query2).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(
@@ -536,8 +590,8 @@ public class AppenderatorTest
                                            )
                                            .build();
 
-      final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
-      Sequences.toList(QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()), results3);
+      final List<Result<TimeseriesResultValue>> results3 =
+          QueryPlus.wrap(query3).run(appenderator, ImmutableMap.of()).toList();
       Assert.assertEquals(
           "query2",
           ImmutableList.of(

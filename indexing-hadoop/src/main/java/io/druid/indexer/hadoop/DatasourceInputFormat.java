@@ -24,14 +24,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,12 +58,13 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 
   public static final String CONF_INPUT_SEGMENTS = "druid.segments";
   public static final String CONF_DRUID_SCHEMA = "druid.datasource.schema";
+  public static final String CONF_TRANSFORM_SPEC = "druid.datasource.transformSpec";
   public static final String CONF_MAX_SPLIT_SIZE = "druid.datasource.split.max.size";
 
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException
   {
-    Configuration conf = context.getConfiguration();
+    JobConf conf = new JobConf(context.getConfiguration());
 
     String segmentsStr = Preconditions.checkNotNull(
         conf.get(CONF_INPUT_SEGMENTS),
@@ -82,7 +80,10 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       throw new ISE("No segments found to read");
     }
 
-    logger.info("segments to read [%s]", segmentsStr);
+    // Note: log is splitted into two lines so that a new String is not generated to print it.
+    // segmentsStr could be quite large when re-indexing multiple months of data.
+    logger.info("Segment to read are...");
+    logger.info(segmentsStr);
 
     long maxSize = conf.getLong(CONF_MAX_SPLIT_SIZE, 0);
     if (maxSize < 0) {
@@ -90,7 +91,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       for (WindowedDataSegment segment : segments) {
         totalSize += segment.getSegment().getSize();
       }
-      int mapTask = ((JobConf) conf).getNumMapTasks();
+      int mapTask = conf.getNumMapTasks();
       if (mapTask > 0) {
         maxSize = totalSize / mapTask;
       }
@@ -117,11 +118,10 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     List<WindowedDataSegment> list = new ArrayList<>();
     long size = 0;
 
-    JobConf dummyConf = new JobConf();
     org.apache.hadoop.mapred.InputFormat fio = supplier.get();
     for (WindowedDataSegment segment : segments) {
       if (size + segment.getSegment().getSize() > maxSize && size > 0) {
-        splits.add(toDataSourceSplit(list, fio, dummyConf));
+        splits.add(toDataSourceSplit(list, fio, conf));
         list = Lists.newArrayList();
         size = 0;
       }
@@ -131,7 +131,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     }
 
     if (list.size() > 0) {
-      splits.add(toDataSourceSplit(list, fio, dummyConf));
+      splits.add(toDataSourceSplit(list, fio, conf));
     }
 
     logger.info("Number of splits [%d]", splits.size());
@@ -215,14 +215,14 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
                   try {
                     return Arrays.stream(split.getLocations());
                   }
-                  catch (final IOException e) {
+                  catch (final Exception e) {
                     logger.error(e, "Exception getting locations");
                     return Stream.empty();
                   }
                 }
             );
           }
-          catch (final IOException e) {
+          catch (final Exception e) {
             logger.error(e, "Exception getting splits");
             return Stream.empty();
           }

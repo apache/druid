@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.utils.ServletResourceUtils;
@@ -37,6 +38,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupsState;
+import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 
@@ -67,6 +69,7 @@ import java.util.Objects;
  * Contains information about lookups exposed through the coordinator
  */
 @Path("/druid/coordinator/v1/lookups")
+@ResourceFilters(ConfigResourceFilter.class)
 public class LookupCoordinatorResource
 {
   private static final Logger LOG = new Logger(LookupCoordinatorResource.class);
@@ -87,6 +90,7 @@ public class LookupCoordinatorResource
   }
 
   @GET
+  @Path("/config")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response getTiers(
       @DefaultValue("false") @QueryParam("discover") boolean discover
@@ -110,6 +114,7 @@ public class LookupCoordinatorResource
   }
 
   @POST
+  @Path("/config")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response updateAllLookups(
@@ -145,7 +150,7 @@ public class LookupCoordinatorResource
 
   @DELETE
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}/{lookup}")
+  @Path("/config/{tier}/{lookup}")
   public Response deleteLookup(
       @PathParam("tier") String tier,
       @PathParam("lookup") String lookup,
@@ -181,7 +186,7 @@ public class LookupCoordinatorResource
 
   @POST
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}/{lookup}")
+  @Path("/config/{tier}/{lookup}")
   public Response createOrUpdateLookup(
       @PathParam("tier") String tier,
       @PathParam("lookup") String lookup,
@@ -231,7 +236,7 @@ public class LookupCoordinatorResource
 
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}/{lookup}")
+  @Path("/config/{tier}/{lookup}")
   public Response getSpecificLookup(
       @PathParam("tier") String tier,
       @PathParam("lookup") String lookup
@@ -264,9 +269,11 @@ public class LookupCoordinatorResource
 
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  @Path("/{tier}")
+  @Path("/config/{tier}")
   public Response getSpecificTier(
-      @PathParam("tier") String tier
+      @PathParam("tier") String tier,
+      @DefaultValue("false") @QueryParam("detailed") boolean detailed
+
   )
   {
     try {
@@ -287,7 +294,11 @@ public class LookupCoordinatorResource
                        .entity(ServletResourceUtils.sanitizeException(new RE("Tier [%s] not found", tier)))
                        .build();
       }
-      return Response.ok().entity(tierLookups.keySet()).build();
+      if (detailed) {
+        return Response.ok().entity(tierLookups).build();
+      } else {
+        return Response.ok().entity(tierLookups.keySet()).build();
+      }
     }
     catch (Exception e) {
       LOG.error(e, "Error getting tier [%s]", tier);

@@ -21,12 +21,14 @@ package io.druid.client;
 
 import io.druid.timeline.DataSegment;
 
+import java.util.Collection;
+
 /**
  */
 public interface InventoryView
 {
   DruidServer getInventoryValue(String string);
-  Iterable<DruidServer> getInventory();
+  Collection<DruidServer> getInventory();
   boolean isStarted();
   boolean isSegmentLoadedByServer(String serverKey, DataSegment segment);
 }

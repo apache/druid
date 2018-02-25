@@ -20,7 +20,6 @@
 package io.druid.server.listener.announcer;
 
 import com.google.common.base.Throwables;
-import com.google.common.primitives.Longs;
 import io.druid.curator.announcement.Announcer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
@@ -31,12 +30,13 @@ import org.apache.curator.utils.ZKPaths;
 import java.nio.ByteBuffer;
 
 /**
- * Announces that there is a particular ListenerResource at the listener_key.
+ * Starting 0.11.0 Coordinator uses announcements made by {@link io.druid.discovery.DruidNodeAnnouncer} .
  */
+@Deprecated
 public abstract class ListenerResourceAnnouncer
 {
   private static final byte[] ANNOUNCE_BYTES = ByteBuffer
-      .allocate(Longs.BYTES)
+      .allocate(Long.BYTES)
       .putLong(System.currentTimeMillis())
       .array();
   private static final Logger LOG = new Logger(ListenerResourceAnnouncer.class);
