@@ -874,7 +874,7 @@
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
                 <artifactId>jna</artifactId>
-                <version>4.4.0</version>
+                <version>4.5.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

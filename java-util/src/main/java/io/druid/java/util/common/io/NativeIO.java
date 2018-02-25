@@ -75,6 +75,7 @@ public class NativeIO
             LOG.error("Cannot get kernel page size");
         }
         */
+    LOG.info("NativeIO enabled");
   }
 
   public static native int posix_fadvise(int fd, long offset, long len, int flag) throws LastErrorException;
@@ -249,12 +250,15 @@ public class NativeIO
     int numBytes;
     long offset = 0;
 
+    LOG.info("Starting chunked copy");
     while ((numBytes = src.read(buf)) > 0) {
+      LOG.info("Writing " + numBytes + " bytes at offset: " + offset);
       raf.write(buf, 0, numBytes);
       trySkipCache(fd, offset, numBytes);
       offset = raf.getFilePointer();
     }
 
     raf.close();
+    LOG.info("Finished chunked copy");
   }
 }
