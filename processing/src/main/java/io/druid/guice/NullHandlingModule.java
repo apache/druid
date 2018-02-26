@@ -17,36 +17,23 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.guice;
+
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import io.druid.common.config.NullHandling;
+import io.druid.common.config.NullValueHandlingConfig;
 
 /**
- * LongPredicate is only supported in Java 8+, so use this to avoid boxing when a long predicate is needed.
  */
-public interface DruidLongPredicate
+public class NullHandlingModule implements Module
 {
-  DruidLongPredicate ALWAYS_FALSE = input -> false;
-
-  DruidLongPredicate ALWAYS_TRUE = input -> true;
-
-  DruidLongPredicate MATCH_NULL_ONLY = new DruidLongPredicate()
+  @Override
+  public void configure(Binder binder)
   {
-    @Override
-    public boolean applyLong(long input)
-    {
-      return false;
-    }
+    JsonConfigProvider.bind(binder, "druid.generic", NullValueHandlingConfig.class);
+    binder.requestStaticInjection(NullHandling.class);
+    binder.requestStaticInjection(NullHandling.class);
 
-    @Override
-    public boolean applyNull()
-    {
-      return true;
-    }
-  };
-
-  boolean applyLong(long input);
-
-  default boolean applyNull()
-  {
-    return false;
   }
 }

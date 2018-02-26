@@ -225,7 +225,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final BitmapIndex bitmapIndex = column.getBitmapIndex();
-    return bitmapIndex.getBitmap(bitmapIndex.getIndex(NullHandling.emptyToNullIfNeeded(value)));
+    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
   }
 
   @Override

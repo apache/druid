@@ -56,14 +56,10 @@ public class TopNMapFn
     return longVal == null ? DimensionHandlerUtils.ZERO_LONG : longVal;
   };
 
-  private static Function<Object, Object> FLOAT_TRANSFORMER = input -> {
-    final Float floatVal = DimensionHandlerUtils.convertObjectToFloat(input);
-    return floatVal == null ? DimensionHandlerUtils.ZERO_FLOAT : floatVal;
-  };
-  private static Function<Object, Object> DOUBLE_TRANSFORMER = input -> {
-    final Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(input);
-    return doubleValue == null ? DimensionHandlerUtils.ZERO_DOUBLE : doubleValue;
-  };
+  private static Function<Object, Object> FLOAT_TRANSFORMER = input -> DimensionHandlerUtils.convertObjectToFloat(input);
+
+  private static Function<Object, Object> DOUBLE_TRANSFORMER = input -> DimensionHandlerUtils.convertObjectToDouble(
+      input);
 
   private static final TopNColumnSelectorStrategyFactory STRATEGY_FACTORY = new TopNColumnSelectorStrategyFactory();
 

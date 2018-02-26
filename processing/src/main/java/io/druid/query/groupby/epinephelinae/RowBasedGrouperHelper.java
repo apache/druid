@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -31,6 +30,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import io.druid.collections.ResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -39,6 +39,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.AllGranularity;
 import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.BaseQuery;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -438,7 +439,7 @@ public class RowBasedGrouperHelper
               Object dimVal = entry.getKey().getKey()[i];
               theMap.put(
                   query.getDimensions().get(i - dimStart).getOutputName(),
-                  dimVal instanceof String ? Strings.emptyToNull((String) dimVal) : dimVal
+                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
               );
             }
 
@@ -527,18 +528,11 @@ public class RowBasedGrouperHelper
     @Override
     public Supplier<Comparable> makeInputRawSupplier(DimensionSelector selector)
     {
-      return new Supplier<Comparable>()
-      {
-        @Override
-        public Comparable get()
-        {
-          final String value;
-          IndexedInts index = selector.getRow();
-          value = index.size() == 0
-                  ? ""
-                  : selector.lookupName(index.get(0));
-          return Strings.nullToEmpty(value);
-        }
+      return () -> {
+        IndexedInts index = selector.getRow();
+        return index.size() == 0
+               ? null
+               : selector.lookupName(index.get(0));
       };
     }
   }
@@ -605,28 +599,19 @@ public class RowBasedGrouperHelper
       type = type == null ? ValueType.STRING : type;
       switch (type) {
         case STRING:
-          functions[i] = input -> input == null ? "" : input.toString();
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToString(input);
           break;
 
         case LONG:
-          functions[i] = input -> {
-            final Long val = DimensionHandlerUtils.convertObjectToLong(input);
-            return val == null ? 0L : val;
-          };
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToLong(input);
           break;
 
         case FLOAT:
-          functions[i] = input -> {
-            final Float val = DimensionHandlerUtils.convertObjectToFloat(input);
-            return val == null ? 0.f : val;
-          };
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToFloat(input);
           break;
 
         case DOUBLE:
-          functions[i] = input -> {
-            Double val = DimensionHandlerUtils.convertObjectToDouble(input);
-            return val == null ? 0.0 : val;
-          };
+          functions[i] = input -> DimensionHandlerUtils.convertObjectToDouble(input);
           break;
         default:
           throw new IAE("invalid type: [%s]", type);
@@ -871,7 +856,10 @@ public class RowBasedGrouperHelper
     private static int compareDimsInRows(RowBasedKey key1, RowBasedKey key2, int dimStart)
     {
       for (int i = dimStart; i < key1.getKey().length; i++) {
-        final int cmp = ((Comparable) key1.getKey()[i]).compareTo(key2.getKey()[i]);
+        final int cmp = Comparators.<Comparable>naturalNullsFirst().compare(
+            (Comparable) key1.getKey()[i],
+            (Comparable) key2.getKey()[i]
+        );
         if (cmp != 0) {
           return cmp;
         }
@@ -920,9 +908,10 @@ public class RowBasedGrouperHelper
 
         if (isNumericField.get(i) && comparator.equals(StringComparators.NUMERIC)) {
           // use natural comparison
-          cmp = lhs.compareTo(rhs);
+          cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
-          cmp = comparator.compare(lhs.toString(), rhs.toString());
+          cmp = comparator.compare(DimensionHandlerUtils.convertObjectToString(lhs),
+                                   DimensionHandlerUtils.convertObjectToString(rhs));
         }
 
         if (cmp != 0) {
@@ -936,7 +925,8 @@ public class RowBasedGrouperHelper
 
   static long estimateStringKeySize(String key)
   {
-    return (long) key.length() * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
+    long length = key == null ? 0 : key.length();
+    return length * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
@@ -1024,7 +1014,7 @@ public class RowBasedGrouperHelper
       rankOfDictionaryIds = IntStream.range(0, dictionarySize).toArray();
       IntArrays.quickSort(
           rankOfDictionaryIds,
-          (i1, i2) -> dictionary.get(i1).compareTo(dictionary.get(i2))
+          (i1, i2) -> Comparators.<String>naturalNullsFirst().compare(dictionary.get(i1), dictionary.get(i2))
       );
 
       IntArrayUtils.inverse(rankOfDictionaryIds);
@@ -1581,14 +1571,30 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        keyBuffer.putLong((Long) key.getKey()[idx]);
+        Long aLong = (Long) key.getKey()[idx];
+        if (aLong == null) {
+          keyBuffer.put((byte) 1);
+          keyBuffer.putLong(0L);
+        } else {
+          keyBuffer.put((byte) 0);
+          keyBuffer.putLong(aLong);
+        }
         return true;
+      }
+
+      protected Long readFromBuffer(ByteBuffer buffer, int initialOffset)
+      {
+        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
+          return NullHandling.defaultLongValue();
+        } else {
+          return buffer.getLong(initialOffset + keyBufferPosition + Byte.BYTES);
+        }
       }
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
       {
-        dimValues[dimValIdx] = buffer.getLong(initialOffset + keyBufferPosition);
+        dimValues[dimValIdx] = readFromBuffer(buffer, initialOffset);
       }
 
       @Override
@@ -1606,7 +1612,8 @@ public class RowBasedGrouperHelper
       FloatRowBasedKeySerdeHelper(
           int keyBufferPosition,
           boolean pushLimitDown,
-          @Nullable StringComparator stringComparator)
+          @Nullable StringComparator stringComparator
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
@@ -1632,14 +1639,30 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        keyBuffer.putFloat((Float) key.getKey()[idx]);
+        Float aFloat = (Float) key.getKey()[idx];
+        if (aFloat == null) {
+          keyBuffer.put((byte) 1);
+          keyBuffer.putFloat(0F);
+        } else {
+          keyBuffer.put((byte) 0);
+          keyBuffer.putFloat(aFloat);
+        }
         return true;
+      }
+
+      protected Float readFromBuffer(ByteBuffer buffer, int initialOffset)
+      {
+        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
+          return NullHandling.defaultFloatValue();
+        } else {
+          return buffer.getFloat(initialOffset + keyBufferPosition + Byte.BYTES);
+        }
       }
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
       {
-        dimValues[dimValIdx] = buffer.getFloat(initialOffset + keyBufferPosition);
+        dimValues[dimValIdx] = readFromBuffer(buffer, initialOffset);
       }
 
       @Override
@@ -1684,14 +1707,30 @@ public class RowBasedGrouperHelper
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        keyBuffer.putDouble((Double) key.getKey()[idx]);
+        Double aDouble = (Double) key.getKey()[idx];
+        if (aDouble == null) {
+          keyBuffer.put((byte) 1);
+          keyBuffer.putDouble(0.0D);
+        } else {
+          keyBuffer.put((byte) 0);
+          keyBuffer.putDouble(aDouble);
+        }
         return true;
+      }
+
+      protected Double readFromBuffer(ByteBuffer buffer, int initialOffset)
+      {
+        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
+          return NullHandling.defaultDoubleValue();
+        } else {
+          return buffer.getDouble(initialOffset + keyBufferPosition + Byte.BYTES);
+        }
       }
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
       {
-        dimValues[dimValIdx] = buffer.getDouble(initialOffset + keyBufferPosition);
+        dimValues[dimValIdx] = readFromBuffer(buffer, initialOffset);
       }
 
       @Override

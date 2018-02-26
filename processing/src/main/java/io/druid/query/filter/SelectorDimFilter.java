@@ -25,12 +25,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
@@ -38,6 +38,7 @@ import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -64,7 +65,7 @@ public class SelectorDimFilter implements DimFilter
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
 
     this.dimension = dimension;
-    this.value = Strings.nullToEmpty(value);
+    this.value = NullHandling.emptyToNullIfNeeded(value);
     this.extractionFn = extractionFn;
   }
 
@@ -75,8 +76,10 @@ public class SelectorDimFilter implements DimFilter
     byte[] valueBytes = (value == null) ? new byte[]{} : StringUtils.toUtf8(value);
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
+    return ByteBuffer.allocate(6 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
                      .put(DimFilterUtils.SELECTOR_CACHE_ID)
+                     .put(value == null ? (byte) 1 : (byte) 0)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(dimensionBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(valueBytes)
@@ -88,7 +91,7 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    return new InDimFilter(dimension, ImmutableList.of(value), extractionFn).optimize();
+    return new InDimFilter(dimension, Arrays.asList(value), extractionFn).optimize();
   }
 
   @Override
@@ -97,14 +100,13 @@ public class SelectorDimFilter implements DimFilter
     if (extractionFn == null) {
       return new SelectorFilter(dimension, value);
     } else {
-      final String valueOrNull = Strings.emptyToNull(value);
 
       final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
       {
         @Override
         public Predicate<String> makeStringPredicate()
         {
-          return Predicates.equalTo(valueOrNull);
+          return Predicates.equalTo(value);
         }
 
         @Override
@@ -188,7 +190,9 @@ public class SelectorDimFilter implements DimFilter
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
+    //CHECKSTYLE.OFF: Regexp
     retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+    //CHECKSTYLE.ON: Regexp
     return retSet;
   }
 
@@ -211,6 +215,10 @@ public class SelectorDimFilter implements DimFilter
       if (longPredicate != null) {
         return;
       }
+      if (value == null) {
+        longPredicate = DruidLongPredicate.MATCH_NULL_ONLY;
+        return;
+      }
       final Long valueAsLong = GuavaUtils.tryParseLong(value);
       if (valueAsLong == null) {
         longPredicate = DruidLongPredicate.ALWAYS_FALSE;
@@ -231,6 +239,11 @@ public class SelectorDimFilter implements DimFilter
       if (floatPredicate != null) {
         return;
       }
+
+      if (value == null) {
+        floatPredicate = DruidFloatPredicate.MATCH_NULL_ONLY;
+        return;
+      }
       final Float valueAsFloat = Floats.tryParse(value);
 
       if (valueAsFloat == null) {
@@ -249,6 +262,10 @@ public class SelectorDimFilter implements DimFilter
     }
     synchronized (initLock) {
       if (druidDoublePredicate != null) {
+        return;
+      }
+      if (value == null) {
+        druidDoublePredicate = DruidDoublePredicate.MATCH_NULL_ONLY;
         return;
       }
       final Double aDouble = Doubles.tryParse(value);

@@ -20,6 +20,7 @@
 package io.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
@@ -47,7 +48,7 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
           ((DimensionSelector) selectorPlus.getSelector()).lookupName(id)
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), "");
+      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultStringValue());
     }
   }
 

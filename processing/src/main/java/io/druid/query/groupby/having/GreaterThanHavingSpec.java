@@ -68,6 +68,10 @@ public class GreaterThanHavingSpec extends BaseHavingSpec
   @Override
   public boolean eval(Row row)
   {
+    Object metricVal = row.getRaw(aggregationName);
+    if (metricVal == null || value == null) {
+      return false;
+    }
     return HavingSpecMetricComparator.compare(row, aggregationName, value, aggregators) > 0;
   }
 

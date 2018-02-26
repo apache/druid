@@ -21,19 +21,19 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
@@ -51,6 +51,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class InDimFilter implements DimFilter
 {
@@ -58,7 +60,7 @@ public class InDimFilter implements DimFilter
   // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
   public static final int NUMERIC_HASHING_THRESHOLD = 16;
 
-  private final ImmutableSortedSet<String> values;
+  private final SortedSet<String> values;
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
@@ -74,19 +76,11 @@ public class InDimFilter implements DimFilter
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
     Preconditions.checkArgument(values != null && !values.isEmpty(), "values can not be null or empty");
-    this.values = ImmutableSortedSet.copyOf(
-        Iterables.transform(
-            values, new Function<String, String>()
-            {
-              @Override
-              public String apply(String input)
-              {
-                return Strings.nullToEmpty(input);
-              }
 
-            }
-        )
-    );
+    this.values = new TreeSet<>(Comparators.naturalNullsFirst());
+    for (String value : values) {
+      this.values.add(NullHandling.emptyToNullIfNeeded(value));
+    }
     this.dimension = dimension;
     this.extractionFn = extractionFn;
     this.longPredicateSupplier = getLongPredicateSupplier();
@@ -119,14 +113,20 @@ public class InDimFilter implements DimFilter
     final byte[][] valuesBytes = new byte[values.size()][];
     int valuesBytesSize = 0;
     int index = 0;
+    boolean hasNull = false;
     for (String value : values) {
+      if (value == null) {
+        hasNull = true;
+      }
+      //CHECKSTYLE.OFF: Regexp
       valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
+      //CHECKSTYLE.ON: Regexp
       valuesBytesSize += valuesBytes[index].length + 1;
       ++index;
     }
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    ByteBuffer filterCacheKey = ByteBuffer.allocate(3
+    ByteBuffer filterCacheKey = ByteBuffer.allocate(5
                                                     + dimensionBytes.length
                                                     + valuesBytesSize
                                                     + extractionFnBytes.length)
@@ -134,6 +134,8 @@ public class InDimFilter implements DimFilter
                                           .put(dimensionBytes)
                                           .put(DimFilterUtils.STRING_SEPARATOR)
                                           .put(extractionFnBytes)
+                                          .put(DimFilterUtils.STRING_SEPARATOR)
+                                          .put(hasNull ? (byte) 1 : (byte) 0)
                                           .put(DimFilterUtils.STRING_SEPARATOR);
     for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)
@@ -165,7 +167,9 @@ public class InDimFilter implements DimFilter
         // We cannot do an unapply()-based optimization if the selector value
         // and the replaceMissingValuesWith value are the same, since we have to match on
         // all values that are not present in the lookup.
+        //CHECKSTYLE.OFF: Regexp
         final String convertedValue = Strings.emptyToNull(value);
+        //CHECKSTYLE.ON: Regexp
         if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
           return this;
         }
@@ -175,7 +179,7 @@ public class InDimFilter implements DimFilter
         // there may be row values that match the selector value but are not included
         // in the lookup map. Match on the selector value as well.
         // If the selector value is overwritten in the lookup map, don't add selector value to keys.
-        if (exFn.isRetainMissingValue() && lookup.apply(convertedValue) == null) {
+        if (exFn.isRetainMissingValue() && NullHandling.isNullOrEquivalent(lookup.apply(convertedValue))) {
           keys.add(convertedValue);
         }
       }
@@ -210,7 +214,9 @@ public class InDimFilter implements DimFilter
     }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (String value : values) {
+      //CHECKSTYLE.OFF: Regexp
       retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+      //CHECKSTYLE.ON: Regexp
     }
     return retSet;
   }
@@ -260,9 +266,11 @@ public class InDimFilter implements DimFilter
     if (extractionFn != null) {
       builder.append(")");
     }
-
-    builder.append(" IN (").append(Joiner.on(", ").join(values)).append(")");
-
+    //CHECKSTYLE.OFF: Regexp
+    builder.append(" IN (")
+           .append(Joiner.on(", ").join(Iterables.transform(values, input -> Strings.nullToEmpty(input))))
+           .append(")");
+    //CHECKSTYLE.ON: Regexp
     return builder.toString();
   }
 

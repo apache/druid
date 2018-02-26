@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +44,7 @@ public abstract class LookupExtractor
    * @return The lookup, or null key cannot have the lookup applied to it and should be treated as missing.
    */
   @Nullable
-  public abstract String apply(@NotNull String key);
+  public abstract String apply(@Nullable String key);
 
   /**
    * @param keys set of keys to apply lookup for each element

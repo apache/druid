@@ -118,7 +118,9 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void queryId(QueryType query)
   {
+    //CHECKSTYLE.OFF: Regexp
     setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
+    //CHECKSTYLE.ON: Regexp
   }
 
   @Override
