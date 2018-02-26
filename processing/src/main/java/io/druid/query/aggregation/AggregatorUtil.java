@@ -167,7 +167,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNull();
         }
       }
       return new ExpressionFloatColumnSelector();
@@ -208,7 +208,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNull();
         }
       }
       return new ExpressionLongColumnSelector();
@@ -249,7 +249,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNull();
         }
       }
       return new ExpressionDoubleColumnSelector();

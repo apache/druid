@@ -21,7 +21,6 @@ package io.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Ints;
 import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.IAE;
@@ -99,6 +98,9 @@ public abstract class ExprEval<T>
     return value;
   }
 
+  /**
+   * returns true if numeric primitive value for this ExprEval is null, otherwise false.
+   */
   public boolean isNull()
   {
     return value == null;
@@ -175,7 +177,7 @@ public abstract class ExprEval<T>
         case DOUBLE:
           return this;
         case LONG:
-          return ExprEval.of(asLong());
+          return ExprEval.of(value == null ? null : asLong());
         case STRING:
           return ExprEval.of(asString());
       }
@@ -213,7 +215,7 @@ public abstract class ExprEval<T>
     {
       switch (castTo) {
         case DOUBLE:
-          return ExprEval.of(asDouble());
+          return ExprEval.of(value == null ? null : asDouble());
         case LONG:
           return this;
         case STRING:
@@ -245,36 +247,55 @@ public abstract class ExprEval<T>
     @Override
     public final int asInt()
     {
-      if (value == null) {
+      Number number = asNumber();
+      if (number == null) {
         assert NullHandling.replaceWithDefault();
         return 0;
       }
-
-      final Integer theInt = Ints.tryParse(value);
-      assert NullHandling.replaceWithDefault() || theInt != null;
-      return theInt == null ? 0 : theInt;
+      return number.intValue();
     }
 
     @Override
     public final long asLong()
     {
-      // GuavaUtils.tryParseLong handles nulls, no need for special null handling here.
-      final Long theLong = GuavaUtils.tryParseLong(value);
-      assert NullHandling.replaceWithDefault() || theLong != null;
-      return theLong == null ? 0L : theLong;
+      Number number = asNumber();
+      if (number == null) {
+        assert NullHandling.replaceWithDefault();
+        return 0L;
+      }
+      return number.longValue();
     }
 
     @Override
     public final double asDouble()
     {
-      if (value == null) {
+      Number number = asNumber();
+      if (number == null) {
         assert NullHandling.replaceWithDefault();
-        return 0.0;
+        return 0.0d;
       }
+      return number.doubleValue();
+    }
 
-      final Double theDouble = Doubles.tryParse(value);
-      assert NullHandling.replaceWithDefault() || theDouble != null;
-      return theDouble == null ? 0.0 : theDouble;
+    @Nullable
+    private Number asNumber()
+    {
+      if (value == null) {
+        return null;
+      }
+      Long v = GuavaUtils.tryParseLong(value);
+      // Do NOT use ternary operator here, because it makes Java to convert Long to Double
+      if (v != null) {
+        return v;
+      } else {
+        return Doubles.tryParse(value);
+      }
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return !NullHandling.replaceWithDefault() && asNumber() == null;
     }
 
     @Override
@@ -288,9 +309,9 @@ public abstract class ExprEval<T>
     {
       switch (castTo) {
         case DOUBLE:
-          return ExprEval.of(asDouble());
+          return ExprEval.ofDouble(asNumber());
         case LONG:
-          return ExprEval.of(asLong());
+          return ExprEval.ofLong(asNumber());
         case STRING:
           return this;
       }

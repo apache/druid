@@ -134,7 +134,11 @@ public class ExpressionVirtualColumnTest
     final BaseLongColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {
@@ -157,7 +161,11 @@ public class ExpressionVirtualColumnTest
     final BaseLongColumnValueSelector selector = ZCONCATX.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {
@@ -168,7 +176,11 @@ public class ExpressionVirtualColumnTest
     }
 
     CURRENT_ROW.set(ROW2);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW3);
     Assert.assertEquals(0L, selector.getLong());
@@ -180,7 +192,11 @@ public class ExpressionVirtualColumnTest
     final BaseFloatColumnValueSelector selector = XPLUSY.makeColumnValueSelector("expr", COLUMN_SELECTOR_FACTORY);
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0.0f, selector.getFloat(), 0.0f);
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {

@@ -56,7 +56,7 @@ public class DoubleMinAggregationTest
   @Test
   public void testDoubleMinAggregator()
   {
-    DoubleMinAggregator agg = (DoubleMinAggregator) doubleMinAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = doubleMinAggFactory.factorize(colSelectorFactory);
 
     aggregate(selector, agg);
     aggregate(selector, agg);
@@ -71,9 +71,9 @@ public class DoubleMinAggregationTest
   @Test
   public void testDoubleMinBufferAggregator()
   {
-    DoubleMinBufferAggregator agg = (DoubleMinBufferAggregator) doubleMinAggFactory.factorizeBuffered(colSelectorFactory);
+    BufferAggregator agg = doubleMinAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -105,13 +105,13 @@ public class DoubleMinAggregationTest
     Assert.assertFalse(one.equals(two));
   }
 
-  private void aggregate(TestDoubleColumnSelectorImpl selector, DoubleMinAggregator agg)
+  private void aggregate(TestDoubleColumnSelectorImpl selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
   }
 
-  private void aggregate(TestDoubleColumnSelectorImpl selector, DoubleMinBufferAggregator agg, ByteBuffer buff, int position)
+  private void aggregate(TestDoubleColumnSelectorImpl selector, BufferAggregator agg, ByteBuffer buff, int position)
   {
     agg.aggregate(buff, position);
     selector.increment();

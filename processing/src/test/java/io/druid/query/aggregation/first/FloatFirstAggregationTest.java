@@ -22,7 +22,9 @@ package io.druid.query.aggregation.first;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Pair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestFloatColumnSelector;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
@@ -71,7 +73,7 @@ public class FloatFirstAggregationTest
   @Test
   public void testDoubleFirstAggregator()
   {
-    FloatFirstAggregator agg = (FloatFirstAggregator) floatFirstAggregatorFactory.factorize(colSelectorFactory);
+    Aggregator agg = floatFirstAggregatorFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -89,7 +91,7 @@ public class FloatFirstAggregationTest
   @Test
   public void testDoubleFirstBufferAggregator()
   {
-    FloatFirstBufferAggregator agg = (FloatFirstBufferAggregator) floatFirstAggregatorFactory.factorizeBuffered(
+    BufferAggregator agg = floatFirstAggregatorFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[floatFirstAggregatorFactory.getMaxIntermediateSize()]);
@@ -119,7 +121,7 @@ public class FloatFirstAggregationTest
   @Test
   public void testDoubleFirstCombiningAggregator()
   {
-    FloatFirstAggregator agg = (FloatFirstAggregator) combiningAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
     aggregate(agg);
     aggregate(agg);
@@ -138,7 +140,7 @@ public class FloatFirstAggregationTest
   @Test
   public void testDoubleFirstCombiningBufferAggregator()
   {
-    FloatFirstBufferAggregator agg = (FloatFirstBufferAggregator) combiningAggFactory.factorizeBuffered(
+    BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[floatFirstAggregatorFactory.getMaxIntermediateSize()]);
@@ -168,7 +170,7 @@ public class FloatFirstAggregationTest
   }
 
   private void aggregate(
-      FloatFirstAggregator agg
+      Aggregator agg
   )
   {
     agg.aggregate();
@@ -178,7 +180,7 @@ public class FloatFirstAggregationTest
   }
 
   private void aggregate(
-      FloatFirstBufferAggregator agg,
+      BufferAggregator agg,
       ByteBuffer buff,
       int position
   )

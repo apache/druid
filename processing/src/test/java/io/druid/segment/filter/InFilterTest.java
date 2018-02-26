@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -125,10 +126,17 @@ public class InFilterTest extends BaseFilterTest
         ImmutableList.of("a")
     );
 
-    assertFilterMatches(
-        toInFilter("dim1", null, "10", "abc"),
-        ImmutableList.of("a", "b", "f")
-    );
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          toInFilter("dim1", null, "10", "abc"),
+          ImmutableList.of("a", "b", "f")
+      );
+    } else {
+      assertFilterMatches(
+          toInFilter("dim1", null, "10", "abc"),
+          ImmutableList.of("b", "f")
+      );
+    }
 
     assertFilterMatches(
         toInFilter("dim1", "-1", "ab", "de"),
@@ -139,26 +147,45 @@ public class InFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn()
   {
-    assertFilterMatches(
-        toInFilter("dim2", null),
-        ImmutableList.of("b", "c", "f")
-    );
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          toInFilter("dim2", null),
+          ImmutableList.of("b", "c", "f")
+      );
+      assertFilterMatches(
+          toInFilter("dim2", null, "a"),
+          ImmutableList.of("a", "b", "c", "d", "f")
+      );
+      assertFilterMatches(
+          toInFilter("dim2", null, "b"),
+          ImmutableList.of("a", "b", "c", "f")
+      );
+      assertFilterMatches(
+          toInFilter("dim2", ""),
+          ImmutableList.of("b", "c", "f")
+      );
+    } else {
+      assertFilterMatches(
+          toInFilter("dim2", null),
+          ImmutableList.of("b", "f")
+      );
+      assertFilterMatches(
+          toInFilter("dim2", null, "a"),
+          ImmutableList.of("a", "b", "d", "f")
+      );
+      assertFilterMatches(
+          toInFilter("dim2", null, "b"),
+          ImmutableList.of("a", "b", "f")
+      );
+      assertFilterMatches(
+          toInFilter("dim2", ""),
+          ImmutableList.of("c")
+      );
+    }
 
     assertFilterMatches(
         toInFilter("dim2", "", (String) null),
         ImmutableList.of("b", "c", "f")
-    );
-
-    assertFilterMatches(
-        toInFilter("dim2", null, "a"),
-        ImmutableList.of("a", "b", "c", "d", "f")
-
-    );
-
-    assertFilterMatches(
-        toInFilter("dim2", null, "b"),
-        ImmutableList.of("a", "b", "c", "f")
-
     );
 
     assertFilterMatches(
@@ -180,10 +207,17 @@ public class InFilterTest extends BaseFilterTest
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 
-    assertFilterMatches(
-        toInFilter("dim3", ""),
-        ImmutableList.of("a", "b", "c", "d", "e", "f")
-    );
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          toInFilter("dim3", ""),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
+      );
+    } else {
+      assertFilterMatches(
+          toInFilter("dim3", ""),
+          ImmutableList.of()
+      );
+    }
 
     assertFilterMatches(
         toInFilter("dim3", null, "a"),
@@ -215,20 +249,43 @@ public class InFilterTest extends BaseFilterTest
     String nullJsFn = "function(str) { if (str === null) { return 'YES'; } else { return 'NO';} }";
     ExtractionFn yesNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
-    assertFilterMatches(
-        toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
-        ImmutableList.of("a", "b", "c", "d", "f")
-    );
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(
+          toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
+          ImmutableList.of("a", "b", "c", "d", "f")
+      );
+      assertFilterMatches(
+          toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
+          ImmutableList.of("a", "b", "e")
+      );
+      assertFilterMatches(
+          toInFilterWithFn("dim2", yesNullFn, "YES"),
+          ImmutableList.of("b", "c", "f")
+      );
+      assertFilterMatches(
+          toInFilterWithFn("dim1", yesNullFn, "NO"),
+          ImmutableList.of("b", "c", "d", "e", "f")
+      );
+    } else {
+      assertFilterMatches(
+          toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
+          ImmutableList.of("a", "b", "d", "f")
+      );
+      assertFilterMatches(
+          toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
+          ImmutableList.of("b", "e")
+      );
+      assertFilterMatches(
+          toInFilterWithFn("dim2", yesNullFn, "YES"),
+          ImmutableList.of("b", "f")
+      );
 
-    assertFilterMatches(
-        toInFilterWithFn("dim2", yesNullFn, "YES"),
-        ImmutableList.of("b", "c", "f")
-    );
+      assertFilterMatches(
+          toInFilterWithFn("dim1", yesNullFn, "NO"),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
+      );
+    }
 
-    assertFilterMatches(
-        toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
-        ImmutableList.of("a", "b", "e")
-    );
 
     assertFilterMatches(
         toInFilterWithFn("dim3", yesNullFn, "NO"),
@@ -240,10 +297,6 @@ public class InFilterTest extends BaseFilterTest
         ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
 
-    assertFilterMatches(
-        toInFilterWithFn("dim1", yesNullFn, "NO"),
-        ImmutableList.of("b", "c", "d", "e", "f")
-    );
   }
 
   @Test

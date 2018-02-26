@@ -880,7 +880,7 @@ interface Function
         throw new IAE("Function[%s] needs 2 arguments", name());
       }
       final ExprEval eval = args.get(0).eval(bindings);
-      return eval.isNull() ? args.get(1).eval(bindings) : eval;
+      return eval.value() == null ? args.get(1).eval(bindings) : eval;
     }
   }
 
@@ -1094,7 +1094,7 @@ interface Function
       }
 
       final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.isNull(), ExprType.LONG);
+      return ExprEval.of(expr.value() == null, ExprType.LONG);
     }
   }
 
@@ -1114,7 +1114,7 @@ interface Function
       }
 
       final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(!expr.isNull(), ExprType.LONG);
+      return ExprEval.of(expr.value() != null, ExprType.LONG);
     }
   }
 }

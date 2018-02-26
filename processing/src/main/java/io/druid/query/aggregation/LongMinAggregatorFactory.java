@@ -87,7 +87,7 @@ public class LongMinAggregatorFactory extends NullableAggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    return new LongMaxBufferAggregator(selector);
+    return new LongMinBufferAggregator(selector);
   }
 
   private ColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)

@@ -23,8 +23,8 @@ package io.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionCacheHelper;
 import io.druid.query.extraction.FunctionalExtraction;
@@ -52,9 +52,9 @@ public class LookupExtractionFn extends FunctionalExtraction
         {
           @Nullable
           @Override
-          public String apply(String input)
+          public String apply(@Nullable String input)
           {
-            return lookup.apply(Strings.nullToEmpty(input));
+            return NullHandling.emptyToNullIfNeeded(lookup.apply(NullHandling.nullToEmptyIfNeeded(input)));
           }
         },
         retainMissingValue,

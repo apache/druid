@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -99,7 +100,11 @@ public class RegexFilterTest extends BaseFilterTest
   public void testSingleValueStringColumnWithNulls()
   {
     // RegexFilter always returns false for null row values.
-    assertFilterMatches(new RegexDimFilter("dim1", ".*", null), ImmutableList.of("1", "2", "3", "4", "5"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(new RegexDimFilter("dim1", ".*", null), ImmutableList.of("1", "2", "3", "4", "5"));
+    } else {
+      assertFilterMatches(new RegexDimFilter("dim1", ".*", null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    }
     assertFilterMatches(new RegexDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new RegexDimFilter("dim1", "2", null), ImmutableList.of("2"));
     assertFilterMatches(new RegexDimFilter("dim1", "1", null), ImmutableList.of("1", "3"));
@@ -111,7 +116,11 @@ public class RegexFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn()
   {
-    assertFilterMatches(new RegexDimFilter("dim2", ".*", null), ImmutableList.of("0", "3", "4"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(new RegexDimFilter("dim2", ".*", null), ImmutableList.of("0", "3", "4"));
+    } else {
+      assertFilterMatches(new RegexDimFilter("dim2", ".*", null), ImmutableList.of("0", "2", "3", "4"));
+    }
     assertFilterMatches(new RegexDimFilter("dim2", "a", null), ImmutableList.of("0", "3"));
     assertFilterMatches(new RegexDimFilter("dim2", "b", null), ImmutableList.of("0"));
     assertFilterMatches(new RegexDimFilter("dim2", "c", null), ImmutableList.of("4"));
@@ -141,11 +150,16 @@ public class RegexFilterTest extends BaseFilterTest
   {
     String nullJsFn = "function(str) { if (str === null) { return 'NOT_NULL_ANYMORE'; } else { return str;} }";
     ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
-
-    assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of("0"));
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of("0"));
+      assertFilterMatches(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn), ImmutableList.of("1", "2", "5"));
+    } else {
+      assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of());
+      assertFilterMatches(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn), ImmutableList.of("1", "5"));
+    }
     assertFilterMatches(new RegexDimFilter("dim1", "ab.*", changeNullFn), ImmutableList.<String>of("4", "5"));
 
-    assertFilterMatches(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn), ImmutableList.of("1", "2", "5"));
+
     assertFilterMatches(new RegexDimFilter("dim2", "a.*", changeNullFn), ImmutableList.of("0", "3"));
 
     assertFilterMatches(new RegexDimFilter("dim3", ".*ANYMORE", changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));

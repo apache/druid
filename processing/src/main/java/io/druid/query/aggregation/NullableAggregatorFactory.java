@@ -39,10 +39,6 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
     return NullHandling.replaceWithDefault() ? aggregator : new NullableAggregator(aggregator, selector);
   }
 
-  protected abstract ColumnValueSelector selector(ColumnSelectorFactory metricFactory);
-
-  protected abstract Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector);
-
   @Override
   public final BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
@@ -51,7 +47,10 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
     return NullHandling.replaceWithDefault() ? aggregator : new NullableBufferAggregator(aggregator, selector);
   }
 
-  protected abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector);
+  protected abstract BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      ColumnValueSelector selector
+  );
 
   @Override
   public final AggregateCombiner makeAggregateCombiner()
@@ -60,13 +59,20 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
     return NullHandling.replaceWithDefault() ? combiner : new NullableAggregateCombiner(combiner);
   }
 
-  protected abstract AggregateCombiner makeAggregateCombiner2();
-
   @Override
   public final int getMaxIntermediateSize()
   {
     return getMaxIntermediateSize2() + (NullHandling.replaceWithDefault() ? 0 : Byte.BYTES);
   }
 
+  // ---- ABSTRACT METHODS BELOW ------
+
+  protected abstract ColumnValueSelector selector(ColumnSelectorFactory metricFactory);
+
+  protected abstract Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector);
+
+  protected abstract AggregateCombiner makeAggregateCombiner2();
+
   protected abstract int getMaxIntermediateSize2();
+
 }

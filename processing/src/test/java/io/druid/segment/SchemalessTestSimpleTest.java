@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -151,7 +152,7 @@ public class SchemalessTestSimpleTest
                             .put("addRowsIndexConstant", 912.0)
                             .put("uniques", 2.000977198748901D)
                             .put("maxIndex", 100.0)
-                            .put("minIndex", 0.0)
+                            .put("minIndex", NullHandling.replaceWithDefault() ? 0.0 : 100.0)
                             .build()
             )
         )
