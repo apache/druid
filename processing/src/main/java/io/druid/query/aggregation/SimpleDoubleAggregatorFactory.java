@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
-import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.Column;
 
 import javax.annotation.Nullable;
@@ -61,7 +61,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableAggregatorFa
     );
   }
 
-  protected BaseDoubleColumnValueSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory, double nullValue)
+  protected ColumnValueSelector getDoubleColumnSelector(ColumnSelectorFactory metricFactory, double nullValue)
   {
     return AggregatorUtil.makeColumnValueSelectorWithDoubleDefault(
         metricFactory,

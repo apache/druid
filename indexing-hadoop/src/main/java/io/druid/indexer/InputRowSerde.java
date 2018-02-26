@@ -45,6 +45,7 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
 
+import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.List;
@@ -55,6 +56,8 @@ import java.util.Map;
 public class InputRowSerde
 {
   private static final Logger log = new Logger(InputRowSerde.class);
+  private static final byte NULL_BYTE = (byte) 1;
+  private static final byte NON_NULL_BYTE = (byte) 0;
 
   private static final IndexSerdeTypeHelper STRING_HELPER = new StringIndexSerdeTypeHelper();
   private static final IndexSerdeTypeHelper LONG_HELPER = new LongIndexSerdeTypeHelper();
@@ -271,18 +274,22 @@ public class InputRowSerde
           }
 
           String t = aggFactory.getTypeName();
-
-          if (t.equals("float")) {
-            out.writeFloat(agg.getFloat());
-          } else if (t.equals("long")) {
-            WritableUtils.writeVLong(out, agg.getLong());
-          } else if (t.equals("double")) {
-            out.writeDouble(agg.getDouble());
+          if (agg.isNull()) {
+            out.writeByte(NULL_BYTE);
           } else {
-            //its a complex metric
-            Object val = agg.get();
-            ComplexMetricSerde serde = getComplexMetricSerde(t);
-            writeBytes(serde.toBytes(val), out);
+            out.writeByte(NON_NULL_BYTE);
+            if (t.equals("float")) {
+              out.writeFloat(agg.getFloat());
+            } else if (t.equals("long")) {
+              WritableUtils.writeVLong(out, agg.getLong());
+            } else if (t.equals("double")) {
+              out.writeDouble(agg.getDouble());
+            } else {
+              //its a complex metric
+              Object val = agg.get();
+              ComplexMetricSerde serde = getComplexMetricSerde(t);
+              writeBytes(serde.toBytes(val), out);
+            }
           }
         }
       }
@@ -294,10 +301,13 @@ public class InputRowSerde
     }
   }
 
-  private static void writeBytes(byte[] value, ByteArrayDataOutput out) throws IOException
+  private static void writeBytes(@Nullable byte[] value, ByteArrayDataOutput out) throws IOException
   {
-    WritableUtils.writeVInt(out, value.length);
-    out.write(value, 0, value.length);
+    int length = value == null ? -1 : value.length;
+    WritableUtils.writeVInt(out, length);
+    if (value != null) {
+      out.write(value, 0, value.length);
+    }
   }
 
   private static void writeString(String value, ByteArrayDataOutput out) throws IOException
@@ -391,6 +401,11 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         String metric = readString(in);
         String type = getType(metric, aggs, i);
+        byte metricNullability = in.readByte();
+        if (metricNullability == NULL_BYTE) {
+          // metric value is null.
+          continue;
+        }
         if (type.equals("float")) {
           event.put(metric, in.readFloat());
         } else if (type.equals("long")) {

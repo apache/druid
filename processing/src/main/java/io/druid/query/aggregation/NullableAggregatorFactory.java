@@ -21,9 +21,8 @@ package io.druid.query.aggregation;
 
 
 import io.druid.common.config.NullHandling;
-import io.druid.java.util.common.Pair;
-import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 
 /**
  * abstract class with functionality to wrap aggregator/bufferAggregator/combiner to make them Nullable.
@@ -35,23 +34,24 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
   @Override
   public final Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    Pair<Aggregator, BaseNullableColumnValueSelector> pair = factorize2(
-        metricFactory);
-    return NullHandling.replaceWithDefault() ? pair.lhs : new NullableAggregator(pair.lhs, pair.rhs);
+    ColumnValueSelector selector = selector(metricFactory);
+    Aggregator aggregator = factorize(metricFactory, selector);
+    return NullHandling.replaceWithDefault() ? aggregator : new NullableAggregator(aggregator, selector);
   }
 
-  protected abstract Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricfactory);
+  protected abstract ColumnValueSelector selector(ColumnSelectorFactory metricFactory);
+
+  protected abstract Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector);
 
   @Override
   public final BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    Pair<BufferAggregator, BaseNullableColumnValueSelector> pair = factorizeBuffered2(
-        metricFactory);
-    return NullHandling.replaceWithDefault() ? pair.lhs : new NullableBufferAggregator(pair.lhs, pair.rhs);
+    ColumnValueSelector selector = selector(metricFactory);
+    BufferAggregator aggregator = factorizeBuffered(metricFactory, selector);
+    return NullHandling.replaceWithDefault() ? aggregator : new NullableBufferAggregator(aggregator, selector);
   }
 
-  protected abstract Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricfactory);
-
+  protected abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector);
 
   @Override
   public final AggregateCombiner makeAggregateCombiner()

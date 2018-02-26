@@ -8205,6 +8205,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(QueryRunnerTestHelper.allGran)
+        .addOrderByColumn("ql")
         .build();
 
     // "entertainment" rows are excluded by the decorated specs, they become empty rows
@@ -8224,6 +8225,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    System.out.println(results);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 

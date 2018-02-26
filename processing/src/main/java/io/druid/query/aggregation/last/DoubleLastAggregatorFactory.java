@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.collections.SerializablePair;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.AggregateCombiner;
@@ -35,8 +34,6 @@ import io.druid.query.aggregation.NullableAggregatorFactory;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.BaseDoubleColumnValueSelector;
-import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.column.Column;
@@ -70,25 +67,29 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
+  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    BaseDoubleColumnValueSelector doubleColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return Pair.of(
-        new DoubleLastAggregator(
-            metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-            doubleColumnSelector
-        ), doubleColumnSelector);
+    return metricFactory.makeColumnValueSelector(fieldName);
   }
 
   @Override
-  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    BaseDoubleColumnValueSelector doubleColumnSelector = metricFactory.makeColumnValueSelector(fieldName);
-    return Pair.of(
-        new DoubleLastBufferAggregator(
-            metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
-            doubleColumnSelector
-        ), doubleColumnSelector);
+    return new DoubleLastAggregator(
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        selector
+    );
+  }
+
+  @Override
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory, ColumnValueSelector selector
+  )
+  {
+    return new DoubleLastBufferAggregator(
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        selector
+    );
   }
 
   @Override
@@ -122,48 +123,44 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory
     return new DoubleLastAggregatorFactory(name, name)
     {
       @Override
-      public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
+      public Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
       {
-        final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return Pair.of(
-            new DoubleLastAggregator(null, null)
-            {
-              @Override
-              public void aggregate()
-              {
-                SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
-                if (pair.lhs >= lastTime) {
-                  lastTime = pair.lhs;
-                  lastValue = pair.rhs;
-                }
-              }
-            }, selector);
+        return new DoubleLastAggregator(null, null)
+        {
+          @Override
+          public void aggregate()
+          {
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
+            if (pair.lhs >= lastTime) {
+              lastTime = pair.lhs;
+              lastValue = pair.rhs;
+            }
+          }
+        };
       }
 
       @Override
-      public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
+      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
       {
-        final ColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return Pair.of(
-            new DoubleLastBufferAggregator(null, null)
-            {
-              @Override
-              public void aggregate(ByteBuffer buf, int position)
-              {
-                SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
-                long lastTime = buf.getLong(position);
-                if (pair.lhs >= lastTime) {
-                  buf.putLong(position, pair.lhs);
-                  buf.putDouble(position + Long.BYTES, pair.rhs);
-                }
-              }
+        return new DoubleLastBufferAggregator(null, null)
+        {
+          @Override
+          public void aggregate(ByteBuffer buf, int position)
+          {
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
+            long lastTime = buf.getLong(position);
+            if (pair.lhs >= lastTime) {
+              buf.putLong(position, pair.lhs);
+              buf.putDouble(position + Double.BYTES, pair.rhs);
+            }
+          }
 
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                inspector.visit("selector", selector);
-              }
-            }, selector);
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("selector", selector);
+          }
+        };
       }
     };
   }

@@ -84,12 +84,33 @@ public class InputRowSerdeTest
   {
     // Prepare the mocks & set close() call count expectation to 1
     final Aggregator mockedAggregator = EasyMock.createMock(DoubleSumAggregator.class);
+    EasyMock.expect(mockedAggregator.isNull()).andReturn(false).times(1);
     EasyMock.expect(mockedAggregator.getDouble()).andReturn(0d).times(1);
     mockedAggregator.aggregate();
     EasyMock.expectLastCall().times(1);
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
     EasyMock.replay(mockedAggregator);
+
+    final Aggregator mockedNullAggregator = EasyMock.createMock(DoubleSumAggregator.class);
+    EasyMock.expect(mockedNullAggregator.isNull()).andReturn(true).times(1);
+    mockedNullAggregator.aggregate();
+    EasyMock.expectLastCall().times(1);
+    mockedNullAggregator.close();
+    EasyMock.expectLastCall().times(1);
+    EasyMock.replay(mockedNullAggregator);
+
+    final AggregatorFactory mockedAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
+    EasyMock.expect(mockedAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedAggregator);
+    EasyMock.expect(mockedAggregatorFactory.getTypeName()).andReturn("double").anyTimes();
+    EasyMock.expect(mockedAggregatorFactory.getName()).andReturn("mockedAggregator").anyTimes();
+
+    final AggregatorFactory mockedNullAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
+    EasyMock.expect(mockedNullAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedNullAggregator);
+    EasyMock.expect(mockedNullAggregatorFactory.getName()).andReturn("mockedNullAggregator").anyTimes();
+    EasyMock.expect(mockedNullAggregatorFactory.getTypeName()).andReturn("double").anyTimes();
+
+    EasyMock.replay(mockedAggregatorFactory, mockedNullAggregatorFactory);
 
     InputRow in = new MapBasedInputRow(
         timestamp,
@@ -103,13 +124,8 @@ public class InputRowSerdeTest
         new LongSumAggregatorFactory("m2out", "m2"),
         new HyperUniquesAggregatorFactory("m3out", "m3"),
         new LongSumAggregatorFactory("unparseable", "m3"), // Unparseable from String to Long
-        new DoubleSumAggregatorFactory("mockedAggregator", "m4") {
-          @Override
-          public Aggregator factorize(ColumnSelectorFactory metricFactory)
-          {
-            return mockedAggregator;
-          }
-        }
+        mockedAggregatorFactory,
+        mockedNullAggregatorFactory
     };
 
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -143,6 +159,7 @@ public class InputRowSerdeTest
     Assert.assertEquals(0L, out.getMetric("unparseable"));
 
     EasyMock.verify(mockedAggregator);
+    EasyMock.verify(mockedNullAggregator);
   }
 
   @Test

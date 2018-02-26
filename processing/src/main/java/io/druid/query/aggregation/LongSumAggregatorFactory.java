@@ -23,13 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
-import io.druid.segment.BaseLongColumnValueSelector;
-import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -74,23 +72,26 @@ public class LongSumAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
+  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    BaseLongColumnValueSelector longColumnSelector = getLongColumnSelector(metricFactory);
-    return Pair.of(new LongSumAggregator(longColumnSelector), longColumnSelector);
+    return getLongColumnSelector(metricFactory);
   }
 
   @Override
-  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    BaseLongColumnValueSelector longColumnSelector = getLongColumnSelector(metricFactory);
-    return Pair.of(
-        new LongSumBufferAggregator(longColumnSelector),
-        longColumnSelector
-    );
+    return new LongSumAggregator(selector);
   }
 
-  private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  @Override
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory, ColumnValueSelector selector
+  )
+  {
+    return new LongSumBufferAggregator(selector);
+  }
+
+  private ColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
     return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
         metricFactory,

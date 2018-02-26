@@ -22,12 +22,10 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.BaseFloatColumnValueSelector;
-import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -55,20 +53,26 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  public Pair<Aggregator, BaseNullableColumnValueSelector> factorize2(ColumnSelectorFactory metricFactory)
+  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f);
-    return Pair.of(new FloatSumAggregator(floatColumnSelector), floatColumnSelector);
+    return makeColumnValueSelectorWithFloatDefault(
+        metricFactory,
+        0.0f
+    );
   }
 
   @Override
-  public Pair<BufferAggregator, BaseNullableColumnValueSelector> factorizeBuffered2(ColumnSelectorFactory metricFactory)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    BaseFloatColumnValueSelector floatColumnSelector = makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f);
-    return Pair.of(
-        new FloatSumBufferAggregator(floatColumnSelector),
-        floatColumnSelector
-    );
+    return new FloatSumAggregator(selector);
+  }
+
+  @Override
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory, ColumnValueSelector selector
+  )
+  {
+    return new FloatSumBufferAggregator(selector);
   }
 
   @Override

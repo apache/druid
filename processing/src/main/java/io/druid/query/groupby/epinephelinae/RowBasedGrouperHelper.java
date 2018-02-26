@@ -1565,7 +1565,7 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Long.BYTES;
+        return Long.BYTES + Byte.BYTES;
       }
 
       @Override
@@ -1633,7 +1633,7 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Float.BYTES;
+        return Float.BYTES + Byte.BYTES;
       }
 
       @Override
@@ -1701,7 +1701,7 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Double.BYTES;
+        return Double.BYTES + Byte.BYTES;
       }
 
       @Override
