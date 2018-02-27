@@ -199,7 +199,7 @@ public class Filters
    */
   static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
   {
-    // Do not use Iterables.transformA() to avoid boxing/unboxing integers.
+    // Do not use Iterables.transform() to avoid boxing/unboxing integers.
     return new Iterable<ImmutableBitmap>()
     {
       @Override
