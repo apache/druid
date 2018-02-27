@@ -54,6 +54,11 @@ public class Execs
     return DummyExecutorService.INSTANCE;
   }
 
+  /**
+   * Guava changes the name from `MoreExecutors.sameThreadExecutor()` to `MoreExecutors.directExecutor()`
+   * quite abruptly. This serves as a compatability method to work in both environments for the common use cases
+   * in druid.io
+   */
   public static ListeningExecutorService sameThreadExecutor()
   {
     return SAME_THREAD_EXECUTOR_SERVICE_INSTANCE;

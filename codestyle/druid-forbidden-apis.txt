@@ -1,2 +1,3 @@
 com.google.common.collect.MapMaker @ Create java.util.concurrent.ConcurrentHashMap directly
 com.google.common.collect.Maps#newConcurrentMap() @ Create java.util.concurrent.ConcurrentHashMap directly
+com.google.common.util.concurrent.MoreExecutors#sameThreadExecutor() @ Use io.druid.java.util.common.concurrent.Execs#sameThreadExecutor

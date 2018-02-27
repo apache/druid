@@ -28,6 +28,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class SameThreadExecutorService extends AbstractExecutorService
 {
+  // Use io.druid.java.util.common.concurrent.Execs#sameThreadExecutor()
+  SameThreadExecutorService()
+  {
+
+  }
 
   @Override
   public void shutdown()
