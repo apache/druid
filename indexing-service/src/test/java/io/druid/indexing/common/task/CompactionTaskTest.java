@@ -109,13 +109,13 @@ public class CompactionTaskTest
   private static final Interval COMPACTION_INTERVAL = Intervals.of("2017-01-01/2017-06-01");
   private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = ImmutableMap.of(
       Intervals.of("2017-01-01/2017-02-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-02-01/2017-03-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-03-01/2017-04-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-04-01/2017-05-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-05-01/2017-06-01"),
       new DoubleDimensionSchema(MIXED_TYPE_COLUMN)
   );

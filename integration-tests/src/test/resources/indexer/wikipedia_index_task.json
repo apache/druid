@@ -37,8 +37,18 @@
                     },
                     "dimensionsSpec": {
                         "dimensions": [
-                            "page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous",
-                            "namespace", "continent", "country", "region", "city"
+                            "page",
+                            {"type": "string", "name": "language", "createBitmapIndex": false},
+                            "user",
+                            "unpatrolled",
+                            "newPage",
+                            "robot",
+                            "anonymous",
+                            "namespace",
+                            "continent",
+                            "country",
+                            "region",
+                            "city"
                         ]
                     }
                 }

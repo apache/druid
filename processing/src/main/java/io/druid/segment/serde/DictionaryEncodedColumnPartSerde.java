@@ -165,7 +165,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public SerializerBuilder withBitmapIndex(GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter)
+    public SerializerBuilder withBitmapIndex(@Nullable GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter)
     {
       if (bitmapIndexWriter == null) {
         flags |= Feature.NO_BITMAP_INDEX.getMask();
@@ -324,7 +324,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
           GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
-              buffer, bitmapSerdeFactory.getObjectStrategy(), builder.getFileMapper()
+              buffer,
+              bitmapSerdeFactory.getObjectStrategy(),
+              builder.getFileMapper()
           );
           builder.setBitmapIndex(
               new BitmapIndexColumnPartSupplier(
@@ -389,6 +391,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
   private static boolean mustWriteFlags(final int flags)
   {
+    // Flags that are not implied by version codes < COMPRESSED must be written. This includes MULTI_VALUE_V3.
     return flags != NO_FLAGS && flags != Feature.MULTI_VALUE.getMask();
   }
 }

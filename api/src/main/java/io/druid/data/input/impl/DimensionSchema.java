@@ -141,6 +141,7 @@ public abstract class DimensionSchema
     return multiValueHandling;
   }
 
+  @JsonProperty("createBitmapIndex")
   public boolean hasBitmapIndex()
   {
     return createBitmapIndex;
@@ -153,7 +154,7 @@ public abstract class DimensionSchema
   public abstract ValueType getValueType();
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -161,33 +162,29 @@ public abstract class DimensionSchema
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    DimensionSchema that = (DimensionSchema) o;
-
-    if (!name.equals(that.name)) {
-      return false;
-    }
-
-    if (!getValueType().equals(that.getValueType())) {
-      return false;
-    }
-
-    return Objects.equals(multiValueHandling, that.multiValueHandling);
+    final DimensionSchema that = (DimensionSchema) o;
+    return createBitmapIndex == that.createBitmapIndex &&
+           Objects.equals(name, that.name) &&
+           Objects.equals(getTypeName(), that.getTypeName()) &&
+           Objects.equals(getValueType(), that.getValueType()) &&
+           multiValueHandling == that.multiValueHandling;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, getValueType(), multiValueHandling);
+    return Objects.hash(name, multiValueHandling, createBitmapIndex, getTypeName(), getValueType());
   }
 
   @Override
   public String toString()
   {
     return "DimensionSchema{" +
-           "name='" + name + "'" +
-           ", valueType='" + getValueType() + "'" +
-           ", multiValueHandling='" + getMultiValueHandling() + "'" +
-           "}";
+           "name='" + name + '\'' +
+           ", valueType=" + getValueType() +
+           ", typeName=" + getTypeName() +
+           ", multiValueHandling=" + multiValueHandling +
+           ", createBitmapIndex=" + createBitmapIndex +
+           '}';
   }
 }
