@@ -22,21 +22,19 @@ package io.druid.query.aggregation.last;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
-import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 
 import java.nio.ByteBuffer;
@@ -51,26 +49,27 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
+  private final boolean storeDoubleAsFloat;
 
   @JsonCreator
   public DoubleLastAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName
-      )
+  )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
+    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new DoubleLastAggregator(
-        name,
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeDoubleColumnSelector(fieldName)
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(fieldName)
     );
   }
 
@@ -78,8 +77,8 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new DoubleLastBufferAggregator(
-        metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
-        metricFactory.makeDoubleColumnSelector(fieldName)
+        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(fieldName)
     );
   }
 
@@ -109,13 +108,13 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        return new DoubleLastAggregator(name, null, null)
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
+        return new DoubleLastAggregator(null, null)
         {
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
               lastValue = pair.rhs;
@@ -127,17 +126,17 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       @Override
       public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
       {
-        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
         return new DoubleLastBufferAggregator(null, null)
         {
           @Override
           public void aggregate(ByteBuffer buf, int position)
           {
-            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.getObject();
             long lastTime = buf.getLong(position);
             if (pair.lhs >= lastTime) {
               buf.putLong(position, pair.lhs);
-              buf.putDouble(position + Longs.BYTES, pair.rhs);
+              buf.putDouble(position + Long.BYTES, pair.rhs);
             }
           }
 
@@ -149,16 +148,6 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
         };
       }
     };
-  }
-
-  @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
   }
 
   @Override
@@ -213,6 +202,10 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
+
+    if (storeDoubleAsFloat) {
+      return "float";
+    }
     return "double";
   }
 

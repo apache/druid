@@ -25,9 +25,10 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
+import io.druid.indexer.TaskState;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.SegmentLoaderFactory;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestRealtimeTask;
 import io.druid.indexing.common.TestTasks;
@@ -71,7 +72,7 @@ public class WorkerTaskMonitorTest
   private static final String basePath = "/test/druid";
   private static final String tasksPath = StringUtils.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = StringUtils.format("%s/indexer/status/worker", basePath);
-  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, new ServerConfig());
+  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, true, false);
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -126,7 +127,7 @@ public class WorkerTaskMonitorTest
               {
                 return basePath;
               }
-            }, null, null, null, null, null
+            }, null, null, null, null
         ),
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         cf,
@@ -163,8 +164,6 @@ public class WorkerTaskMonitorTest
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
     return new WorkerTaskMonitor(
         jsonMapper,
-        cf,
-        workerCuratorCoordinator,
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
                 taskConfig,
@@ -195,8 +194,13 @@ public class WorkerTaskMonitorTest
             ),
             taskConfig,
             new NoopServiceEmitter(),
-            DUMMY_NODE
-        )
+            DUMMY_NODE,
+            new ServerConfig()
+        ),
+        taskConfig,
+        cf,
+        workerCuratorCoordinator,
+        EasyMock.createNiceMock(DruidLeaderClient.class)
     );
   }
 
@@ -262,7 +266,7 @@ public class WorkerTaskMonitorTest
     );
 
     Assert.assertEquals(task.getId(), taskAnnouncement.getTaskStatus().getId());
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskAnnouncement.getTaskStatus().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskAnnouncement.getTaskStatus().getStatusCode());
   }
 
   @Test(timeout = 30_000L)
@@ -298,7 +302,7 @@ public class WorkerTaskMonitorTest
     List<TaskAnnouncement> announcements = workerCuratorCoordinator.getAnnouncements();
     Assert.assertEquals(1, announcements.size());
     Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, announcements.get(0).getTaskStatus().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, announcements.get(0).getTaskStatus().getStatusCode());
     Assert.assertEquals(DUMMY_NODE.getHost(), announcements.get(0).getTaskLocation().getHost());
     Assert.assertEquals(DUMMY_NODE.getPlaintextPort(), announcements.get(0).getTaskLocation().getPort());
   }
@@ -336,7 +340,7 @@ public class WorkerTaskMonitorTest
     List<TaskAnnouncement> announcements = workerCuratorCoordinator.getAnnouncements();
     Assert.assertEquals(1, announcements.size());
     Assert.assertEquals(task.getId(), announcements.get(0).getTaskStatus().getId());
-    Assert.assertEquals(TaskStatus.Status.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
+    Assert.assertEquals(TaskState.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
   }
 
   @Test(timeout = 30_000L)

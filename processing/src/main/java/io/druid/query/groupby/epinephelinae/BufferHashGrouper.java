@@ -21,29 +21,38 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
-import com.google.common.primitives.Ints;
+import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyType>
 {
-  private static final Logger log = new Logger(BufferHashGrouper.class);
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
 
+  private final AggregatorFactory[] aggregatorFactories;
   private ByteBuffer buffer;
   private boolean initialized = false;
+
+  // The BufferHashGrouper normally sorts by all fields of the grouping key with lexicographic ascending order.
+  // However, when a query will have the limit push down optimization applied (see LimitedBufferHashGrouper),
+  // the optimization may not be applied on some nodes because of buffer capacity limits. In this case,
+  // those nodes will use BufferHashGrouper instead of LimitedBufferHashGrouper. In this mixed use case,
+  // nodes using BufferHashGrouper need to use the same sorting order as nodes using LimitedBufferHashGrouper, so that
+  // results are merged properly. When useDefaultSorting is false, we call keySerde.bufferComparatorWithAggregators()
+  // to get a comparator that uses the ordering defined by the OrderByColumnSpec of a query.
+  private final boolean useDefaultSorting;
 
   // Track the offsets of used buckets using this list.
   // When a new bucket is initialized by initializeNewBucketKey(), an offset is added to this list.
@@ -58,10 +67,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       final AggregatorFactory[] aggregatorFactories,
       final int bufferGrouperMaxSize,
       final float maxLoadFactor,
-      final int initialBuckets
+      final int initialBuckets,
+      final boolean useDefaultSorting
   )
   {
     super(bufferSupplier, keySerde, aggregatorFactories, bufferGrouperMaxSize);
+    this.aggregatorFactories = aggregatorFactories;
 
     this.maxLoadFactor = maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
     this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
@@ -78,6 +89,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     }
 
     this.bucketSize = offset;
+    this.useDefaultSorting = useDefaultSorting;
   }
 
   @Override
@@ -89,7 +101,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       int hashTableSize = ByteBufferHashTable.calculateTableArenaSizeWithPerBucketAdditionalSize(
           buffer.capacity(),
           bucketSize,
-          Ints.BYTES
+          Integer.BYTES
       );
 
       hashTableBuffer = buffer.duplicate();
@@ -104,7 +116,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
       this.offsetList = new ByteBufferIntList(
           offsetListBuffer,
-          offsetListBuffer.capacity() / Ints.BYTES
+          offsetListBuffer.capacity() / Integer.BYTES
       );
 
       this.hashTable = new ByteBufferHashTable(
@@ -154,12 +166,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   }
 
   @Override
-  public Iterator<Entry<KeyType>> iterator(boolean sorted)
+  public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
-      return Iterators.<Entry<KeyType>>emptyIterator();
+      return CloseableIterators.withEmptyBaggage(Iterators.<Entry<KeyType>>emptyIterator());
     }
 
     if (sorted) {
@@ -186,7 +198,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         }
       };
 
-      final BufferComparator comparator = keySerde.bufferComparator();
+      final BufferComparator comparator;
+      if (useDefaultSorting) {
+        comparator = keySerde.bufferComparator();
+      } else {
+        comparator = keySerde.bufferComparatorWithAggregators(aggregatorFactories, aggregatorOffsets);
+      }
 
       // Sort offsets in-place.
       Collections.sort(
@@ -207,7 +224,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
           }
       );
 
-      return new Iterator<Entry<KeyType>>()
+      return new CloseableIterator<Entry<KeyType>>()
       {
         int curr = 0;
         final int size = getSize();
@@ -232,10 +249,16 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         {
           throw new UnsupportedOperationException();
         }
+
+        @Override
+        public void close() throws IOException
+        {
+          // do nothing
+        }
       };
     } else {
       // Unsorted iterator
-      return new Iterator<Entry<KeyType>>()
+      return new CloseableIterator<Entry<KeyType>>()
       {
         int curr = 0;
         final int size = getSize();
@@ -263,6 +286,12 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         public void remove()
         {
           throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          // do nothing
         }
       };
     }

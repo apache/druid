@@ -20,8 +20,7 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.BalancerSegmentHolder;
@@ -38,6 +37,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
+import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -78,7 +79,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    params.getDruidCluster().getHistoricals().forEach((String tier, MinMaxPriorityQueue<ServerHolder> servers) -> {
+    params.getDruidCluster().getHistoricals().forEach((String tier, NavigableSet<ServerHolder> servers) -> {
       balanceTier(params, tier, servers, stats);
     });
     return params.buildFromExisting().withCoordinatorStats(stats).build();
@@ -87,7 +88,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
   private void balanceTier(
       DruidCoordinatorRuntimeParams params,
       String tier,
-      MinMaxPriorityQueue<ServerHolder> servers,
+      SortedSet<ServerHolder> servers,
       CoordinatorStats stats
   )
   {
@@ -98,10 +99,9 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     if (!currentlyMovingSegments.get(tier).isEmpty()) {
       reduceLifetimes(tier);
-      log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.size());
+      log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.get(tier).size());
       return;
     }
-
 
     final List<ServerHolder> serverHolderList = Lists.newArrayList(servers);
 

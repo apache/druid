@@ -23,9 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.MapMaker;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.inventory.CuratorInventoryManager;
 import io.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import io.druid.curator.inventory.InventoryManagerConfig;
@@ -37,7 +36,9 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,8 +53,8 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   private final CuratorInventoryManager<DruidServer, InventoryType> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
-  private final ConcurrentMap<ServerCallback, Executor> serverCallbacks = new MapMaker().makeMap();
-  private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new MapMaker().makeMap();
+  private final ConcurrentMap<ServerRemovedCallback, Executor> serverRemovedCallbacks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
 
   public AbstractCuratorServerInventoryView(
       final EmittingLogger log,
@@ -118,7 +119,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
           public void deadContainer(DruidServer deadContainer)
           {
             log.info("Server Disappeared[%s]", deadContainer);
-            runServerCallbacks(deadContainer);
+            runServerRemovedCallbacks(deadContainer);
           }
 
           @Override
@@ -204,15 +205,15 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   }
 
   @Override
-  public Iterable<DruidServer> getInventory()
+  public Collection<DruidServer> getInventory()
   {
     return inventoryManager.getInventory();
   }
 
   @Override
-  public void registerServerCallback(Executor exec, ServerCallback callback)
+  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
   {
-    serverCallbacks.put(callback, exec);
+    serverRemovedCallbacks.put(callback, exec);
   }
 
   @Override
@@ -247,9 +248,9 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     }
   }
 
-  protected void runServerCallbacks(final DruidServer server)
+  private void runServerRemovedCallbacks(final DruidServer server)
   {
-    for (final Map.Entry<ServerCallback, Executor> entry : serverCallbacks.entrySet()) {
+    for (final Map.Entry<ServerRemovedCallback, Executor> entry : serverRemovedCallbacks.entrySet()) {
       entry.getValue().execute(
           new Runnable()
           {
@@ -257,7 +258,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
             public void run()
             {
               if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
-                serverCallbacks.remove(entry.getKey());
+                serverRemovedCallbacks.remove(entry.getKey());
               }
             }
           }
@@ -282,7 +283,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
       return;
     }
 
-    container.addDataSegment(inventory.getIdentifier(), inventory);
+    container.addDataSegment(inventory);
 
     runSegmentCallbacks(
         new Function<SegmentCallback, CallbackAction>()
@@ -341,19 +342,19 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   }
 
   protected abstract DruidServer addInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey,
-      final InventoryType inventory
+      InventoryType inventory
   );
 
   protected abstract DruidServer updateInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey,
-      final InventoryType inventory
+      InventoryType inventory
   );
 
   protected abstract DruidServer removeInnerInventory(
-      final DruidServer container,
+      DruidServer container,
       String inventoryKey
   );
 

@@ -25,6 +25,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -71,6 +72,7 @@ public class PredicateFirehose implements Firehose
     return false;
   }
 
+  @Nullable
   @Override
   public InputRow nextRow()
   {

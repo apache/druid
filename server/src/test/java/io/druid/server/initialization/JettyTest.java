@@ -27,10 +27,10 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.InputStreamResponseHandler;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.InputStreamResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -41,6 +41,8 @@ import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthorizerMapper;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -58,6 +60,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -79,7 +82,7 @@ public class JettyTest extends BaseJettyTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
 
@@ -126,6 +129,7 @@ public class JettyTest extends BaseJettyTest
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
+                binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                 LifecycleModule.register(binder, Server.class);
               }
             }
@@ -170,14 +174,13 @@ public class JettyTest extends BaseJettyTest
                         e.printStackTrace();
                       }
                       finally {
-                        System.out
-                            .println(
-                                "Response time client"
-                                + (System.currentTimeMillis() - startTime)
-                                + "time taken for getting future"
-                                + (System.currentTimeMillis() - startTime2)
-                                + "Counter " + count.incrementAndGet()
-                            );
+                        System.out.printf(
+                            Locale.ENGLISH,
+                            "Response time client%dtime taken for getting future%dCounter %d%n",
+                            System.currentTimeMillis() - startTime,
+                            System.currentTimeMillis() - startTime2,
+                            count.incrementAndGet()
+                        );
                         latch.countDown();
 
                       }

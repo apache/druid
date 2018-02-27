@@ -43,7 +43,7 @@ public class DimensionTopNMetricSpecTest
                        + "    \"ordering\": \"alphanumeric\",\n"
                        + "    \"previousStop\": \"test\"\n"
                        + "}";
-    ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     Assert.assertEquals(expectedMetricSpec, actualMetricSpec);
@@ -64,7 +64,7 @@ public class DimensionTopNMetricSpecTest
                        + "    \"ordering\": \"lexicographic\",\n"
                        + "    \"previousStop\": \"test\"\n"
                        + "}";
-    ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     Assert.assertEquals(expectedMetricSpec, actualMetricSpec);
@@ -85,7 +85,7 @@ public class DimensionTopNMetricSpecTest
                        + "    \"ordering\": \"strlen\",\n"
                        + "    \"previousStop\": \"test\"\n"
                        + "}";
-    ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     Assert.assertEquals(expectedMetricSpec, actualMetricSpec);
@@ -106,7 +106,7 @@ public class DimensionTopNMetricSpecTest
                        + "    \"ordering\": \"numeric\",\n"
                        + "    \"previousStop\": \"test\"\n"
                        + "}";
-    ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), DimensionTopNMetricSpec.class);
     Assert.assertEquals(expectedMetricSpec, actualMetricSpec);

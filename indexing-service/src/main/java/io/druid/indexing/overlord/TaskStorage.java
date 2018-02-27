@@ -24,8 +24,11 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.Pair;
 import io.druid.metadata.EntryExistsException;
+import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public interface TaskStorage
@@ -37,7 +40,7 @@ public interface TaskStorage
    * @param status task status
    * @throws EntryExistsException if the task ID already exists
    */
-  public void insert(Task task, TaskStatus status) throws EntryExistsException;
+  void insert(Task task, TaskStatus status) throws EntryExistsException;
 
   /**
    * Persists task status in the storage facility. This method should throw an exception if the task status lifecycle
@@ -45,14 +48,23 @@ public interface TaskStorage
    *
    * @param status task status
    */
-  public void setStatus(TaskStatus status);
+  void setStatus(TaskStatus status);
 
   /**
    * Persists lock state in the storage facility.
    * @param taskid task ID
    * @param taskLock lock state
    */
-  public void addLock(String taskid, TaskLock taskLock);
+  void addLock(String taskid, TaskLock taskLock);
+
+  /**
+   * Replace the old lock with the new lock. This method is not thread-safe.
+   *
+   * @param taskid  an id of the task holding the old lock and new lock
+   * @param oldLock old lock
+   * @param newLock new lock
+   */
+  void replaceLock(String taskid, TaskLock oldLock, TaskLock newLock);
 
   /**
    * Removes lock state from the storage facility. It is harmless to keep old locks in the storage facility, but
@@ -61,7 +73,7 @@ public interface TaskStorage
    * @param taskid task ID
    * @param taskLock lock state
    */
-  public void removeLock(String taskid, TaskLock taskLock);
+  void removeLock(String taskid, TaskLock taskLock);
 
   /**
    * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
@@ -72,7 +84,7 @@ public interface TaskStorage
    * @param taskid task ID
    * @return optional task
    */
-  public Optional<Task> getTask(String taskid);
+  Optional<Task> getTask(String taskid);
 
   /**
    * Returns task status as stored in the storage facility. If the task ID does not exist, this will return
@@ -81,7 +93,7 @@ public interface TaskStorage
    * @param taskid task ID
    * @return task status
    */
-  public Optional<TaskStatus> getStatus(String taskid);
+  Optional<TaskStatus> getStatus(String taskid);
 
   /**
    * Add an action taken by a task to the audit log.
@@ -91,7 +103,7 @@ public interface TaskStorage
    *
    * @param <T> task action return type
    */
-  public <T> void addAuditLog(Task task, TaskAction<T> taskAction);
+  <T> void addAuditLog(Task task, TaskAction<T> taskAction);
 
   /**
    * Returns all actions taken by a task.
@@ -99,7 +111,7 @@ public interface TaskStorage
    * @param taskid task ID
    * @return list of task actions
    */
-  public List<TaskAction> getAuditLogs(String taskid);
+  List<TaskAction> getAuditLogs(String taskid);
 
   /**
    * Returns a list of currently running or pending tasks as stored in the storage facility. No particular order
@@ -107,16 +119,19 @@ public interface TaskStorage
    *
    * @return list of active tasks
    */
-  public List<Task> getActiveTasks();
+  List<Task> getActiveTasks();
 
   /**
-   * Returns a list of recently finished task statuses as stored in the storage facility. No particular order
-   * is guaranteed, but implementations are encouraged to return tasks in descending order of creation. No particular
-   * standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
+   * Returns up to {@code maxTaskStatuses} statuses of recently finished tasks as stored in the storage facility. No
+   * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
+   * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
    *
    * @return list of recently finished tasks
    */
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses();
+  List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses);
+
+  @Nullable
+  Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);
 
   /**
    * Returns a list of locks for a particular task.
@@ -124,5 +139,5 @@ public interface TaskStorage
    * @param taskid task ID
    * @return list of TaskLocks for the given task
    */
-  public List<TaskLock> getLocks(String taskid);
+  List<TaskLock> getLocks(String taskid);
 }

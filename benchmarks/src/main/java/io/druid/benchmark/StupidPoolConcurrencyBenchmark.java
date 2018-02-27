@@ -20,45 +20,23 @@
 package io.druid.benchmark;
 
 import com.google.common.base.Supplier;
-
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
-import io.druid.java.util.common.logger.Logger;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-@State(Scope.Benchmark)
 public class StupidPoolConcurrencyBenchmark
 {
-  private static final Logger log = new Logger(StupidPoolConcurrencyBenchmark.class);
-
-
-  @Setup(Level.Iteration)
-  public void setup() throws IOException
-  {
-
-  }
-
-  @TearDown(Level.Iteration)
-  public void teardown()
-  {
-
-  }
-
   private static final Object simpleObject = new Object();
 
   @State(Scope.Benchmark)

@@ -85,8 +85,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   public long scanAndAggregate(
       TopNParams params,
       Aggregator[][] rowSelector,
-      Map<Comparable, Aggregator[]> aggregatesStore,
-      int numProcessed
+      Map<Comparable, Aggregator[]> aggregatesStore
   )
   {
     final Cursor cursor = params.getCursor();

@@ -20,19 +20,20 @@
 package io.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.IAE;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Contains a representation of the current state of the cluster by tier.
@@ -41,7 +42,7 @@ import java.util.Set;
 public class DruidCluster
 {
   private final Set<ServerHolder> realtimes;
-  private final Map<String, MinMaxPriorityQueue<ServerHolder>> historicals;
+  private final Map<String, NavigableSet<ServerHolder>> historicals;
 
   public DruidCluster()
   {
@@ -52,7 +53,7 @@ public class DruidCluster
   @VisibleForTesting
   public DruidCluster(
       @Nullable Set<ServerHolder> realtimes,
-      Map<String, MinMaxPriorityQueue<ServerHolder>> historicals
+      Map<String, NavigableSet<ServerHolder>> historicals
   )
   {
     this.realtimes = realtimes == null ? new HashSet<>() : new HashSet<>(realtimes);
@@ -86,9 +87,9 @@ public class DruidCluster
   private void addHistorical(ServerHolder serverHolder)
   {
     final ImmutableDruidServer server = serverHolder.getServer();
-    final MinMaxPriorityQueue<ServerHolder> tierServers = historicals.computeIfAbsent(
+    final NavigableSet<ServerHolder> tierServers = historicals.computeIfAbsent(
         server.getTier(),
-        k -> MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create()
+        k -> new TreeSet<>(Collections.reverseOrder())
     );
     tierServers.add(serverHolder);
   }
@@ -98,7 +99,7 @@ public class DruidCluster
     return realtimes;
   }
 
-  public Map<String, MinMaxPriorityQueue<ServerHolder>> getHistoricals()
+  public Map<String, NavigableSet<ServerHolder>> getHistoricals()
   {
     return historicals;
   }
@@ -108,7 +109,7 @@ public class DruidCluster
     return historicals.keySet();
   }
 
-  public MinMaxPriorityQueue<ServerHolder> getHistoricalsByTier(String tier)
+  public NavigableSet<ServerHolder> getHistoricalsByTier(String tier)
   {
     return historicals.get(tier);
   }
@@ -124,7 +125,7 @@ public class DruidCluster
     return allServers;
   }
 
-  public Iterable<MinMaxPriorityQueue<ServerHolder>> getSortedHistoricalsByTier()
+  public Iterable<NavigableSet<ServerHolder>> getSortedHistoricalsByTier()
   {
     return historicals.values();
   }
@@ -146,7 +147,7 @@ public class DruidCluster
 
   public boolean hasTier(String tier)
   {
-    MinMaxPriorityQueue<ServerHolder> servers = historicals.get(tier);
-    return (servers == null) || servers.isEmpty();
+    NavigableSet<ServerHolder> servers = historicals.get(tier);
+    return (servers != null) && !servers.isEmpty();
   }
 }

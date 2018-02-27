@@ -23,5 +23,5 @@ import java.io.IOException;
 
 public interface TaskActionClient
 {
-  public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException;
+  <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException;
 }

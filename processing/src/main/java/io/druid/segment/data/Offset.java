@@ -33,6 +33,10 @@ import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
  * io.druid.query.topn.Historical1SimpleDoubleAggPooledTopNScannerPrototype} and {@link
  * io.druid.query.topn.HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPrototype} during
  * specialization, and specialized version of those prototypes must be able to any subclass of Offset.
+ *
+ * This interface is the core "pointer" interface that is used to create {@link io.druid.segment.ColumnValueSelector}s
+ * over historical segments. It's counterpart for incremental index is {@link
+ * io.druid.segment.incremental.TimeAndDimsHolder}.
  */
 @SubclassesMustBePublic
 public abstract class Offset implements ReadableOffset, Cloneable
@@ -47,6 +51,13 @@ public abstract class Offset implements ReadableOffset, Cloneable
    * Resets the Offset to the position it was created or cloned with.
    */
   public abstract void reset();
+
+  /**
+   * Returns the same offset ("this") or a readable "view" of this offset, which always returns the same value from
+   * {@link #getOffset()}, as this offset. This method is useful for "unwrapping" such offsets as {@link
+   * io.druid.segment.FilteredOffset} and reduce reference indirection, when only {@link ReadableOffset} API is needed.
+   */
+  public abstract ReadableOffset getBaseReadableOffset();
 
   @Override
   public Offset clone()

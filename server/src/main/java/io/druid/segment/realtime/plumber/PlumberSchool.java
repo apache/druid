@@ -39,6 +39,6 @@ public interface PlumberSchool
    *
    * @return returns a plumber
    */
-  public Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics);
+  Plumber findPlumber(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics);
 
 }

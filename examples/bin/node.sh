@@ -40,7 +40,13 @@ case $command in
     fi
     if [ ! -d "$PID_DIR" ]; then mkdir -p $PID_DIR; fi
     if [ ! -d "$LOG_DIR" ]; then mkdir -p $LOG_DIR; fi
-    nohup java `cat $CONF_DIR/$nodeType/jvm.config | xargs` -cp $CONF_DIR/_common:$CONF_DIR/$nodeType:$LIB_DIR/*:$HADOOP_CONF_DIR io.druid.cli.Main server $nodeType >> $LOG_DIR/$nodeType.log &
+
+    JAVA=java
+    if [ "$JAVA_HOME" != "" ]; then
+      JAVA=$JAVA_HOME/bin/java
+    fi
+
+    nohup $JAVA `cat $CONF_DIR/$nodeType/jvm.config | xargs` -cp $CONF_DIR/_common:$CONF_DIR/$nodeType:$LIB_DIR/*:$HADOOP_CONF_DIR io.druid.cli.Main server $nodeType >> $LOG_DIR/$nodeType.log 2>&1 &
     nodeType_PID=$!
     echo $nodeType_PID > $pid
     echo "Started $nodeType node ($nodeType_PID)"

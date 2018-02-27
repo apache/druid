@@ -60,11 +60,11 @@ public class DoubleLastAggregationTest
     combiningAggFactory = (DoubleLastAggregatorFactory) doubleLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
     valueSelector = new TestDoubleColumnSelectorImpl(doubles);
-    objectSelector = new TestObjectColumnSelector(pairs);
+    objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
-    EasyMock.expect(colSelectorFactory.makeDoubleColumnSelector("nilly")).andReturn(valueSelector);
-    EasyMock.expect(colSelectorFactory.makeObjectColumnSelector("billy")).andReturn(objectSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
   }
 
@@ -84,9 +84,6 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(doubles[0], result.rhs, 0.0001);
     Assert.assertEquals((long) doubles[0], agg.getLong());
     Assert.assertEquals(doubles[0], agg.getDouble(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
   }
 
   @Test
@@ -136,9 +133,6 @@ public class DoubleLastAggregationTest
     Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
     Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
     Assert.assertEquals(expected.rhs, agg.getDouble(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
   }
 
   @Test

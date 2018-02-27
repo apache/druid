@@ -202,9 +202,8 @@ In `conf/druid/_common/common.runtime.properties`, replace
 <div class="note caution">
 In production, we recommend running 2 servers, each running a Druid Coordinator
 and a Druid Overlord. We also recommend running a ZooKeeper cluster on its own dedicated hardware,
-as well as  replicated [metadata
-storage](http://druid.io/docs/latest/dependencies/metadata-storage.html) such as MySQL or
-PostgreSQL, on its own dedicated hardware.
+as well as replicated <a href = "http://druid.io/docs/latest/dependencies/metadata-storage.html">metadata storage</a>
+such as MySQL or PostgreSQL, on its own dedicated hardware.
 </div>
 
 ## Tune Druid processes that serve queries
@@ -292,9 +291,9 @@ rsync -az druid-#{DRUIDVERSION}/ COORDINATION_SERVER:druid-#{DRUIDVERSION}/
 Log on to your coordination server and install Zookeeper:
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz -o zookeeper-3.4.9.tar.gz
-tar -xzf zookeeper-3.4.9.tar.gz
-cd zookeeper-3.4.9
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz -o zookeeper-3.4.11.tar.gz
+tar -xzf zookeeper-3.4.11.tar.gz
+cd zookeeper-3.4.11
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 ```

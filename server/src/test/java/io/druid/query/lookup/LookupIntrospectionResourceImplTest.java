@@ -39,7 +39,7 @@ import javax.ws.rs.ext.Provider;
 public class LookupIntrospectionResourceImplTest extends JerseyTest
 {
 
-   static LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
+  static LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
 
 
   @Override

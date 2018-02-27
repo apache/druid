@@ -19,13 +19,12 @@
 
 package io.druid.math.expr;
 
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.List;
 
@@ -75,6 +74,9 @@ interface Function
     @Override
     protected final ExprEval eval(ExprEval param)
     {
+      if (NullHandling.sqlCompatible() && param.isNull()) {
+        return ExprEval.of(null);
+      }
       if (param.type() == ExprType.LONG) {
         return eval(param.asLong());
       } else if (param.type() == ExprType.DOUBLE) {
@@ -824,17 +826,17 @@ interface Function
         throw new IAE("first argument should be string type but got %s type", value.type());
       }
 
-      DateTimeFormatter formatter = ISODateTimeFormat.dateOptionalTimeParser();
+      DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
         if (format.type() != ExprType.STRING) {
           throw new IAE("second argument should be string type but got %s type", format.type());
         }
-        formatter = DateTimeFormat.forPattern(format.asString());
+        formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
       }
       DateTime date;
       try {
-        date = DateTime.parse(value.asString(), formatter);
+        date = formatter.parse(value.asString());
       }
       catch (IllegalArgumentException e) {
         throw new IAE(e, "invalid value %s", value.asString());
@@ -897,10 +899,20 @@ interface Function
         return ExprEval.of(null);
       } else {
         // Pass first argument in to the constructor to provide StringBuilder a little extra sizing hint.
-        final StringBuilder builder = new StringBuilder(Strings.nullToEmpty(args.get(0).eval(bindings).asString()));
+        String first = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+        if (first == null) {
+          // Result of concatenation is null if any of the Values is null.
+          // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
+          return ExprEval.of(null);
+        }
+        final StringBuilder builder = new StringBuilder(first);
         for (int i = 1; i < args.size(); i++) {
-          final String s = args.get(i).eval(bindings).asString();
-          if (s != null) {
+          final String s = NullHandling.nullToEmptyIfNeeded(args.get(i).eval(bindings).asString());
+          if (s == null) {
+            // Result of concatenation is null if any of the Values is null.
+            // e.g. 'select CONCAT(null, "abc") as c;' will return null as per Standard SQL spec.
+            return ExprEval.of(null);
+          } else {
             builder.append(s);
           }
         }
@@ -926,6 +938,31 @@ interface Function
 
       final String arg = args.get(0).eval(bindings).asString();
       return arg == null ? ExprEval.of(0) : ExprEval.of(arg.length());
+    }
+  }
+
+  class StrposFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "strpos";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 2) {
+        throw new IAE("Function[%s] needs 2 arguments", name());
+      }
+
+      final String haystack = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+      final String needle = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
+
+      if (haystack == null || needle == null) {
+        return ExprEval.of(null);
+      }
+      return ExprEval.of(haystack.indexOf(needle));
     }
   }
 
@@ -961,7 +998,9 @@ interface Function
           return ExprEval.of(arg.substring(index));
         }
       } else {
-        return ExprEval.of(null);
+        // If starting index of substring is greater then the length of string, the result will be a zero length string.
+        // e.g. 'select substring("abc", 4,5) as c;' will return an empty string
+        return ExprEval.of(NullHandling.defaultStringValue());
       }
     }
   }
@@ -984,29 +1023,12 @@ interface Function
       final String arg = args.get(0).eval(bindings).asString();
       final String pattern = args.get(1).eval(bindings).asString();
       final String replacement = args.get(2).eval(bindings).asString();
-      return ExprEval.of(
-          Strings.nullToEmpty(arg).replace(Strings.nullToEmpty(pattern), Strings.nullToEmpty(replacement))
-      );
-    }
-  }
-
-  class TrimFunc implements Function
-  {
-    @Override
-    public String name()
-    {
-      return "trim";
-    }
-
-    @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      if (args.size() != 1) {
-        throw new IAE("Function[%s] needs 1 argument", name());
+      if (arg == null) {
+        return ExprEval.of(NullHandling.defaultStringValue());
       }
-
-      final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(Strings.nullToEmpty(arg).trim());
+      return ExprEval.of(
+          arg.replace(NullHandling.nullToEmptyIfNeeded(pattern), NullHandling.nullToEmptyIfNeeded(replacement))
+      );
     }
   }
 
@@ -1026,7 +1048,10 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(StringUtils.toLowerCase(Strings.nullToEmpty(arg)));
+      if (arg == null) {
+        return ExprEval.of(NullHandling.defaultStringValue());
+      }
+      return ExprEval.of(StringUtils.toLowerCase(arg));
     }
   }
 
@@ -1046,7 +1071,50 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return ExprEval.of(StringUtils.toUpperCase(Strings.nullToEmpty(arg)));
+      if (arg == null) {
+        return ExprEval.of(NullHandling.defaultStringValue());
+      }
+      return ExprEval.of(StringUtils.toUpperCase(arg));
+    }
+  }
+
+  class IsNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "isnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.of(expr.isNull(), ExprType.LONG);
+    }
+  }
+
+  class IsNotNullFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notnull";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 1) {
+        throw new IAE("Function[%s] needs 1 argument", name());
+      }
+
+      final ExprEval expr = args.get(0).eval(bindings);
+      return ExprEval.of(!expr.isNull(), ExprType.LONG);
     }
   }
 }

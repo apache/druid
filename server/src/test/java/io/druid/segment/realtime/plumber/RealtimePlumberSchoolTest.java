@@ -26,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
@@ -39,6 +38,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
@@ -46,6 +46,7 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -55,6 +56,9 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
@@ -83,7 +87,24 @@ import java.util.concurrent.TimeUnit;
 @RunWith(Parameterized.class)
 public class RealtimePlumberSchoolTest
 {
+  @Parameterized.Parameters(name = "rejectionPolicy = {0}, segmentWriteOutMediumFactory = {1}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
+        new NoopRejectionPolicyFactory(),
+        new MessageTimeRejectionPolicyFactory()
+    };
+
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
+      constructors.add(new Object[]{rejectionPolicy, OffHeapMemorySegmentWriteOutMediumFactory.instance()});
+      constructors.add(new Object[]{rejectionPolicy, TmpFileSegmentWriteOutMediumFactory.instance()});
+    }
+    return constructors;
+  }
+
   private final RejectionPolicyFactory rejectionPolicy;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   private RealtimePlumber plumber;
   private RealtimePlumberSchool realtimePlumberSchool;
   private DataSegmentAnnouncer announcer;
@@ -98,24 +119,10 @@ public class RealtimePlumberSchoolTest
   private FireDepartmentMetrics metrics;
   private File tmpDir;
 
-  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy)
+  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     this.rejectionPolicy = rejectionPolicy;
-  }
-
-  @Parameterized.Parameters(name = "rejectionPolicy = {0}")
-  public static Collection<?> constructorFeeder() throws IOException
-  {
-    final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
-        new NoopRejectionPolicyFactory(),
-        new MessageTimeRejectionPolicyFactory()
-    };
-
-    final List<Object[]> constructors = Lists.newArrayList();
-    for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
-      constructors.add(new Object[]{rejectionPolicy});
-    }
-    return constructors;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @Before
@@ -141,6 +148,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -160,6 +168,7 @@ public class RealtimePlumberSchoolTest
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(Granularities.YEAR, Granularities.NONE, null),
+        null,
         jsonMapper
     );
 
@@ -201,6 +210,7 @@ public class RealtimePlumberSchoolTest
         0,
         false,
         null,
+        null,
         null
     );
 
@@ -212,11 +222,11 @@ public class RealtimePlumberSchoolTest
         segmentPublisher,
         handoffNotifierFactory,
         MoreExecutors.sameThreadExecutor(),
-        TestHelper.getTestIndexMergerV9(),
-        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory),
+        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
-        TestHelper.getJsonMapper()
+        TestHelper.makeJsonMapper()
     );
 
     metrics = new FireDepartmentMetrics();
@@ -254,18 +264,15 @@ public class RealtimePlumberSchoolTest
 
   private void testPersist(final Object commitMetadata) throws Exception
   {
-    plumber.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
-                   schema,
-                   tuningConfig.getShardSpec(),
-                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                   tuningConfig.getMaxRowsInMemory(),
-                   tuningConfig.isReportParseExceptions()
-               )
-           );
+    Sink sink = new Sink(
+        Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+        schema,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
 
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
@@ -301,18 +308,15 @@ public class RealtimePlumberSchoolTest
   @Test(timeout = 60000)
   public void testPersistFails() throws Exception
   {
-    plumber.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
-                   schema,
-                   tuningConfig.getShardSpec(),
-                   DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                   tuningConfig.getMaxRowsInMemory(),
-                   tuningConfig.isReportParseExceptions()
-               )
-           );
+    Sink sink = new Sink(
+        Intervals.utc(0, TimeUnit.HOURS.toMillis(1)),
+        schema,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber.getSinks().put(0L, sink);
     plumber.startJob();
     final InputRow row = EasyMock.createNiceMock(InputRow.class);
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
@@ -358,18 +362,15 @@ public class RealtimePlumberSchoolTest
     Interval testInterval = new Interval(DateTimes.of("1970-01-01"), DateTimes.of("1971-01-01"));
 
     RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
-    plumber2.getSinks()
-            .put(
-                0L,
-                new Sink(
-                    testInterval,
-                    schema2,
-                    tuningConfig.getShardSpec(),
-                    DateTimes.of("2014-12-01T12:34:56.789").toString(),
-                    tuningConfig.getMaxRowsInMemory(),
-                    tuningConfig.isReportParseExceptions()
-                )
-            );
+    Sink sink = new Sink(
+        testInterval,
+        schema2,
+        tuningConfig.getShardSpec(),
+        DateTimes.of("2014-12-01T12:34:56.789").toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
+    plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());
     final CountDownLatch doneSignal = new CountDownLatch(1);
     final Committer committer = new Committer()
@@ -425,17 +426,17 @@ public class RealtimePlumberSchoolTest
     Assert.assertEquals(0, hydrants.get(0).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(0).getSegment().getDataInterval()
+        hydrants.get(0).getSegmentDataInterval()
     );
     Assert.assertEquals(2, hydrants.get(1).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(1).getSegment().getDataInterval()
+        hydrants.get(1).getSegmentDataInterval()
     );
     Assert.assertEquals(4, hydrants.get(2).getCount());
     Assert.assertEquals(
         expectedInterval,
-        hydrants.get(2).getSegment().getDataInterval()
+        hydrants.get(2).getSegmentDataInterval()
     );
 
     /* Delete all the hydrants and reload, no sink should be created */
@@ -563,9 +564,15 @@ public class RealtimePlumberSchoolTest
 
     for (int i = 0; i < hydrants.size(); i++) {
       hydrant = hydrants.get(i);
-      qindex = hydrant.getSegment().asQueryableIndex();
-      Assert.assertEquals(i, hydrant.getCount());
-      Assert.assertEquals(expectedDims.get(i), ImmutableList.copyOf(qindex.getAvailableDimensions()));
+      ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
+      try {
+        qindex = segment.asQueryableIndex();
+        Assert.assertEquals(i, hydrant.getCount());
+        Assert.assertEquals(expectedDims.get(i), ImmutableList.copyOf(qindex.getAvailableDimensions()));
+      }
+      finally {
+        segment.decrement();
+      }
     }
   }
 
@@ -598,19 +605,7 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
-      {
-        return 0;
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return 0L;
-      }
-
-      @Override
-      public double getDoubleMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0;
       }
@@ -658,27 +653,15 @@ public class RealtimePlumberSchoolTest
       }
 
       @Override
-      public float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return 0;
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return 0L;
       }
 
       @Override
       public Object getRaw(String dimension)
       {
         return dimVals;
-      }
-
-      @Override
-      public double getDoubleMetric(String metric)
-      {
-        return 0;
       }
 
       @Override

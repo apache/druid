@@ -22,7 +22,7 @@ package io.druid.curator.discovery;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.DruidNode;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
@@ -30,8 +30,11 @@ import org.apache.curator.x.discovery.ServiceInstance;
 import java.util.Map;
 
 /**
+ * This class is deprecated, Add service to {@link io.druid.discovery.DruidNodeAnnouncer} node announcement instead.
+ *
  * Uses the Curator Service Discovery recipe to announce services.
  */
+@Deprecated
 public class CuratorServiceAnnouncer implements ServiceAnnouncer
 {
   private static final EmittingLogger log = new EmittingLogger(CuratorServiceAnnouncer.class);

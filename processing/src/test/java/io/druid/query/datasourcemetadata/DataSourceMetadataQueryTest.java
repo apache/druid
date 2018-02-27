@@ -19,17 +19,15 @@
 
 package io.druid.query.datasourcemetadata;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.Druids;
 import io.druid.query.GenericQueryMetricsFactory;
@@ -53,6 +51,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DataSourceMetadataQueryTest
 {
@@ -137,12 +136,10 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
                                                             .dataSource("testing")
                                                             .build();
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-    Iterable<Result<DataSourceMetadataResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context),
-        Lists.<Result<DataSourceMetadataResultValue>>newArrayList()
-    );
+    Iterable<Result<DataSourceMetadataResultValue>> results =
+        runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
     DateTime maxIngestedEventTime = val.getMaxIngestedEventTime();
 
@@ -156,50 +153,50 @@ public class DataSourceMetadataQueryTest
     DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest(queryMetricsFactory);
     List<LogicalSegment> segments = toolChest
         .filterSegments(
-        null,
-        Arrays.asList(
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2012-01-01/P1D");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2012-01-01T01/PT1H");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2013-01-01/P1D");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2013-01-01T01/PT1H");
-              }
-            },
-            new LogicalSegment()
-            {
-              @Override
-              public Interval getInterval()
-              {
-                return Intervals.of("2013-01-01T02/PT1H");
-              }
-            }
-        )
-    );
+            null,
+            Arrays.asList(
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2012-01-01/P1D");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2012-01-01T01/PT1H");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2013-01-01/P1D");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2013-01-01T01/PT1H");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2013-01-01T02/PT1H");
+                  }
+                }
+            )
+        );
 
     Assert.assertEquals(segments.size(), 2);
     // should only have the latest segments. 
@@ -233,9 +230,7 @@ public class DataSourceMetadataQueryTest
     final DataSourceMetadataResultValue resultValue = new DataSourceMetadataResultValue(DateTimes.of("2000-01-01T00Z"));
     final Map<String, Object> resultValueMap = new DefaultObjectMapper().convertValue(
         resultValue,
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
     Assert.assertEquals(
         ImmutableMap.<String, Object>of("maxIngestedEventTime", "2000-01-01T00:00:00.000Z"),

@@ -30,6 +30,7 @@ public class CSVParseSpecTest
   @Test(expected = IllegalArgumentException.class)
   public void testColumnMissing() throws Exception
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new CSVParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -51,6 +52,7 @@ public class CSVParseSpecTest
   @Test(expected = IllegalArgumentException.class)
   public void testComma() throws Exception
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new CSVParseSpec(
         new TimestampSpec(
             "timestamp",

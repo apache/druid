@@ -25,29 +25,22 @@ import org.apache.curator.utils.ZKPaths;
 public class ZkPathsConfig
 {
   @JsonProperty
-  private
-  String base = "druid";
+  private String base = "druid";
   @JsonProperty
-  private
-  String propertiesPath;
+  private String propertiesPath;
   @JsonProperty
-  private
-  String announcementsPath;
-  @JsonProperty @Deprecated
-  private
-  String servedSegmentsPath;
+  private String announcementsPath;
   @JsonProperty
-  private
-  String liveSegmentsPath;
+  @Deprecated
+  private String servedSegmentsPath;
   @JsonProperty
-  private
-  String coordinatorPath;
+  private String liveSegmentsPath;
   @JsonProperty
-  private
-  String loadQueuePath;
+  private String coordinatorPath;
   @JsonProperty
-  private
-  String connectorPath;
+  private String loadQueuePath;
+  @JsonProperty
+  private String connectorPath;
 
   public String getBase()
   {
@@ -78,6 +71,11 @@ public class ZkPathsConfig
   public String getCoordinatorPath()
   {
     return (null == coordinatorPath) ? defaultPath("coordinator") : coordinatorPath;
+  }
+
+  public String getOverlordPath()
+  {
+    return defaultPath("overlord");
   }
 
   public String getLoadQueuePath()

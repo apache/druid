@@ -19,7 +19,7 @@
 
 package io.druid.timeline;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,12 +30,14 @@ import io.druid.TestObjectMapper;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -48,8 +50,8 @@ import java.util.Set;
  */
 public class DataSegmentTest
 {
-  private final static ObjectMapper mapper = new TestObjectMapper();
-  private final static int TEST_VERSION = 0x7;
+  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final int TEST_VERSION = 0x7;
 
   private static ShardSpec getShardSpec(final int partitionNum)
   {
@@ -87,6 +89,14 @@ public class DataSegmentTest
     };
   }
 
+  @Before
+  public void setUp()
+  {
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    mapper.setInjectableValues(injectableValues);
+  }
+
   @Test
   public void testV1Serialization() throws Exception
   {
@@ -108,9 +118,7 @@ public class DataSegmentTest
 
     final Map<String, Object> objectMap = mapper.readValue(
         mapper.writeValueAsString(segment),
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
     Assert.assertEquals(10, objectMap.size());

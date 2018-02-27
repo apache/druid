@@ -21,6 +21,7 @@ package io.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.task.Task;
@@ -94,8 +95,8 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
     //simulate completion of task0 and task1
     mockWorkerRunningAndCompletionSuccessfulTasks(tasks[0], tasks[1]);
 
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, results[0].get().getStatusCode());
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, results[1].get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, results[0].get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, results[1].get().getStatusCode());
 
     // now both threads race to run the last 3 tasks. task2 and task3 are being assigned
     waitForBothWorkersToHaveUnackedTasks();
@@ -104,20 +105,20 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
         && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[3].getId())) {
       remoteTaskRunner.shutdown("task4");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[3], tasks[2]);
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, results[3].get().getStatusCode());
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, results[2].get().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, results[3].get().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, results[2].get().getStatusCode());
     } else if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[3].getId())
                && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[4].getId())) {
       remoteTaskRunner.shutdown("task2");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[4], tasks[3]);
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, results[4].get().getStatusCode());
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, results[3].get().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, results[4].get().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, results[3].get().getStatusCode());
     } else if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[4].getId())
                && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[2].getId())) {
       remoteTaskRunner.shutdown("task3");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[4], tasks[2]);
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, results[4].get().getStatusCode());
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, results[2].get().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, results[4].get().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, results[2].get().getStatusCode());
     } else {
       throw new ISE("two out of three tasks 2,3 and 4 must be waiting for ack.");
     }
@@ -133,7 +134,7 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
       rtrTestUtils.mockWorkerRunningTask("worker1", tasks[5]);
       rtrTestUtils.mockWorkerCompleteSuccessfulTask("worker1", tasks[5]);
     }
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, results[5].get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, results[5].get().getStatusCode());
   }
 
   private void mockWorkerRunningAndCompletionSuccessfulTasks(Task t1, Task t2) throws Exception

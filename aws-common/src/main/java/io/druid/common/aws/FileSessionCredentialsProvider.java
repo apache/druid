@@ -22,7 +22,7 @@ package io.druid.common.aws;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 
 import java.io.File;
 import java.io.FileInputStream;

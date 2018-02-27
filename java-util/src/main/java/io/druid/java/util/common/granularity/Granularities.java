@@ -41,4 +41,8 @@ public class Granularities
   public static final Granularity ALL = GranularityType.ALL.getDefaultGranularity();
   public static final Granularity NONE = GranularityType.NONE.getDefaultGranularity();
 
+  public static Granularity nullToAll(Granularity granularity)
+  {
+    return granularity == null ? Granularities.ALL : granularity;
+  }
 }

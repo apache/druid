@@ -24,17 +24,19 @@ import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.metamx.common.lifecycle.Lifecycle;
-import com.metamx.emitter.core.LoggingEmitter;
-import com.metamx.emitter.core.LoggingEmitterConfig;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.http.client.CredentialedHttpClient;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.auth.BasicCredentials;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.emitter.core.LoggingEmitter;
+import io.druid.java.util.emitter.core.LoggingEmitterConfig;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.http.client.CredentialedHttpClient;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.auth.BasicCredentials;
 import io.druid.curator.CuratorConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
+import io.druid.guice.annotations.Self;
+import io.druid.server.DruidNode;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.IntegrationTestingConfigProvider;
 import io.druid.testing.IntegrationTestingCuratorConfig;
@@ -52,21 +54,25 @@ public class DruidTestModule implements Module
     JsonConfigProvider.bind(binder, "druid.test.config", IntegrationTestingConfigProvider.class);
 
     binder.bind(CuratorConfig.class).to(IntegrationTestingCuratorConfig.class);
+
+    // Bind DruidNode instance to make Guice happy. This instance is currently unused.
+    binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(
+        new DruidNode("integration-tests", "localhost", 9191, null, null, true, false)
+    );
   }
 
   @Provides
   @TestClient
   public HttpClient getHttpClient(
-    IntegrationTestingConfig config,
-    Lifecycle lifecycle,
-    @Client HttpClient delegate
-  )
-    throws Exception
+      IntegrationTestingConfig config,
+      Lifecycle lifecycle,
+      @EscalatedClient HttpClient delegate
+  ) throws Exception
   {
     if (config.getUsername() != null) {
       return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);
     } else {
-      return delegate;
+      return new CredentialedHttpClient(new BasicCredentials("admin", "priest"), delegate);
     }
   }
 

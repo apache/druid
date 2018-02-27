@@ -26,10 +26,14 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
+
+import java.util.Objects;
 
 /**
  */
+@PublicApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringDimensionSchema.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = DimensionSchema.STRING_TYPE_NAME, value = StringDimensionSchema.class),
@@ -49,12 +53,18 @@ public abstract class DimensionSchema
 
   // main druid and druid-api should really use the same ValueType enum.
   // merge them when druid-api is merged back into the main repo
+
+  /**
+   * Should be the same as {@code io.druid.segment.column.ValueType}.
+   * TODO merge them when druid-api is merged back into the main repo
+   */
   public enum ValueType
   {
     FLOAT,
     LONG,
     STRING,
     DOUBLE,
+    @SuppressWarnings("unused") // used in io.druid.segment.column.ValueType
     COMPLEX;
 
     @JsonValue
@@ -71,7 +81,7 @@ public abstract class DimensionSchema
     }
   }
 
-  public static enum MultiValueHandling
+  public enum MultiValueHandling
   {
     SORTED_ARRAY,
     SORTED_SET,
@@ -114,7 +124,7 @@ public abstract class DimensionSchema
   protected DimensionSchema(String name, MultiValueHandling multiValueHandling)
   {
     this.name = Preconditions.checkNotNull(name, "Dimension name cannot be null.");
-    this.multiValueHandling = multiValueHandling;
+    this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
   }
 
   @JsonProperty
@@ -147,13 +157,30 @@ public abstract class DimensionSchema
 
     DimensionSchema that = (DimensionSchema) o;
 
-    return name.equals(that.name);
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
+    if (!getValueType().equals(that.getValueType())) {
+      return false;
+    }
+
+    return Objects.equals(multiValueHandling, that.multiValueHandling);
   }
 
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    return Objects.hash(name, getValueType(), multiValueHandling);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DimensionSchema{" +
+           "name='" + name + "'" +
+           ", valueType='" + getValueType() + "'" +
+           ", multiValueHandling='" + getMultiValueHandling() + "'" +
+           "}";
   }
 }

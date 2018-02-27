@@ -81,11 +81,6 @@ public class BenchmarkColumnValueGenerator
     return schema;
   }
 
-  public long getSeed()
-  {
-    return seed;
-  }
-
   private Object generateSingleRowValue()
   {
     Object ret = null;

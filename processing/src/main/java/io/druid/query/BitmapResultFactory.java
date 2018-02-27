@@ -50,11 +50,6 @@ import io.druid.collections.bitmap.ImmutableBitmap;
 public interface BitmapResultFactory<T>
 {
   /**
-   * Wraps a bitmap of unknown nature.
-   */
-  T wrapUnknown(ImmutableBitmap bitmap);
-
-  /**
    * Wraps a bitmap which designates rows in a segment with some specific dimension value.
    */
   T wrapDimensionValue(ImmutableBitmap bitmap);
@@ -65,7 +60,7 @@ public interface BitmapResultFactory<T>
   T wrapAllFalse(ImmutableBitmap allFalseBitmap);
 
   /**
-   * Wraps a bitmap which is a result of {@link BitmapFactory#complement(ImmutableBitmap)} called with
+   * Wraps a bitmap which is a result of {@link BitmapFactory#complement(ImmutableBitmap, int)} called with
    * {@link BitmapFactory#makeEmptyImmutableBitmap()} as argument.
    */
   T wrapAllTrue(ImmutableBitmap allTrueBitmap);

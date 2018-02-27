@@ -21,7 +21,6 @@ package io.druid.segment.column;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -29,12 +28,13 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.CachingIndexed;
+import io.druid.segment.data.ColumnarInts;
+import io.druid.segment.data.ColumnarMultiInts;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
+import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.data.SingleIndexedInt;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.historical.HistoricalDimensionSelector;
-import io.druid.segment.historical.OffsetHolder;
 import io.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
@@ -43,16 +43,15 @@ import java.util.BitSet;
 
 /**
 */
-public class SimpleDictionaryEncodedColumn
-    implements DictionaryEncodedColumn<String>
+public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
-  private final IndexedInts column;
-  private final IndexedMultivalue<IndexedInts> multiValueColumn;
+  private final ColumnarInts column;
+  private final ColumnarMultiInts multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
-      IndexedInts singleValueColumn,
-      IndexedMultivalue<IndexedInts> multiValueColumn,
+      ColumnarInts singleValueColumn,
+      ColumnarMultiInts multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
   {
@@ -86,10 +85,10 @@ public class SimpleDictionaryEncodedColumn
   }
 
   @Override
+  @Nullable
   public String lookupName(int id)
   {
-    //Empty to Null will ensure that null and empty are equivalent for extraction function
-    return Strings.emptyToNull(cachedLookups.get(id));
+    return cachedLookups.get(id);
   }
 
   @Override
@@ -106,8 +105,8 @@ public class SimpleDictionaryEncodedColumn
 
   @Override
   public HistoricalDimensionSelector makeDimensionSelector(
-      final OffsetHolder offsetHolder,
-      final ExtractionFn extractionFn
+      final ReadableOffset offset,
+      @Nullable final ExtractionFn extractionFn
   )
   {
     abstract class QueryableDimensionSelector implements HistoricalDimensionSelector, IdLookup
@@ -144,9 +143,7 @@ public class SimpleDictionaryEncodedColumn
       public int lookupId(String name)
       {
         if (extractionFn != null) {
-          throw new UnsupportedOperationException(
-              "cannot perform lookup when applying an extraction function"
-          );
+          throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
         }
         return SimpleDictionaryEncodedColumn.this.lookupId(name);
       }
@@ -158,7 +155,7 @@ public class SimpleDictionaryEncodedColumn
         @Override
         public IndexedInts getRow()
         {
-          return multiValueColumn.get(offsetHolder.getReadableOffset().getOffset());
+          return multiValueColumn.get(offset.getOffset());
         }
 
         @Override
@@ -179,12 +176,24 @@ public class SimpleDictionaryEncodedColumn
           return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
         }
 
+        @Nullable
+        @Override
+        public Object getObject()
+        {
+          return defaultGetObject();
+        }
+
+        @Override
+        public Class classOfObject()
+        {
+          return Object.class;
+        }
+
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("multiValueColumn", multiValueColumn);
-          inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getReadableOffset());
+          inspector.visit("offset", offset);
           inspector.visit("extractionFn", extractionFn);
         }
       }
@@ -193,22 +202,25 @@ public class SimpleDictionaryEncodedColumn
       class SingleValueQueryableDimensionSelector extends QueryableDimensionSelector
           implements SingleValueHistoricalDimensionSelector
       {
+        private final SingleIndexedInt row = new SingleIndexedInt();
+
         @Override
         public IndexedInts getRow()
         {
-          return new SingleIndexedInt(getRowValue());
+          row.setValue(getRowValue());
+          return row;
         }
 
-        @Override
         public int getRowValue()
         {
-          return column.get(offsetHolder.getReadableOffset().getOffset());
+          return column.get(offset.getOffset());
         }
 
         @Override
         public IndexedInts getRow(int offset)
         {
-          return new SingleIndexedInt(getRowValue(offset));
+          row.setValue(getRowValue(offset));
+          return row;
         }
 
         @Override
@@ -270,11 +282,22 @@ public class SimpleDictionaryEncodedColumn
         }
 
         @Override
+        public Object getObject()
+        {
+          return lookupName(getRowValue());
+        }
+
+        @Override
+        public Class classOfObject()
+        {
+          return String.class;
+        }
+
+        @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("column", column);
-          inspector.visit("offsetHolder", offsetHolder);
-          inspector.visit("offset", offsetHolder.getReadableOffset());
+          inspector.visit("offset", offset);
           inspector.visit("extractionFn", extractionFn);
         }
       }

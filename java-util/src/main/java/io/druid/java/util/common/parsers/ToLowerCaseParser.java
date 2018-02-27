@@ -37,9 +37,9 @@ public class ToLowerCaseParser implements Parser<String, Object>
   }
 
   @Override
-  public Map parse(String input)
+  public Map parseToMap(String input)
   {
-    Map<String, Object> line = baseParser.parse(input);
+    Map<String, Object> line = baseParser.parseToMap(input);
     Map<String, Object> retVal = Maps.newLinkedHashMap();
     for (Map.Entry<String, Object> entry : line.entrySet()) {
       String k = StringUtils.toLowerCase(entry.getKey());

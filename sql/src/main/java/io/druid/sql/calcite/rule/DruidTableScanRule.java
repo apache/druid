@@ -19,7 +19,6 @@
 
 package io.druid.sql.calcite.rule;
 
-import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.rel.DruidQueryRel;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.table.DruidTable;
@@ -30,16 +29,11 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 
 public class DruidTableScanRule extends RelOptRule
 {
-  private final PlannerContext plannerContext;
   private final QueryMaker queryMaker;
 
-  public DruidTableScanRule(
-      final PlannerContext plannerContext,
-      final QueryMaker queryMaker
-  )
+  public DruidTableScanRule(final QueryMaker queryMaker)
   {
     super(operand(LogicalTableScan.class, any()));
-    this.plannerContext = plannerContext;
     this.queryMaker = queryMaker;
   }
 
@@ -51,7 +45,7 @@ public class DruidTableScanRule extends RelOptRule
     final DruidTable druidTable = table.unwrap(DruidTable.class);
     if (druidTable != null) {
       call.transformTo(
-          DruidQueryRel.fullScan(scan.getCluster(), table, druidTable, plannerContext, queryMaker)
+          DruidQueryRel.fullScan(scan, table, druidTable, queryMaker)
       );
     }
   }

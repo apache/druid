@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -36,6 +36,7 @@ import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -51,6 +52,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -224,7 +226,7 @@ public class JdbcExtractionNamespaceTest
                       }
                     }
                 ),
-                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter)
+                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
             );
             try {
               lifecycle.start();
@@ -269,17 +271,12 @@ public class JdbcExtractionNamespaceTest
         }
     );
 
-    try (final Closeable closeable =
-             new Closeable()
-             {
-               @Override
-               public void close() throws IOException
-               {
-                 if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
-                   throw new IOException("Unable to stop future");
-                 }
-               }
-             }) {
+    Closeable closeable = () -> {
+      if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
+        throw new IOException("Unable to stop future");
+      }
+    };
+    try (final Closeable c = closeable) {
       handleRef = setupFuture.get(10, TimeUnit.SECONDS);
     }
     Assert.assertNotNull(handleRef);
@@ -339,19 +336,20 @@ public class JdbcExtractionNamespaceTest
       throws InterruptedException
   {
     final String query;
+    final String statementVal = val != null ? "'%s'" : "%s";
     if (tsColumn == null) {
       handle.createStatement(
           StringUtils.format("DELETE FROM %s WHERE %s='%s'", tableName, keyName, key)
       ).setQueryTimeout(1).execute();
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', '%s')",
+          "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', " + statementVal + ")",
           tableName,
           filterColumn, keyName, valName,
           filter, key, val
       );
     } else {
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s')",
+          "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', " + statementVal + ")",
           tableName,
           tsColumn, filterColumn, keyName, valName,
           updateTs, filter, key, val
@@ -446,6 +444,19 @@ public class JdbcExtractionNamespaceTest
       assertUpdated(entry, "foo", "bar");
       insertValues(handleRef, "foo", "baz", null, "2900-01-01 00:00:00");
       assertUpdated(entry, "foo", "baz");
+    }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testIgnoresNullValues()
+          throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
+  {
+    try (final CacheScheduler.Entry entry = ensureEntry()) {
+      insertValues(handleRef, "fooz", null, null, "2900-01-01 00:00:00");
+      waitForUpdates(1_000L, 2L);
+      Thread.sleep(100);
+      Set set = entry.getCache().keySet();
+      Assert.assertFalse(set.contains("fooz"));
     }
   }
 

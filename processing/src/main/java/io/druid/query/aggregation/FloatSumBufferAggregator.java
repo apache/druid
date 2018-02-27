@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -28,17 +28,11 @@ import java.nio.ByteBuffer;
 public class FloatSumBufferAggregator extends SimpleFloatBufferAggregator
 {
 
-  FloatSumBufferAggregator(FloatColumnSelector selector)
+  FloatSumBufferAggregator(BaseFloatColumnValueSelector selector)
   {
     super(selector);
   }
 
-
-  @Override
-  public void putFirst(ByteBuffer buf, int position, float value)
-  {
-    buf.putFloat(position, value);
-  }
 
   @Override
   public void aggregate(ByteBuffer buf, int position, float value)

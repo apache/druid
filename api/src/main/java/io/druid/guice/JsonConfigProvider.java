@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.util.Types;
+import io.druid.guice.annotations.PublicApi;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
@@ -76,6 +77,7 @@ import java.util.Properties;
  *
  * @param <T> type of config object to provide.
  */
+@PublicApi
 public class JsonConfigProvider<T> implements Provider<Supplier<T>>
 {
   @SuppressWarnings("unchecked")

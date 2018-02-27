@@ -23,12 +23,14 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
+import javax.annotation.Nullable;
+
 public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
-  private final LongColumnSelector selector;
+  private final BaseLongColumnValueSelector selector;
   private final ExtractionFn extractionFn;
 
-  public LongWrappingDimensionSelector(LongColumnSelector selector, ExtractionFn extractionFn)
+  public LongWrappingDimensionSelector(BaseLongColumnValueSelector selector, ExtractionFn extractionFn)
   {
     this.selector = selector;
     this.extractionFn = extractionFn;
@@ -42,6 +44,19 @@ public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelec
     } else {
       return extractionFn.apply(selector.getLong());
     }
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return getValue();
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return String.class;
   }
 
   @Override

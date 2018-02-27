@@ -20,12 +20,16 @@
 package io.druid.segment;
 
 import io.druid.segment.column.Column;
-import io.druid.segment.data.Indexed;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  */
 public interface ColumnSelector
 {
-  public Indexed<String> getColumnNames();
-  public Column getColumn(String columnName);
+  List<String> getColumnNames();
+
+  @Nullable
+  Column getColumn(String columnName);
 }

@@ -35,5 +35,5 @@ import java.util.List;
               })
 public interface DataSource
 {
-  public List<String> getNames();
+  List<String> getNames();
 }

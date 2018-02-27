@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 /**
  */
@@ -30,27 +30,20 @@ public class FloatMinAggregator implements Aggregator
     return Math.min(((Number) lhs).floatValue(), ((Number) rhs).floatValue());
   }
 
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
 
   private float min;
 
-  public FloatMinAggregator(FloatColumnSelector selector)
+  public FloatMinAggregator(BaseFloatColumnValueSelector selector)
   {
     this.selector = selector;
-
-    reset();
+    this.min = Float.POSITIVE_INFINITY;
   }
 
   @Override
   public void aggregate()
   {
     min = Math.min(min, selector.getFloat());
-  }
-
-  @Override
-  public void reset()
-  {
-    min = Float.POSITIVE_INFINITY;
   }
 
   @Override

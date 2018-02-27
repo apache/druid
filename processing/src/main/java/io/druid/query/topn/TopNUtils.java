@@ -35,6 +35,10 @@ final class TopNUtils
    * Casting to the specific Offset subtype helps Hotspot JIT (OpenJDK 8) to generate better assembly. It shouldn't be
    * so, because the Offset subtype is still always the same (otherwise cast wouldn't be possible), so JIT should
    * generate equivalent code. In OpenJDK 9 Hotspot could be improved and this "casting hack" is not needed anymore.
+   *
+   * TODO check if offset.clone() is also necessary for generating better assembly, or it could be removed.
+   *
+   * See also javadoc comments to methods, where this method is used.
    */
   static Object copyOffset(HistoricalCursor cursor)
   {

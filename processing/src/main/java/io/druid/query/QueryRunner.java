@@ -19,10 +19,12 @@
 
 package io.druid.query;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.guava.Sequence;
 
 import java.util.Map;
 
+@ExtensionPoint
 public interface QueryRunner<T>
 {
   /**

@@ -23,10 +23,10 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ObjectStrategy;
-import io.druid.segment.data.TmpFileIOPeon;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -106,7 +106,7 @@ public class GenericIndexedBenchmark
   public void createGenericIndexed() throws IOException
   {
     GenericIndexedWriter<byte[]> genericIndexedWriter = new GenericIndexedWriter<>(
-        new TmpFileIOPeon(),
+        new OffHeapMemorySegmentWriteOutMedium(),
         "genericIndexedBenchmark",
         byteArrayStrategy
     );
@@ -121,14 +121,13 @@ public class GenericIndexedBenchmark
       element.putInt(0, i);
       genericIndexedWriter.write(element.array());
     }
-    genericIndexedWriter.close();
     smooshDir = Files.createTempDir();
     file = File.createTempFile("genericIndexedBenchmark", "meta");
 
     try (FileChannel fileChannel =
              FileChannel.open(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
          FileSmoosher fileSmoosher = new FileSmoosher(smooshDir)) {
-      genericIndexedWriter.writeToChannel(fileChannel, fileSmoosher);
+      genericIndexedWriter.writeTo(fileChannel, fileSmoosher);
     }
 
     FileChannel fileChannel = FileChannel.open(file.toPath());

@@ -34,9 +34,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -45,6 +45,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -61,15 +62,19 @@ import java.util.Set;
  */
 public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 {
+  private static final EmittingLogger log = new EmittingLogger(MergeTaskBase.class);
+
   @JsonIgnore
   private final List<DataSegment> segments;
-
-  private static final EmittingLogger log = new EmittingLogger(MergeTaskBase.class);
+  @JsonIgnore
+  @Nullable
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   protected MergeTaskBase(
       final String id,
       final String dataSource,
       final List<DataSegment> segments,
+      final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Map<String, Object> context
   )
   {
@@ -104,6 +109,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     verifyInputSegments(segments);
 
     this.segments = segments;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   protected void verifyInputSegments(List<DataSegment> segments)
@@ -127,9 +133,15 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   }
 
   @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox.getTaskActionClient()));
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);
@@ -173,7 +185,11 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       long uploadStart = System.currentTimeMillis();
 
       // Upload file
-      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment);
+
+      // The merge task does not support replicas where different tasks could generate segments with the
+      // same identifier but potentially different contents. In case of conflict, favor the most recently pushed
+      // segment (replaceExisting == true).
+      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment, true);
 
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
@@ -248,6 +264,13 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     return segments;
   }
 
+  @JsonProperty
+  @Nullable
+  public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
+  {
+    return segmentWriteOutMediumFactory;
+  }
+
   @Override
   public String toString()
   {
@@ -256,6 +279,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
                   .add("dataSource", getDataSource())
                   .add("interval", getInterval())
                   .add("segments", segments)
+                  .add("segmentWriteOutMediumFactory", segmentWriteOutMediumFactory)
                   .toString();
   }
 

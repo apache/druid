@@ -70,7 +70,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
 
   @Override
   protected long scanAndAggregate(
-      TopNParams params, int[] dimValSelector, Map<String, Aggregator[]> aggregatesStore, int numProcessed
+      TopNParams params, int[] dimValSelector, Map<String, Aggregator[]> aggregatesStore
   )
   {
     if (params.getCardinality() < 0) {

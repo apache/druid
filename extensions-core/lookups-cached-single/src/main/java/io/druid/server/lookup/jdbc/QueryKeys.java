@@ -44,7 +44,7 @@ public interface QueryKeys
       @Define("valueColumn") String valueColumn
   );
 
-  static class QueryKeysContainerFactory implements ContainerFactory<ImmutableSet<?>>
+  class QueryKeysContainerFactory implements ContainerFactory<ImmutableSet<?>>
   {
     @Override
     public boolean accepts(Class<?> type)

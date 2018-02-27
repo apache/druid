@@ -44,6 +44,7 @@ import io.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -98,17 +99,13 @@ public class CliRealtimeExample extends ServerRunnable
   private static class NoopServerView implements ServerView
   {
     @Override
-    public void registerServerCallback(
-        Executor exec, ServerCallback callback
-    )
+    public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
     {
       // do nothing
     }
 
     @Override
-    public void registerSegmentCallback(
-        Executor exec, SegmentCallback callback
-    )
+    public void registerSegmentCallback(Executor exec, SegmentCallback callback)
     {
       // do nothing
     }
@@ -123,7 +120,7 @@ public class CliRealtimeExample extends ServerRunnable
     }
 
     @Override
-    public Iterable<DruidServer> getInventory()
+    public Collection<DruidServer> getInventory()
     {
       return ImmutableList.of();
     }
@@ -158,7 +155,7 @@ public class CliRealtimeExample extends ServerRunnable
     }
 
     @Override
-    public DataSegment push(File file, DataSegment segment) throws IOException
+    public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
     {
       return segment;
     }

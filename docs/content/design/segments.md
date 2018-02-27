@@ -13,7 +13,7 @@ operate well under heavy query load, it is important for the segment
 file size to be within the recommended range of 300mb-700mb. If your
 segment files are larger than this range, then consider either
 changing the granularity of the time interval or partitioning your
-data and tweaking the `targetPartitionSize` in your `partitioningSpec`
+data and tweaking the `targetPartitionSize` in your `partitionsSpec`
 (a good starting point for this parameter is 5 million rows).  See the
 sharding section below and the 'Partitioning specification' section of
 the [Batch ingestion](../ingestion/batch-ingestion.html) documentation

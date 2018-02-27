@@ -10,12 +10,21 @@ Druid uses a module system that allows for the addition of extensions at runtime
 
 Druid's extensions leverage Guice in order to add things at runtime.  Basically, Guice is a framework for Dependency Injection, but we use it to hold the expected object graph of the Druid process.  Extensions can make any changes they want/need to the object graph via adding Guice bindings.  While the extensions actually give you the capability to change almost anything however you want, in general, we expect people to want to extend one of the things listed below.  This means that we honor our [versioning strategy](./versioning.html) for changes that affect the interfaces called out on this page, but other interfaces are deemed "internal" and can be changed in an incompatible manner even between patch releases.
 
-1. Add a new deep storage implementation
-1. Add a new Firehose
-1. Add Aggregators
-1. Add Complex metrics
-1. Add new Query types
-1. Add new Jersey resources
+1. Add a new deep storage implementation by extending the `io.druid.segment.loading.DataSegment*` and
+   `io.druid.tasklogs.TaskLog*` classes.
+1. Add a new Firehose by extending `io.druid.data.input.FirehoseFactory`.
+1. Add a new input parser by extending `io.druid.data.input.impl.InputRowParser`.
+1. Add a new string-based input format by extending `io.druid.data.input.impl.ParseSpec`.
+1. Add Aggregators by extending `io.druid.query.aggregation.AggregatorFactory`, `io.druid.query.aggregation.Aggregator`,
+   and `io.druid.query.aggregation.BufferAggregator`.
+1. Add PostAggregators by extending `io.druid.query.aggregation.PostAggregator`.
+1. Add ExtractionFns by extending `io.druid.query.extraction.ExtractionFn`.
+1. Add Complex metrics by extending `io.druid.segment.serde.ComplexMetricsSerde`.
+1. Add new Query types by extending `io.druid.query.QueryRunnerFactory`, `io.druid.query.QueryToolChest`, and
+   `io.druid.query.Query`.
+1. Add new Jersey resources by calling `Jerseys.addResource(binder, clazz)`.
+1. Add new Jetty filters by extending `io.druid.server.initialization.jetty.ServletFilterHolder`.
+1. Add new secret providers by extending `io.druid.metadata.PasswordProvider`.
 1. Bundle your extension with all the other Druid extensions
 
 Extensions are added to the system via an implementation of `io.druid.initialization.DruidModule`.
@@ -101,7 +110,7 @@ The following example was retrieved from a historical node configured to use Azu
 00Z_2015-04-14T02:41:09.484Z
 2015-04-14T02:42:33,463 INFO [ZkCoordinator-0] io.druid.guice.JsonConfigurator - Loaded class[class io.druid.storage.azure.AzureAccountConfig] from props[drui
 d.azure.] as [io.druid.storage.azure.AzureAccountConfig@759c9ad9]
-2015-04-14T02:49:08,275 INFO [ZkCoordinator-0] com.metamx.common.CompressionUtils - Unzipping file[/opt/druid/tmp/compressionUtilZipCache1263964429587449785.z
+2015-04-14T02:49:08,275 INFO [ZkCoordinator-0] io.druid.java.util.common.CompressionUtils - Unzipping file[/opt/druid/tmp/compressionUtilZipCache1263964429587449785.z
 ip] to [/opt/druid/zk_druid/dde/2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z/2015-04-14T02:41:09.484Z/0]
 2015-04-14T02:49:08,276 INFO [ZkCoordinator-0] io.druid.storage.azure.AzureDataSegmentPuller - Loaded 1196 bytes from [dde/2015-01-02T00:00:00.000Z_2015-01-03
 T00:00:00.000Z/2015-04-14T02:41:09.484Z/0/index.zip] to [/opt/druid/zk_druid/dde/2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z/2015-04-14T02:41:09.484Z/0]

@@ -27,17 +27,17 @@ import java.util.Iterator;
  */
 public interface TopNResultBuilder
 {
-  public TopNResultBuilder addEntry(
+  TopNResultBuilder addEntry(
       Comparable dimNameObj,
       Object dimValIndex,
       Object[] metricVals
   );
 
-  public TopNResultBuilder addEntry(
+  TopNResultBuilder addEntry(
       DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor
   );
 
-  public Iterator<DimValHolder> getTopNIterator();
+  Iterator<DimValHolder> getTopNIterator();
 
-  public Result<TopNResultValue> build();
+  Result<TopNResultValue> build();
 }

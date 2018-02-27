@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -30,7 +29,6 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
-import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.TestHelper;
@@ -40,6 +38,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RetryQueryRunnerTest
 {
@@ -67,7 +66,7 @@ public class RetryQueryRunnerTest
     }
   }
 
-  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                       .dataSource(QueryRunnerTestHelper.dataSource)
@@ -89,7 +88,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRunWithMissingSegments() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -103,9 +102,6 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new RetryQueryRunnerConfig()
         {
           @Override
@@ -123,10 +119,7 @@ public class RetryQueryRunnerTest
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
@@ -139,7 +132,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRetry() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
@@ -171,17 +164,11 @@ public class RetryQueryRunnerTest
             }
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(1, true),
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
@@ -193,7 +180,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testRetryMultiple() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
@@ -225,17 +212,11 @@ public class RetryQueryRunnerTest
             }
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(4, true),
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
@@ -247,7 +228,7 @@ public class RetryQueryRunnerTest
   @Test(expected = SegmentMissingException.class)
   public void testException() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -264,17 +245,11 @@ public class RetryQueryRunnerTest
             return Sequences.empty();
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(1, false),
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
@@ -285,7 +260,7 @@ public class RetryQueryRunnerTest
   @Test
   public void testNoDuplicateRetry() throws Exception
   {
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
@@ -353,17 +328,11 @@ public class RetryQueryRunnerTest
             }
           }
         },
-        (QueryToolChest) new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
         new TestRetryQueryRunnerConfig(2, false),
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue("Should return a list with 3 elements", ((List) actualResults).size() == 3);
     Assert.assertTrue(

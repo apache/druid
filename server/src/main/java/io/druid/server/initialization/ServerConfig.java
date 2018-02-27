@@ -35,6 +35,13 @@ public class ServerConfig
   private int numThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
 
   @JsonProperty
+  @Min(1)
+  private int queueSize = Integer.MAX_VALUE;
+
+  @JsonProperty
+  private boolean enableRequestLimit = false;
+
+  @JsonProperty
   @NotNull
   private Period maxIdleTime = new Period("PT5m");
 
@@ -47,10 +54,11 @@ public class ServerConfig
   private long maxScatterGatherBytes = Long.MAX_VALUE;
 
   @JsonProperty
-  private boolean plaintext = true;
+  @Min(1)
+  private long maxQueryTimeout = Long.MAX_VALUE;
 
   @JsonProperty
-  private boolean tls = false;
+  private int maxRequestHeaderSize = 8 * 1024;
 
   @JsonProperty
   @NotNull
@@ -59,6 +67,16 @@ public class ServerConfig
   public int getNumThreads()
   {
     return numThreads;
+  }
+
+  public int getQueueSize()
+  {
+    return queueSize;
+  }
+
+  public boolean isEnableRequestLimit()
+  {
+    return enableRequestLimit;
   }
 
   public Period getMaxIdleTime()
@@ -76,14 +94,14 @@ public class ServerConfig
     return maxScatterGatherBytes;
   }
 
-  public boolean isPlaintext()
+  public long getMaxQueryTimeout()
   {
-    return plaintext;
+    return maxQueryTimeout;
   }
 
-  public boolean isTls()
+  public int getMaxRequestHeaderSize()
   {
-    return tls;
+    return maxRequestHeaderSize;
   }
 
   public Period getGracefulShutdownTimeout()
@@ -102,17 +120,31 @@ public class ServerConfig
     }
     ServerConfig that = (ServerConfig) o;
     return numThreads == that.numThreads &&
+           queueSize == that.queueSize &&
+           enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
-           plaintext == that.plaintext &&
-           tls == that.tls &&
-           Objects.equals(maxIdleTime, that.maxIdleTime);
+           maxQueryTimeout == that.maxQueryTimeout &&
+           maxRequestHeaderSize == that.maxRequestHeaderSize &&
+           Objects.equals(maxIdleTime, that.maxIdleTime) &&
+           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(numThreads, maxIdleTime, defaultQueryTimeout, maxScatterGatherBytes, plaintext, tls);
+
+    return Objects.hash(
+        numThreads,
+        queueSize,
+        enableRequestLimit,
+        maxIdleTime,
+        defaultQueryTimeout,
+        maxScatterGatherBytes,
+        maxQueryTimeout,
+        maxRequestHeaderSize,
+        gracefulShutdownTimeout
+    );
   }
 
   @Override
@@ -120,12 +152,14 @@ public class ServerConfig
   {
     return "ServerConfig{" +
            "numThreads=" + numThreads +
+           ", queueSize=" + queueSize +
+           ", enableRequestLimit=" + enableRequestLimit +
            ", maxIdleTime=" + maxIdleTime +
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
-           ", plaintext=" + plaintext +
-           ", tls=" + tls +
-           ", gracefulStopTimeout=" + gracefulShutdownTimeout +
+           ", maxQueryTimeout=" + maxQueryTimeout +
+           ", maxRequestHeaderSize=" + maxRequestHeaderSize +
+           ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
            '}';
   }
 }

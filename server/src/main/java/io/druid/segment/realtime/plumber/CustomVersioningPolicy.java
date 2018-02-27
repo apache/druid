@@ -43,4 +43,10 @@ public class CustomVersioningPolicy implements VersioningPolicy
   {
     return version;
   }
+
+  @JsonProperty("version")
+  public String getVersion()
+  {
+    return version;
+  }
 }

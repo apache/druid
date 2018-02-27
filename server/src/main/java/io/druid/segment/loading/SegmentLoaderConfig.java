@@ -45,13 +45,16 @@ public class SegmentLoaderConfig
   private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = 1;
+  private int numLoadingThreads = 10;
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
 
   @JsonProperty
   private File infoDir = null;
+
+  @JsonProperty
+  private int statusQueueMaxSize = 100;
 
   public List<StorageLocationConfig> getLocations()
   {
@@ -94,6 +97,11 @@ public class SegmentLoaderConfig
     }
 
     return infoDir;
+  }
+
+  public int getStatusQueueMaxSize()
+  {
+    return statusQueueMaxSize;
   }
 
   public SegmentLoaderConfig withLocations(List<StorageLocationConfig> locations)

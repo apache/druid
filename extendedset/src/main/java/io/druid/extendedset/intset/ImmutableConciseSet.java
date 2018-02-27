@@ -19,7 +19,6 @@ package io.druid.extendedset.intset;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
-import com.google.common.primitives.Ints;
 import io.druid.extendedset.utilities.IntList;
 import org.roaringbitmap.IntIterator;
 
@@ -34,7 +33,7 @@ import java.util.PriorityQueue;
 
 public class ImmutableConciseSet
 {
-  private final static int CHUNK_SIZE = 10000;
+  private static final int CHUNK_SIZE = 10000;
 
   private static final Comparator<WordIterator> UNION_COMPARATOR = new Comparator<WordIterator>()
   {
@@ -811,7 +810,7 @@ public class ImmutableConciseSet
     if (words == null) {
       return new byte[]{};
     }
-    ByteBuffer buf = ByteBuffer.allocate(words.capacity() * Ints.BYTES);
+    ByteBuffer buf = ByteBuffer.allocate(words.capacity() * Integer.BYTES);
     buf.asIntBuffer().put(words.asReadOnlyBuffer());
     return buf.array();
   }

@@ -21,7 +21,6 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.ISE;
 
 import java.nio.ByteBuffer;
@@ -68,7 +67,7 @@ public class ByteBufferMinMaxOffsetHeap
   public int addOffset(int offset)
   {
     int pos = heapSize;
-    buf.putInt(pos * Ints.BYTES, offset);
+    buf.putInt(pos * Integer.BYTES, offset);
     heapSize++;
 
     if (heapIndexUpdater != null) {
@@ -100,7 +99,7 @@ public class ByteBufferMinMaxOffsetHeap
     }
 
     int lastIndex = heapSize - 1;
-    int lastOffset = buf.getInt(lastIndex * Ints.BYTES);
+    int lastOffset = buf.getInt(lastIndex * Integer.BYTES);
     heapSize--;
     buf.putInt(0, lastOffset);
 
@@ -132,7 +131,7 @@ public class ByteBufferMinMaxOffsetHeap
     // index of max must be 1, just remove it and shrink the heap
     if (heapSize == 2) {
       heapSize--;
-      maxOffset = buf.getInt(Ints.BYTES);
+      maxOffset = buf.getInt(Integer.BYTES);
       if (heapIndexUpdater != null) {
         heapIndexUpdater.updateHeapIndexForOffset(maxOffset, -1);
       }
@@ -140,12 +139,12 @@ public class ByteBufferMinMaxOffsetHeap
     }
 
     int maxIndex = findMaxElementIndex();
-    maxOffset = buf.getInt(maxIndex * Ints.BYTES);
+    maxOffset = buf.getInt(maxIndex * Integer.BYTES);
 
     int lastIndex = heapSize - 1;
-    int lastOffset = buf.getInt(lastIndex * Ints.BYTES);
+    int lastOffset = buf.getInt(lastIndex * Integer.BYTES);
     heapSize--;
-    buf.putInt(maxIndex * Ints.BYTES, lastOffset);
+    buf.putInt(maxIndex * Integer.BYTES, lastOffset);
 
     if (heapIndexUpdater != null) {
       heapIndexUpdater.updateHeapIndexForOffset(maxOffset, -1);
@@ -163,7 +162,7 @@ public class ByteBufferMinMaxOffsetHeap
     if (heapSize < 1) {
       throw new ISE("Empty heap");
     }
-    int deletedOffset = buf.getInt(deletedIndex * Ints.BYTES);
+    int deletedOffset = buf.getInt(deletedIndex * Integer.BYTES);
     if (heapIndexUpdater != null) {
       heapIndexUpdater.updateHeapIndexForOffset(deletedOffset, -1);
     }
@@ -173,8 +172,8 @@ public class ByteBufferMinMaxOffsetHeap
     if (lastIndex == deletedIndex) {
       return deletedOffset;
     }
-    int lastOffset = buf.getInt(lastIndex * Ints.BYTES);
-    buf.putInt(deletedIndex * Ints.BYTES, lastOffset);
+    int lastOffset = buf.getInt(lastIndex * Integer.BYTES);
+    buf.putInt(deletedIndex * Integer.BYTES, lastOffset);
 
     if (heapIndexUpdater != null) {
       heapIndexUpdater.updateHeapIndexForOffset(lastOffset, deletedIndex);
@@ -190,18 +189,18 @@ public class ByteBufferMinMaxOffsetHeap
 
   public void setAt(int index, int newVal)
   {
-    buf.putInt(index * Ints.BYTES, newVal);
+    buf.putInt(index * Integer.BYTES, newVal);
   }
 
   public int getAt(int index)
   {
-    return buf.getInt(index * Ints.BYTES);
+    return buf.getInt(index * Integer.BYTES);
   }
 
   public int indexOf(int offset)
   {
     for (int i = 0; i < heapSize; i++) {
-      int curOffset = buf.getInt(i * Ints.BYTES);
+      int curOffset = buf.getInt(i * Integer.BYTES);
       if (curOffset == offset) {
         return i;
       }
@@ -227,11 +226,11 @@ public class ByteBufferMinMaxOffsetHeap
     if (isEvenLevel(pos)) {
       int parentIndex = getParentIndex(pos);
       if (parentIndex > -1) {
-        int parentOffset = buf.getInt(parentIndex * Ints.BYTES);
-        int offset = buf.getInt(pos * Ints.BYTES);
+        int parentOffset = buf.getInt(parentIndex * Integer.BYTES);
+        int offset = buf.getInt(pos * Integer.BYTES);
         if (minComparator.compare(offset, parentOffset) > 0) {
-          buf.putInt(parentIndex * Ints.BYTES, offset);
-          buf.putInt(pos * Ints.BYTES, parentOffset);
+          buf.putInt(parentIndex * Integer.BYTES, offset);
+          buf.putInt(pos * Integer.BYTES, parentOffset);
           if (heapIndexUpdater != null) {
             heapIndexUpdater.updateHeapIndexForOffset(offset, parentIndex);
             heapIndexUpdater.updateHeapIndexForOffset(parentOffset, pos);
@@ -246,11 +245,11 @@ public class ByteBufferMinMaxOffsetHeap
     } else {
       int parentIndex = getParentIndex(pos);
       if (parentIndex > -1) {
-        int parentOffset = buf.getInt(parentIndex * Ints.BYTES);
-        int offset = buf.getInt(pos * Ints.BYTES);
+        int parentOffset = buf.getInt(parentIndex * Integer.BYTES);
+        int offset = buf.getInt(pos * Integer.BYTES);
         if (minComparator.compare(offset, parentOffset) < 0) {
-          buf.putInt(parentIndex * Ints.BYTES, offset);
-          buf.putInt(pos * Ints.BYTES, parentOffset);
+          buf.putInt(parentIndex * Integer.BYTES, offset);
+          buf.putInt(pos * Integer.BYTES, parentOffset);
           if (heapIndexUpdater != null) {
             heapIndexUpdater.updateHeapIndexForOffset(offset, parentIndex);
             heapIndexUpdater.updateHeapIndexForOffset(parentOffset, pos);
@@ -269,12 +268,12 @@ public class ByteBufferMinMaxOffsetHeap
   {
     int grandparent = getGrandparentIndex(pos);
     while (grandparent > -1) {
-      int offset = buf.getInt(pos * Ints.BYTES);
-      int gpOffset = buf.getInt(grandparent * Ints.BYTES);
+      int offset = buf.getInt(pos * Integer.BYTES);
+      int gpOffset = buf.getInt(grandparent * Integer.BYTES);
 
       if (comparator.compare(offset, gpOffset) < 0) {
-        buf.putInt(pos * Ints.BYTES, gpOffset);
-        buf.putInt(grandparent * Ints.BYTES, offset);
+        buf.putInt(pos * Integer.BYTES, gpOffset);
+        buf.putInt(grandparent * Integer.BYTES, offset);
         if (heapIndexUpdater != null) {
           heapIndexUpdater.updateHeapIndexForOffset(gpOffset, pos);
           heapIndexUpdater.updateHeapIndexForOffset(offset, grandparent);
@@ -293,8 +292,8 @@ public class ByteBufferMinMaxOffsetHeap
     while (minChild > -1) {
       minGrandchild = findMinGrandChild(comparator, pos);
       if (minGrandchild > -1) {
-        int minChildOffset = buf.getInt(minChild * Ints.BYTES);
-        int minGcOffset = buf.getInt(minGrandchild * Ints.BYTES);
+        int minChildOffset = buf.getInt(minChild * Integer.BYTES);
+        int minGcOffset = buf.getInt(minGrandchild * Integer.BYTES);
         int cmp = comparator.compare(minChildOffset, minGcOffset);
         minIndex = (cmp > 0) ? minGrandchild : minChild;
       } else if (minChild > -1) {
@@ -303,23 +302,23 @@ public class ByteBufferMinMaxOffsetHeap
         break;
       }
       if (minIndex == minGrandchild) {
-        int offset = buf.getInt(pos * Ints.BYTES);
-        int minOffset = buf.getInt(minIndex * Ints.BYTES);
+        int offset = buf.getInt(pos * Integer.BYTES);
+        int minOffset = buf.getInt(minIndex * Integer.BYTES);
 
         if (comparator.compare(minOffset, offset) < 0) {
-          buf.putInt(pos * Ints.BYTES, minOffset);
-          buf.putInt(minIndex * Ints.BYTES, offset);
+          buf.putInt(pos * Integer.BYTES, minOffset);
+          buf.putInt(minIndex * Integer.BYTES, offset);
           if (heapIndexUpdater != null) {
             heapIndexUpdater.updateHeapIndexForOffset(minOffset, pos);
             heapIndexUpdater.updateHeapIndexForOffset(offset, minIndex);
           }
 
           int parent = getParentIndex(minIndex);
-          int parentOffset = buf.getInt(parent * Ints.BYTES);
+          int parentOffset = buf.getInt(parent * Integer.BYTES);
 
           if (comparator.compare(offset, parentOffset) > 0) {
-            buf.putInt(minIndex * Ints.BYTES, parentOffset);
-            buf.putInt(parent * Ints.BYTES, offset);
+            buf.putInt(minIndex * Integer.BYTES, parentOffset);
+            buf.putInt(parent * Integer.BYTES, offset);
             if (heapIndexUpdater != null) {
               heapIndexUpdater.updateHeapIndexForOffset(offset, parent);
               heapIndexUpdater.updateHeapIndexForOffset(parentOffset, minIndex);
@@ -329,11 +328,11 @@ public class ByteBufferMinMaxOffsetHeap
         }
         pos = minIndex;
       } else {
-        int offset = buf.getInt(pos * Ints.BYTES);
-        int minOffset = buf.getInt(minIndex * Ints.BYTES);
+        int offset = buf.getInt(pos * Integer.BYTES);
+        int minOffset = buf.getInt(minIndex * Integer.BYTES);
         if (comparator.compare(minOffset, offset) < 0) {
-          buf.putInt(pos * Ints.BYTES, minOffset);
-          buf.putInt(minIndex * Ints.BYTES, offset);
+          buf.putInt(pos * Integer.BYTES, minOffset);
+          buf.putInt(minIndex * Integer.BYTES, offset);
           if (heapIndexUpdater != null) {
             heapIndexUpdater.updateHeapIndexForOffset(offset, minIndex);
             heapIndexUpdater.updateHeapIndexForOffset(minOffset, pos);
@@ -363,7 +362,7 @@ public class ByteBufferMinMaxOffsetHeap
     int limit = Math.min(index, heapSize - len) + len;
     int minIndex = index;
     for (int i = index + 1; i < limit; i++) {
-      if (comparator.compare(buf.getInt(i * Ints.BYTES), buf.getInt(minIndex * Ints.BYTES)) < 0) {
+      if (comparator.compare(buf.getInt(i * Integer.BYTES), buf.getInt(minIndex * Integer.BYTES)) < 0) {
         minIndex = i;
       }
     }
@@ -429,8 +428,8 @@ public class ByteBufferMinMaxOffsetHeap
       default:
         // The max element must sit on the first level of the maxHeap. It is
         // actually the *lesser* of the two from the maxHeap's perspective.
-        int offset1 = buf.getInt(1 * Ints.BYTES);
-        int offset2 = buf.getInt(2 * Ints.BYTES);
+        int offset1 = buf.getInt(1 * Integer.BYTES);
+        int offset2 = buf.getInt(2 * Integer.BYTES);
         return maxComparator.compare(offset1, offset2) <= 0 ? 1 : 2;
     }
   }
@@ -449,11 +448,11 @@ public class ByteBufferMinMaxOffsetHeap
   private boolean verifyIndex(int i)
   {
     Comparator comparator = isEvenLevel(i) ? minComparator : maxComparator;
-    int offset = buf.getInt(i * Ints.BYTES);
+    int offset = buf.getInt(i * Integer.BYTES);
 
     int lcIdx = getLeftChildIndex(i);
     if (lcIdx < heapSize) {
-      int leftChildOffset = buf.getInt(lcIdx * Ints.BYTES);
+      int leftChildOffset = buf.getInt(lcIdx * Integer.BYTES);
       if (comparator.compare(offset, leftChildOffset) > 0) {
         throw new ISE("Left child val[%d] at idx[%d] is less than val[%d] at idx[%d]",
                       leftChildOffset, lcIdx, offset, i);
@@ -462,7 +461,7 @@ public class ByteBufferMinMaxOffsetHeap
 
     int rcIdx = getRightChildIndex(i);
     if (rcIdx < heapSize) {
-      int rightChildOffset = buf.getInt(rcIdx * Ints.BYTES);
+      int rightChildOffset = buf.getInt(rcIdx * Integer.BYTES);
       if (comparator.compare(offset, rightChildOffset) > 0) {
         throw new ISE("Right child val[%d] at idx[%d] is less than val[%d] at idx[%d]",
                       rightChildOffset, rcIdx, offset, i);
@@ -471,7 +470,7 @@ public class ByteBufferMinMaxOffsetHeap
 
     if (i > 0) {
       int parentIdx = getParentIndex(i);
-      int parentOffset = buf.getInt(parentIdx * Ints.BYTES);
+      int parentOffset = buf.getInt(parentIdx * Integer.BYTES);
       if (comparator.compare(offset, parentOffset) > 0) {
         throw new ISE("Parent val[%d] at idx[%d] is less than val[%d] at idx[%d]",
                       parentOffset, parentIdx, offset, i);
@@ -480,7 +479,7 @@ public class ByteBufferMinMaxOffsetHeap
 
     if (i > 2) {
       int gpIdx = getGrandparentIndex(i);
-      int gpOffset = buf.getInt(gpIdx * Ints.BYTES);
+      int gpOffset = buf.getInt(gpIdx * Integer.BYTES);
       if (comparator.compare(gpOffset, offset) > 0) {
         throw new ISE("Grandparent val[%d] at idx[%d] is less than val[%d] at idx[%d]",
                       gpOffset, gpIdx, offset, i);
@@ -499,7 +498,7 @@ public class ByteBufferMinMaxOffsetHeap
 
     String ret = "[";
     for (int i = 0; i < heapSize; i++) {
-      ret += buf.getInt(i * Ints.BYTES);
+      ret += buf.getInt(i * Integer.BYTES);
       if (i < heapSize - 1) {
         ret += ", ";
       }

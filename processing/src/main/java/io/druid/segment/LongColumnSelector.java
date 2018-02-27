@@ -19,24 +19,23 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.query.monomorphicprocessing.HotLoopCallee;
+import javax.annotation.Nullable;
 
 /**
+ * This interface is convenient for implementation of "long-sourcing" {@link ColumnValueSelector}s, it provides default
+ * implementations for all {@link ColumnValueSelector}'s methods except {@link #getLong()}.
+ *
+ * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseLongColumnValueSelector} must be used instead.
  */
-public interface LongColumnSelector extends ColumnValueSelector, HotLoopCallee
+public interface LongColumnSelector extends ColumnValueSelector<Long>
 {
-  @CalledFromHotLoop
-  @Override
-  long getLong();
-
   /**
    * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
    * calling. "Polymorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
   @Deprecated
-  @CalledFromHotLoop
   @Override
   default float getFloat()
   {
@@ -49,10 +48,37 @@ public interface LongColumnSelector extends ColumnValueSelector, HotLoopCallee
    * objects.
    */
   @Deprecated
-  @CalledFromHotLoop
   @Override
   default double getDouble()
   {
     return (double) getLong();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  @Nullable
+  default Long getObject()
+  {
+    if (isNull()) {
+      return null;
+    }
+    return getLong();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Class<Long> classOfObject()
+  {
+    return Long.class;
   }
 }

@@ -19,9 +19,6 @@
 
 package io.druid.curator.inventory;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.java.util.common.StringUtils;
@@ -37,12 +34,17 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
+ * This class is deprecated. Use {@link io.druid.client.HttpServerInventoryView} for segment discovery.
+ *
  * An InventoryManager watches updates to inventory on Zookeeper (or some other discovery-like service publishing
  * system).  It is built up on two object types: containers and inventory objects.
  * <p/>
@@ -52,6 +54,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * A Strategy is provided to the constructor of an Inventory manager, this strategy provides all of the
  * object-specific logic to serialize, deserialize, compose and alter the container and inventory objects.
  */
+@Deprecated
 public class CuratorInventoryManager<ContainerClass, InventoryClass>
 {
   private static final Logger log = new Logger(CuratorInventoryManager.class);
@@ -80,7 +83,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     this.config = config;
     this.strategy = strategy;
 
-    this.containers = new MapMaker().makeMap();
+    this.containers = new ConcurrentHashMap<>();
     this.uninitializedInventory = Sets.newConcurrentHashSet();
 
     this.pathChildrenCacheExecutor = exec;
@@ -160,19 +163,12 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     return containerHolder == null ? null : containerHolder.getContainer();
   }
 
-  public Iterable<ContainerClass> getInventory()
+  public Collection<ContainerClass> getInventory()
   {
-    return Iterables.transform(
-        containers.values(),
-        new Function<ContainerHolder, ContainerClass>()
-        {
-          @Override
-          public ContainerClass apply(ContainerHolder input)
-          {
-            return input.getContainer();
-          }
-        }
-    );
+    return containers.values()
+                     .stream()
+                     .map(ContainerHolder::getContainer)
+                     .collect(Collectors.toList());
   }
 
   private byte[] getZkDataForNode(String path)

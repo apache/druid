@@ -22,6 +22,7 @@ package io.druid.java.util.common;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 
+import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -77,11 +78,37 @@ public class StringUtils
     }
   }
 
+  @Nullable
+  public static String fromUtf8Nullable(@Nullable final byte[] bytes)
+  {
+    if (bytes == null) {
+      return null;
+    }
+    return fromUtf8(bytes);
+  }
+
   public static String fromUtf8(final ByteBuffer buffer, final int numBytes)
   {
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
-    return StringUtils.fromUtf8(bytes);
+    return fromUtf8(bytes);
+  }
+
+  /**
+   * Reads numBytes bytes from buffer and converts that to a utf-8 string
+   * @param buffer buffer to read bytes from
+   * @param numBytes number of bytes to read
+   * @return returns null if numBytes is -1 otherwise utf-8 string represetation of bytes read
+   */
+  @Nullable
+  public static String fromUtf8Nullable(final ByteBuffer buffer, final int numBytes)
+  {
+    if (numBytes < 0) {
+      return null;
+    }
+    final byte[] bytes = new byte[numBytes];
+    buffer.get(bytes);
+    return fromUtf8Nullable(bytes);
   }
 
   public static String fromUtf8(final ByteBuffer buffer)
@@ -98,6 +125,15 @@ public class StringUtils
       // Should never happen
       throw Throwables.propagate(e);
     }
+  }
+
+  @Nullable
+  public static byte[] toUtf8Nullable(@Nullable final String string)
+  {
+    if (string == null) {
+      return null;
+    }
+    return toUtf8(string);
   }
 
   /**
@@ -138,5 +174,28 @@ public class StringUtils
   public static String toUpperCase(String s)
   {
     return s.toUpperCase(Locale.ENGLISH);
+  }
+
+  public static String removeChar(String s, char c)
+  {
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == c) {
+        return removeChar(s, c, i);
+      }
+    }
+    return s;
+  }
+
+  private static String removeChar(String s, char c, int firstOccurranceIndex)
+  {
+    StringBuilder sb = new StringBuilder(s.length() - 1);
+    sb.append(s, 0, firstOccurranceIndex);
+    for (int i = firstOccurranceIndex + 1; i < s.length(); i++) {
+      char charOfString = s.charAt(i);
+      if (charOfString != c) {
+        sb.append(charOfString);
+      }
+    }
+    return sb.toString();
   }
 }

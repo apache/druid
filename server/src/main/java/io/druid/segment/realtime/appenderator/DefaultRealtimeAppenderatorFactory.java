@@ -21,7 +21,7 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -39,8 +39,7 @@ import io.druid.timeline.partition.ShardSpec;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 
-public class
-DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
+public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
 {
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;

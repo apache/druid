@@ -23,12 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
@@ -67,16 +64,13 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new HistogramAggregator(metricFactory.makeFloatColumnSelector(fieldName), breaks);
+    return new HistogramAggregator(metricFactory.makeColumnValueSelector(fieldName), breaks);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new HistogramBufferAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
-        breaks
-    );
+    return new HistogramBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), breaks);
   }
 
   @Override
@@ -103,8 +97,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
       @Override
       public void reset(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        Histogram first = ((ObjectColumnSelector<Histogram>) selector).get();
+        Histogram first = (Histogram) selector.getObject();
         if (combined == null) {
           combined = new Histogram(first);
         } else {
@@ -115,8 +108,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        Histogram other = ((ObjectColumnSelector<Histogram>) selector).get();
+        Histogram other = (Histogram) selector.getObject();
         combined.fold(other);
       }
 
@@ -128,7 +120,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
 
       @Nullable
       @Override
-      public Histogram get()
+      public Histogram getObject()
       {
         return combined;
       }
@@ -197,7 +189,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     ByteBuffer buf = ByteBuffer
-        .allocate(1 + fieldNameBytes.length + Floats.BYTES * breaks.length)
+        .allocate(1 + fieldNameBytes.length + Float.BYTES * breaks.length)
         .put(AggregatorUtil.HIST_CACHE_TYPE_ID)
         .put(fieldNameBytes)
         .put((byte) 0xFF);
@@ -215,7 +207,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES * (breaks.length + 1) + Floats.BYTES * 2;
+    return Long.BYTES * (breaks.length + 1) + Float.BYTES * 2;
   }
 
   @Override

@@ -1,6 +1,16 @@
 # IntelliJ Setup
 This document contains some examples and instructions on how to get IntelliJ setup to run local debugging and test setups of Druid.
 
+## Project SDK
+
+The "SDK", configured for the Druid project, *must* be called `1.8`, to avoid annoying changes of
+[.idea/misc.xml](`.idea/misc.xml`) file, that you shouldn't check into your commits. If you don't have an SDK on your
+dev machine with this name, you should either rename one of the existing SDKs to `1.8`, or create another one with this
+name, and it could point to the same files as some other existing SDK, even if it's actually JDK 9+. `1.8` is just
+an alias name. You can do this in Using `File` -> `Project Structure...` -> `Platform Settings` -> `SDKs`
+(see also [IntelliJ help page about this](https://www.jetbrains.com/help/idea/configuring-intellij-platform-plugin-sdk.html)):
+![IntelliJ SDK Config](intellij-sdk-config.jpg)
+
 ## Code Style
 The Code Style is available in XML format at [druid_intellij_formatting.xml](druid_intellij_formatting.xml) and can be [imported into IntelliJ](https://www.jetbrains.com/help/idea/2017.1/copying-code-style-settings.html).
 

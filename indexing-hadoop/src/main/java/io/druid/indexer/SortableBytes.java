@@ -77,11 +77,6 @@ public class SortableBytes
            '}';
   }
 
-  public static SortableBytes fromBytes(byte[] bytes)
-  {
-    return fromBytes(bytes, 0, bytes.length);
-  }
-
   public static SortableBytes fromBytesWritable(BytesWritable bytes)
   {
     return fromBytes(bytes.getBytes(), 0, bytes.getLength());

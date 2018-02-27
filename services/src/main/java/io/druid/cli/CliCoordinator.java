@@ -31,6 +31,7 @@ import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
+import io.druid.client.HttpServerInventoryViewResource;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
@@ -42,8 +43,10 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
 import io.druid.metadata.MetadataRuleManagerProvider;
@@ -55,6 +58,7 @@ import io.druid.metadata.MetadataStorageProvider;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.BalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCoordinator;
+import io.druid.server.coordinator.DruidCoordinatorCleanupPendingSegments;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
@@ -62,6 +66,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
 import io.druid.server.http.ClusterResource;
+import io.druid.server.http.CoordinatorCompactionConfigsResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
@@ -74,8 +79,8 @@ import io.druid.server.http.RedirectInfo;
 import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
+import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import io.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import io.druid.server.router.TieredBrokerConfig;
@@ -168,9 +173,6 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(DruidCoordinator.class);
 
-            binder.bind(ListenerDiscoverer.class).in(ManageLifecycle.class);
-
-            LifecycleModule.register(binder, ListenerDiscoverer.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
 
@@ -179,6 +181,7 @@ public class CliCoordinator extends ServerRunnable
 
             Jerseys.addResource(binder, CoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
+            Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);
             Jerseys.addResource(binder, RulesResource.class);
             Jerseys.addResource(binder, ServersResource.class);
@@ -187,6 +190,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, IntervalsResource.class);
             Jerseys.addResource(binder, LookupCoordinatorResource.class);
             Jerseys.addResource(binder, ClusterResource.class);
+            Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);
@@ -208,6 +212,10 @@ public class CliCoordinator extends ServerRunnable
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class
+            ).addConditionBinding(
+                "druid.coordinator.kill.pendingSegments.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorCleanupPendingSegments.class
             );
 
             binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(Coordinator.class).toProvider(
@@ -225,12 +233,14 @@ public class CliCoordinator extends ServerRunnable
               CuratorFramework curator,
               ObjectMapper jsonMapper,
               ScheduledExecutorFactory factory,
-              DruidCoordinatorConfig config
+              DruidCoordinatorConfig config,
+              @EscalatedGlobal HttpClient httpClient,
+              ZkPathsConfig zkPaths
           )
           {
             return new LoadQueueTaskMaster(
                 curator, jsonMapper, factory.create(1, "Master-PeonExec--%d"),
-                Executors.newSingleThreadExecutor(), config
+                Executors.newSingleThreadExecutor(), config, httpClient, zkPaths
             );
           }
         }

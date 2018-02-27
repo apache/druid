@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
@@ -36,7 +34,6 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
@@ -85,7 +82,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
+        metricFactory.makeColumnValueSelector(fieldName),
         resolution,
         lowerLimit,
         upperLimit
@@ -96,10 +93,8 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new ApproximateHistogramBufferAggregator(
-        metricFactory.makeFloatColumnSelector(fieldName),
-        resolution,
-        lowerLimit,
-        upperLimit
+        metricFactory.makeColumnValueSelector(fieldName),
+        resolution
     );
   }
 
@@ -127,16 +122,14 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       @Override
       public void reset(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        ApproximateHistogram first = ((ObjectColumnSelector<ApproximateHistogram>) selector).get();
+        ApproximateHistogram first = (ApproximateHistogram) selector.getObject();
         combined.copy(first);
       }
 
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        @SuppressWarnings("unchecked")
-        ApproximateHistogram other = ((ObjectColumnSelector<ApproximateHistogram>) selector).get();
+        ApproximateHistogram other = (ApproximateHistogram) selector.getObject();
         combined.foldFast(other);
       }
 
@@ -148,7 +141,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 
       @Nullable
       @Override
-      public ApproximateHistogram get()
+      public ApproximateHistogram getObject()
       {
         return combined;
       }
@@ -276,7 +269,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    return ByteBuffer.allocate(1 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length + Integer.BYTES * 2 + Float.BYTES * 2)
                      .put(AggregatorUtil.APPROX_HIST_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .putInt(resolution)

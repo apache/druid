@@ -21,17 +21,18 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
-import com.google.common.primitives.Ints;
+import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -96,7 +97,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
     // For each bucket, store an extra field indicating the bucket's current index within the heap when
     // pushing down limits
-    offset += Ints.BYTES;
+    offset += Integer.BYTES;
     this.bucketSize = offset;
   }
 
@@ -108,15 +109,14 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     }
     this.totalBuffer = bufferSupplier.get();
 
-    validateBufferCapacity(
-        limit,
-        maxLoadFactor,
-        totalBuffer,
-        bucketSize
-    );
+    // We check this already in SpillingGrouper to ensure that LimitedBufferHashGrouper is only used when there is
+    // sufficient buffer capacity. If this error occurs, something went very wrong.
+    if (!validateBufferCapacity(totalBuffer.capacity())) {
+      throw new IAE("WTF? Using LimitedBufferHashGrouper with insufficient buffer capacity.");
+    }
 
     //only store offsets up to `limit` + 1 instead of up to # of buckets, we only keep the top results
-    int heapByteSize = (limit + 1) * Ints.BYTES;
+    int heapByteSize = (limit + 1) * Integer.BYTES;
 
     int hashTableSize = ByteBufferHashTable.calculateTableArenaSizeWithFixedAdditionalSize(
         totalBuffer.capacity(),
@@ -142,7 +142,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
         keySize,
         bufferGrouperMaxSize
     );
-    this.heapIndexUpdater = new BufferGrouperOffsetHeapIndexUpdater(totalBuffer, bucketSize - Ints.BYTES);
+    this.heapIndexUpdater = new BufferGrouperOffsetHeapIndexUpdater(totalBuffer, bucketSize - Integer.BYTES);
     this.offsetHeap = new ByteBufferMinMaxOffsetHeap(offsetHeapBuffer, limit, makeHeapComparator(), heapIndexUpdater);
 
     reset();
@@ -200,13 +200,13 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   }
 
   @Override
-  public Iterator<Entry<KeyType>> iterator(boolean sorted)
+  public CloseableIterator<Entry<KeyType>> iterator(boolean sorted)
   {
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubqueryWithLimitPushDown()
       // in GroupByQueryRunnerTest)
-      return Iterators.<Entry<KeyType>>emptyIterator();
+      return CloseableIterators.withEmptyBaggage(Iterators.<Entry<KeyType>>emptyIterator());
     }
 
     if (sortHasNonGroupingFields) {
@@ -252,7 +252,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     }
   }
 
-  private Iterator<Grouper.Entry<KeyType>> makeDefaultOrderingIterator()
+  private CloseableIterator<Entry<KeyType>> makeDefaultOrderingIterator()
   {
     final int size = offsetHeap.getHeapSize();
 
@@ -300,7 +300,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
         }
     );
 
-    return new Iterator<Grouper.Entry<KeyType>>()
+    return new CloseableIterator<Entry<KeyType>>()
     {
       int curr = 0;
 
@@ -321,13 +321,19 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       {
         throw new UnsupportedOperationException();
       }
+
+      @Override
+      public void close() throws IOException
+      {
+        // do nothing
+      }
     };
   }
 
-  private Iterator<Grouper.Entry<KeyType>> makeHeapIterator()
+  private CloseableIterator<Entry<KeyType>> makeHeapIterator()
   {
     final int initialHeapSize = offsetHeap.getHeapSize();
-    return new Iterator<Grouper.Entry<KeyType>>()
+    return new CloseableIterator<Entry<KeyType>>()
     {
       int curr = 0;
 
@@ -355,6 +361,12 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       {
         throw new UnsupportedOperationException();
       }
+
+      @Override
+      public void close() throws IOException
+      {
+        // do nothing
+      }
     };
   }
 
@@ -375,27 +387,25 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     };
   }
 
-
-  private void validateBufferCapacity(
-      int limit,
-      float maxLoadFactor,
-      ByteBuffer buffer,
-      int bucketSize
-  )
+  public boolean validateBufferCapacity(int bufferCapacity)
   {
     int numBucketsNeeded = (int) Math.ceil((limit + 1) / maxLoadFactor);
     int targetTableArenaSize = numBucketsNeeded * bucketSize * 2;
-    int heapSize = (limit + 1) * (Ints.BYTES);
+    int heapSize = (limit + 1) * (Integer.BYTES);
     int requiredSize = targetTableArenaSize + heapSize;
 
-    if (buffer.capacity() < requiredSize) {
-      throw new IAE(
-          "Buffer capacity [%d] is too small for limit[%d] with load factor[%f], minimum bytes needed: [%d]",
-          buffer.capacity(),
+    if (bufferCapacity < requiredSize) {
+      log.debug(
+          "Buffer capacity [%,d] is too small for limit[%d] with load factor[%f], " +
+          "minimum bytes needed: [%,d], not applying limit push down optimization.",
+          bufferCapacity,
           limit,
           maxLoadFactor,
           requiredSize
       );
+      return false;
+    } else {
+      return true;
     }
   }
 

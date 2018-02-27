@@ -19,57 +19,62 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Iterables;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.QueryDataSource;
 import io.druid.query.ResourceLimitExceededException;
-import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.ExpressionDimFilter;
-import io.druid.query.filter.OrDimFilter;
-import io.druid.segment.VirtualColumn;
-import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.planner.PlannerContext;
-import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.interpreter.BindableConvention;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
+import org.apache.calcite.rel.core.Filter;
+import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * DruidRel that has a main query, and also a subquery "right" that is used to filter the main query.
+ */
 public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
 {
-  private final DruidRel<?> left;
-  private final DruidRel<?> right;
-  private final List<DruidExpression> leftExpressions;
+  private final List<RexNode> leftExpressions;
   private final List<Integer> rightKeys;
   private final int maxSemiJoinRowsInMemory;
+  private DruidRel<?> left;
+  private RelNode right;
 
   private DruidSemiJoin(
       final RelOptCluster cluster,
       final RelTraitSet traitSet,
-      final DruidRel left,
-      final DruidRel right,
-      final List<DruidExpression> leftExpressions,
+      final DruidRel<?> left,
+      final RelNode right,
+      final List<RexNode> leftExpressions,
       final List<Integer> rightKeys,
-      final int maxSemiJoinRowsInMemory
+      final int maxSemiJoinRowsInMemory,
+      final QueryMaker queryMaker
   )
   {
-    super(cluster, traitSet, left.getQueryMaker());
+    super(cluster, traitSet, queryMaker);
     this.left = left;
     this.right = right;
     this.leftExpressions = ImmutableList.copyOf(leftExpressions);
@@ -77,7 +82,7 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
     this.maxSemiJoinRowsInMemory = maxSemiJoinRowsInMemory;
   }
 
-  public static DruidSemiJoin from(
+  public static DruidSemiJoin create(
       final DruidRel left,
       final DruidRel right,
       final List<Integer> leftKeys,
@@ -85,25 +90,20 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
       final PlannerContext plannerContext
   )
   {
-    final ImmutableList.Builder<DruidExpression> listBuilder = ImmutableList.builder();
-    for (Integer key : leftKeys) {
-      final String columnName = left.getQueryBuilder().getRowOrder().get(key);
+    final ImmutableList.Builder<RexNode> listBuilder = ImmutableList.builder();
 
-      final VirtualColumn leftVirtualColumn = left.getQueryBuilder()
-                                                  .getVirtualColumns(plannerContext.getExprMacroTable())
-                                                  .getVirtualColumn(columnName);
+    final PartialDruidQuery leftPartialQuery = left.getPartialDruidQuery();
+    if (leftPartialQuery.stage().compareTo(PartialDruidQuery.Stage.AGGREGATE) >= 0) {
+      throw new ISE("LHS must not be an Aggregate");
+    }
 
-      if (leftVirtualColumn != null) {
-        // VirtualColumns not allowed to remain in "left" since we have no way of forcing later rules to include them.
-        // See if we can get rid of this virtual column reference, otherwise give up.
-        if (leftVirtualColumn instanceof ExpressionVirtualColumn) {
-          final ExpressionVirtualColumn expressionColumn = (ExpressionVirtualColumn) leftVirtualColumn;
-          listBuilder.add(DruidExpression.fromExpression(expressionColumn.getExpression()));
-        } else {
-          return null;
-        }
-      } else {
-        listBuilder.add(DruidExpression.fromColumn(columnName));
+    if (leftPartialQuery.getSelectProject() != null) {
+      for (int key : leftKeys) {
+        listBuilder.add(leftPartialQuery.getSelectProject().getChildExps().get(key));
+      }
+    } else {
+      for (int key : leftKeys) {
+        listBuilder.add(RexInputRef.of(key, leftPartialQuery.getRowType()));
       }
     }
 
@@ -114,41 +114,44 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         right,
         listBuilder.build(),
         rightKeys,
-        plannerContext.getPlannerConfig().getMaxSemiJoinRowsInMemory()
+        plannerContext.getPlannerConfig().getMaxSemiJoinRowsInMemory(),
+        left.getQueryMaker()
     );
   }
 
   @Override
-  public RowSignature getSourceRowSignature()
+  public PartialDruidQuery getPartialDruidQuery()
   {
-    return left.getSourceRowSignature();
+    return left.getPartialDruidQuery();
   }
 
   @Override
-  public DruidQueryBuilder getQueryBuilder()
-  {
-    return left.getQueryBuilder();
-  }
-
-  @Override
-  public DruidSemiJoin withQueryBuilder(final DruidQueryBuilder newQueryBuilder)
+  public DruidSemiJoin withPartialQuery(final PartialDruidQuery newQueryBuilder)
   {
     return new DruidSemiJoin(
         getCluster(),
         getTraitSet().plusAll(newQueryBuilder.getRelTraits()),
-        left.withQueryBuilder(newQueryBuilder),
+        left.withPartialQuery(newQueryBuilder),
         right,
         leftExpressions,
         rightKeys,
-        maxSemiJoinRowsInMemory
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
     );
   }
 
+  @Nullable
   @Override
-  public QueryDataSource asDataSource()
+  public DruidQuery toDruidQuery()
   {
     final DruidRel rel = getLeftRelWithFilter();
-    return rel != null ? rel.asDataSource() : null;
+    return rel != null ? rel.toDruidQuery() : null;
+  }
+
+  @Override
+  public DruidQuery toDruidQueryForExplaining()
+  {
+    return left.toDruidQueryForExplaining();
   }
 
   @Override
@@ -158,10 +161,11 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         getCluster(),
         getTraitSet().replace(BindableConvention.INSTANCE),
         left,
-        right,
+        RelOptRule.convert(right, BindableConvention.INSTANCE),
         leftExpressions,
         rightKeys,
-        maxSemiJoinRowsInMemory
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
     );
   }
 
@@ -172,17 +176,28 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         getCluster(),
         getTraitSet().replace(DruidConvention.instance()),
         left,
-        right,
+        RelOptRule.convert(right, DruidConvention.instance()),
         leftExpressions,
         rightKeys,
-        maxSemiJoinRowsInMemory
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
     );
+  }
+
+  @Override
+  public List<String> getDatasourceNames()
+  {
+    final DruidRel<?> druidRight = (DruidRel) this.right;
+    Set<String> datasourceNames = new LinkedHashSet<>();
+    datasourceNames.addAll(left.getDatasourceNames());
+    datasourceNames.addAll(druidRight.getDatasourceNames());
+    return new ArrayList<>(datasourceNames);
   }
 
   @Override
   public int getQueryCount()
   {
-    return left.getQueryCount() + right.getQueryCount();
+    return left.getQueryCount() + ((DruidRel) right).getQueryCount();
   }
 
   @Override
@@ -203,13 +218,53 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
+  public List<RelNode> getInputs()
+  {
+    return ImmutableList.of(right);
+  }
+
+  @Override
+  public void replaceInput(int ordinalInParent, RelNode p)
+  {
+    if (ordinalInParent != 0) {
+      throw new IndexOutOfBoundsException(StringUtils.format("Invalid ordinalInParent[%s]", ordinalInParent));
+    }
+    // 'right' is the only one Calcite concerns. See getInputs().
+    this.right = p;
+  }
+
+  @Override
+  public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs)
+  {
+    return new DruidSemiJoin(
+        getCluster(),
+        getTraitSet(),
+        left,
+        Iterables.getOnlyElement(inputs),
+        leftExpressions,
+        rightKeys,
+        maxSemiJoinRowsInMemory,
+        getQueryMaker()
+    );
+  }
+
+  @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    return pw
-        .item("leftExpressions", leftExpressions)
-        .item("leftQuery", left.getQueryBuilder())
-        .item("rightKeys", rightKeys)
-        .item("rightQuery", right.getQueryBuilder());
+    final String queryString;
+
+    try {
+      queryString = getQueryMaker().getJsonMapper().writeValueAsString(toDruidQueryForExplaining().getQuery());
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
+    return super.explainTerms(pw)
+                .input("right", right)
+                .item("query", queryString)
+                .item("leftExpressions", leftExpressions)
+                .item("rightKeys", rightKeys);
   }
 
   @Override
@@ -224,16 +279,18 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
    */
   private DruidRel<?> getLeftRelWithFilter()
   {
+    final DruidRel<?> druidRight = (DruidRel) this.right;
+
     // Build list of acceptable values from right side.
-    final Set<List<String>> valuess = Sets.newHashSet();
-    final List<DimFilter> filters = right.runQuery().accumulate(
+    final Set<List<String>> valuess = new HashSet<>();
+    final List<RexNode> conditions = druidRight.runQuery().accumulate(
         new ArrayList<>(),
-        new Accumulator<List<DimFilter>, Object[]>()
+        new Accumulator<List<RexNode>, Object[]>()
         {
           @Override
-          public List<DimFilter> accumulate(final List<DimFilter> theFilters, final Object[] row)
+          public List<RexNode> accumulate(final List<RexNode> theConditions, final Object[] row)
           {
-            final List<String> values = Lists.newArrayListWithCapacity(rightKeys.size());
+            final List<String> values = new ArrayList<>(rightKeys.size());
 
             for (int i : rightKeys) {
               final Object value = row[i];
@@ -247,59 +304,89 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
             }
 
             if (valuess.add(values)) {
-              final List<DimFilter> bounds = Lists.newArrayList();
+              final List<RexNode> subConditions = new ArrayList<>();
+
               for (int i = 0; i < values.size(); i++) {
-                final DruidExpression leftExpression = leftExpressions.get(i);
-                if (leftExpression.isSimpleExtraction()) {
-                  bounds.add(
-                      new BoundDimFilter(
-                          leftExpression.getSimpleExtraction().getColumn(),
-                          values.get(i),
-                          values.get(i),
-                          false,
-                          false,
-                          null,
-                          leftExpression.getSimpleExtraction().getExtractionFn(),
-                          getSourceRowSignature().naturalStringComparator(leftExpression.getSimpleExtraction())
-                      )
-                  );
-                } else {
-                  bounds.add(
-                      new ExpressionDimFilter(
-                          StringUtils.format(
-                              "(%s == %s)",
-                              leftExpression.getExpression(),
-                              DruidExpression.stringLiteral(values.get(i))
-                          ),
-                          getPlannerContext().getExprMacroTable()
-                      )
-                  );
-                }
+                final String value = values.get(i);
+                subConditions.add(
+                    getCluster().getRexBuilder().makeCall(
+                        SqlStdOperatorTable.EQUALS,
+                        leftExpressions.get(i),
+                        getCluster().getRexBuilder().makeLiteral(value)
+                    )
+                );
               }
-              theFilters.add(new AndDimFilter(bounds));
+
+              theConditions.add(makeAnd(subConditions));
             }
-            return theFilters;
+            return theConditions;
           }
         }
     );
 
     valuess.clear();
 
-    if (!filters.isEmpty()) {
+    if (!conditions.isEmpty()) {
       // Add a filter to the left side.
-      final DimFilter semiJoinFilter = new OrDimFilter(filters);
-      final DimFilter newFilter = left.getQueryBuilder().getFilter() == null
-                                  ? semiJoinFilter
-                                  : new AndDimFilter(
-                                      ImmutableList.of(
-                                          semiJoinFilter,
-                                          left.getQueryBuilder().getFilter()
-                                      )
-                                  );
+      final PartialDruidQuery leftPartialQuery = left.getPartialDruidQuery();
+      final Filter whereFilter = leftPartialQuery.getWhereFilter();
+      final Filter newWhereFilter;
 
-      return left.withQueryBuilder(left.getQueryBuilder().withFilter(newFilter));
+      if (whereFilter != null) {
+        newWhereFilter = whereFilter.copy(
+            whereFilter.getTraitSet(),
+            whereFilter.getInput(),
+            makeAnd(ImmutableList.of(whereFilter.getCondition(), makeOr(conditions)))
+        );
+      } else {
+        newWhereFilter = LogicalFilter.create(
+            leftPartialQuery.getScan(),
+            makeOr(conditions)
+        );
+      }
+
+      PartialDruidQuery newPartialQuery = PartialDruidQuery.create(leftPartialQuery.getScan())
+                                                           .withWhereFilter(newWhereFilter)
+                                                           .withSelectProject(leftPartialQuery.getSelectProject())
+                                                           .withSelectSort(leftPartialQuery.getSelectSort());
+
+      if (leftPartialQuery.getAggregate() != null) {
+        newPartialQuery = newPartialQuery.withAggregate(leftPartialQuery.getAggregate());
+      }
+
+      if (leftPartialQuery.getHavingFilter() != null) {
+        newPartialQuery = newPartialQuery.withHavingFilter(leftPartialQuery.getHavingFilter());
+      }
+
+      if (leftPartialQuery.getPostProject() != null) {
+        newPartialQuery = newPartialQuery.withPostProject(leftPartialQuery.getPostProject());
+      }
+
+      if (leftPartialQuery.getSort() != null) {
+        newPartialQuery = newPartialQuery.withSort(leftPartialQuery.getSort());
+      }
+
+      return left.withPartialQuery(newPartialQuery);
     } else {
       return null;
+    }
+  }
+
+  private RexNode makeAnd(final List<RexNode> conditions)
+  {
+    if (conditions.size() == 1) {
+      return Iterables.getOnlyElement(conditions);
+    } else {
+      return getCluster().getRexBuilder().makeCall(SqlStdOperatorTable.AND, conditions);
+    }
+  }
+
+  private RexNode makeOr(final List<RexNode> conditions)
+  {
+    if (conditions.size() == 1) {
+      return Iterables.getOnlyElement(conditions);
+    } else {
+      return getCluster().getRexBuilder().makeCall(SqlStdOperatorTable.OR, conditions);
     }
   }
 }

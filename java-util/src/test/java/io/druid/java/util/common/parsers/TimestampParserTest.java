@@ -28,6 +28,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.TimeZone;
+
 public class TimestampParserTest
 {
   @Rule
@@ -38,6 +40,19 @@ public class TimestampParserTest
   {
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("\"hello world\""));
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("    \"    hello world   \"    "));
+  }
+
+  @Test
+  public void testExtractTimeZone() throws Exception
+  {
+    Assert.assertEquals(DateTimeZone.UTC, ParserUtils.getDateTimeZone("UTC"));
+    Assert.assertEquals(DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST")), ParserUtils.getDateTimeZone("PST"));
+    Assert.assertNull(ParserUtils.getDateTimeZone("Hello"));
+    Assert.assertNull(ParserUtils.getDateTimeZone("AEST"));
+    Assert.assertEquals(DateTimeZone.forTimeZone(TimeZone.getTimeZone("Australia/Hobart")),
+        ParserUtils.getDateTimeZone("Australia/Hobart"));
+    Assert.assertNull(ParserUtils.getDateTimeZone(""));
+    Assert.assertNull(ParserUtils.getDateTimeZone(null));
   }
 
   @Test
@@ -53,6 +68,11 @@ public class TimestampParserTest
     Assert.assertEquals(DateTimes.of("2009-02-13T00:00:00Z"), parser.apply("\"2009-02-13\""));
     Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30Z"), parser.apply("2009-02-13 23:31:30"));
     Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30Z"), parser.apply(1234567890000L));
+    Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30Z"), parser.apply("2009-02-13 23:31:30 UTC"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST"))),
+        parser.apply("2009-02-13 23:31:30 PST"));
+    Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST"))),
+        parser.apply("\"2009-02-13 23:31:30 PST\""));
   }
 
   @Test
@@ -60,7 +80,7 @@ public class TimestampParserTest
   {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
 
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(NullPointerException.class);
     parser.apply(null);
   }
 

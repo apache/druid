@@ -21,7 +21,6 @@ package io.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.Intervals;
@@ -67,15 +66,13 @@ public class ServerHolderTest
       new ImmutableDruidDataSource(
           "src1",
           ImmutableMap.of(),
-          ImmutableMap.of(),
-          ImmutableSet.of()
+          ImmutableMap.of()
       ),
       "src2",
       new ImmutableDruidDataSource(
           "src2",
           ImmutableMap.of(),
-          ImmutableMap.of(),
-          ImmutableSet.of()
+          ImmutableMap.of()
       )
   );
 

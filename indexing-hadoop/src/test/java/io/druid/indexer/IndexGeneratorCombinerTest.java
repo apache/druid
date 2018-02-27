@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
@@ -82,6 +83,7 @@ public class IndexGeneratorCombinerTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2010/2011"))
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
@@ -143,6 +145,17 @@ public class IndexGeneratorCombinerTest
     );
     BytesWritable key = keySortableBytes.toBytesWritable();
 
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("host"),
+            new StringDimensionSchema("keywords")
+        ),
+        null,
+        null
+    );
+
+    Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap = InputRowSerde.getTypeHelperMap(dimensionsSpec);
+
     InputRow row1 = new MapBasedInputRow(
         timestamp,
         ImmutableList.<String>of("keywords"),
@@ -162,8 +175,8 @@ public class IndexGeneratorCombinerTest
         )
     );
     List<BytesWritable> rows = Lists.newArrayList(
-        new BytesWritable(InputRowSerde.toBytes(row1, aggregators, true)),
-        new BytesWritable(InputRowSerde.toBytes(row2, aggregators, true))
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators, true)),
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators, true))
     );
 
     Reducer.Context context = EasyMock.createNiceMock(Reducer.Context.class);
@@ -182,12 +195,19 @@ public class IndexGeneratorCombinerTest
 
     Assert.assertTrue(captureKey.getValue() == key);
 
-    InputRow capturedRow = InputRowSerde.fromBytes(captureVal.getValue().getBytes(), aggregators);
+    InputRow capturedRow = InputRowSerde.fromBytes(typeHelperMap, captureVal.getValue().getBytes(), aggregators);
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow.getDimensions());
     Assert.assertEquals(ImmutableList.of(), capturedRow.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow.getDimension("keywords"));
-    Assert.assertEquals(15, capturedRow.getLongMetric("visited_sum"));
-    Assert.assertEquals(2.0, (Double) HyperUniquesAggregatorFactory.estimateCardinality(capturedRow.getRaw("unique_hosts")), 0.001);
+    Assert.assertEquals(15, capturedRow.getMetric("visited_sum").longValue());
+    Assert.assertEquals(
+        2.0,
+        (Double) HyperUniquesAggregatorFactory.estimateCardinality(
+            capturedRow.getRaw("unique_hosts"),
+            false
+        ),
+        0.001
+    );
   }
 
   @Test
@@ -220,9 +240,21 @@ public class IndexGeneratorCombinerTest
             "visited", 5
         )
     );
+
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("host"),
+            new StringDimensionSchema("keywords")
+        ),
+        null,
+        null
+    );
+
+    Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap = InputRowSerde.getTypeHelperMap(dimensionsSpec);
+
     List<BytesWritable> rows = Lists.newArrayList(
-        new BytesWritable(InputRowSerde.toBytes(row1, aggregators, true)),
-        new BytesWritable(InputRowSerde.toBytes(row2, aggregators, true))
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators, true)),
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators, true))
     );
 
     Reducer.Context context = EasyMock.createNiceMock(Reducer.Context.class);
@@ -245,18 +277,26 @@ public class IndexGeneratorCombinerTest
     Assert.assertTrue(captureKey1.getValue() == key);
     Assert.assertTrue(captureKey2.getValue() == key);
 
-    InputRow capturedRow1 = InputRowSerde.fromBytes(captureVal1.getValue().getBytes(), aggregators);
+    InputRow capturedRow1 = InputRowSerde.fromBytes(typeHelperMap, captureVal1.getValue().getBytes(), aggregators);
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow1.getDimensions());
     Assert.assertEquals(Collections.singletonList("host1"), capturedRow1.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow1.getDimension("keywords"));
-    Assert.assertEquals(10, capturedRow1.getLongMetric("visited_sum"));
-    Assert.assertEquals(1.0, (Double) HyperUniquesAggregatorFactory.estimateCardinality(capturedRow1.getRaw("unique_hosts")), 0.001);
+    Assert.assertEquals(10, capturedRow1.getMetric("visited_sum").longValue());
+    Assert.assertEquals(
+        1.0,
+        (Double) HyperUniquesAggregatorFactory.estimateCardinality(capturedRow1.getRaw("unique_hosts"), false),
+        0.001
+    );
 
-    InputRow capturedRow2 = InputRowSerde.fromBytes(captureVal2.getValue().getBytes(), aggregators);
+    InputRow capturedRow2 = InputRowSerde.fromBytes(typeHelperMap, captureVal2.getValue().getBytes(), aggregators);
     Assert.assertEquals(Arrays.asList("host", "keywords"), capturedRow2.getDimensions());
     Assert.assertEquals(Collections.singletonList("host2"), capturedRow2.getDimension("host"));
     Assert.assertEquals(Arrays.asList("bar", "foo"), capturedRow2.getDimension("keywords"));
-    Assert.assertEquals(5, capturedRow2.getLongMetric("visited_sum"));
-    Assert.assertEquals(1.0, (Double) HyperUniquesAggregatorFactory.estimateCardinality(capturedRow2.getRaw("unique_hosts")), 0.001);
+    Assert.assertEquals(5, capturedRow2.getMetric("visited_sum").longValue());
+    Assert.assertEquals(
+        1.0,
+        (Double) HyperUniquesAggregatorFactory.estimateCardinality(capturedRow2.getRaw("unique_hosts"), false),
+        0.001
+    );
   }
 }

@@ -39,9 +39,8 @@ import java.util.Collection;
 import java.util.Random;
 
 /**
- *
+ * TODO rewrite to use JMH and move to the benchmarks project
  */
-
 @RunWith(Parameterized.class)
 @Ignore // Don't need to run every time
 public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
@@ -191,8 +190,6 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
         roStorageBuffer.position(startPosition);
         roStorageBuffer.get(zipperBuffer);
 
-        final ByteOrder byteOrder = retVal.order();
-
         for (int i = 0; i < NUM_BYTES_FOR_BUCKETS; ++i) {
           if (zipperBuffer[i] != 0) {
             final short val = (short) (0xffff & (i + startPosition - initialPosition));
@@ -243,6 +240,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
   }
 
 
+  @SuppressWarnings("unused")
   volatile HashCode hashCode;
 
   @BenchmarkOptions(benchmarkRounds = 100000, warmupRounds = 100)

@@ -19,18 +19,17 @@
 
 package io.druid.server.router;
 
-import com.google.common.base.Function;
-import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.query.Query;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -39,53 +38,59 @@ public class QueryHostFinder
   private static EmittingLogger log = new EmittingLogger(QueryHostFinder.class);
 
   private final TieredBrokerHostSelector hostSelector;
+  private final AvaticaConnectionBalancer avaticaConnectionBalancer;
 
   private final ConcurrentHashMap<String, Server> serverBackup = new ConcurrentHashMap<>();
 
   @Inject
   public QueryHostFinder(
-      TieredBrokerHostSelector hostSelector
+      TieredBrokerHostSelector hostSelector,
+      AvaticaConnectionBalancer avaticaConnectionBalancer
   )
   {
     this.hostSelector = hostSelector;
+    this.avaticaConnectionBalancer = avaticaConnectionBalancer;
   }
 
   public <T> Server findServer(Query<T> query)
   {
-    final Pair<String, ServerDiscoverySelector> selected = hostSelector.select(query);
+    final Pair<String, Server> selected = hostSelector.select(query);
     return findServerInner(selected);
   }
 
   public Server findDefaultServer()
   {
-    final Pair<String, ServerDiscoverySelector> selected = hostSelector.getDefaultLookup();
+    final Pair<String, Server> selected = hostSelector.getDefaultLookup();
     return findServerInner(selected);
   }
 
-  public Collection<String> getAllHosts()
+  public Collection<Server> getAllServers()
   {
-    return FluentIterable
-        .from((Collection<ServerDiscoverySelector>) hostSelector.getAllBrokers().values())
-        .transformAndConcat(
-            new Function<ServerDiscoverySelector, Iterable<Server>>()
-            {
-              @Override
-              public Iterable<Server> apply(ServerDiscoverySelector input)
-              {
-                return input.getAll();
-              }
-            }
-        ).transform(new Function<Server, String>()
-        {
-          @Override
-          public String apply(Server input)
-          {
-            return input.getHost();
-          }
-        }).toList();
+    return ((Collection<List<Server>>) hostSelector.getAllBrokers().values()).stream()
+                                                                             .flatMap(Collection::stream)
+                                                                             .collect(Collectors.toList());
   }
 
-  public <T> String getHost(Query<T> query)
+  public Server findServerAvatica(String connectionId)
+  {
+    Server chosenServer = avaticaConnectionBalancer.pickServer(getAllServers(), connectionId);
+    if (chosenServer == null) {
+      log.makeAlert(
+          "Catastrophic failure! No servers found at all! Failing request!"
+      ).emit();
+
+      throw new ISE("No server found for Avatica request with connectionId[%s]", connectionId);
+    }
+    log.debug(
+        "Balancer class [%s] sending request with connectionId[%s] to server: %s",
+        avaticaConnectionBalancer.getClass(),
+        connectionId,
+        chosenServer.getHost()
+    );
+    return chosenServer;
+  }
+
+  public <T> Server getServer(Query<T> query)
   {
     Server server = findServer(query);
 
@@ -97,13 +102,12 @@ public class QueryHostFinder
       throw new ISE("No server found for query[%s]", query);
     }
 
-    final String host = server.getHost();
-    log.debug("Selected [%s]", host);
+    log.debug("Selected [%s]", server.getHost());
 
-    return host;
+    return server;
   }
 
-  public String getDefaultHost()
+  public Server getDefaultServer()
   {
     Server server = findDefaultServer();
 
@@ -115,19 +119,18 @@ public class QueryHostFinder
       throw new ISE("No default server found!");
     }
 
-    return server.getHost();
+    return server;
   }
 
-  private Server findServerInner(final Pair<String, ServerDiscoverySelector> selected)
+  private Server findServerInner(final Pair<String, Server> selected)
   {
     if (selected == null) {
       log.error("Danger, Will Robinson! Unable to find any brokers!");
     }
 
     final String serviceName = selected == null ? hostSelector.getDefaultServiceName() : selected.lhs;
-    final ServerDiscoverySelector selector = selected == null ? null : selected.rhs;
+    Server server = selected == null ? null : selected.rhs;
 
-    Server server = selector == null ? null : selector.pick();
     if (server == null) {
       log.error(
           "WTF?! No server found for serviceName[%s]. Using backup",

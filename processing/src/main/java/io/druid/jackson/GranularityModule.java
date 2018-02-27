@@ -45,7 +45,7 @@ public class GranularityModule extends SimpleModule
   }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = Granularity.class)
-  public static interface GranularityMixin
+  public interface GranularityMixin
   {
   }
 }

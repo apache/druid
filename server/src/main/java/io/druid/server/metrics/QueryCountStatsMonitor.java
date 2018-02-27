@@ -20,10 +20,10 @@ package io.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
-import com.metamx.metrics.KeyedDiff;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
+import io.druid.java.util.metrics.KeyedDiff;
 
 import java.util.Map;
 

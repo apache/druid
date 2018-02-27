@@ -29,8 +29,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
@@ -362,7 +362,8 @@ public class RealtimeManager implements QuerySegmentWalker
         }
         catch (Exception e) {
           log.makeAlert(e, "Unknown exception, Ignoring and continuing.")
-             .addData("inputRow", inputRow);
+             .addData("inputRow", inputRow)
+             .emit();
         }
 
         try {

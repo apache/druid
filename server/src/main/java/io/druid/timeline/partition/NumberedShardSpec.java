@@ -40,10 +40,10 @@ import java.util.Map;
 public class NumberedShardSpec implements ShardSpec
 {
   @JsonIgnore
-  final private int partitionNum;
+  private final int partitionNum;
 
   @JsonIgnore
-  final private int partitions;
+  private final int partitions;
 
   @JsonCreator
   public NumberedShardSpec(

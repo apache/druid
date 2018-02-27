@@ -22,8 +22,8 @@ package io.druid.client.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import io.druid.client.ImmutableSegmentLoadInfo;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -35,7 +35,7 @@ import java.io.IOException;
 
 public class ImmutableSegmentLoadInfoTest
 {
-  private final ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws IOException

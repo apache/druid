@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.ResourceHolder;
@@ -196,8 +195,9 @@ public class GroupByQueryEngine
           newKey.putInt(MISSING_VALUE);
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
         } else {
-          for (Integer dimValue : row) {
+          for (int i = 0; i < row.size(); i++) {
             ByteBuffer newKey = key.duplicate();
+            int dimValue = row.get(i);
             newKey.putInt(dimValue);
             unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
           }
@@ -332,7 +332,7 @@ public class GroupByQueryEngine
           );
         }
 
-        final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec);
+        final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(dimSpec);
         if (selector != null) {
           if (selector.getValueCardinality() == DimensionSelector.CARDINALITY_UNKNOWN) {
             throw new UnsupportedOperationException(
@@ -349,7 +349,7 @@ public class GroupByQueryEngine
       sizesRequired = new int[aggregatorSpecs.size()];
       for (int i = 0; i < aggregatorSpecs.size(); ++i) {
         AggregatorFactory aggregatorSpec = aggregatorSpecs.get(i);
-        aggregators[i] = aggregatorSpec.factorizeBuffered(cursor);
+        aggregators[i] = aggregatorSpec.factorizeBuffered(cursor.getColumnSelectorFactory());
         metricNames[i] = aggregatorSpec.getName();
         sizesRequired[i] = aggregatorSpec.getMaxIntermediateSize();
       }
@@ -384,7 +384,7 @@ public class GroupByQueryEngine
         cursor.advance();
       }
       while (!cursor.isDone() && rowUpdater.getNumRows() < maxIntermediateRows) {
-        ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Ints.BYTES);
+        ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Integer.BYTES);
 
         unprocessedKeys = rowUpdater.updateValues(key, dimensions);
         if (unprocessedKeys != null) {

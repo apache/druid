@@ -22,6 +22,7 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
 
@@ -31,6 +32,7 @@ import java.util.Objects;
 
 /**
  */
+@PublicApi
 public class TimestampSpec
 {
   private static class ParseCtx
@@ -51,7 +53,7 @@ public class TimestampSpec
   private final Function<Object, DateTime> timestampConverter;
 
   // remember last value parsed
-  private transient ParseCtx parseCtx = new ParseCtx();
+  private static final ThreadLocal<ParseCtx> parseCtx = ThreadLocal.withInitial(ParseCtx::new);
 
   @JsonCreator
   public TimestampSpec(
@@ -96,15 +98,16 @@ public class TimestampSpec
   {
     DateTime extracted = missingValue;
     if (input != null) {
+      ParseCtx ctx = parseCtx.get();
       // Check if the input is equal to the last input, so we don't need to parse it again
-      if (input.equals(parseCtx.lastTimeObject)) {
-        extracted = parseCtx.lastDateTime;
+      if (input.equals(ctx.lastTimeObject)) {
+        extracted = ctx.lastDateTime;
       } else {
+        extracted = timestampConverter.apply(input);
         ParseCtx newCtx = new ParseCtx();
         newCtx.lastTimeObject = input;
-        extracted = timestampConverter.apply(input);
         newCtx.lastDateTime = extracted;
-        parseCtx = newCtx;
+        parseCtx.set(newCtx);
       }
     }
     return extracted;

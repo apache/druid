@@ -20,7 +20,7 @@
 package io.druid.query.topn;
 
 import com.google.common.collect.ImmutableSet;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.CachingEmitter;
 import io.druid.query.DefaultQueryMetricsTest;
@@ -52,7 +52,7 @@ public class DefaultTopNQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.getJsonMapper());
+    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.makeJsonMapper());
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")
         .granularity(Granularities.ALL)
@@ -102,7 +102,7 @@ public class DefaultTopNQueryMetricsTest
   {
     CachingEmitter cachingEmitter = new CachingEmitter();
     ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
-    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.getJsonMapper());
+    DefaultTopNQueryMetrics queryMetrics = new DefaultTopNQueryMetrics(TestHelper.makeJsonMapper());
     DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
   }
 }

@@ -58,6 +58,7 @@ public class CloudFilesDataSegmentPusherConfig
     this.basePath = basePath;
   }
 
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setOperationMaxRetries(int operationMaxRetries)
   {
     this.operationMaxRetries = operationMaxRetries;

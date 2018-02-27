@@ -23,6 +23,7 @@ import com.google.common.collect.Iterables;
 import io.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -38,6 +39,7 @@ public abstract class AbstractTierSelectorStrategy implements TierSelectorStrate
     this.serverSelectorStrategy = serverSelectorStrategy;
   }
 
+  @Nullable
   @Override
   public QueryableDruidServer pick(
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,

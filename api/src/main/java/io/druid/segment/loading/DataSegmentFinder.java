@@ -19,6 +19,7 @@
 
 package io.druid.segment.loading;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.timeline.DataSegment;
 
 import java.util.Set;
@@ -27,6 +28,7 @@ import java.util.Set;
  * A DataSegmentFinder is responsible for finding Druid segments underneath a specified directory and optionally updates
  * all descriptor.json files on deep storage with correct loadSpec.
  */
+@ExtensionPoint
 public interface DataSegmentFinder
 {
   /**

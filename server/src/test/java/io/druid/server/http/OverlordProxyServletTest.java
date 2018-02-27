@@ -19,8 +19,7 @@
 
 package io.druid.server.http;
 
-import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,17 +32,16 @@ public class OverlordProxyServletTest
   @Test
   public void testRewriteURI()
   {
-    ServerDiscoverySelector selector = EasyMock.createMock(ServerDiscoverySelector.class);
-    Server server = EasyMock.createMock(Server.class);
-    EasyMock.expect(server.getHost()).andReturn("overlord:port");
-    EasyMock.expect(selector.pick()).andReturn(server).anyTimes();
+    DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
+    EasyMock.expect(druidLeaderClient.findCurrentLeader()).andReturn("https://overlord:port");
+
     HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
-    EasyMock.expect(request.getScheme()).andReturn("https").anyTimes();
     EasyMock.expect(request.getQueryString()).andReturn("param1=test&param2=test2").anyTimes();
     EasyMock.expect(request.getRequestURI()).andReturn("/druid/overlord/worker").anyTimes();
-    EasyMock.replay(server, selector, request);
 
-    URI uri = URI.create(new OverlordProxyServlet(selector).rewriteTarget(request));
+    EasyMock.replay(druidLeaderClient, request);
+
+    URI uri = URI.create(new OverlordProxyServlet(druidLeaderClient).rewriteTarget(request));
     Assert.assertEquals("https://overlord:port/druid/overlord/worker?param1=test&param2=test2", uri.toString());
   }
 

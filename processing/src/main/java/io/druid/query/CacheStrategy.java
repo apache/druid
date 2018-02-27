@@ -21,11 +21,13 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
+import io.druid.guice.annotations.ExtensionPoint;
 
 import java.util.concurrent.ExecutorService;
 
 /**
 */
+@ExtensionPoint
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
   /**

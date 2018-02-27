@@ -45,7 +45,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     int aggregatorIndex = 0;
     for (AggregatorFactory spec : aggregatorSpecs) {
-      aggregators[aggregatorIndex] = spec.factorize(cursor);
+      aggregators[aggregatorIndex] = spec.factorize(cursor.getColumnSelectorFactory());
       ++aggregatorIndex;
     }
     return aggregators;
@@ -56,7 +56,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     BufferAggregator[] aggregators = new BufferAggregator[aggregatorSpecs.size()];
     int aggregatorIndex = 0;
     for (AggregatorFactory spec : aggregatorSpecs) {
-      aggregators[aggregatorIndex] = spec.factorizeBuffered(cursor);
+      aggregators[aggregatorIndex] = spec.factorizeBuffered(cursor.getColumnSelectorFactory());
       ++aggregatorIndex;
     }
     return aggregators;
@@ -115,7 +115,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       DimValAggregateStore aggregatesStore = makeDimValAggregateStore(params);
 
-      processedRows = scanAndAggregate(params, theDimValSelector, aggregatesStore, numProcessed);
+      processedRows = scanAndAggregate(params, theDimValSelector, aggregatesStore);
 
       updateResults(params, theDimValSelector, aggregatesStore, resultBuilder);
 
@@ -147,7 +147,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     if (queryMetrics != null) {
       queryMetrics.startRecordingScanTime();
     }
-    long processedRows = scanAndAggregate(params, null, aggregatesStore, 0);
+    long processedRows = scanAndAggregate(params, null, aggregatesStore);
     updateResults(params, null, aggregatesStore, resultBuilder);
     closeAggregators(aggregatesStore);
     params.getCursor().reset();
@@ -187,8 +187,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
   protected abstract long scanAndAggregate(
       Parameters params,
       DimValSelector dimValSelector,
-      DimValAggregateStore dimValAggregateStore,
-      int numProcessed
+      DimValAggregateStore dimValAggregateStore
   );
 
   protected abstract void updateResults(
@@ -228,14 +227,13 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     }
   }
 
-  protected static abstract class BaseArrayProvider<T> implements TopNMetricSpecBuilder<T>
+  protected abstract static class BaseArrayProvider<T> implements TopNMetricSpecBuilder<T>
   {
     private volatile String previousStop;
     private volatile boolean ignoreAfterThreshold;
     private volatile int ignoreFirstN;
     private volatile int keepOnlyN;
 
-    private final DimensionSelector dimSelector;
     private final IdLookup idLookup;
     private final TopNQuery query;
     private final Capabilities capabilities;
@@ -246,7 +244,6 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
         Capabilities capabilities
     )
     {
-      this.dimSelector = dimSelector;
       this.idLookup = dimSelector.idLookup();
       this.query = query;
       this.capabilities = capabilities;

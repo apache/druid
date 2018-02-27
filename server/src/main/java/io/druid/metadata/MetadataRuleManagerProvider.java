@@ -26,5 +26,5 @@ import com.google.inject.Provider;
 public interface MetadataRuleManagerProvider extends Provider<MetadataRuleManager>
 {
   @Override
-  public MetadataRuleManager get();
+  MetadataRuleManager get();
 }

@@ -19,17 +19,11 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DoubleColumnSelector;
 
 /**
  * Specialization of {@link AggregateCombiner} for primitive double aggregations.
  */
-public abstract class DoubleAggregateCombiner implements AggregateCombiner, DoubleColumnSelector
+public abstract class DoubleAggregateCombiner implements AggregateCombiner<Double>, DoubleColumnSelector
 {
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // Usually AggregateCombiner has nothing to inspect
-  }
 }

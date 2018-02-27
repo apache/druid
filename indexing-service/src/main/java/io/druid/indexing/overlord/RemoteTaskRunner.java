@@ -43,17 +43,17 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.InputStreamResponseHandler;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.InputStreamResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ProvisioningService;
@@ -379,6 +379,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+    finally {
+      lifecycleLock.exitStop();
+    }
   }
 
   @Override
@@ -478,10 +481,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return null;
   }
 
-  public boolean isWorkerRunningTask(Worker worker, String taskId)
+  public boolean isWorkerRunningTask(ZkWorker worker, String taskId)
   {
-    ZkWorker zkWorker = zkWorkers.get(worker.getHost());
-    return (zkWorker != null && zkWorker.isRunningTask(taskId));
+    return Preconditions.checkNotNull(worker, "worker").isRunningTask(taskId);
   }
 
   /**
@@ -622,7 +624,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private RemoteTaskRunnerWorkItem addPendingTask(final Task task)
   {
     log.info("Added pending task %s", task.getId());
-    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(task.getId(), null, null);
+    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
+        task.getId(),
+        task.getType(),
+        null,
+        null
+    );
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
     runPendingTasks();
@@ -747,13 +754,13 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       WorkerSelectStrategy strategy;
       if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
         strategy = WorkerBehaviorConfig.DEFAULT_STRATEGY;
-        log.info("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
+        log.debug("No worker selection strategy set. Using default of [%s]", strategy.getClass().getSimpleName());
       } else {
         strategy = workerConfig.getSelectStrategy();
       }
 
       ZkWorker assignedWorker = null;
-      Optional<ImmutableWorkerInfo> immutableZkWorker = null;
+      final ImmutableWorkerInfo immutableZkWorker;
       try {
         synchronized (workersWithUnacknowledgedTask) {
           immutableZkWorker = strategy.findWorkerForTask(
@@ -787,10 +794,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               task
           );
 
-          if (immutableZkWorker.isPresent() &&
-              workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.get().getWorker().getHost(), task.getId())
-              == null) {
-            assignedWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
+          if (immutableZkWorker != null &&
+              workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.getWorker().getHost(), task.getId())
+                == null) {
+            assignedWorker = zkWorkers.get(immutableZkWorker.getWorker().getHost());
           }
         }
 
@@ -866,7 +873,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
       // on a worker - this avoids overflowing a worker with tasks
       Stopwatch timeoutStopwatch = Stopwatch.createStarted();
-      while (!isWorkerRunningTask(theZkWorker.getWorker(), task.getId())) {
+      while (!isWorkerRunningTask(theZkWorker, task.getId())) {
         final long waitMs = config.getTaskAssignmentTimeout().toStandardDuration().getMillis();
         statusLock.wait(waitMs);
         long elapsed = timeoutStopwatch.elapsed(TimeUnit.MILLISECONDS);
@@ -877,7 +884,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               task.getId(),
               elapsed,
               config.getTaskAssignmentTimeout()
-          );
+          ).emit();
           taskComplete(taskRunnerWorkItem, theZkWorker, TaskStatus.failure(task.getId()));
           break;
         }
@@ -957,6 +964,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       } else {
                         final RemoteTaskRunnerWorkItem newTaskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
                             taskId,
+                            announcement.getTaskType(),
                             zkWorker.getWorker(),
                             TaskLocation.unknown()
                         );
@@ -1227,6 +1235,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
+    // skip the lock and bail early if we should not mark any workers lazy (e.g. number
+    // of current workers is at or below the minNumWorkers of autoscaler config)
+    if (maxWorkers < 1) {
+      return Collections.emptyList();
+    }
     // status lock is used to prevent any tasks being assigned to the worker while we mark it lazy
     synchronized (statusLock) {
       Iterator<String> iterator = zkWorkers.keySet().iterator();

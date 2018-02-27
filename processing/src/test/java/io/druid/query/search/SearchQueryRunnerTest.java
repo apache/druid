@@ -46,14 +46,10 @@ import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
+import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.FragmentSearchQuerySpec;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchQueryConfig;
-import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
@@ -115,8 +111,8 @@ public class SearchQueryRunnerTest
   public void testSearchHitSerDe() throws Exception
   {
     for (SearchHit hit : Arrays.asList(new SearchHit("dim1", "val1"), new SearchHit("dim2", "val2", 3))) {
-      SearchHit read = TestHelper.getJsonMapper().readValue(
-          TestHelper.getJsonMapper().writeValueAsString(hit),
+      SearchHit read = TestHelper.makeJsonMapper().readValue(
+          TestHelper.makeJsonMapper().writeValueAsString(hit),
           SearchHit.class
       );
       Assert.assertEquals(hit, read);
@@ -440,20 +436,10 @@ public class SearchQueryRunnerTest
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
 
-    DimFilter filter = Druids.newAndDimFilterBuilder()
-                             .fields(
-                                 Arrays.<DimFilter>asList(
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.marketDimension)
-                                           .value("spot")
-                                           .build(),
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("automotive")
-                                           .build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new AndDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "automotive", null)
+    );
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -474,20 +460,10 @@ public class SearchQueryRunnerTest
     List<SearchHit> expectedHits = Lists.newLinkedList();
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
 
-    DimFilter filter = Druids.newOrDimFilterBuilder()
-                             .fields(
-                                 Arrays.<DimFilter>asList(
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("total_market")
-                                           .build(),
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("automotive")
-                                           .build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new OrDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "total_market", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "automotive", null)
+    );
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -523,20 +499,10 @@ public class SearchQueryRunnerTest
   {
     List<SearchHit> expectedHits = Lists.newLinkedList();
 
-    DimFilter filter = Druids.newAndDimFilterBuilder()
-                             .fields(
-                                 Arrays.<DimFilter>asList(
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.marketDimension)
-                                           .value("total_market")
-                                           .build(),
-                                     Druids.newSelectorDimFilterBuilder()
-                                           .dimension(QueryRunnerTestHelper.qualityDimension)
-                                           .value("automotive")
-                                           .build()
-                                 )
-                             )
-                             .build();
+    DimFilter filter = new AndDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "total_market", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "automotive", null)
+    );
 
     checkSearchQuery(
         Druids.newSearchQueryBuilder()
@@ -814,10 +780,7 @@ public class SearchQueryRunnerTest
 
   private void checkSearchQuery(Query searchQuery, QueryRunner runner, List<SearchHit> expectedResults)
   {
-    Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()),
-        Lists.<Result<SearchResultValue>>newArrayList()
-    );
+    Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
     List<SearchHit> copy = Lists.newLinkedList(expectedResults);
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());

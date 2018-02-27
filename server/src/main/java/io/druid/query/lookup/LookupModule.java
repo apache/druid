@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -33,6 +34,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.guice.ExpressionModule;
@@ -47,9 +49,11 @@ import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.dimension.LookupDimensionSpec;
 import io.druid.query.expression.LookupExprMacro;
 import io.druid.server.DruidNode;
 import io.druid.server.http.HostAndPortWithScheme;
+import io.druid.server.http.security.ConfigResourceFilter;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.listener.announcer.ListenerResourceAnnouncer;
@@ -82,7 +86,11 @@ public class LookupModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.<Module>of(
-        new SimpleModule("DruidLookupModule").registerSubtypes(MapLookupExtractorFactory.class)
+        new SimpleModule("DruidLookupModule").registerSubtypes(MapLookupExtractorFactory.class),
+        new SimpleModule().registerSubtypes(
+            new NamedType(LookupDimensionSpec.class, "lookup"),
+            new NamedType(RegisteredLookupExtractionFn.class, "registeredLookup")
+        )
     );
   }
 
@@ -114,6 +122,7 @@ public class LookupModule implements DruidModule
 }
 
 @Path(ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY)
+@ResourceFilters(ConfigResourceFilter.class)
 class LookupListeningResource extends ListenerResource
 {
   private static final Logger LOG = new Logger(LookupListeningResource.class);
@@ -205,6 +214,7 @@ class LookupListeningResource extends ListenerResource
   }
 }
 
+@Deprecated
 class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
 {
   @Inject

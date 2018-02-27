@@ -40,16 +40,7 @@ public class ConcatSequence<T> implements Sequence<T>
   @Override
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> accumulator)
   {
-    return baseSequences.accumulate(
-        initValue, new Accumulator<OutType, Sequence<T>>()
-    {
-      @Override
-      public OutType accumulate(OutType accumulated, Sequence<T> in)
-      {
-        return in.accumulate(accumulated, accumulator);
-      }
-    }
-    );
+    return baseSequences.accumulate(initValue, (accumulated, in) -> in.accumulate(accumulated, accumulator));
   }
 
   @Override

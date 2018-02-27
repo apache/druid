@@ -19,14 +19,24 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.Json;
 import io.druid.guice.http.DruidHttpClientConfig;
+import io.druid.server.AsyncManagementForwardingServlet;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.router.ManagementProxyConfig;
 import io.druid.server.router.Router;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -34,21 +44,35 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
-/**
- */
+import javax.servlet.Servlet;
+import java.util.List;
+
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
+  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+      "/status/health"
+  );
+
+  private final DruidHttpClientConfig routerHttpClientConfig;
+  private final DruidHttpClientConfig globalHttpClientConfig;
+  private final ManagementProxyConfig managementProxyConfig;
   private final AsyncQueryForwardingServlet asyncQueryForwardingServlet;
-  private final DruidHttpClientConfig httpClientConfig;
+  private final AsyncManagementForwardingServlet asyncManagementForwardingServlet;
 
   @Inject
   public RouterJettyServerInitializer(
-      @Router DruidHttpClientConfig httpClientConfig,
-      AsyncQueryForwardingServlet asyncQueryForwardingServlet
+      @Router DruidHttpClientConfig routerHttpClientConfig,
+      @Global DruidHttpClientConfig globalHttpClientConfig,
+      ManagementProxyConfig managementProxyConfig,
+      AsyncQueryForwardingServlet asyncQueryForwardingServlet,
+      AsyncManagementForwardingServlet asyncManagementForwardingServlet
   )
   {
-    this.httpClientConfig = httpClientConfig;
+    this.routerHttpClientConfig = routerHttpClientConfig;
+    this.globalHttpClientConfig = globalHttpClientConfig;
+    this.managementProxyConfig = managementProxyConfig;
     this.asyncQueryForwardingServlet = asyncQueryForwardingServlet;
+    this.asyncManagementForwardingServlet = asyncManagementForwardingServlet;
   }
 
   @Override
@@ -58,21 +82,41 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-    asyncQueryForwardingServlet.setTimeout(httpClientConfig.getReadTimeout().getMillis());
-    ServletHolder sh = new ServletHolder(asyncQueryForwardingServlet);
-    //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
-    sh.setInitParameter("maxThreads", Integer.toString(httpClientConfig.getNumMaxThreads()));
+    root.addServlet(buildServletHolder(asyncQueryForwardingServlet, routerHttpClientConfig), "/druid/v2/*");
 
-    //Needs to be set in servlet config or else overridden to default value in AbstractProxyServlet.createHttpClient()
-    sh.setInitParameter("maxConnections", Integer.toString(httpClientConfig.getNumConnections()));
-    sh.setInitParameter("idleTimeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
-    sh.setInitParameter("timeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
+    if (managementProxyConfig.isEnabled()) {
+      ServletHolder managementForwardingServletHolder = buildServletHolder(
+          asyncManagementForwardingServlet, globalHttpClientConfig
+      );
+      root.addServlet(managementForwardingServletHolder, "/druid/coordinator/*");
+      root.addServlet(managementForwardingServletHolder, "/druid/indexer/*");
+      root.addServlet(managementForwardingServletHolder, "/proxy/*");
+    }
 
-    root.addServlet(sh, "/druid/v2/*");
+    final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
+    AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+
+    // perform no-op authorization for these resources
+    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+
+    final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
+    AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
+
+    // Check that requests were authorized before sending responses
+    AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+        root,
+        authenticators,
+        jsonMapper
+    );
+
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
     root.addFilter(GuiceFilter.class, "/status/*", null);
     root.addFilter(GuiceFilter.class, "/druid/router/*", null);
+    root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
 
     final HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(
@@ -82,5 +126,20 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
         }
     );
     server.setHandler(handlerList);
+  }
+
+  private ServletHolder buildServletHolder(Servlet servlet, DruidHttpClientConfig httpClientConfig)
+  {
+    ServletHolder sh = new ServletHolder(servlet);
+
+    //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
+    sh.setInitParameter("maxThreads", Integer.toString(httpClientConfig.getNumMaxThreads()));
+
+    //Needs to be set in servlet config or else overridden to default value in AbstractProxyServlet.createHttpClient()
+    sh.setInitParameter("maxConnections", Integer.toString(httpClientConfig.getNumConnections()));
+    sh.setInitParameter("idleTimeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
+    sh.setInitParameter("timeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
+
+    return sh;
   }
 }

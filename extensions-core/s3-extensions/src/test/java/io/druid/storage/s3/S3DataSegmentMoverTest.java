@@ -160,7 +160,8 @@ public class S3DataSegmentMoverTest
   private static class MockStorageService extends RestS3Service
   {
     Map<String, Set<String>> storage = Maps.newHashMap();
-    boolean moved = false;
+    boolean copied = false;
+    boolean deletedOld = false;
 
     private MockStorageService() throws S3ServiceException
     {
@@ -169,7 +170,7 @@ public class S3DataSegmentMoverTest
 
     public boolean didMove()
     {
-      return moved;
+      return copied && deletedOld;
     }
 
     @Override
@@ -196,7 +197,7 @@ public class S3DataSegmentMoverTest
     }
 
     @Override
-    public Map<String, Object> moveObject(
+    public Map<String, Object> copyObject(
         String sourceBucketName,
         String sourceObjectKey,
         String destinationBucketName,
@@ -204,19 +205,25 @@ public class S3DataSegmentMoverTest
         boolean replaceMetadata
     ) throws ServiceException
     {
-      moved = true;
+      copied = true;
       if (isObjectInBucket(sourceBucketName, sourceObjectKey)) {
         this.putObject(destinationBucketName, new S3Object(destinationObject.getKey()));
-        storage.get(sourceBucketName).remove(sourceObjectKey);
       }
       return null;
+    }
+
+    @Override
+    public void deleteObject(String bucket, String objectKey) throws S3ServiceException
+    {
+      deletedOld = true;
+      storage.get(bucket).remove(objectKey);
     }
 
     @Override
     public S3Object putObject(String bucketName, S3Object object) throws S3ServiceException
     {
       if (!storage.containsKey(bucketName)) {
-        storage.put(bucketName, Sets.<String>newHashSet());
+        storage.put(bucketName, Sets.newHashSet());
       }
       storage.get(bucketName).add(object.getKey());
       return object;

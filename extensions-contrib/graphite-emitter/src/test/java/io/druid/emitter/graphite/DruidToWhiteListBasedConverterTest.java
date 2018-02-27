@@ -31,4 +31,11 @@ public class DruidToWhiteListBasedConverterTest
     String test = "host name.yahoo.com:8080";
     Assert.assertEquals("host_name_yahoo_com:8080", GraphiteEmitter.sanitize(test));
   }
+
+  @Test
+  public void testSanitizeAndReplaceSlashWithDot()
+  {
+    String test = "query/cache/delta/hitRate";
+    Assert.assertEquals("query.cache.delta.hitRate", GraphiteEmitter.sanitize(test, true));
+  }
 }

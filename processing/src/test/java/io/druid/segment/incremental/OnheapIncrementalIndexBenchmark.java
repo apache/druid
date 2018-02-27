@@ -37,7 +37,6 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -175,7 +174,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         AtomicInteger numEntries,
         TimeAndDims key,
         ThreadLocal<InputRow> rowContainer,
-        Supplier<InputRow> rowSupplier
+        Supplier<InputRow> rowSupplier,
+        boolean skipMaxRowsInMemoryCheck // ignore for benchmark
     ) throws IndexSizeExceededException
     {
 
@@ -393,12 +393,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
                   Map<String, Object> context = new HashMap<String, Object>();
-                  for (Result<TimeseriesResultValue> result :
-                      Sequences.toList(
-                          runner.run(QueryPlus.wrap(query), context),
-                          new LinkedList<Result<TimeseriesResultValue>>()
-                      )
-                      ) {
+                  List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+                  for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
                       Assert.assertTrue(result.getValue().getDoubleMetric("doubleSumResult0") > 0);
                     }
@@ -430,10 +426,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .aggregators(queryAggregatorFactories)
                                   .build();
     Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        new LinkedList<Result<TimeseriesResultValue>>()
-    );
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());

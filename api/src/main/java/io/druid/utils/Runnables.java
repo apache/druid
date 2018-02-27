@@ -19,8 +19,11 @@
 
 package io.druid.utils;
 
+import io.druid.guice.annotations.PublicApi;
+
 /**
  */
+@PublicApi
 public class Runnables
 {
   public static Runnable getNoopRunnable()

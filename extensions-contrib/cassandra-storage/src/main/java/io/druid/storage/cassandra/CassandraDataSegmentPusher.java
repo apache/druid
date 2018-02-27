@@ -24,8 +24,9 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
-
+import com.netflix.astyanax.recipes.storage.ChunkedStorageProvider;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
@@ -53,7 +54,8 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
   @Inject
   public CassandraDataSegmentPusher(
       CassandraDataSegmentConfig config,
-      ObjectMapper jsonMapper)
+      ObjectMapper jsonMapper
+  )
   {
     super(config);
     this.jsonMapper = jsonMapper;
@@ -73,13 +75,14 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
+  public DataSegment push(final File indexFilesDir, DataSegment segment, final boolean replaceExisting)
+      throws IOException
   {
     log.info("Writing [%s] to C*", indexFilesDir);
     String key = JOINER.join(
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
         this.getStorageDir(segment)
-        );
+    );
 
     // Create index
     final File compressedIndexFile = File.createTempFile("druid", "index.zip");
@@ -89,26 +92,28 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     int version = SegmentUtils.getVersionFromDir(indexFilesDir);
 
     try {
-      long start = System.currentTimeMillis();
-      ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
-          .withConcurrencyLevel(CONCURRENCY).call();
-      byte[] json = jsonMapper.writeValueAsBytes(segment);
-      MutationBatch mutation = this.keyspace.prepareMutationBatch();
-      mutation.withRow(descriptorStorage, key)
-        .putColumn("lastmodified", System.currentTimeMillis(), null)
-        .putColumn("descriptor", json, null);
-      mutation.execute();
-      log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
+      if (!replaceExisting && doesObjectExist(indexStorage, key)) {
+        log.info("Skipping push because key [%s] exists && replaceExisting == false", key);
+      } else {
+        long start = System.currentTimeMillis();
+        ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
+                      .withConcurrencyLevel(CONCURRENCY).call();
+        byte[] json = jsonMapper.writeValueAsBytes(segment);
+        MutationBatch mutation = this.keyspace.prepareMutationBatch();
+        mutation.withRow(descriptorStorage, key)
+                .putColumn("lastmodified", System.currentTimeMillis(), null)
+                .putColumn("descriptor", json, null);
+        mutation.execute();
+        log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
+      }
     }
     catch (Exception e) {
       throw new IOException(e);
     }
 
     segment = segment.withSize(indexSize)
-        .withLoadSpec(
-            ImmutableMap.<String, Object> of("type", "c*", "key", key)
-        )
-        .withBinaryVersion(version);
+                     .withLoadSpec(ImmutableMap.<String, Object>of("type", "c*", "key", key))
+                     .withBinaryVersion(version);
 
     log.info("Deleting zipped index File[%s]", compressedIndexFile);
     compressedIndexFile.delete();
@@ -119,5 +124,15 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
   public Map<String, Object> makeLoadSpec(URI uri)
   {
     throw new UnsupportedOperationException("not supported");
+  }
+
+  private boolean doesObjectExist(ChunkedStorageProvider provider, String objectName) throws Exception
+  {
+    try {
+      return ChunkedStorage.newInfoReader(provider, objectName).call().isValidForRead();
+    }
+    catch (NotFoundException e) {
+      return false;
+    }
   }
 }

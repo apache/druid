@@ -20,7 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Ordering;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -42,11 +42,11 @@ public class FloatSumAggregator implements Aggregator
     return ((Number) lhs).floatValue() + ((Number) rhs).floatValue();
   }
 
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
 
   private float sum;
 
-  public FloatSumAggregator(FloatColumnSelector selector)
+  public FloatSumAggregator(BaseFloatColumnValueSelector selector)
   {
     this.selector = selector;
 
@@ -57,12 +57,6 @@ public class FloatSumAggregator implements Aggregator
   public void aggregate()
   {
     sum += selector.getFloat();
-  }
-
-  @Override
-  public void reset()
-  {
-    sum = 0;
   }
 
   @Override

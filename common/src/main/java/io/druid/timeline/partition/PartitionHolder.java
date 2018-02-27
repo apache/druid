@@ -19,8 +19,6 @@
 
 package io.druid.timeline.partition;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
@@ -60,11 +58,6 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
   public void add(PartitionChunk<T> chunk)
   {
     holderSet.add(chunk);
-  }
-
-  public int size()
-  {
-    return holderSet.size();
   }
 
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
@@ -121,14 +114,8 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
   public PartitionChunk<T> getChunk(final int partitionNum)
   {
     final Iterator<PartitionChunk<T>> retVal = Iterators.filter(
-        holderSet.iterator(), new Predicate<PartitionChunk<T>>()
-    {
-      @Override
-      public boolean apply(PartitionChunk<T> input)
-      {
-        return input.getChunkNumber() == partitionNum;
-      }
-    }
+        holderSet.iterator(),
+        input -> input.getChunkNumber() == partitionNum
     );
 
     return retVal.hasNext() ? retVal.next() : null;
@@ -142,17 +129,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public Iterable<T> payloads()
   {
-    return Iterables.transform(
-        this,
-        new Function<PartitionChunk<T>, T>()
-        {
-          @Override
-          public T apply(PartitionChunk<T> input)
-          {
-            return input.getObject();
-          }
-        }
-    );
+    return Iterables.transform(this, PartitionChunk::getObject);
   }
 
   @Override

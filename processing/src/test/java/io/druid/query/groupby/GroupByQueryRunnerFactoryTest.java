@@ -36,7 +36,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
@@ -49,8 +48,8 @@ import io.druid.segment.incremental.IncrementalIndex;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -70,14 +69,7 @@ public class GroupByQueryRunnerFactoryTest
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
-        .setAggregatorSpecs(
-            Arrays.asList(
-                new AggregatorFactory[]
-                    {
-                        new CountAggregatorFactory("count")
-                    }
-            )
-        )
+        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
         .build();
 
     final QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig());
@@ -124,7 +116,7 @@ public class GroupByQueryRunnerFactoryTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t2", "count", 4L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
   }
 
   private Segment createSegment() throws Exception

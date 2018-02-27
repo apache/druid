@@ -23,9 +23,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.Random;
 
 /**
@@ -51,5 +55,36 @@ public class HyperUniqueFinalizingPostAggregatorTest
     double cardinality = (Double) postAggregator.compute(ImmutableMap.<String, Object>of("uniques", collector));
 
     Assert.assertTrue(cardinality == 99.37233005831612);
+  }
+
+  @Test
+  public void testComputeRounded() throws Exception
+  {
+    Random random = new Random(0L);
+    HyperUniqueFinalizingPostAggregator postAggregator = new HyperUniqueFinalizingPostAggregator(
+        "uniques", "uniques"
+    ).decorate(
+        ImmutableMap.of(
+            "uniques",
+            new CardinalityAggregatorFactory(
+                "uniques",
+                null,
+                Collections.singletonList(DefaultDimensionSpec.of("dummy")),
+                false,
+                true
+            )
+        )
+    );
+    HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
+
+    for (int i = 0; i < 100; ++i) {
+      byte[] hashedVal = fn.hashLong(random.nextLong()).asBytes();
+      collector.add(hashedVal);
+    }
+
+    Object cardinality = postAggregator.compute(ImmutableMap.<String, Object>of("uniques", collector));
+
+    Assert.assertThat(cardinality, CoreMatchers.instanceOf(Long.class));
+    Assert.assertEquals(99L, cardinality);
   }
 }

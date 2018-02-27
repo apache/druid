@@ -19,6 +19,7 @@
 
 package io.druid.discovery;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.java.util.common.IAE;
@@ -27,6 +28,7 @@ import io.druid.java.util.common.logger.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +65,8 @@ public abstract class DruidNodeDiscoveryProvider
       WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NODE_TYPE_MM)
   );
 
-  private final Map<String, ServiceListener> serviceDiscoveryMap = new ConcurrentHashMap<>(SERVICE_TO_NODE_TYPES.size());
+  private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap = new ConcurrentHashMap<>(
+      SERVICE_TO_NODE_TYPES.size());
 
   /**
    * Get DruidNodeDiscovery instance to discover nodes of given nodeType.
@@ -73,67 +76,45 @@ public abstract class DruidNodeDiscoveryProvider
   /**
    * Get DruidNodeDiscovery instance to discover nodes that announce given service in its metadata.
    */
-  public synchronized DruidNodeDiscovery getForService(String serviceName)
+  public DruidNodeDiscovery getForService(String serviceName)
   {
-    ServiceListener nodeDiscovery = serviceDiscoveryMap.get(serviceName);
+    return serviceDiscoveryMap.compute(
+        serviceName,
+        (k, v) -> {
+          if (v != null) {
+            return v;
+          }
 
-    if (nodeDiscovery == null) {
-      Set<String> nodeTypesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName);
-      if (nodeTypesToWatch == null) {
-        throw new IAE("Unknown service [%s].", serviceName);
-      }
+          Set<String> nodeTypesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(serviceName);
+          if (nodeTypesToWatch == null) {
+            throw new IAE("Unknown service [%s].", serviceName);
+          }
 
-      nodeDiscovery = new ServiceListener(serviceName);
-      for (String nodeType : nodeTypesToWatch) {
-        getForNodeType(nodeType).registerListener(nodeDiscovery);
-      }
-      serviceDiscoveryMap.put(serviceName, nodeDiscovery);
-    }
-
-    return nodeDiscovery;
+          ServiceDruidNodeDiscovery serviceDiscovery = new ServiceDruidNodeDiscovery(serviceName);
+          for (String nodeType : nodeTypesToWatch) {
+            getForNodeType(nodeType).registerListener(serviceDiscovery.nodeTypeListener());
+          }
+          return serviceDiscovery;
+        }
+    );
   }
 
-  private static class ServiceListener implements DruidNodeDiscovery, DruidNodeDiscovery.Listener
+  private static class ServiceDruidNodeDiscovery implements DruidNodeDiscovery
   {
+    private static final Logger log = new Logger(ServiceDruidNodeDiscovery.class);
+
     private final String service;
     private final Map<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
 
     private final List<Listener> listeners = new ArrayList<>();
 
-    ServiceListener(String service)
+    private final Object lock = new Object();
+
+    private Set<NodeTypeListener> uninitializedNodeTypeListeners = new HashSet<>();
+
+    ServiceDruidNodeDiscovery(String service)
     {
       this.service = service;
-    }
-
-    @Override
-    public synchronized void nodeAdded(DiscoveryDruidNode node)
-    {
-      if (node.getServices().containsKey(service)) {
-        DiscoveryDruidNode prev = nodes.putIfAbsent(node.getDruidNode().getHostAndPortToUse(), node);
-
-        if (prev == null) {
-          for (Listener listener : listeners) {
-            listener.nodeAdded(node);
-          }
-        } else {
-          log.warn("Node[%s] discovered but already exists [%s].", node, prev);
-        }
-      } else {
-        log.warn("Node[%s] discovered but doesn't have service[%s]. Ignored.", node, service);
-      }
-    }
-
-    @Override
-    public synchronized void nodeRemoved(DiscoveryDruidNode node)
-    {
-      DiscoveryDruidNode prev = nodes.remove(node.getDruidNode().getHostAndPortToUse());
-      if (prev != null) {
-        for (Listener listener : listeners) {
-          listener.nodeRemoved(node);
-        }
-      } else {
-        log.warn("Node[%s] disappeared but was unknown for service listener [%s].", node, service);
-      }
     }
 
     @Override
@@ -143,12 +124,91 @@ public abstract class DruidNodeDiscoveryProvider
     }
 
     @Override
-    public synchronized void registerListener(Listener listener)
+    public void registerListener(Listener listener)
     {
-      for (DiscoveryDruidNode node : nodes.values()) {
-        listener.nodeAdded(node);
+      synchronized (lock) {
+        if (uninitializedNodeTypeListeners.isEmpty()) {
+          listener.nodesAdded(ImmutableList.copyOf(nodes.values()));
+        }
+        listeners.add(listener);
       }
-      listeners.add(listener);
+    }
+
+    NodeTypeListener nodeTypeListener()
+    {
+      NodeTypeListener nodeListener = new NodeTypeListener();
+      uninitializedNodeTypeListeners.add(nodeListener);
+      return nodeListener;
+    }
+
+    class NodeTypeListener implements DruidNodeDiscovery.Listener
+    {
+      @Override
+      public void nodesAdded(List<DiscoveryDruidNode> nodesDiscovered)
+      {
+        synchronized (lock) {
+          ImmutableList.Builder<DiscoveryDruidNode> builder = ImmutableList.builder();
+          for (DiscoveryDruidNode node : nodesDiscovered) {
+            if (node.getServices().containsKey(service)) {
+              DiscoveryDruidNode prev = nodes.putIfAbsent(node.getDruidNode().getHostAndPortToUse(), node);
+
+              if (prev == null) {
+                builder.add(node);
+              } else {
+                log.warn("Node[%s] discovered but already exists [%s].", node, prev);
+              }
+            } else {
+              log.warn("Node[%s] discovered but doesn't have service[%s]. Ignored.", node, service);
+            }
+          }
+
+          ImmutableList<DiscoveryDruidNode> newNodesAdded = null;
+          if (uninitializedNodeTypeListeners.isEmpty()) {
+            newNodesAdded = builder.build();
+          } else if (uninitializedNodeTypeListeners.remove(this) && uninitializedNodeTypeListeners.isEmpty()) {
+            newNodesAdded = ImmutableList.copyOf(nodes.values());
+          }
+
+          if (newNodesAdded != null) {
+            for (Listener listener : listeners) {
+              try {
+                listener.nodesAdded(newNodesAdded);
+              }
+              catch (Exception ex) {
+                log.error(ex, "Listener[%s].nodesAdded(%s) threw exception. Ignored.", listener, newNodesAdded);
+              }
+            }
+          }
+        }
+      }
+
+      @Override
+      public void nodesRemoved(List<DiscoveryDruidNode> nodesDisappeared)
+      {
+        synchronized (lock) {
+          ImmutableList.Builder<DiscoveryDruidNode> builder = ImmutableList.builder();
+          for (DiscoveryDruidNode node : nodesDisappeared) {
+            DiscoveryDruidNode prev = nodes.remove(node.getDruidNode().getHostAndPortToUse());
+            if (prev != null) {
+              builder.add(node);
+            } else {
+              log.warn("Node[%s] disappeared but was unknown for service listener [%s].", node, service);
+            }
+          }
+
+          if (uninitializedNodeTypeListeners.isEmpty()) {
+            ImmutableList<DiscoveryDruidNode> nodesRemoved = builder.build();
+            for (Listener listener : listeners) {
+              try {
+                listener.nodesRemoved(nodesRemoved);
+              }
+              catch (Exception ex) {
+                log.error(ex, "Listener[%s].nodesRemoved(%s) threw exception. Ignored.", listener, nodesRemoved);
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

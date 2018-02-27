@@ -66,7 +66,7 @@ public class RegexParserTest
     );
     String data = "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be mybucket [06/Feb/2014:00:00:38 +0000] 192.0.2.3 79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be 3E57427F3EXAMPLE REST.GET.VERSIONING - \"GET /mybucket?versioning HTTP/1.1\" 200 - 113 - 7 - \"-\" \"S3Console/0.4\" -";
 
-    final Map<String, Object> parsed = parser.parse(data);
+    final Map<String, Object> parsed = parser.parseToMap(data);
     ImmutableMap.Builder builder = ImmutableMap.builder();
     builder.put("Bucket Owner", "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be");
     builder.put("Bucket", "mybucket");
@@ -127,7 +127,7 @@ public class RegexParserTest
     );
     String data = "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be mybucket [06/Feb/2014:00:01:00 +0000] 192.0.2.3 79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be 7B4A0FABBEXAMPLE REST.GET.VERSIONING - \"GET /mybucket?versioning HTTP/1.1\" 200 - 139 139 27 26 \"-\" \"() { foo;};echo; /bin/bash -c \"expr 299663299665 / 3; echo 333:; uname -a; echo 333:; id;\"\" -";
 
-    final Map<String, Object> parsed = parser.parse(data);
+    final Map<String, Object> parsed = parser.parseToMap(data);
     ImmutableMap.Builder builder = ImmutableMap.builder();
     builder.put("Bucket Owner", "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be");
     builder.put("Bucket", "mybucket");
@@ -175,7 +175,7 @@ public class RegexParserTest
     );
     String data = "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be mybucket@mybucket2";
 
-    final Map<String, Object> parsed = parser.parse(data);
+    final Map<String, Object> parsed = parser.parseToMap(data);
     ImmutableMap.Builder builder = ImmutableMap.builder();
     builder.put("Bucket Owner", "79a59df900b949e55d96a1e698fbacedfd6e09d98eacf8f8d5218e7cd47ef2be");
     builder.put("Bucket", Lists.newArrayList("mybucket", "mybucket2"));
@@ -199,7 +199,7 @@ public class RegexParserTest
     );
     String data = "1a2";
 
-    final Map<String, Object> parsed = parser.parse(data);
+    final Map<String, Object> parsed = parser.parseToMap(data);
     ImmutableMap.Builder builder = ImmutableMap.builder();
     builder.put("column_1", Lists.newArrayList("1", "2"));
 
@@ -226,6 +226,6 @@ public class RegexParserTest
     );
     String data = "BBBB";
 
-    parser.parse(data);
+    parser.parseToMap(data);
   }
 }

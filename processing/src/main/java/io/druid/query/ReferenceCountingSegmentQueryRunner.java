@@ -19,12 +19,10 @@
 
 package io.druid.query;
 
-import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.segment.ReferenceCountingSegment;
 
-import java.io.Closeable;
 import java.util.Map;
 
 /**
@@ -49,16 +47,20 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
-    final Closeable closeable = adapter.increment();
-    if (closeable != null) {
+    if (adapter.increment()) {
       try {
         final Sequence<T> baseSequence = factory.createRunner(adapter).run(queryPlus, responseContext);
 
-        return Sequences.withBaggage(baseSequence, closeable);
+        return Sequences.withBaggage(baseSequence, adapter.decrementOnceCloseable());
       }
-      catch (RuntimeException e) {
-        CloseQuietly.close(closeable);
-        throw e;
+      catch (Throwable t) {
+        try {
+          adapter.decrement();
+        }
+        catch (Exception e) {
+          t.addSuppressed(e);
+        }
+        throw t;
       }
     } else {
       // Segment was closed before we had a chance to increment the reference count

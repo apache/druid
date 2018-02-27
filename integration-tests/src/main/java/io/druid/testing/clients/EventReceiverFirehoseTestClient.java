@@ -24,10 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.testing.guice.TestClient;
@@ -144,10 +145,8 @@ public class EventReceiverFirehoseTestClient
       int expectedEventsPosted = 0;
       while ((s = reader.readLine()) != null) {
         events.add(
-            (Map<String, Object>) this.jsonMapper.readValue(
-                s, new TypeReference<Map<String, Object>>()
-                {
-                }
+            this.jsonMapper.readValue(
+                s, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
             )
         );
         ObjectMapper mapper = (totalEventsPosted % 2 == 0) ? jsonMapper : smileMapper;
@@ -155,7 +154,7 @@ public class EventReceiverFirehoseTestClient
                            ? MediaType.APPLICATION_JSON
                            : SmileMediaTypes.APPLICATION_JACKSON_SMILE;
         totalEventsPosted += postEvents(events, mapper, mediaType);
-        ;
+
         expectedEventsPosted += events.size();
         events = new ArrayList<>();
       }

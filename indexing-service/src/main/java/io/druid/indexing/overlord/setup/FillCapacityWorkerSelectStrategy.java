@@ -19,59 +19,82 @@
 
 package io.druid.indexing.overlord.setup;
 
-import com.google.common.base.Optional;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.Comparator;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.Objects;
 
-/**
- */
 public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 {
+  private final AffinityConfig affinityConfig;
+
+  @JsonCreator
+  public FillCapacityWorkerSelectStrategy(
+      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
+  )
+  {
+    this.affinityConfig = affinityConfig;
+  }
+
+  @JsonProperty
+  public AffinityConfig getAffinityConfig()
+  {
+    return affinityConfig;
+  }
+
   @Override
-  public Optional<ImmutableWorkerInfo> findWorkerForTask(
+  public ImmutableWorkerInfo findWorkerForTask(
       final WorkerTaskRunnerConfig config,
       final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       final Task task
   )
   {
-    TreeSet<ImmutableWorkerInfo> sortedWorkers = Sets.newTreeSet(
-        new Comparator<ImmutableWorkerInfo>()
-        {
-          @Override
-          public int compare(
-              ImmutableWorkerInfo zkWorker, ImmutableWorkerInfo zkWorker2
-          )
-          {
-            int retVal = Ints.compare(zkWorker2.getCurrCapacityUsed(), zkWorker.getCurrCapacityUsed());
-            // the version sorting is needed because if the workers have the same currCapacityUsed only one of them is
-            // returned. Exists the possibility that this worker is disabled and doesn't have valid version so can't
-            // run new tasks, so in this case the workers are sorted using version to ensure that if exists enable
-            // workers the comparator return one of them.
-
-            if (retVal == 0) {
-              retVal = zkWorker.getWorker().getVersion().compareTo(zkWorker2.getWorker().getVersion());
-            }
-
-            return retVal;
-          }
-        }
+    return WorkerSelectUtils.selectWorker(
+        task,
+        zkWorkers,
+        config,
+        affinityConfig,
+        FillCapacityWorkerSelectStrategy::selectFromEligibleWorkers
     );
-    sortedWorkers.addAll(zkWorkers.values());
-    final String minWorkerVer = config.getMinWorkerVersion();
+  }
 
-    for (ImmutableWorkerInfo zkWorker : sortedWorkers) {
-      if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {
-        return Optional.of(zkWorker);
-      }
+  private static ImmutableWorkerInfo selectFromEligibleWorkers(final Map<String, ImmutableWorkerInfo> eligibleWorkers)
+  {
+    return eligibleWorkers.values().stream().max(
+        Comparator.comparing(ImmutableWorkerInfo::getCurrCapacityUsed)
+    ).orElse(null);
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
     }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final FillCapacityWorkerSelectStrategy that = (FillCapacityWorkerSelectStrategy) o;
+    return Objects.equals(affinityConfig, that.affinityConfig);
+  }
 
-    return Optional.absent();
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(affinityConfig);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FillCapacityWorkerSelectStrategy{" +
+           "affinityConfig=" + affinityConfig +
+           '}';
   }
 }

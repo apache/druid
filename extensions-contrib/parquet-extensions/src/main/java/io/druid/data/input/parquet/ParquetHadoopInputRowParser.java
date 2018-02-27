@@ -20,11 +20,10 @@ package io.druid.data.input.parquet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.data.input.AvroStreamInputRowParser;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.avro.GenericRecordAsMap;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
@@ -76,13 +75,13 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   }
 
   /**
-   * imitate avro extension {@link AvroStreamInputRowParser#parseGenericRecord(GenericRecord, ParseSpec, List, boolean, boolean)}
+   * imitate avro extension {@link io.druid.data.input.avro.AvroParsers#parseGenericRecord}
    */
   @Override
-  public InputRow parse(GenericRecord record)
+  public List<InputRow> parseBatch(GenericRecord record)
   {
     // Map the record to a map
-    GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, false, binaryAsString);
+    GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, binaryAsString);
 
     // Determine logical type of the timestamp column
     LogicalType logicalType = determineTimestampSpecLogicalType(record.getSchema(), timestampSpec.getTimestampColumn());
@@ -99,7 +98,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
       dateTime = timestampSpec.extractTimestamp(genericRecordAsMap);
     }
 
-    return new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap);
+    return ImmutableList.of(new MapBasedInputRow(dateTime, dimensions, genericRecordAsMap));
   }
 
   @JsonProperty

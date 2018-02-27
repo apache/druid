@@ -29,12 +29,8 @@ import io.druid.indexing.common.task.TaskResource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
-import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
-import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import io.druid.segment.realtime.plumber.Plumber;
-import io.druid.segment.realtime.plumber.PlumberSchool;
 
 import java.io.File;
 
@@ -58,18 +54,13 @@ public class TestRealtimeTask extends RealtimeIndexTask
         id,
         taskResource,
         new FireDepartment(
-            new DataSchema(dataSource, null, new AggregatorFactory[]{}, null, mapper), new RealtimeIOConfig(
-            new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return null;
-          }
-        }, null
-        ), null
+            new DataSchema(dataSource, null, new AggregatorFactory[]{}, null, null, mapper),
+            new RealtimeIOConfig(
+                new LocalFirehoseFactory(new File("lol"), "rofl", null),
+                (schema, config, metrics) -> null,
+                null
+            ),
+            null
         ),
         null
     );

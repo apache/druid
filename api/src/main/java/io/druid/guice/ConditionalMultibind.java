@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
+import io.druid.guice.annotations.PublicApi;
 
 import java.lang.annotation.Annotation;
 import java.util.Properties;
@@ -43,6 +44,7 @@ import java.util.Properties;
  * At injection time, you will get the items that satisfy their corresponding predicates by calling
  * injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>(){}))
  */
+@PublicApi
 public class ConditionalMultibind<T>
 {
 
@@ -226,6 +228,7 @@ public class ConditionalMultibind<T>
    *
    * @return self to support a continuous syntax for adding more conditional bindings.
    */
+  @PublicApi
   public ConditionalMultibind<T> addConditionBinding(
       String property,
       Predicate<String> condition,

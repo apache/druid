@@ -27,8 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
 import io.druid.java.util.common.ISE;
@@ -57,7 +56,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   private IngestSegmentFirehose firehose;
 
   private int rowNum;
-  private MapBasedRow currRow;
+  private Row currRow;
 
   private List<QueryableIndex> indexes = Lists.newArrayList();
   private List<File> tmpSegmentDirs = Lists.newArrayList();
@@ -108,18 +107,18 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
 
     firehose = new IngestSegmentFirehose(
         adapters,
+        spec.getTransformSpec(),
         spec.getDimensions(),
         spec.getMetrics(),
         spec.getFilter()
     );
-
   }
 
   @Override
   public boolean nextKeyValue() throws IOException, InterruptedException
   {
     if (firehose.hasMore()) {
-      currRow = (MapBasedRow) firehose.nextRow();
+      currRow = firehose.nextRow();
       rowNum++;
       return true;
     } else {
@@ -136,13 +135,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   @Override
   public InputRow getCurrentValue() throws IOException, InterruptedException
   {
-    return new SegmentInputRow(
-        new MapBasedInputRow(
-            currRow.getTimestamp(),
-            spec.getDimensions(),
-            currRow.getEvent()
-        )
-    );
+    return currRow == null ? null : new SegmentInputRow(currRow, spec.getDimensions());
   }
 
   @Override

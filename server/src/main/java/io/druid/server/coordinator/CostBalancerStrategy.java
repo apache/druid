@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 
 import io.druid.java.util.common.Pair;
 import io.druid.timeline.DataSegment;
@@ -311,8 +311,11 @@ public class CostBalancerStrategy implements BalancerStrategy
         )
     );
 
-    //  plus the costs of segments that will be loaded
+    // plus the costs of segments that will be loaded
     cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad());
+
+    // minus the costs of segments that are marked to be dropped
+    cost -= computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsMarkedToDrop());
 
     return cost;
   }

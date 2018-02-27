@@ -48,10 +48,10 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
@@ -80,7 +80,8 @@ public class DatasourcePathSpecTest
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     segments = ImmutableList.of(
@@ -136,7 +137,7 @@ public class DatasourcePathSpecTest
               {
                 binder.bind(UsedSegmentLister.class).toInstance(segmentList);
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null, null, new ServerConfig())
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null, null, true, false)
                 );
               }
             }
@@ -178,7 +179,7 @@ public class DatasourcePathSpecTest
   {
     HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
 
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
         mapper,
@@ -280,6 +281,7 @@ public class DatasourcePathSpecTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2000/3000"))
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(

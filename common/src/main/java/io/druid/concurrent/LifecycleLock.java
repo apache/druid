@@ -115,6 +115,11 @@ public final class LifecycleLock
       }
     }
 
+    boolean isStarted()
+    {
+      return getState() == START_EXITED_SUCCESSFUL;
+    }
+
     boolean awaitStarted()
     {
       try {
@@ -124,7 +129,7 @@ public final class LifecycleLock
       catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-      return getState() == START_EXITED_SUCCESSFUL;
+      return isStarted();
     }
 
     boolean awaitStarted(long timeNanos)
@@ -138,7 +143,7 @@ public final class LifecycleLock
       catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-      return getState() == START_EXITED_SUCCESSFUL;
+      return isStarted();
     }
 
     @Override
@@ -208,6 +213,15 @@ public final class LifecycleLock
   public void exitStart()
   {
     sync.exitStart();
+  }
+
+  /**
+   * Returns {@code true} if {@link #started()} was called before that. Returns {@code false} if {@link #started()} is
+   * not called before {@link #exitStart()}, or if {@link #canStop()} is already called on this LifecycleLock.
+   */
+  public boolean isStarted()
+  {
+    return sync.isStarted();
   }
 
   /**

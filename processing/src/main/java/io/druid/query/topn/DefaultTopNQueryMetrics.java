@@ -41,6 +41,7 @@ public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> impl
     dimension(query);
     numMetrics(query);
     numComplexMetrics(query);
+    granularity(query);
   }
 
   @Override
@@ -66,6 +67,12 @@ public class DefaultTopNQueryMetrics extends DefaultQueryMetrics<TopNQuery> impl
   {
     int numComplexAggs = DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs());
     setDimension("numComplexMetrics", String.valueOf(numComplexAggs));
+  }
+
+  @Override
+  public void granularity(TopNQuery query)
+  {
+    // Don't emit by default
   }
 
   @Override

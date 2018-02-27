@@ -28,7 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
@@ -50,6 +50,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
@@ -171,7 +172,7 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public Optional<Task> getTask(final String taskId)
   {
-      return handler.getEntry(taskId);
+    return handler.getEntry(taskId);
   }
 
   @Override
@@ -212,23 +213,25 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses()
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
   {
-    final DateTime start = DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold());
-
     return ImmutableList.copyOf(
-        Iterables.filter(
-            handler.getInactiveStatusesSince(start),
-            new Predicate<TaskStatus>()
-            {
-              @Override
-              public boolean apply(TaskStatus status)
-              {
-                return status.isComplete();
-              }
-            }
-        )
+        handler
+            .getInactiveStatusesSince(
+                DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold()),
+                maxTaskStatuses
+            )
+            .stream()
+            .filter(TaskStatus::isComplete)
+            .collect(Collectors.toList())
     );
+  }
+
+  @Nullable
+  @Override
+  public Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId)
+  {
+    return handler.getCreatedDateAndDataSource(taskId);
   }
 
   @Override
@@ -248,21 +251,39 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public void replaceLock(String taskid, TaskLock oldLock, TaskLock newLock)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    Preconditions.checkNotNull(oldLock, "oldLock");
+    Preconditions.checkNotNull(newLock, "newLock");
+
+    log.info(
+        "Replacing lock on interval[%s] version[%s] for task: %s",
+        oldLock.getInterval(),
+        oldLock.getVersion(),
+        taskid
+    );
+
+    final Long oldLockId = handler.getLockId(taskid, oldLock);
+    if (oldLockId == null) {
+      throw new ISE("Cannot find lock[%s]", oldLock);
+    }
+
+    handler.replaceLock(taskid, oldLockId, newLock);
+  }
+
+  @Override
   public void removeLock(String taskid, TaskLock taskLockToRemove)
   {
     Preconditions.checkNotNull(taskid, "taskid");
     Preconditions.checkNotNull(taskLockToRemove, "taskLockToRemove");
 
-    final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
-
-    for (final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
-      final long id = taskLockWithId.getKey();
-      final TaskLock taskLock = taskLockWithId.getValue();
-
-      if (taskLock.equals(taskLockToRemove)) {
-        log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
-        handler.removeLock(id);
-      }
+    final Long lockId = handler.getLockId(taskid, taskLockToRemove);
+    if (lockId == null) {
+      log.warn("Cannot find lock[%s]", taskLockToRemove);
+    } else {
+      log.info("Deleting TaskLock with id[%d]: %s", lockId, taskLockToRemove);
+      handler.removeLock(lockId);
     }
   }
 

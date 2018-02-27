@@ -20,23 +20,30 @@
 package io.druid.segment.column;
 
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.historical.OffsetHolder;
+import io.druid.segment.data.ReadableOffset;
 
-import java.io.Closeable;
+import javax.annotation.Nullable;
 
 /**
  */
-public interface DictionaryEncodedColumn<ActualType extends Comparable> extends Closeable
+public interface DictionaryEncodedColumn<ActualType extends Comparable> extends BaseColumn
 {
-  public int length();
-  public boolean hasMultipleValues();
-  public int getSingleValueRow(int rowNum);
-  public IndexedInts getMultiValueRow(int rowNum);
-  public ActualType lookupName(int id);
-  public int lookupId(ActualType name);
-  public int getCardinality();
+  int length();
+  boolean hasMultipleValues();
+  int getSingleValueRow(int rowNum);
+  IndexedInts getMultiValueRow(int rowNum);
+  ActualType lookupName(int id);
+  int lookupId(ActualType name);
+  int getCardinality();
 
-  DimensionSelector makeDimensionSelector(OffsetHolder offsetHolder, ExtractionFn extractionFn);
+  DimensionSelector makeDimensionSelector(ReadableOffset offset, @Nullable ExtractionFn extractionFn);
+
+  @Override
+  default ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  {
+    return makeDimensionSelector(offset, null);
+  }
 }

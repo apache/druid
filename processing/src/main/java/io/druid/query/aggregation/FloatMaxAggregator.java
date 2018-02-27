@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 /**
  */
@@ -30,27 +30,20 @@ public class FloatMaxAggregator implements Aggregator
     return Math.max(((Number) lhs).floatValue(), ((Number) rhs).floatValue());
   }
 
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
 
   private float max;
 
-  public FloatMaxAggregator(FloatColumnSelector selector)
+  public FloatMaxAggregator(BaseFloatColumnValueSelector selector)
   {
     this.selector = selector;
-
-    reset();
+    this.max = Float.NEGATIVE_INFINITY;
   }
 
   @Override
   public void aggregate()
   {
     max = Math.max(max, selector.getFloat());
-  }
-
-  @Override
-  public void reset()
-  {
-    max = Float.NEGATIVE_INFINITY;
   }
 
   @Override

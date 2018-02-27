@@ -313,7 +313,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         configSupplier.get(),
         resource,
         spillMapper,
-        processingConfig.getTmpDir()
+        processingConfig.getTmpDir(),
+        processingConfig.intermediateComputeSizeBytes()
     );
     return mergeResults(new QueryRunner<Row>()
     {
@@ -337,7 +338,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryWatcher,
         queryRunners,
         processingConfig.getNumThreads(),
+        bufferPool,
         mergeBufferPool,
+        processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
         processingConfig.getTmpDir()
     );
