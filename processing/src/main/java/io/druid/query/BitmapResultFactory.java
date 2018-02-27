@@ -83,7 +83,7 @@ public interface BitmapResultFactory<T>
   T union(Iterable<T> bitmapResults);
 
   /**
-   * Equivalent of intersection(Iterables.transformAsync(dimensionValueBitmaps, factory::wrapDimensionValue)), but doesn't
+   * Equivalent of intersection(Iterables.transform(dimensionValueBitmaps, factory::wrapDimensionValue)), but doesn't
    * create a lot of bitmap result objects.
    */
   T unionDimensionValueBitmaps(Iterable<ImmutableBitmap> dimensionValueBitmaps);
