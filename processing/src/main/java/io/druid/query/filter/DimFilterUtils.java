@@ -88,7 +88,7 @@ public class DimFilterUtils
    * @param dimFilter The filter to use
    * @param input The iterable of objects to be filtered
    * @param converter The function to convert T to ShardSpec that can be filtered by
-   * @param <T> This can be any type, as long as transform function is provided to convert this to ShardSpec
+   * @param <T> This can be any type, as long as transformAsync function is provided to convert this to ShardSpec
    * @return The set of filtered object, in the same order as input
    */
   public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter)
@@ -109,7 +109,7 @@ public class DimFilterUtils
    * @param input The iterable of objects to be filtered
    * @param converter The function to convert T to ShardSpec that can be filtered by
    * @param dimensionRangeCache The cache of RangeSets of different dimensions for the dimFilter
-   * @param <T> This can be any type, as long as transform function is provided to convert this to ShardSpec
+   * @param <T> This can be any type, as long as transformAsync function is provided to convert this to ShardSpec
    * @return The set of filtered object, in the same order as input
    */
   public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter,

@@ -74,7 +74,7 @@ public class GenericRecordAsMap implements Map<String, Object>
    * <ul>
    * <li>null, boolean, int, long, float, double, string, Records, Enums, Maps, Fixed -> String, using String.valueOf</li>
    * <li>bytes -> Arrays.toString() or new String if binaryAsString is true</li>
-   * <li>Arrays -> List&lt;String&gt;, using Lists.transform(&lt;List&gt;dimValue, TO_STRING_INCLUDING_NULL)</li>
+   * <li>Arrays -> List&lt;String&gt;, using Lists.transformAsync(&lt;List&gt;dimValue, TO_STRING_INCLUDING_NULL)</li>
    * </ul>
    * <li> avro schema type -> druid metric:</li>
    * <ul>

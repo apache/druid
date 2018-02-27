@@ -437,7 +437,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-    pendingHandoffs.add(ListenableFutures.transform(publishFuture, driver::registerHandoff));
+    pendingHandoffs.add(ListenableFutures.transformAsync(publishFuture, driver::registerHandoff));
   }
 
   private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,

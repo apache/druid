@@ -268,14 +268,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = ListenableFutures.transform(
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = ListenableFutures.transformAsync(
         pushInBackground(wrapCommitter(committer), theSegments),
         sam -> publishInBackground(
             sam,
             publisher
         )
     );
-    return ListenableFutures.transform(publishFuture, sam -> {
+    return ListenableFutures.transformAsync(publishFuture, sam -> {
       synchronized (segments) {
         sequenceNames.forEach(segments::remove);
       }
@@ -376,7 +376,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   )
   {
     return ListenableFutures
-        .transform(
+        .transformAsync(
             publish(publisher, committer, sequenceNames),
             this::registerHandoff
         );

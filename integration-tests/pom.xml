@@ -229,7 +229,6 @@
                                 <!-- Needed because of https://github.com/policeman-tools/forbidden-apis/issues/126 -->
                                 <signaturesFile>../codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                                 <signaturesFile>../codestyle/druid-forbidden-apis.txt</signaturesFile>
-                                <signaturesFile>../codestyle/guava-forbidden-apis.txt</signaturesFile>
                             </signaturesFiles>
                         </configuration>
                     </plugin>
@@ -279,7 +278,6 @@
                                 <!-- Needed because of https://github.com/policeman-tools/forbidden-apis/issues/126 -->
                                 <signaturesFile>../codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                                 <signaturesFile>../codestyle/druid-forbidden-apis.txt</signaturesFile>
-                                <signaturesFile>../codestyle/guava-forbidden-apis.txt</signaturesFile>
                             </signaturesFiles>
                         </configuration>
                     </plugin>

@@ -49,7 +49,7 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "strlen", value = StrlenExtractionFn.class)
 })
 /**
- * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension).
+ * An ExtractionFn is a function that can be used to transformAsync the values of a column (typically a dimension).
  * Note that ExtractionFn implementations are expected to be Threadsafe.
  *
  * A simple example of the type of operation this enables is the RegexDimExtractionFn which applies a

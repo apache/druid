@@ -169,7 +169,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         }
 
         /*
-         * Note that the transform function increments a counter to determine the rowNum of
+         * Note that the transformAsync function increments a counter to determine the rowNum of
          * the iterated Rowboats. We need to return a new iterator on each
          * iterator() call to ensure the counter starts at 0.
          */

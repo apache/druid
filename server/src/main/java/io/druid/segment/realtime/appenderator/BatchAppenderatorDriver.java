@@ -133,7 +133,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
         .collect(Collectors.toList());
 
     final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures
-        .transform(
+        .transformAsync(
             pushInBackground(null, segmentIdentifierList),
             this::dropInBackground
         );
