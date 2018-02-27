@@ -41,12 +41,12 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Escalator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -282,6 +282,21 @@ public class DruidAvaticaHandlerTest
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of("x", "a", "y", "a")
+        ),
+        getRows(resultSet)
+    );
+  }
+
+  @Test
+  public void testSelectBoolean() throws Exception
+  {
+    final ResultSet resultSet = client.createStatement().executeQuery(
+        "SELECT dim2, dim2 IS NULL AS isnull FROM druid.foo LIMIT 1"
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("dim2", "a", "isnull", false)
         ),
         getRows(resultSet)
     );
