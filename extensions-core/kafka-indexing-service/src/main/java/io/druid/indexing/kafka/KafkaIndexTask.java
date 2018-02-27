@@ -849,17 +849,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
 
       for (SegmentsAndMetadata handedOff : handedOffList) {
-        if (handedOff == null) {
-          log.warn("Handoff failed for segments %s", handedOff.getSegments());
-        } else {
-          log.info(
-              "Handoff completed for segments[%s] with metadata[%s].",
-              Joiner.on(", ").join(
-                  handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
-              ),
-              Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
-          );
-        }
+        log.info(
+            "Handoff completed for segments[%s] with metadata[%s].",
+            Joiner.on(", ").join(
+                handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
+            ),
+            Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
+        );
       }
     }
     catch (InterruptedException | RejectedExecutionException e) {
