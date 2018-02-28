@@ -49,9 +49,14 @@ import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URL;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBasicAuthConfigurationTest
@@ -197,6 +202,33 @@ public class ITBasicAuthConfigurationTest
 
     LOG.info("Checking access for user druid99.");
     checkNodeAccess(newUser99Client);
+
+    LOG.info("Checking Avatica query on broker.");
+    testAvaticaQuery("jdbc:avatica:remote:url=" + config.getBrokerUrl() + "/druid/v2/sql/avatica/");
+
+    LOG.info("Checking Avatica query on router.");
+    testAvaticaQuery("jdbc:avatica:remote:url=" + config.getRouterUrl() + "/druid/v2/sql/avatica/");
+  }
+
+  private void testAvaticaQuery(String url)
+  {
+    LOG.info("URL: " + url);
+    try {
+      Properties connectionProperties = new Properties();
+      connectionProperties.put("user", "admin");
+      connectionProperties.put("password", "priest");
+      Connection connection = DriverManager.getConnection(url, connectionProperties);
+      Statement statement = connection.createStatement();
+      statement.setMaxRows(450);
+      String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
+      ResultSet resultSet = statement.executeQuery(query);
+      Assert.assertTrue(resultSet.next());
+      statement.close();
+      connection.close();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void checkNodeAccess(HttpClient httpClient)
