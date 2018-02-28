@@ -1288,8 +1288,12 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             new Object[]{"", 1.0f, 1L},
+            new Object[]{"2", 3.0f, 1L}
+        ) :
+        ImmutableList.of(
             new Object[]{"2", 3.0f, 1L}
         )
     );
@@ -2832,10 +2836,16 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
             new Object[]{10.0f, 1L},
             new Object[]{2.0f, 1L},
             new Object[]{0.0f, 4L}
+        ) :
+        ImmutableList.of(
+            new Object[]{10.0f, 1L},
+            new Object[]{2.0f, 1L},
+            new Object[]{0.0f, 1L}
         )
     );
   }
@@ -3411,8 +3421,6 @@ public class CalciteQueryTest extends CalciteTestBase
   @Test
   public void testSumOfString() throws Exception
   {
-    // Perhaps should be 13, but dim1 has "1", "2" and "10.1"; and CAST('10.1' AS INTEGER) = 0 since parsing is strict.
-
     testQuery(
         "SELECT SUM(CAST(dim1 AS INTEGER)) FROM druid.foo",
         ImmutableList.of(
@@ -3432,7 +3440,7 @@ public class CalciteQueryTest extends CalciteTestBase
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{3L}
+            new Object[]{13L}
         )
     );
   }
@@ -3440,8 +3448,6 @@ public class CalciteQueryTest extends CalciteTestBase
   @Test
   public void testSumOfExtractionFn() throws Exception
   {
-    // Perhaps should be 13, but dim1 has "1", "2" and "10.1"; and CAST('10.1' AS INTEGER) = 0 since parsing is strict.
-
     testQuery(
         "SELECT SUM(CAST(SUBSTRING(dim1, 1, 10) AS INTEGER)) FROM druid.foo",
         ImmutableList.of(
@@ -3461,7 +3467,7 @@ public class CalciteQueryTest extends CalciteTestBase
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{3L}
+            new Object[]{13L}
         )
     );
   }
@@ -5313,7 +5319,7 @@ public class CalciteQueryTest extends CalciteTestBase
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0f, 3L},
+            new Object[]{NullHandling.defaultFloatValue(), 3L},
             new Object[]{1.0f, 1L},
             new Object[]{2.0f, 1L},
             new Object[]{10.0f, 1L}
@@ -5367,7 +5373,7 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{10.0f, 1L},
             new Object[]{2.0f, 1L},
             new Object[]{1.0f, 1L},
-            new Object[]{0.0f, 3L}
+            new Object[]{NullHandling.defaultFloatValue(), 3L}
         )
     );
   }

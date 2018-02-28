@@ -113,7 +113,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     {
       final ExprEval stringEval = stringExpr.eval(bindings);
 
-      if (chars.length == 0 || stringEval.isNull()) {
+      if (chars.length == 0 || stringEval.value() == null) {
         return stringEval;
       }
 

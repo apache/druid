@@ -20,8 +20,10 @@
 package io.druid.query.groupby.epinephelinae.column;
 
 
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -30,7 +32,7 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public int getGroupingKeySize()
   {
-    return Double.BYTES;
+    return Double.BYTES + Byte.BYTES;
   }
 
   @Override
@@ -38,26 +40,44 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
       GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap
   )
   {
-    final double val = key.getDouble(selectorPlus.getKeyBufferPosition());
-    resultMap.put(selectorPlus.getOutputName(), val);
+    if (key.get(selectorPlus.getKeyBufferPosition()) == (byte) 1) {
+      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultDoubleValue());
+    } else {
+      final double val = key.getDouble(selectorPlus.getKeyBufferPosition() + Byte.BYTES);
+      resultMap.put(selectorPlus.getOutputName(), val);
+    }
   }
 
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
-    values[columnIndex] = selector.getDouble();
+    if (NullHandling.sqlCompatible() && selector.isNull()) {
+      values[columnIndex] = null;
+    } else {
+      values[columnIndex] = selector.getDouble();
+    }
   }
 
   @Override
+  @Nullable
   public Object getOnlyValue(ColumnValueSelector selector)
   {
+    if (NullHandling.sqlCompatible() && selector.isNull()) {
+      return null;
+    }
     return selector.getDouble();
   }
 
   @Override
-  public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
+  public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
-    keyBuffer.putDouble(keyBufferPosition, (Double) obj);
+    if (obj == null) {
+      keyBuffer.put(keyBufferPosition, (byte) 1);
+      keyBuffer.putDouble(keyBufferPosition + Byte.BYTES, 0.0d);
+    } else {
+      keyBuffer.put(keyBufferPosition, (byte) 0);
+      keyBuffer.putDouble(keyBufferPosition + Byte.BYTES, (Double) obj);
+    }
   }
 
   @Override
@@ -65,7 +85,7 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
       int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
   )
   {
-    keyBuffer.putDouble(keyBufferPosition, (Double) rowObj);
+    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
     stack[columnIndex] = 1;
   }
 

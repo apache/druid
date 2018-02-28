@@ -365,6 +365,9 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
     // Result of any Binary expressions is null if any of the argument is null.
     // e.g "select null * 2 as c;" or "select null + 1 as c;" will return null as per Standard SQL spec.
+    if (NullHandling.sqlCompatible() && (leftVal.value() == null || rightVal.value() == null)) {
+      return ExprEval.of(null);
+    }
 
     if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());

@@ -19,7 +19,6 @@
 
 package io.druid.math.expr;
 
-import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
@@ -155,7 +154,7 @@ public abstract class ExprEval<T>
   {
     private DoubleExprEval(Number value)
     {
-      super(Preconditions.checkNotNull(value, "value"));
+      super(value);
     }
 
     @Override
@@ -195,7 +194,7 @@ public abstract class ExprEval<T>
   {
     private LongExprEval(Number value)
     {
-      super(Preconditions.checkNotNull(value, "value"));
+      super(value);
     }
 
     @Override

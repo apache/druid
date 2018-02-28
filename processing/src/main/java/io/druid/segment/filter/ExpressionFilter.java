@@ -59,6 +59,9 @@ public class ExpressionFilter implements Filter
       @Override
       public boolean matches()
       {
+        if (NullHandling.sqlCompatible() && selector.isNull()) {
+          return false;
+        }
         return Evals.asBoolean(selector.getLong());
       }
 

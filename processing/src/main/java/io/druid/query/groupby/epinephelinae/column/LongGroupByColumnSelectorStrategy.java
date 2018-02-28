@@ -19,8 +19,10 @@
 
 package io.druid.query.groupby.epinephelinae.column;
 
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -30,7 +32,7 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
   @Override
   public int getGroupingKeySize()
   {
-    return Long.BYTES;
+    return Long.BYTES + Byte.BYTES;
   }
 
   @Override
@@ -38,26 +40,44 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
       GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap
   )
   {
-    final long val = key.getLong(selectorPlus.getKeyBufferPosition());
-    resultMap.put(selectorPlus.getOutputName(), val);
+    if (key.get(selectorPlus.getKeyBufferPosition()) == (byte) 1) {
+      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultLongValue());
+    } else {
+      final long val = key.getLong(selectorPlus.getKeyBufferPosition() + Byte.BYTES);
+      resultMap.put(selectorPlus.getOutputName(), val);
+    }
   }
 
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    valuess[columnIndex] = selector.getLong();
+    if (NullHandling.sqlCompatible() && selector.isNull()) {
+      valuess[columnIndex] = null;
+    } else {
+      valuess[columnIndex] = selector.getLong();
+    }
   }
 
   @Override
+  @Nullable
   public Object getOnlyValue(ColumnValueSelector selector)
   {
+    if (NullHandling.sqlCompatible() && selector.isNull()) {
+      return null;
+    }
     return selector.getLong();
   }
 
   @Override
   public void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer)
   {
-    keyBuffer.putLong(keyBufferPosition, (Long) obj);
+    if (obj == null) {
+      keyBuffer.put(keyBufferPosition, (byte) 1);
+      keyBuffer.putLong(keyBufferPosition + Byte.BYTES, 0L);
+    } else {
+      keyBuffer.put(keyBufferPosition, (byte) 0);
+      keyBuffer.putLong(keyBufferPosition + Byte.BYTES, (Long) obj);
+    }
   }
 
   @Override
@@ -65,7 +85,7 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
       int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
   )
   {
-    keyBuffer.putLong(keyBufferPosition, (Long) rowObj);
+    writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
     stack[columnIndex] = 1;
   }
 
