@@ -69,6 +69,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.druid.java.util.common.StringUtils.toUpperCase;
+
 public class MemcachedCache implements Cache
 {
   private static final Logger log = new Logger(MemcachedCache.class);
@@ -343,8 +345,8 @@ public class MemcachedCache implements Cache
           // (approx < 5% difference in counts across nodes, with 5 cache nodes)
           .setKetamaNodeRepetitions(1000)
           .setHashAlg(MURMUR3_128)
-          .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(config.getProtocol().toUpperCase()))
-          .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(config.getLocator().toUpperCase()))
+          .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(toUpperCase(config.getProtocol())))
+          .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(toUpperCase(config.getLocator())))
           .setDaemon(true)
           .setFailureMode(FailureMode.Cancel)
           .setTranscoder(transcoder)
