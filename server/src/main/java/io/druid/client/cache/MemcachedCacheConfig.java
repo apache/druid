@@ -103,11 +103,13 @@ public class MemcachedCacheConfig
     return numConnections;
   }
 
-  public String getProtocol() {
+  public String getProtocol()
+  {
     return protocol;
   }
 
-  public String getLocator() {
+  public String getLocator()
+  {
     return locator;
   }
 }
