@@ -42,13 +42,13 @@ persist and hand-off logic is in `RealtimePlumber.java`.
 The two main Hadoop indexing classes are `HadoopDruidDetermineConfigurationJob.java` for the job to determine how many Druid 
 segments to create, and `HadoopDruidIndexerJob.java`, which creates Druid segments.
 
-At some point in the inputStream, we may move the Hadoop ingestion code out of core Druid.
+At some point in the future, we may move the Hadoop ingestion code out of core Druid.
 
 ## Internal UIs
 
 Druid currently has two internal UIs. One is for the Coordinator and one is for the Overlord.
 
-At some point in the inputStream, we will likely move the internal UI code out of core Druid.
+At some point in the future, we will likely move the internal UI code out of core Druid.
 
 ## Client Libraries
 

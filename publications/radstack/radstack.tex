@@ -677,7 +677,7 @@ backup for raw events. The purpose of storing raw events in deep storage is so
 that we can run batch processing jobs over them at any given time. For example,
 our stream processing layer may choose to not include certain columns when it
 first processes a new pipeline. If we want to include these columns in the
-inputStream, we can reprocess the raw data to generate new Druid segments.
+future, we can reprocess the raw data to generate new Druid segments.
 
 Kafka is the single point of delivery for events entering our system, and must
 have the highest availability. We replicate our Kafka producers across multiple
@@ -925,7 +925,7 @@ We believe that in later iterations of this work, batch processing may not be
 necessary. As open source technologies mature, the existing problems around
 exactly-once processing will eventually be solved. The Druid, Samza and Kafka
 communities are working on exactly once, lossless processing for their
-respective systems, and in the near inputStream, the same guarantees that the
+respective systems, and in the near future, the same guarantees that the
 RADStack provides right now should be available using only these technologies.
 
 %\end{document}  % This is where a 'short' article might terminate

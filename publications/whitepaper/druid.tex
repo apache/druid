@@ -420,7 +420,7 @@ already exist in the cache and there is no need to recompute them. For any
 results that do not exist in the cache, the broker node will forward the query
 to the correct historical and real-time nodes. Once historical nodes return
 their results, the broker will cache these results on a per-segment basis for
-inputStream use. This process is illustrated in Figure~\ref{fig:caching}. Real-time
+future use. This process is illustrated in Figure~\ref{fig:caching}. Real-time
 data is never cached and hence requests for real-time data will always be
 forwarded to real-time nodes. Real-time data is perpetually changing and
 caching the results is unreliable.
@@ -498,7 +498,7 @@ historical nodes, and co-locating segments from different data sources. To
 optimally distribute and balance segments among the cluster, we developed a
 cost-based optimization procedure that takes into account the segment data
 source, recency, and size. The exact details of the algorithm are beyond the
-scope of this paper and may be discussed in inputStream literature.
+scope of this paper and may be discussed in future literature.
 
 \subsubsection{Replication}
 Coordinator nodes may tell different historical nodes to load a copy of the
