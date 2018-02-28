@@ -20,39 +20,40 @@
 package io.druid.data.input.impl.prefetch;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import io.druid.data.input.Firehose;
-import io.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
-import io.druid.data.input.impl.FileIteratingFirehose;
-import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.SqlFirehose;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.LineIterator;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * PrefetchableTextFilesFirehoseFactory is an abstract firehose factory for reading text files.  The firehose returned
- * by this class provides three key functionalities.
+ * PrefetchSqlFirehoseFactory is an abstract firehose factory for reading prefetched sql resultset data. Regardless
+ * of whether prefetching is enabled or not, for each sql object the entire result set is fetched into a file in the local disk.
+ * This class defines prefetching as caching the resultsets into local disk in case multiple sql queries are present.
+ * When prefetching is enabled, the following functionalities are provided:
  * <p/>
  * <p>
- * - Caching: for the first call of {@link #connect(StringInputRowParser, File)}, it caches objects in a local disk
+ * - Caching: for the first call of {@link #connect(InputRowParser, File)}, it caches objects in a local disk
  * up to maxCacheCapacityBytes.  These caches are NOT deleted until the process terminates, and thus can be used for
  * future reads.
  * <br/>
@@ -61,47 +62,46 @@ import java.util.concurrent.TimeUnit;
  * smaller than {@link PrefetchConfig#prefetchTriggerBytes}, a background prefetch thread automatically starts to fetch remaining
  * objects.
  * <br/>
- * - Retry: if an exception occurs while downloading an object, it retries again up to {@link PrefetchConfig#maxFetchRetry}.
  * <p/>
  * <p>
- * This implementation can be useful when the cost for reading input objects is large as reading from AWS S3 because
- * batch tasks like IndexTask or HadoopIndexTask can read the whole data twice for determining partition specs and
- * generating segments if the intervals of GranularitySpec is not specified.
+ * This implementation aims to avoid maintaining a persistent connection to the database by prefetching the resultset into disk.
  * <br/>
  * Prefetching can be turned on/off by setting maxFetchCapacityBytes.  Depending on prefetching is enabled or
  * disabled, the behavior of the firehose is different like below.
  * <p/>
  * <p>
- * 1. If prefetch is enabled, this firehose can fetch input objects in background.
+ * 1. If prefetch is enabled this firehose can fetch input objects in background.
  * <br/>
  * 2. When next() is called, it first checks that there are already fetched files in local storage.
  * <br/>
  * 2.1 If exists, it simply chooses a fetched file and returns a {@link LineIterator} reading that file.
  * <br/>
  * 2.2 If there is no fetched files in local storage but some objects are still remained to be read, the firehose
- * fetches one of input objects in background immediately. If an IOException occurs while downloading the object,
- * it retries up to the maximum retry count. Finally, the firehose returns a {@link LineIterator} only when the
- * download operation is successfully finished.
+ * fetches one of input objects in background immediately. Finally, the firehose returns an iterator of {@link JsonIterator}
+ * for deserializing the saved resultset.
  * <br/>
- * 3. If prefetch is disabled, the firehose returns a {@link LineIterator} which directly reads the stream opened by
- * {@link #openObjectStream}. If there is an IOException, it will throw it and the read will fail.
+ * 3. If prefetch is disabled, the firehose saves the resultset to file and returns an iterator of {@link JsonIterator}
+ * which directly reads the stream opened by {@link #openObjectStream}. If there is an IOException, it will throw it
+ * and the read will fail.
  */
-public abstract class PrefetchableTextFilesFirehoseFactory<T>
-    extends AbstractTextFilesFirehoseFactory<T>
+public abstract class PrefetchSqlFirehoseFactory<T>
+    implements FirehoseFactory<InputRowParser<Map<String, Object>>>
 {
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
 
-  private final CacheManager<T> cacheManager;
   private final PrefetchConfig prefetchConfig;
-
+  private final CacheManager<T> cacheManager;
   private List<T> objects;
+  private ObjectMapper objectMapper;
 
-  public PrefetchableTextFilesFirehoseFactory(
+
+  public PrefetchSqlFirehoseFactory(
       Long maxCacheCapacityBytes,
       Long maxFetchCapacityBytes,
       Long prefetchTriggerBytes,
       Long fetchTimeout,
-      Integer maxFetchRetry
+      Integer maxFetchRetry,
+      ObjectMapper objectMapper
   )
   {
     this.prefetchConfig = new PrefetchConfig(
@@ -114,6 +114,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
     this.cacheManager = new CacheManager<>(
         prefetchConfig.getMaxCacheCapacityBytes()
     );
+    this.objectMapper = objectMapper;
   }
 
   @JsonProperty
@@ -153,12 +154,12 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   }
 
   @Override
-  public Firehose connect(StringInputRowParser firehoseParser, @Nullable File temporaryDirectory) throws IOException
+  public Firehose connect(InputRowParser<Map<String, Object>> firehoseParser, @Nullable File temporaryDirectory)
+      throws IOException
   {
     if (objects == null) {
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));
     }
-
     if (cacheManager.isEnabled() || prefetchConfig.getMaxFetchCapacityBytes() > 0) {
       Preconditions.checkNotNull(temporaryDirectory, "temporaryDirectory");
       Preconditions.checkArgument(
@@ -173,11 +174,11 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
       );
     }
 
-    LOG.info("Create a new firehose for [%d] objects", objects.size());
+    LOG.info("Create a new firehose for [%d] queries", objects.size());
 
     // fetchExecutor is responsible for background data fetching
     final ExecutorService fetchExecutor = Execs.singleThreaded("firehose_fetch_%d");
-    final FileFetcher<T> fetcher = new FileFetcher<T>(
+    final Fetcher<T> fetcher = new SqlFetcher<>(
         cacheManager,
         objects,
         fetchExecutor,
@@ -186,22 +187,22 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
         new ObjectOpenFunction<T>()
         {
           @Override
-          public InputStream open(T object) throws IOException
+          public InputStream open(T object, File outFile) throws IOException
           {
-            return openObjectStream(object);
+            return openObjectStream(object, outFile);
           }
 
           @Override
-          public InputStream open(T object, long start) throws IOException
+          public InputStream open(T object) throws IOException
           {
-            return openObjectStream(object, start);
+            final File outFile = File.createTempFile("sqlresults_", null, temporaryDirectory);
+            return openObjectStream(object, outFile);
           }
-        },
-        getRetryCondition()
+        }
     );
 
-    return new FileIteratingFirehose(
-        new Iterator<LineIterator>()
+    return new SqlFirehose(
+        new Iterator<JsonIterator<Map<String, Object>>>()
         {
           @Override
           public boolean hasNext()
@@ -210,28 +211,22 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
           }
 
           @Override
-          public LineIterator next()
+          public JsonIterator<Map<String, Object>> next()
           {
             if (!hasNext()) {
               throw new NoSuchElementException();
             }
-
-            final OpenedObject<T> openedObject = fetcher.next();
-            final InputStream stream;
             try {
-              stream = wrapObjectStream(
-                  openedObject.getObject(),
-                  openedObject.getObjectStream()
-              );
+              TypeReference<Map<String, Object>> type = new TypeReference<Map<String, Object>>()
+              {
+              };
+              final OpenedObject<T> openedObject = fetcher.next();
+              final InputStream stream = openedObject.getObjectStream();
+              return new JsonIterator<>(type, stream, openedObject.getResourceCloser(), objectMapper);
             }
-            catch (IOException e) {
-              throw new RuntimeException(e);
+            catch (Exception ioe) {
+              throw new RuntimeException(ioe);
             }
-
-            return new ResourceCloseableLineIterator(
-                new InputStreamReader(stream, StandardCharsets.UTF_8),
-                openedObject.getResourceCloser()
-            );
           }
         },
         firehoseParser,
@@ -252,45 +247,15 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   }
 
   /**
-   * Returns a predicate describing retry conditions. {@link Fetcher} and {@link RetryingInputStream} will retry on the
-   * errors satisfying this condition.
-   */
-  protected abstract Predicate<Throwable> getRetryCondition();
-
-  /**
-   * Open an input stream from the given object.  If the object is compressed, this method should return a byte stream
-   * as it is compressed.  The object compression should be handled in {@link #wrapObjectStream(Object, InputStream)}.
+   * Open an input stream from the given object.  The object is fetched into the file and an input
+   * stream to the file is provided.
    *
-   * @param object an object to be read
-   * @param start  start offset
+   * @param object   an object to be read
+   * @param filename file to which the object is fetched into
    *
-   * @return an input stream for the object
+   * @return an input stream to the file
    */
-  protected abstract InputStream openObjectStream(T object, long start) throws IOException;
+  protected abstract InputStream openObjectStream(T object, File filename) throws IOException;
 
-  /**
-   * This class calls the {@link Closeable#close()} method of the resourceCloser when it is closed.
-   */
-  static class ResourceCloseableLineIterator extends LineIterator
-  {
-    private final Closeable resourceCloser;
-
-    ResourceCloseableLineIterator(Reader reader, Closeable resourceCloser) throws IllegalArgumentException
-    {
-      super(reader);
-      this.resourceCloser = resourceCloser;
-    }
-
-    @Override
-    public void close()
-    {
-      super.close();
-      try {
-        resourceCloser.close();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-  }
+  protected abstract Collection<T> initObjects() throws IOException;
 }

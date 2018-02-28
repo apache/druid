@@ -12,7 +12,7 @@ The coordinator loads a set of rules from the metadata storage. Rules may be spe
 
 Note: It is recommended that the coordinator console is used to configure rules. However, the coordinator node does have HTTP endpoints to programmatically configure rules.
 
-When a rule is updated, the change may not be reflected until the next time the coordinator runs. This will be fixed in the near future.
+When a rule is updated, the change may not be reflected until the next time the coordinator runs. This will be fixed in the near inputStream.
 
 Load Rules
 ----------

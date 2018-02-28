@@ -96,7 +96,7 @@ each.
 
 The windowPeriod is the slack time permitted for events. For example, a windowPeriod of ten minutes
 (the default) means that any events with a timestamp older than ten minutes in the past, or more
-than ten minutes in the future, will be dropped.
+than ten minutes in the inputStream, will be dropped.
 
 These are important configurations because they influence how long tasks will be alive for, and how
 long data stays in the realtime system before being handed off to the historical nodes. For example,
