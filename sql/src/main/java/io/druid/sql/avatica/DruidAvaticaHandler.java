@@ -35,7 +35,7 @@ import java.lang.reflect.InvocationTargetException;
 
 public class DruidAvaticaHandler extends AvaticaJsonHandler
 {
-  static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
+  public static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
 
   @Inject
   public DruidAvaticaHandler(
