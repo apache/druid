@@ -52,7 +52,7 @@ If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 
 <div class="note info">
 The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
-may need to migrate schemas in the inputStream, consider one of the other decoders, all of which use a message header that
+may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
 allows the parser to identify the proper Avro schema for reading records.
 </div>
 

@@ -677,7 +677,7 @@ backup for raw events. The purpose of storing raw events in deep storage is so
 that we can run batch processing jobs over them at any given time. For example,
 our stream processing layer may choose to not include certain columns when it
 first processes a new pipeline. If we want to include these columns in the
-future, we can reprocess the raw data to generate new Druid segments.
+future, we can reprocess the raw data to generate new Druid segments. 
 
 Kafka is the single point of delivery for events entering our system, and must
 have the highest availability. We replicate our Kafka producers across multiple
