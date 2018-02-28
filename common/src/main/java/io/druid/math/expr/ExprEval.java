@@ -294,7 +294,7 @@ public abstract class ExprEval<T>
     @Override
     public boolean isNull()
     {
-      return !NullHandling.replaceWithDefault() && asNumber() == null;
+      return asNumber() == null;
     }
 
     @Override

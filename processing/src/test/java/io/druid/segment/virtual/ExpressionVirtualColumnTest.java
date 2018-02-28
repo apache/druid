@@ -183,7 +183,11 @@ public class ExpressionVirtualColumnTest
     }
 
     CURRENT_ROW.set(ROW3);
-    Assert.assertEquals(0L, selector.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, selector.getLong());
+    } else {
+      Assert.assertTrue(selector.isNull());
+    }
   }
 
   @Test
