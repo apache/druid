@@ -128,7 +128,7 @@ public abstract class ExprEval<T>
 
     private NumericExprEval(Number value)
     {
-      super(value);
+      super(value == null ? NullHandling.defaultDoubleValue() : value);
     }
 
     @Override
