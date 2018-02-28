@@ -19,6 +19,7 @@
 
 package io.druid.sql.calcite.planner;
 
+import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import io.druid.java.util.common.DateTimes;
@@ -104,6 +105,7 @@ public class Calcites
 
   public static String escapeStringLiteral(final String s)
   {
+    Preconditions.checkNotNull(s);
     if (s == null) {
       return "''";
     } else {
