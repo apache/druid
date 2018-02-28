@@ -52,7 +52,9 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 {
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
       "/status/health",
-      // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks
+      // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
+      // The router will keep the connection context in the forwarded message, and the broker is responsible for
+      // performing the auth checks.
       DruidAvaticaHandler.AVATICA_PATH
   );
 

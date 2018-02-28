@@ -39,8 +39,10 @@ import io.druid.server.security.Action;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
+import io.druid.sql.avatica.DruidAvaticaHandler;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.calcite.avatica.AvaticaSqlException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.testng.Assert;
@@ -203,11 +205,20 @@ public class ITBasicAuthConfigurationTest
     LOG.info("Checking access for user druid99.");
     checkNodeAccess(newUser99Client);
 
+    String brokerUrl = "jdbc:avatica:remote:url=" + config.getBrokerUrl() + DruidAvaticaHandler.AVATICA_PATH;
+    String routerUrl = "jdbc:avatica:remote:url=" + config.getRouterUrl() + DruidAvaticaHandler.AVATICA_PATH;
+
     LOG.info("Checking Avatica query on broker.");
-    testAvaticaQuery("jdbc:avatica:remote:url=" + config.getBrokerUrl() + "/druid/v2/sql/avatica/");
+    testAvaticaQuery(brokerUrl);
 
     LOG.info("Checking Avatica query on router.");
-    testAvaticaQuery("jdbc:avatica:remote:url=" + config.getRouterUrl() + "/druid/v2/sql/avatica/");
+    testAvaticaQuery(routerUrl);
+
+    LOG.info("Testing Avatica query on broker with incorrect credentials.");
+    testAvaticaAuthFailure(brokerUrl);
+    
+    LOG.info("Testing Avatica query on router with incorrect credentials.");
+    testAvaticaAuthFailure(routerUrl);
   }
 
   private void testAvaticaQuery(String url)
@@ -230,6 +241,30 @@ public class ITBasicAuthConfigurationTest
       throw new RuntimeException(e);
     }
   }
+
+  private void testAvaticaAuthFailure(String url) throws Exception
+  {
+    LOG.info("URL: " + url);
+    try {
+      Properties connectionProperties = new Properties();
+      connectionProperties.put("user", "admin");
+      connectionProperties.put("password", "wrongpassword");
+      Connection connection = DriverManager.getConnection(url, connectionProperties);
+      Statement statement = connection.createStatement();
+      statement.setMaxRows(450);
+      String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
+      statement.executeQuery(query);
+    }
+    catch (AvaticaSqlException ase) {
+      Assert.assertEquals(
+          ase.getErrorMessage(),
+          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: ForbiddenException: Authentication failed."
+      );
+      return;
+    }
+    Assert.fail("Test failed, did not get AvaticaSqlException.");
+  }
+
 
   private void checkNodeAccess(HttpClient httpClient)
   {
