@@ -84,8 +84,7 @@ Uses memcached as cache backend. This allows all nodes to share the same cache.
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
 |`druid.cache.numConnections`|Number of memcached connections to use.|1|
-|`druid.cache.protocol`|Memcached communication protocol. Can be binary or text.|binary|
-|`druid.cache.locator`|Memcached locator. Can be consistent or array_mod.|consistent|
+
 
 #### Hybrid
 
