@@ -198,7 +198,13 @@ handle all formatting decisions on their own, without using the ParseSpec.
 #### Dimension Schema
 A dimension schema specifies the type and name of a dimension to be ingested.
 
-For example, the following `dimensionsSpec` section from a `dataSchema` ingests one column as Long (`countryNum`), two columns as Float (`userLatitude`, `userLongitude`), and the other columns as Strings:
+For string columns, the dimension schema can also be used to enable or disable bitmap indexing by setting the
+`createBitmapIndex` boolean. By default, bitmap indexes are enabled for all string columns. Only string columns can have
+bitmap indexes; they are not supported for numeric columns.
+
+For example, the following `dimensionsSpec` section from a `dataSchema` ingests one column as Long (`countryNum`), two
+columns as Float (`userLatitude`, `userLongitude`), and the other columns as Strings, with bitmap indexes disabled
+for the `comment` column.
 
 ```json
 "dimensionsSpec" : {
@@ -216,6 +222,11 @@ For example, the following `dimensionsSpec` section from a `dataSchema` ingests 
     "region",
     "city",
     {
+      "type": "string",
+      "name": "comment",
+      "createBitmapIndex": false
+    },
+    {
       "type": "long",
       "name": "countryNum"
     },
@@ -232,7 +243,6 @@ For example, the following `dimensionsSpec` section from a `dataSchema` ingests 
   "spatialDimensions" : []
 }
 ```
-
 
 ## GranularitySpec
 
