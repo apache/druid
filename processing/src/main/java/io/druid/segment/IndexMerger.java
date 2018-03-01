@@ -300,6 +300,10 @@ public interface IndexMerger
     }
   }
 
+  /**
+   * This method applies {@link DimensionMerger#convertSegmentRowValuesToMergedRowValues(int, ColumnValueSelector)} to
+   * all dimension column selectors of the given sourceRowIterator, using the given index number.
+   */
   static TransformableRowIterator toMergedIndexRowIterator(
       TransformableRowIterator sourceRowIterator,
       int indexNumber,
@@ -307,6 +311,7 @@ public interface IndexMerger
   )
   {
     RowPointer sourceRowPointer = sourceRowIterator.getPointer();
+    TimeAndDimsPointer markedSourceRowPointer = sourceRowIterator.getMarkedPointer();
     boolean anySelectorChanged = false;
     ColumnValueSelector[] convertedDimensionSelectors = new ColumnValueSelector[mergers.size()];
     ColumnValueSelector[] convertedMarkedDimensionSelectors = new ColumnValueSelector[mergers.size()];
@@ -315,25 +320,38 @@ public interface IndexMerger
       ColumnValueSelector convertedDimensionSelector =
           mergers.get(i).convertSegmentRowValuesToMergedRowValues(indexNumber, sourceDimensionSelector);
       convertedDimensionSelectors[i] = convertedDimensionSelector;
+      // convertedDimensionSelector could be just the same object as sourceDimensionSelector, it means that this
+      // type of column doesn't have any kind of special per-index encoding that needs to be converted to the "global"
+      // encoding. E. g. it's always true for subclasses of NumericDimensionMergerV9.
       //noinspection ObjectEquality
       anySelectorChanged |= convertedDimensionSelector != sourceDimensionSelector;
 
       convertedMarkedDimensionSelectors[i] = mergers.get(i).convertSegmentRowValuesToMergedRowValues(
           indexNumber,
-          sourceRowIterator.getMarkedPointer().dimensionSelectors[i]
+          markedSourceRowPointer.getDimensionSelector(i)
       );
     }
+    // If none dimensions are actually converted, don't need to transform the sourceRowIterator, adding extra
+    // indirection layer. It could be just returned back from this method.
     if (!anySelectorChanged) {
       return sourceRowIterator;
     }
-    RowPointer convertedRowPointer = sourceRowPointer.withDimensionSelectors(
+    return makeRowIteratorWithConvertedDimensionColumns(
+        sourceRowIterator,
         convertedDimensionSelectors,
-        sourceRowPointer.getDimensionHandlers()
+        convertedMarkedDimensionSelectors
     );
-    TimeAndDimsPointer convertedMarkedRowPointer = sourceRowIterator.getMarkedPointer().withDimensionSelectors(
-        convertedMarkedDimensionSelectors,
-        sourceRowIterator.getMarkedPointer().getDimensionHandlers()
-    );
+  }
+
+  static TransformableRowIterator makeRowIteratorWithConvertedDimensionColumns(
+      TransformableRowIterator sourceRowIterator,
+      ColumnValueSelector[] convertedDimensionSelectors,
+      ColumnValueSelector[] convertedMarkedDimensionSelectors
+  )
+  {
+    RowPointer convertedRowPointer = sourceRowIterator.getPointer().withDimensionSelectors(convertedDimensionSelectors);
+    TimeAndDimsPointer convertedMarkedRowPointer =
+        sourceRowIterator.getMarkedPointer().withDimensionSelectors(convertedMarkedDimensionSelectors);
     return new ForwardingRowIterator(sourceRowIterator)
     {
       @Override

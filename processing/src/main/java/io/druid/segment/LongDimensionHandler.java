@@ -28,13 +28,15 @@ import java.util.Comparator;
 
 public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
 {
-  /**
-   * Don't use {@link Comparator#comparingLong} because this comparator is used in hot code, so avoiding small extra
-   * indirection.
-   */
-  @SuppressWarnings("ComparatorCombinators")
-  private static Comparator<ColumnValueSelector> LONG_COLUMN_COMPARATOR =
-      (s1, s2) -> Long.compare(s1.getLong(), s2.getLong());
+  private static Comparator<ColumnValueSelector> LONG_COLUMN_COMPARATOR = (s1, s2) -> {
+    if (s1.isNull()) {
+      return s2.isNull() ? 0 : -1;
+    } else if (s2.isNull()) {
+      return 1;
+    } else {
+      return Long.compare(s1.getLong(), s2.getLong());
+    }
+  };
 
   private final String dimensionName;
 

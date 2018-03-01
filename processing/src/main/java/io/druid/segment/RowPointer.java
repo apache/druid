@@ -58,15 +58,12 @@ public final class RowPointer extends TimeAndDimsPointer
   }
 
   @Override
-  RowPointer withDimensionSelectors(
-      ColumnValueSelector[] newDimensionSelectors,
-      List<DimensionHandler> newDimensionHandlers
-  )
+  RowPointer withDimensionSelectors(ColumnValueSelector[] newDimensionSelectors)
   {
     return new RowPointer(
         timestampSelector,
         newDimensionSelectors,
-        newDimensionHandlers,
+        getDimensionHandlers(),
         metricSelectors,
         getMetricNames(),
         rowNumPointer

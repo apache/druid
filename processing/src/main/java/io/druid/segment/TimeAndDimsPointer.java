@@ -123,15 +123,12 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
     return metricNames;
   }
 
-  TimeAndDimsPointer withDimensionSelectors(
-      ColumnValueSelector[] newDimensionSelectors,
-      List<DimensionHandler> newDimensionHandlers
-  )
+  TimeAndDimsPointer withDimensionSelectors(ColumnValueSelector[] newDimensionSelectors)
   {
     return new TimeAndDimsPointer(
         timestampSelector,
         newDimensionSelectors,
-        newDimensionHandlers,
+        dimensionHandlers,
         metricSelectors,
         getMetricNames()
     );

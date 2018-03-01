@@ -28,13 +28,15 @@ import java.util.Comparator;
 
 public class DoubleDimensionHandler implements DimensionHandler<Double, Double, Double>
 {
-  /**
-   * Don't use {@link Comparator#comparingDouble} because this comparator is used in hot code, so avoiding small extra
-   * indirection.
-   */
-  @SuppressWarnings("ComparatorCombinators")
-  private static Comparator<ColumnValueSelector> DOUBLE_COLUMN_COMPARATOR =
-      (s1, s2) -> Double.compare(s1.getDouble(), s2.getDouble());
+  private static Comparator<ColumnValueSelector> DOUBLE_COLUMN_COMPARATOR = (s1, s2) -> {
+    if (s1.isNull()) {
+      return s2.isNull() ? 0 : -1;
+    } else if (s2.isNull()) {
+      return 1;
+    } else {
+      return Double.compare(s1.getDouble(), s2.getDouble());
+    }
+  };
 
   private final String dimensionName;
 
