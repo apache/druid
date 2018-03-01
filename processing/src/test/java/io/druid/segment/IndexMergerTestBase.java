@@ -981,9 +981,14 @@ public class IndexMergerTestBase
       checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("dimA", "1"));
       checkBitmapIndex(Collections.singletonList(4), adapter.getBitmapIndex("dimA", "2"));
 
-      // dimB may or may not have bitmap indexes, since it comes in through explicit definition in indexB2.
-      Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dimB").hasBitmapIndexes());
-      if (useBitmapIndexes) {
+
+      // dimB may or may not have bitmap indexes, since it comes in through explicit definition in toPersistB2.
+      //noinspection ObjectEquality
+      if (toPersistB == toPersistB2) {
+        Assert.assertEquals(useBitmapIndexes, adapter.getCapabilities("dimB").hasBitmapIndexes());
+      }
+      //noinspection ObjectEquality
+      if (toPersistB != toPersistB2 || useBitmapIndexes) {
         checkBitmapIndex(Arrays.asList(3, 4), adapter.getBitmapIndex("dimB", ""));
         checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimB", "1"));
         checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimB", "2"));
@@ -1900,13 +1905,7 @@ public class IndexMergerTestBase
   private void addDimValuesToIndex(IncrementalIndex index, String dimName, List<String> values) throws Exception
   {
     for (String val : values) {
-      index.add(
-          new MapBasedInputRow(
-              1,
-              Collections.singletonList(dimName),
-              ImmutableMap.of(dimName, val)
-          )
-      );
+      index.add(new MapBasedInputRow(1, Collections.singletonList(dimName), ImmutableMap.of(dimName, val)));
     }
   }
 
