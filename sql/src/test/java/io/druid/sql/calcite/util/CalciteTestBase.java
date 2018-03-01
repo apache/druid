@@ -17,23 +17,16 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.http;
+package io.druid.sql.calcite.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import io.druid.segment.TestHelper;
-import io.druid.sql.calcite.util.CalciteTestBase;
-import io.druid.sql.http.SqlQuery;
-import org.junit.Assert;
-import org.junit.Test;
+import io.druid.sql.calcite.planner.Calcites;
+import org.junit.BeforeClass;
 
-public class SqlQueryTest extends CalciteTestBase
+public abstract class CalciteTestBase
 {
-  @Test
-  public void testSerde() throws Exception
+  @BeforeClass
+  public static void setupCalciteProperties()
   {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final SqlQuery query = new SqlQuery("SELECT 1", SqlQuery.ResultFormat.ARRAY, ImmutableMap.of("useCache", false));
-    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
+    Calcites.setSystemProperties();
   }
 }

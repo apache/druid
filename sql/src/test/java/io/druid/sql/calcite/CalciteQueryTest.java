@@ -96,6 +96,7 @@ import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -122,7 +123,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class CalciteQueryTest
+public class CalciteQueryTest extends CalciteTestBase
 {
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
@@ -232,7 +233,6 @@ public class CalciteQueryTest
   @Before
   public void setUp() throws Exception
   {
-    Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
   }
 
