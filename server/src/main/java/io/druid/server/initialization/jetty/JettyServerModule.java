@@ -375,8 +375,8 @@ public class JettyServerModule extends JerseyServletModule
           @Override
           public void stop()
           {
-            log.info("Stopping jetty server...");
             try {
+              log.info("Stopping jetty server...");
               server.stop();
             }
             catch (Exception e) {
