@@ -57,6 +57,12 @@ public class MemcachedCacheConfig
   @JsonProperty
   private int numConnections = 1;
 
+  @JsonProperty
+  private String protocol = "binary";
+
+  @JsonProperty
+  private String locator = "consistent";
+
   public int getExpiration()
   {
     return expiration;
@@ -95,5 +101,15 @@ public class MemcachedCacheConfig
   public int getNumConnections()
   {
     return numConnections;
+  }
+
+  public String getProtocol()
+  {
+    return protocol;
+  }
+
+  public String getLocator()
+  {
+    return locator;
   }
 }

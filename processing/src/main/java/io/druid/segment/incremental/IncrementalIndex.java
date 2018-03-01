@@ -294,6 +294,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       ValueType type = TYPE_MAP.get(dimSchema.getValueType());
       String dimName = dimSchema.getName();
       ColumnCapabilitiesImpl capabilities = makeCapabilitesFromValueType(type);
+      capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
+
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {

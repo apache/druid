@@ -39,6 +39,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -83,7 +84,17 @@ public class SelectorFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
+    super(
+        testName,
+        ROWS,
+        indexBuilder.schema(
+            new IncrementalIndexSchema.Builder()
+                .withDimensionsSpec(PARSER.getParseSpec().getDimensionsSpec()).build()
+        ),
+        finisher,
+        cnf,
+        optimize
+    );
   }
 
   @AfterClass

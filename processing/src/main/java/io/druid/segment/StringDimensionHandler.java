@@ -77,11 +77,13 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
   private final String dimensionName;
   private final MultiValueHandling multiValueHandling;
+  private final boolean hasBitmapIndexes;
 
-  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling)
+  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
   {
     this.dimensionName = dimensionName;
     this.multiValueHandling = multiValueHandling;
+    this.hasBitmapIndexes = hasBitmapIndexes;
   }
 
   @Override
@@ -117,7 +119,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer(multiValueHandling);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes);
   }
 
   @Override
@@ -128,7 +130,15 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       ProgressIndicator progress
   )
   {
+    // Sanity-check capabilities.
+    if (hasBitmapIndexes != capabilities.hasBitmapIndexes()) {
+      throw new ISE(
+          "capabilities.hasBitmapIndexes[%s] != this.hasBitmapIndexes[%s]",
+          capabilities.hasBitmapIndexes(),
+          hasBitmapIndexes
+      );
+    }
+
     return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress);
   }
-
 }

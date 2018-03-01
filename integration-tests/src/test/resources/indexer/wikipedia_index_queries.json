@@ -25,6 +25,11 @@
             "dimensions":[
                 "page"
             ],
+            "filter":{
+                "type":"selector",
+                "dimension":"language",
+                "value":"zh"
+            },
             "aggregations":[
                 {
                     "type":"count",

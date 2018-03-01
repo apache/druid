@@ -363,6 +363,10 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   @Override
   public void writeIndexes(@Nullable List<IntBuffer> segmentRowNumConversions) throws IOException
   {
+    if (!capabilities.hasBitmapIndexes()) {
+      return;
+    }
+
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 
