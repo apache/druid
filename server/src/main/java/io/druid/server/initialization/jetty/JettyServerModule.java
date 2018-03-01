@@ -70,6 +70,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
@@ -92,7 +93,6 @@ public class JettyServerModule extends JerseyServletModule
   private static final Logger log = new Logger(JettyServerModule.class);
 
   private static final AtomicInteger activeConnections = new AtomicInteger();
-  private static final String GRACEFUL_SHUTDOWN_TIMEOUT = "graceful_shutdown_timeout";
 
   @Override
   protected void configureServlets()
@@ -298,7 +298,39 @@ public class JettyServerModule extends JerseyServletModule
 
     server.setHandler(new StatisticsHandler());
     server.setConnectors(connectors);
-    server.setAttribute(GRACEFUL_SHUTDOWN_TIMEOUT, config.getGracefulShutdownTimeout().toStandardDuration().getMillis());
+    server.setStopTimeout(config.getGracefulShutdownTimeout().toStandardDuration().getMillis());
+    server.addLifeCycleListener(new LifeCycle.Listener()
+    {
+      @Override
+      public void lifeCycleStarting(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle starting [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStarted(LifeCycle event)
+      {
+        log.debug("Jetty lifeycle started [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleFailure(LifeCycle event, Throwable cause)
+      {
+        log.warn(cause, "Jetty lifecycle event failed [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStopping(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle stopping [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStopped(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle stopped [%s]", event.getClass());
+      }
+    });
 
     // initialize server
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
@@ -340,53 +372,11 @@ public class JettyServerModule extends JerseyServletModule
             }
           }
 
-          private Handler getStatisticsHandler()
-          {
-            for (Handler handler : server.getHandlers()) {
-              if (handler.getClass().equals(StatisticsHandler.class)) {
-                return handler;
-              }
-            }
-
-            return null;
-          }
-
           @Override
           public void stop()
           {
-            StatisticsHandler statisticsHandler = (StatisticsHandler) getStatisticsHandler();
-
-            if (statisticsHandler != null) {
-              long startTime = System.currentTimeMillis();
-              long gracefulShutDownTimeout = (long) server.getAttribute(GRACEFUL_SHUTDOWN_TIMEOUT);
-
-              if (statisticsHandler.getRequestsActive() > 0) {
-                log.info("Waiting for upto [%s] milliseconds for active requests to be zero, current active requests=[%s]",
-                    gracefulShutDownTimeout, statisticsHandler.getRequestsActive());
-              }
-
-              while (statisticsHandler.getRequestsActive() > 0 &&
-                  System.currentTimeMillis() - startTime < gracefulShutDownTimeout) {
-                try {
-                  Thread.sleep(500);
-                }
-                catch (InterruptedException e) {
-                  log.error("Sleep has been interrupted, while waiting for active requests to be zero");
-                  stopImmediately();
-                  Thread.currentThread().interrupt();
-                  return;
-                }
-              }
-              log.info("Stopping Jetty Server with active requests=[%s]", statisticsHandler.getRequestsActive());
-            }
-
-            stopImmediately();
-          }
-
-          private void stopImmediately()
-          {
+            log.info("Stopping jetty server...");
             try {
-              log.info("Stopping Jetty Server...");
               server.stop();
             }
             catch (Exception e) {
