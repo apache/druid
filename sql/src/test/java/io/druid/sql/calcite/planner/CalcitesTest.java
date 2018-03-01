@@ -20,10 +20,11 @@
 package io.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableSortedSet;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class CalcitesTest
+public class CalcitesTest extends CalciteTestBase
 {
   @Test
   public void testEscapeStringLiteral()
