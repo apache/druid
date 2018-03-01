@@ -32,8 +32,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.druid.java.util.emitter.core.NoopEmitter;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -43,8 +41,9 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
@@ -92,12 +91,12 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
@@ -105,6 +104,7 @@ import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Escalator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceType;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -137,7 +137,8 @@ public class CalciteTests
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
-  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null) {
+  public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
+  {
     @Override
     public Authorizer getAuthorizer(String name)
     {
@@ -162,11 +163,13 @@ public class CalciteTests
     }
   };
   public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
+
   static {
     final Map<String, Authenticator> defaultMap = Maps.newHashMap();
     defaultMap.put(
         AuthConfig.ALLOW_ALL_NAME,
-        new AllowAllAuthenticator() {
+        new AllowAllAuthenticator()
+        {
           @Override
           public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
           {
@@ -176,9 +179,12 @@ public class CalciteTests
     );
     TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
   }
+
   public static final Escalator TEST_AUTHENTICATOR_ESCALATOR;
+
   static {
-    TEST_AUTHENTICATOR_ESCALATOR = new NoopEscalator() {
+    TEST_AUTHENTICATOR_ESCALATOR = new NoopEscalator()
+    {
 
       @Override
       public AuthenticationResult createEscalatedAuthenticationResult()
@@ -215,15 +221,14 @@ public class CalciteTests
 
           // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
 
-          binder.bind(LookupReferencesManager.class)
-                .toInstance(
-                    LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
-                        ImmutableMap.of(
-                            "a", "xa",
-                            "abc", "xabc"
-                        )
-                    )
-            );
+          binder.bind(LookupReferencesManager.class).toInstance(
+              LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+                  ImmutableMap.of(
+                      "a", "xa",
+                      "abc", "xabc"
+                  )
+              )
+          );
 
         }
       }

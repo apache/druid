@@ -144,7 +144,13 @@ public class DruidStatementTest extends CalciteTestBase
             true,
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", NullHandling.defaultStringValue(), 2.0f},
+                new Object[]{
+                    DateTimes.of("2000-01-02").getMillis(),
+                    1L,
+                    "10.1",
+                    NullHandling.defaultStringValue(),
+                    2.0f
+                },
                 new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                 new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                 new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
@@ -171,7 +177,13 @@ public class DruidStatementTest extends CalciteTestBase
             false,
             Lists.<Object>newArrayList(
                 new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
-                new Object[]{DateTimes.of("2000-01-02").getMillis(), 1L, "10.1", NullHandling.defaultStringValue(), 2.0f}
+                new Object[]{
+                    DateTimes.of("2000-01-02").getMillis(),
+                    1L,
+                    "10.1",
+                    NullHandling.defaultStringValue(),
+                    2.0f
+                }
             )
         ),
         frame

@@ -127,6 +127,7 @@ import java.util.Map;
 
 public class CalciteQueryTest extends CalciteTestBase
 {
+
   private static final Logger log = new Logger(CalciteQueryTest.class);
 
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
@@ -523,7 +524,15 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{T("2000-01-01"), 1L, "forbidden", "abcd", 9999.0f, NullHandling.defaultDoubleValue(), HLLCV1.class.getName()}
+            new Object[]{
+                T("2000-01-01"),
+                1L,
+                "forbidden",
+                "abcd",
+                9999.0f,
+                NullHandling.defaultDoubleValue(),
+                HLLCV1.class.getName()
+            }
         )
     );
   }
@@ -4197,7 +4206,7 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     DimFilter filter = NullHandling.replaceWithDefault() ?
                        IN("dim2", Arrays.asList(null, "a"), null)
-                                                                        : SELECTOR("dim2", "a", null);
+                                                         : SELECTOR("dim2", "a", null);
     // Filters on top N values of some dimension by using an inner join.
     testQuery(
         "SELECT t1.dim1, SUM(t1.cnt)\n"
