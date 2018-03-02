@@ -360,7 +360,8 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     }
   }
 
-  private static boolean isNullRow(IndexedInts row, int size) {
+  private static boolean isNullRow(IndexedInts row, int size)
+  {
     for (int i = 0; i < size; i++) {
       if (row.get(i) != 0) {
         return false;
