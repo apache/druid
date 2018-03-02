@@ -19,7 +19,7 @@
 
 package io.druid.firehose.s3;
 
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -57,13 +57,13 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
   private static final int MAX_LISTING_LENGTH = 1024;
 
-  private final AmazonS3Client s3Client;
+  private final AmazonS3 s3Client;
   private final List<URI> uris;
   private final List<URI> prefixes;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject("s3Client") AmazonS3Client s3Client,
+      @JacksonInject("s3Client") AmazonS3 s3Client,
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("prefixes") List<URI> prefixes,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,

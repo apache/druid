@@ -20,7 +20,7 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
@@ -83,7 +83,7 @@ public class S3Utils
     return RetryUtils.retry(f, S3RETRY, maxTries);
   }
 
-  static boolean isObjectInBucketIgnoringPermission(AmazonS3Client s3Client, String bucketName, String objectKey)
+  static boolean isObjectInBucketIgnoringPermission(AmazonS3 s3Client, String bucketName, String objectKey)
   {
     try {
       return s3Client.doesObjectExist(bucketName, objectKey);
@@ -99,7 +99,7 @@ public class S3Utils
   }
 
   public static Iterator<S3ObjectSummary> objectSummaryIterator(
-      final AmazonS3Client s3Client,
+      final AmazonS3 s3Client,
       final String bucket,
       final String prefix,
       final int numMaxKeys
@@ -191,7 +191,7 @@ public class S3Utils
     return filename;
   }
 
-  static AccessControlList grantFullControlToBucketOwver(AmazonS3Client s3Client, String bucket)
+  static AccessControlList grantFullControlToBucketOwver(AmazonS3 s3Client, String bucket)
   {
     final AccessControlList acl = s3Client.getBucketAcl(bucket);
     acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
@@ -240,7 +240,7 @@ public class S3Utils
    * @param bucket   s3 bucket
    * @param key      unique key for the object to be retrieved
    */
-  public static S3ObjectSummary getSingleObjectSummary(AmazonS3Client s3Client, String bucket, String key)
+  public static S3ObjectSummary getSingleObjectSummary(AmazonS3 s3Client, String bucket, String key)
   {
     final ListObjectsV2Request request = new ListObjectsV2Request()
         .withBucketName(bucket)

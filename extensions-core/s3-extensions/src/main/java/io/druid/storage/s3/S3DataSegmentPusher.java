@@ -20,7 +20,7 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
@@ -45,13 +45,13 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
-  private final AmazonS3Client s3Client;
+  private final AmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public S3DataSegmentPusher(
-      AmazonS3Client s3Client,
+      AmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
       ObjectMapper jsonMapper
   )
@@ -156,7 +156,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   private void uploadFileIfPossibleAndClear(
-      AmazonS3Client s3Client,
+      AmazonS3 s3Client,
       String bucket,
       String key,
       File file,

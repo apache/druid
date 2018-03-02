@@ -20,7 +20,7 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -63,7 +63,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
-  private static FileObject buildFileObject(final URI uri, final AmazonS3Client s3Client) throws AmazonServiceException
+  private static FileObject buildFileObject(final URI uri, final AmazonS3 s3Client) throws AmazonServiceException
   {
     final S3Coords coords = new S3Coords(checkURI(uri));
     final S3ObjectSummary objectSummary = S3Utils.getSingleObjectSummary(s3Client, coords.bucket, coords.path);
@@ -162,11 +162,11 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   protected static final String BUCKET = "bucket";
   protected static final String KEY = "key";
 
-  protected final AmazonS3Client s3Client;
+  protected final AmazonS3 s3Client;
 
   @Inject
   public S3DataSegmentPuller(
-      AmazonS3Client s3Client
+      AmazonS3 s3Client
   )
   {
     this.s3Client = s3Client;
