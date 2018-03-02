@@ -26,10 +26,10 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.metamx.common.IAE;
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 
+import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
