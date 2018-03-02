@@ -332,9 +332,9 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     int rowSize = row.size();
     if (rowSize == 0) {
       nullRowsBitmap.add(rowCount);
-    } else if (hasNull && rowSize == 1 && row.get(0) == 0) {
-      // If this dimension has the null/empty str in its dictionary, a row with a single-valued dimension
-      // that matches the null/empty str's dictionary ID should also be added to nullRowBitmap.
+    } else if (hasNull && isNullRow(row, rowSize)) {
+      // If this dimension has the null/empty str in its dictionary, a row with nulls at all positions should also be
+      // added to nullRowBitmap.
       nullRowsBitmap.add(rowCount);
     }
     if (encodedValueSerializer instanceof ColumnarMultiIntsSerializer) {
@@ -358,6 +358,15 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
           s.getClass()
       );
     }
+  }
+
+  private static boolean isNullRow(IndexedInts row, int size) {
+    for (int i = 0; i < size; i++) {
+      if (row.get(i) != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

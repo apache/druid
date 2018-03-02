@@ -430,7 +430,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       virtualColumns,
                       descending,
                       closer,
-                      baseCursorOffset.getBaseReadableOffset(), columnCache
+                      baseCursorOffset.getBaseReadableOffset(),
+                      columnCache
                   );
                   final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
 

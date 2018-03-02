@@ -372,7 +372,7 @@ public interface IndexMerger
   {
     /**
      * Don't replace this lambda with {@link Comparator#comparing} or {@link Comparators#naturalNullsFirst()} because
-     * this comparator is hot, so avoiding extra small indirection.
+     * this comparator is hot, so we want to avoid extra indirection layers.
      */
     static final Comparator<Pair<Integer, PeekingIterator<String>>> NULLS_FIRST_PEEKING_COMPARATOR = (lhs, rhs) -> {
       String left = lhs.rhs.peek();

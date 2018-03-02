@@ -108,7 +108,7 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
     if (numBytesForMaxWritten) {
       throw new IllegalStateException("written out already");
     }
-    for (int i = 0; i < ints.size(); i++) {
+    for (int i = 0, size = ints.size(); i < size; i++) {
       int value = ints.get(i);
       Preconditions.checkState(value >= 0 && value <= maxId);
       writeInt.write(valuesOut, value);

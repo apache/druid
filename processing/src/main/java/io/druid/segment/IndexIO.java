@@ -262,7 +262,8 @@ public class IndexIO
     if (rp1.getTimestamp() != rp2.getTimestamp()) {
       throw new SegmentValidationException(
           "Timestamp mismatch. Expected %d found %d",
-          rp1.getTimestamp(), rp2.getTimestamp()
+          rp1.getTimestamp(),
+          rp2.getTimestamp()
       );
     }
     final Object[] dims1 = rp1.getDimensionValuesForDebug();
