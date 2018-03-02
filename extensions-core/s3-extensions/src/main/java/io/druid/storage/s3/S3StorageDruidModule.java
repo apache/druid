@@ -146,9 +146,6 @@ public class S3StorageDruidModule implements DruidModule
     if (StringUtils.isNotEmpty(proxyConfig.getPassword())) {
       conf.setProxyPassword(proxyConfig.getPassword());
     }
-    if (StringUtils.isNotEmpty(proxyConfig.getDomain())) {
-      conf.setProxyDomain(proxyConfig.getDomain());
-    }
     return conf;
   }
 
