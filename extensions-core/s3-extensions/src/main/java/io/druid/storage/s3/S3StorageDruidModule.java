@@ -20,6 +20,7 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
@@ -118,17 +119,14 @@ public class S3StorageDruidModule implements DruidModule
   )
   {
     final AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard().withCredentials(provider);
-    final ClientConfiguration configuration = new ClientConfiguration();
+    final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
 
-    builder.withClientConfiguration(setProxyConfig(configuration, proxyConfig));
-    if (toEndpointConfiguration(endpointConfig) != null) {
-      builder.withEndpointConfiguration(toEndpointConfiguration(endpointConfig));
+    builder.setClientConfiguration(setProxyConfig(configuration, proxyConfig));
+    final EndpointConfiguration endpointConfiguration = toEndpointConfiguration(endpointConfig);
+    if (endpointConfiguration != null) {
+      builder.setEndpointConfiguration(endpointConfiguration);
     }
 
-    log.info(builder.getEndpoint().getServiceEndpoint());
-    log.info(builder.getEndpoint().getSigningRegion());
-    log.info(builder.getClientConfiguration().getProxyHost());
-    log.info(builder.getClientConfiguration().getProxyPassword());
     return builder.build();
   }
 
