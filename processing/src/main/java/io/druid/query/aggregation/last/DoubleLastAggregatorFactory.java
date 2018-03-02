@@ -151,7 +151,7 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory
             long lastTime = buf.getLong(position);
             if (pair.lhs >= lastTime) {
               buf.putLong(position, pair.lhs);
-              buf.putDouble(position + Double.BYTES, pair.rhs);
+              buf.putDouble(position + Long.BYTES, pair.rhs);
             }
           }
 
