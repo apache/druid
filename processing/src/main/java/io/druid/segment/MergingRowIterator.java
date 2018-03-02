@@ -148,6 +148,9 @@ final class MergingRowIterator implements RowIterator
     } else {
       pQueueSize--;
       if (pQueueSize > 0) {
+        pQueue[0] = pQueue[pQueueSize];
+        pQueue[pQueueSize] = null;
+
         // The head iterator is going to change, so the changedSinceMark property could still be "unchanged", if there
         // were several iterators pointing to equal "time and dims", that is what the following line checks:
         changedSinceMark |= !headUsedToBeEqualToChild;
@@ -160,9 +163,6 @@ final class MergingRowIterator implements RowIterator
         // last element is now moved to the head. equalToChild[parentOfLast] must have correct value before the
         // sinkHeap(0) call a few lines below, because it's an assumed invariant of sinkHeap().
         sinkHeap(parentOfLast);
-
-        pQueue[0] = pQueue[pQueueSize];
-        pQueue[pQueueSize] = null;
         sinkHeap(0);
         return true;
       } else {
