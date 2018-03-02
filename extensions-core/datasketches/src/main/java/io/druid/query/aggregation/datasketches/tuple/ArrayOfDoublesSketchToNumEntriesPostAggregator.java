@@ -35,7 +35,8 @@ public class ArrayOfDoublesSketchToNumEntriesPostAggregator extends ArrayOfDoubl
   @JsonCreator
   public ArrayOfDoublesSketchToNumEntriesPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("field") final PostAggregator field)
+      @JsonProperty("field") final PostAggregator field
+  )
   {
     super(name, field);
   }

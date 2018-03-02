@@ -81,7 +81,7 @@ public class ArrayOfDoublesSketchModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module> asList(
+    return Arrays.<Module>asList(
         new SimpleModule("ArrayOfDoublesSketchModule").registerSubtypes(
             new NamedType(ArrayOfDoublesSketchAggregatorFactory.class, ARRAY_OF_DOUBLES_SKETCH),
             new NamedType(ArrayOfDoublesSketchToEstimatePostAggregator.class,
@@ -98,7 +98,9 @@ public class ArrayOfDoublesSketchModule implements DruidModule
             new NamedType(ArrayOfDoublesSketchSetOpPostAggregator.class, ARRAY_OF_DOUBLES_SKETCH_SET_OP_POST_AGG),
             new NamedType(ArrayOfDoublesSketchTTestPostAggregator.class, ARRAY_OF_DOUBLES_SKETCH_T_TEST_POST_AGG),
             new NamedType(ArrayOfDoublesSketchToStringPostAggregator.class, ARRAY_OF_DOUBLES_SKETCH_TO_STRING_POST_AGG))
-            .addSerializer(ArrayOfDoublesSketch.class, new ArrayOfDoublesSketchJsonSerializer()));
+            .addSerializer(ArrayOfDoublesSketch.class, new ArrayOfDoublesSketchJsonSerializer()
+        )
+    );
   }
 
 }

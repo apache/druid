@@ -36,17 +36,23 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
 {
 
   private final DimensionSelector keySelector;
-  private final List<BaseDoubleColumnValueSelector> valueSelectors;
+  private final BaseDoubleColumnValueSelector[] valueSelectors;
   private final int nominalEntries;
   private final int maxIntermediateSize;
+  private final double[] values; // for sketch update call
 
-  public ArrayOfDoublesSketchBuildBufferAggregator(final DimensionSelector keySelector,
-      final List<BaseDoubleColumnValueSelector> valueSelectors, int nominalEntries, int maxIntermediateSize)
+  public ArrayOfDoublesSketchBuildBufferAggregator(
+      final DimensionSelector keySelector,
+      final List<BaseDoubleColumnValueSelector> valueSelectors,
+      int nominalEntries,
+      int maxIntermediateSize
+  )
   {
     this.keySelector = keySelector;
-    this.valueSelectors = valueSelectors;
+    this.valueSelectors = valueSelectors.toArray(new BaseDoubleColumnValueSelector[valueSelectors.size()]);
     this.nominalEntries = nominalEntries;
     this.maxIntermediateSize = maxIntermediateSize;
+    values = new double[valueSelectors.size()];
   }
 
   @Override
@@ -55,24 +61,19 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
     final WritableMemory mem = WritableMemory.wrap(buf);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
-        .setNumberOfValues(valueSelectors.size())
-        .setNumberOfValues(valueSelectors.size()).build(region);
+        .setNumberOfValues(valueSelectors.length)
+        .setNumberOfValues(valueSelectors.length).build(region);
   }
 
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
     final IndexedInts keys = keySelector.getRow();
-    if (keys == null) {
-      return;
-    }
     final WritableMemory mem = WritableMemory.wrap(buf);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
-    final double[] values = new double[valueSelectors.size()];
-    int valueIndex = 0;
-    for (final BaseDoubleColumnValueSelector valueSelector : valueSelectors) {
-      values[valueIndex++] = valueSelector.getDouble();
+    for (int i = 0; i < valueSelectors.length; i++) {
+      values[i] = valueSelectors[i].getDouble();
     }
     for (int i = 0; i < keys.size(); i++) {
       final String key = keySelector.lookupName(keys.get(i));
@@ -110,8 +111,8 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
-    inspector.visit("keyselector", keySelector);
-    inspector.visit("valueselectors", valueSelectors.toArray());
+    inspector.visit("keySelector", keySelector);
+    inspector.visit("valueSelectors", valueSelectors);
   }
 
 }

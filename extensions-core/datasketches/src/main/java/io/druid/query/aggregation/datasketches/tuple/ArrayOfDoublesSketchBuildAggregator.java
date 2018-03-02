@@ -32,16 +32,19 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 {
 
   private final DimensionSelector keySelector;
-  private final List<BaseDoubleColumnValueSelector> valueSelectors;
-
+  private final BaseDoubleColumnValueSelector[] valueSelectors;
+  private final double[] values; // for sketch update call
   private ArrayOfDoublesUpdatableSketch sketch;
 
   public ArrayOfDoublesSketchBuildAggregator(
-      final DimensionSelector keySelector, final List<BaseDoubleColumnValueSelector> valueSelectors,
-      final int nominalEntries)
+      final DimensionSelector keySelector,
+      final List<BaseDoubleColumnValueSelector> valueSelectors,
+      final int nominalEntries
+  )
   {
     this.keySelector = keySelector;
-    this.valueSelectors = valueSelectors;
+    this.valueSelectors = valueSelectors.toArray(new BaseDoubleColumnValueSelector[valueSelectors.size()]);
+    values = new double[valueSelectors.size()];
     sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(valueSelectors.size()).build();
   }
@@ -50,13 +53,8 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   public synchronized void aggregate()
   {
     final IndexedInts keys = keySelector.getRow();
-    if (keys == null) {
-      return;
-    }
-    final double[] values = new double[valueSelectors.size()];
-    int valueIndex = 0;
-    for (final BaseDoubleColumnValueSelector valueSelector : valueSelectors) {
-      values[valueIndex++] = valueSelector.getDouble();
+    for (int i = 0; i < valueSelectors.length; i++) {
+      values[i] = valueSelectors[i].getDouble();
     }
     for (int i = 0; i < keys.size(); i++) {
       final String key = keySelector.lookupName(keys.get(i));

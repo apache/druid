@@ -47,7 +47,8 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
       @JsonProperty("column") final Integer column,
-      @JsonProperty("k") final Integer k)
+      @JsonProperty("k") final Integer k
+  )
   {
     super(name, field);
     this.column = column == null ? 1 : column;

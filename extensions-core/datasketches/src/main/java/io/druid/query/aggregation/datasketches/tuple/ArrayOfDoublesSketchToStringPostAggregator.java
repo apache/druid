@@ -36,7 +36,8 @@ public class ArrayOfDoublesSketchToStringPostAggregator extends ArrayOfDoublesSk
   @JsonCreator
   public ArrayOfDoublesSketchToStringPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("field") final PostAggregator field)
+      @JsonProperty("field") final PostAggregator field
+  )
   {
     super(name, field);
   }

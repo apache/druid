@@ -31,8 +31,11 @@ public class ArrayOfDoublesSketchMergeAggregator implements Aggregator
   private final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector;
   private ArrayOfDoublesUnion union;
 
-  public ArrayOfDoublesSketchMergeAggregator(final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
-      final int nominalEntries, final int numberOfValues)
+  public ArrayOfDoublesSketchMergeAggregator(
+      final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
+      final int nominalEntries,
+      final int numberOfValues
+  )
   {
     this.selector = selector;
     union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries).setNumberOfValues(numberOfValues)

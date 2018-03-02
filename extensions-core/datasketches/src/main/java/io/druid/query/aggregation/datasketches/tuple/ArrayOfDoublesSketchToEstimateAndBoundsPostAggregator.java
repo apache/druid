@@ -40,7 +40,8 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends Array
   public ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("numStdDevs") final Integer numStdDevs)
+      @JsonProperty("numStdDevs") final Integer numStdDevs
+  )
   {
     super(name, field);
     this.numStdDevs = numStdDevs == null ? 1 : numStdDevs;

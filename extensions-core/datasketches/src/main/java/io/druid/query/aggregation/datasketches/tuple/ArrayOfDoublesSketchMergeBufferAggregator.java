@@ -38,8 +38,12 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   private final int numberOfValues;
   private final int maxIntermediateSize;
 
-  public ArrayOfDoublesSketchMergeBufferAggregator(final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
-      final int nominalEntries, final int numberOfValues, final int maxIntermediateSize)
+  public ArrayOfDoublesSketchMergeBufferAggregator(
+      final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
+      final int nominalEntries,
+      final int numberOfValues,
+      final int maxIntermediateSize
+  )
   {
     this.selector = selector;
     this.nominalEntries = nominalEntries;

@@ -76,7 +76,8 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("nominalEntries") @Nullable final Integer nominalEntries,
       @JsonProperty("metricColumns") @Nullable final List<String> metricColumns,
-      @JsonProperty("numberOfValues") @Nullable final Integer numberOfValues)
+      @JsonProperty("numberOfValues") @Nullable final Integer numberOfValues
+  )
   {
     this.name = Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     this.fieldName = Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
@@ -166,7 +167,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(final Object lhs, final Object rhs)
+  public Object combine(@Nullable final Object lhs, @Nullable final Object rhs)
   {
     final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(numberOfValues).buildUnion();

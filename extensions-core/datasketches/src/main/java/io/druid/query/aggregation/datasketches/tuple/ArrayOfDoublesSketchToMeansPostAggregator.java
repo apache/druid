@@ -37,7 +37,8 @@ public class ArrayOfDoublesSketchToMeansPostAggregator extends ArrayOfDoublesSke
   @JsonCreator
   public ArrayOfDoublesSketchToMeansPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("field") final PostAggregator field)
+      @JsonProperty("field") final PostAggregator field
+  )
   {
     super(name, field);
   }

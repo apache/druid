@@ -32,7 +32,6 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import com.yahoo.memory.Memory;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 
 public class ArrayOfDoublesSketchMergeComplexMetricSerde extends ComplexMetricSerde
@@ -59,7 +58,7 @@ public class ArrayOfDoublesSketchMergeComplexMetricSerde extends ComplexMetricSe
       public Object extractValue(final InputRow inputRow, final String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        if (object == null || object instanceof ArrayOfDoublesSketch || object instanceof Memory) {
+        if (object == null || object instanceof ArrayOfDoublesSketch) {
           return object;
         }
         return ArrayOfDoublesSketchOperations.deserialize(object);

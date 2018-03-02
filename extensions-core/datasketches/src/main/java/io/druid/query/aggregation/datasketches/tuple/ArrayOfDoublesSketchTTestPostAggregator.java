@@ -41,7 +41,8 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
   @JsonCreator
   public ArrayOfDoublesSketchTTestPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("fields") List<PostAggregator> fields)
+      @JsonProperty("fields") List<PostAggregator> fields
+  )
   {
     super(name, fields);
     if (fields.size() != 2) {

@@ -39,7 +39,8 @@ public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDouble
   @JsonCreator
   public ArrayOfDoublesSketchToVariancesPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("field") final PostAggregator field)
+      @JsonProperty("field") final PostAggregator field
+  )
   {
     super(name, field);
   }

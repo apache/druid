@@ -46,7 +46,8 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
       @JsonProperty("func") final String func,
       @JsonProperty("nominalEntries") final Integer nominalEntries,
       @JsonProperty("numberOfValues") final Integer numberOfValues,
-      @JsonProperty("fields") List<PostAggregator> fields)
+      @JsonProperty("fields") List<PostAggregator> fields
+  )
   {
     super(name, fields);
     this.func = ArrayOfDoublesSketchOperations.Func.valueOf(func);
