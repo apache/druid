@@ -104,7 +104,7 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
     return ioConfig.getFirehoseFactory().connect(dataSchema.getParser(), null);
   }
 
-  public FirehoseV2 connect(Object metaData) throws IOException
+  public FirehoseV2 connect(Object metaData)
   {
     return ioConfig.getFirehoseFactoryV2().connect(dataSchema.getParser(), metaData);
   }

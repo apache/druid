@@ -33,9 +33,8 @@ import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
-import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ForbiddenException;
 import io.druid.server.security.ResourceAction;
 
@@ -62,18 +61,12 @@ import java.util.Set;
 public class SupervisorResource
 {
   private final TaskMaster taskMaster;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
 
   @Inject
-  public SupervisorResource(
-      TaskMaster taskMaster,
-      AuthConfig authConfig,
-      AuthorizerMapper authorizerMapper
-  )
+  public SupervisorResource(TaskMaster taskMaster, AuthorizerMapper authorizerMapper)
   {
     this.taskMaster = taskMaster;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -224,6 +217,7 @@ public class SupervisorResource
                 supervisorHistory.keySet()
             );
 
+            @SuppressWarnings("unused") // TODO understand, this code looks strange
             final Map<String, List<VersionedSupervisorSpec>> authorizedSupervisorHistory = Maps.filterKeys(
                 supervisorHistory,
                 new Predicate<String>()

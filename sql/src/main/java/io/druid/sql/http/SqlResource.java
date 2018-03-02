@@ -52,7 +52,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.SQLException;
 import java.util.List;
 
 @Path("/druid/v2/sql/")
@@ -79,7 +78,7 @@ public class SqlResource
   public Response doPost(
       final SqlQuery sqlQuery,
       @Context final HttpServletRequest req
-  ) throws SQLException, IOException
+  ) throws IOException
   {
     final PlannerResult plannerResult;
     final DateTimeZone timeZone;

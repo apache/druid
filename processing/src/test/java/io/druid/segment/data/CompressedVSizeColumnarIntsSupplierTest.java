@@ -101,7 +101,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
 
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     closer = Closer.create();
     CloseQuietly.close(columnarInts);
@@ -172,7 +172,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     setupSimple(2);
     Assert.assertEquals(8, supplier.getBaseBuffers().size());
@@ -227,7 +227,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   }
 
   @Test
-  public void testmaxIntsInBuffer() throws Exception
+  public void testmaxIntsInBuffer()
   {
     Assert.assertEquals(CompressedPools.BUFFER_SIZE, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(1));
     Assert.assertEquals(CompressedPools.BUFFER_SIZE / 2, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(2));

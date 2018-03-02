@@ -161,7 +161,7 @@ public class DruidMeta extends MetaImpl
       final String sql,
       final long maxRowCount,
       final PrepareCallback callback
-  ) throws NoSuchStatementException
+  )
   {
     // Avatica doesn't call this.
     throw new UnsupportedOperationException("Deprecated");
@@ -174,7 +174,7 @@ public class DruidMeta extends MetaImpl
       final long maxRowCount,
       final int maxRowsInFirstFrame,
       final PrepareCallback callback
-  ) throws NoSuchStatementException
+  )
   {
     // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
     final DruidStatement druidStatement = getDruidStatement(statement);
@@ -207,7 +207,7 @@ public class DruidMeta extends MetaImpl
   public ExecuteBatchResult prepareAndExecuteBatch(
       final StatementHandle statement,
       final List<String> sqlCommands
-  ) throws NoSuchStatementException
+  )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
     throw new UnsupportedOperationException("Batch statements not supported");
@@ -217,7 +217,7 @@ public class DruidMeta extends MetaImpl
   public ExecuteBatchResult executeBatch(
       final StatementHandle statement,
       final List<List<TypedValue>> parameterValues
-  ) throws NoSuchStatementException
+  )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
     throw new UnsupportedOperationException("Batch statements not supported");
@@ -239,7 +239,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle statement,
       final List<TypedValue> parameterValues,
       final long maxRowCount
-  ) throws NoSuchStatementException
+  )
   {
     // Avatica doesn't call this.
     throw new UnsupportedOperationException("Deprecated");
@@ -250,7 +250,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle statement,
       final List<TypedValue> parameterValues,
       final int maxRowsInFirstFrame
-  ) throws NoSuchStatementException
+  )
   {
     Preconditions.checkArgument(parameterValues.isEmpty(), "Expected parameterValues to be empty");
 
@@ -306,7 +306,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle sh,
       final QueryState state,
       final long offset
-  ) throws NoSuchStatementException
+  )
   {
     final DruidStatement druidStatement = getDruidStatement(sh);
     final boolean isDone = druidStatement.isDone();

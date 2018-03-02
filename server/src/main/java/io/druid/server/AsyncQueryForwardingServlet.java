@@ -26,14 +26,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.selector.Server;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -386,7 +386,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
-  private static String getAvaticaConnectionId(Map<String, Object> requestMap) throws IOException
+  private static String getAvaticaConnectionId(Map<String, Object> requestMap)
   {
     Object connectionIdObj = requestMap.get("connectionId");
     if (connectionIdObj == null) {
@@ -495,7 +495,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super.onFailure(response, failure);
     }
 
-    private void emitQueryTime(long requestTimeNs, boolean success) throws JsonProcessingException
+    private void emitQueryTime(long requestTimeNs, boolean success)
     {
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,

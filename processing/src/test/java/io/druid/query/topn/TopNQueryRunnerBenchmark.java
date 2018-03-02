@@ -85,7 +85,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   private static final Map<TestCases, QueryRunner> testCaseMap = Maps.newHashMap();
 
   @BeforeClass
-  public static void setUp() throws Exception
+  public static void setUp()
   {
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         new StupidPool<ByteBuffer>(

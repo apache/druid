@@ -138,7 +138,7 @@ public class CompressionStrategyTest
               new Callable<Boolean>()
               {
                 @Override
-                public Boolean call() throws Exception
+                public Boolean call()
                 {
                   ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
                   ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);

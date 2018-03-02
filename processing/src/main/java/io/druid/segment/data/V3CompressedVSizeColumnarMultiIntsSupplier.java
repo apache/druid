@@ -116,7 +116,7 @@ public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSuppl
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return 1 + offsetSupplier.getSerializedSize() + valueSupplier.getSerializedSize();
   }

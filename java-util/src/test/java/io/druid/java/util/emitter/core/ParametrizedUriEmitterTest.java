@@ -51,13 +51,13 @@ public class ParametrizedUriEmitterTest
   private Lifecycle lifecycle;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     httpClient = new MockHttpClient();
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     if (lifecycle != null) {
       lifecycle.stop();

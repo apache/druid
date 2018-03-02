@@ -29,13 +29,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.java.util.common.parsers.JSONPathFieldSpec;
-import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
@@ -60,6 +58,8 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.TestHelper;
@@ -174,7 +174,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Before
-  public void setupTest() throws Exception
+  public void setupTest()
   {
     taskStorage = createMock(TaskStorage.class);
     taskMaster = createMock(TaskMaster.class);
@@ -208,7 +208,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @After
-  public void tearDownTest() throws Exception
+  public void tearDownTest()
   {
     supervisor = null;
   }
@@ -1592,14 +1592,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test(expected = IllegalStateException.class)
-  public void testStopNotStarted() throws Exception
+  public void testStopNotStarted()
   {
     supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
     supervisor.stop(false);
   }
 
   @Test
-  public void testStop() throws Exception
+  public void testStop()
   {
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     taskClient.close();

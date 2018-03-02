@@ -34,7 +34,6 @@ import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
@@ -56,7 +55,7 @@ import java.util.Map;
 /**
  * A data segment puller that also hanldes URI data pulls.
  */
-public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
+public class S3DataSegmentPuller implements URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
@@ -106,25 +105,25 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       }
 
       @Override
-      public OutputStream openOutputStream() throws IOException
+      public OutputStream openOutputStream()
       {
         throw new UOE("Cannot stream S3 output");
       }
 
       @Override
-      public Reader openReader(boolean ignoreEncodingErrors) throws IOException
+      public Reader openReader(boolean ignoreEncodingErrors)
       {
         throw new UOE("Cannot open reader");
       }
 
       @Override
-      public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException
+      public CharSequence getCharContent(boolean ignoreEncodingErrors)
       {
         throw new UOE("Cannot open character sequence");
       }
 
       @Override
-      public Writer openWriter() throws IOException
+      public Writer openWriter()
       {
         throw new UOE("Cannot open writer");
       }
@@ -160,14 +159,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
     this.s3Client = s3Client;
   }
 
-  @Override
-  public void getSegmentFiles(final DataSegment segment, final File outDir) throws SegmentLoadingException
-  {
-    getSegmentFiles(new S3Coords(segment), outDir);
-  }
-
-  public FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir)
-      throws SegmentLoadingException
+  FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir) throws SegmentLoadingException
   {
 
     log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);

@@ -76,7 +76,7 @@ public class OverlordResourceTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     taskRunner = EasyMock.createMock(TaskRunner.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
@@ -166,7 +166,7 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void testSecuredGetWaitingTask() throws Exception
+  public void testSecuredGetWaitingTask()
   {
     expectAuthorizationTokenCheck();
 
@@ -379,13 +379,13 @@ public class OverlordResourceTest
       }
 
       @Override
-      public boolean isReady(TaskActionClient taskActionClient) throws Exception
+      public boolean isReady(TaskActionClient taskActionClient)
       {
         return false;
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus run(TaskToolbox toolbox)
       {
         return null;
       }

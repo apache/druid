@@ -55,7 +55,7 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
   private int[] vals;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     closer = Closer.create();
     CloseQuietly.close(columnarInts);
@@ -124,7 +124,7 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     setupSimple(5);
 

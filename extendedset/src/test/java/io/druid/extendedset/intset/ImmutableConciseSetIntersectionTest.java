@@ -548,7 +548,7 @@ public class ImmutableConciseSetIntersectionTest
   }
 
   @Test
-  public void testIntersectionTerminates() throws Exception
+  public void testIntersectionTerminates()
   {
     verifyIntersection(Collections.emptyList(), Arrays.asList(new ImmutableConciseSet(), new ImmutableConciseSet()));
   }

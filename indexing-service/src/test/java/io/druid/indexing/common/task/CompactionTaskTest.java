@@ -514,7 +514,6 @@ public class CompactionTaskTest
 
     @Override
     public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
-        throws SegmentLoadingException
     {
       final Map<DataSegment, File> submap = new HashMap<>(segments.size());
       for (DataSegment segment : segments) {
@@ -535,7 +534,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+    public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
       if (!(taskAction instanceof SegmentListUsedAction)) {
         throw new ISE("action[%s] is not supported", taskAction);
@@ -595,7 +594,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public QueryableIndex loadIndex(File file) throws IOException
+    public QueryableIndex loadIndex(File file)
     {
       return queryableIndexMap.get(file);
     }

@@ -51,24 +51,9 @@ public class TaskActionTestKit extends ExternalResource
   private MetadataSegmentManager metadataSegmentManager;
   private TaskActionToolbox taskActionToolbox;
 
-  public MetadataStorageTablesConfig getMetadataStorageTablesConfig()
-  {
-    return metadataStorageTablesConfig;
-  }
-
-  public TaskStorage getTaskStorage()
-  {
-    return taskStorage;
-  }
-
   public TaskLockbox getTaskLockbox()
   {
     return taskLockbox;
-  }
-
-  public TestDerbyConnector getTestDerbyConnector()
-  {
-    return testDerbyConnector;
   }
 
   public IndexerMetadataStorageCoordinator getMetadataStorageCoordinator()

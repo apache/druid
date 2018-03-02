@@ -22,12 +22,10 @@ package io.druid.server.lookup.cache.loading;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class OffHeapLoadingCacheTest
 {
   @Test
-  public void testClose() throws IOException
+  public void testClose()
   {
     LoadingCache loadingCache = new OffHeapLoadingCache<>(1000L, 1000L, 0L, 0L);
     loadingCache.close();

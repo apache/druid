@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.parsers.ParseException;
-
-import java.io.IOException;
 /**
  * Initialization method that connects up the FirehoseV2.  If this method returns successfully it should be safe to
  * call start() on the returned FirehoseV2 (which might subsequently block).
@@ -41,5 +39,5 @@ import java.io.IOException;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface FirehoseFactoryV2<T extends InputRowParser>
 {
-  FirehoseV2 connect(T parser, Object lastCommit) throws IOException, ParseException;
+  FirehoseV2 connect(T parser, Object lastCommit) throws ParseException;
 }

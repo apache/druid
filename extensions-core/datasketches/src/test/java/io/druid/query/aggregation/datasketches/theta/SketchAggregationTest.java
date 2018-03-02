@@ -79,7 +79,7 @@ public class SketchAggregationTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
@@ -226,7 +226,7 @@ public class SketchAggregationTest
   }
 
   @Test
-  public void testSketchMergeFinalization() throws Exception
+  public void testSketchMergeFinalization()
   {
     SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(128).build());
 

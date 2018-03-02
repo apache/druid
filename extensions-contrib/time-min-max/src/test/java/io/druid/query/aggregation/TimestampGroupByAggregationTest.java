@@ -100,7 +100,7 @@ public class TimestampGroupByAggregationTest
   }
 
   @Before
-  public void setup() throws Exception
+  public void setup()
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new TimestampMinMaxModule().getJacksonModules(),

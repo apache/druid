@@ -99,7 +99,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     if (resourceFilter instanceof TaskResourceFilter && !mockedOnceTsqa) {
       // Since we are creating the mocked tsqa object only once and getting that object from Guice here therefore

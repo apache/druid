@@ -28,8 +28,4 @@ public class UOE extends UnsupportedOperationException
     super(StringUtils.nonStrictFormat(formatText, arguments));
   }
 
-  public UOE(Throwable cause, String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
-  }
 }

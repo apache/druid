@@ -299,7 +299,7 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expectLastCall().andAnswer(new IAnswer<Object>()
     {
       @Override
-      public Object answer() throws Throwable
+      public Object answer()
       {
         threadWasInterrupted.set(Thread.currentThread().isInterrupted());
         return null;
@@ -332,7 +332,7 @@ public class KafkaLookupExtractorFactoryTest
 
 
   @Test
-  public void testStartFailsFromTimeout() throws Exception
+  public void testStartFailsFromTimeout()
   {
     EasyMock.expect(cacheManager.createCache())
             .andReturn(cacheHandler)

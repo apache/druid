@@ -22,8 +22,6 @@ package io.druid.query;
 import io.druid.java.util.emitter.core.Emitter;
 import io.druid.java.util.emitter.core.Event;
 
-import java.io.IOException;
-
 public class CachingEmitter implements Emitter
 {
   private Event lastEmittedEvent;
@@ -45,12 +43,12 @@ public class CachingEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
   }
 }

@@ -57,7 +57,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
         new AbstractPrioritizedCallable<Sequence<T>>(priority)
         {
           @Override
-          public Sequence<T> call() throws Exception
+          public Sequence<T> call()
           {
             //Note: this is assumed that baseRunner does most of the work eagerly on call to the
             //run() method and resulting sequence accumulate/yield is fast.

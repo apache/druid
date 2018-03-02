@@ -29,16 +29,16 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -113,7 +113,7 @@ public class RealtimeManager implements QuerySegmentWalker
   }
 
   @LifecycleStart
-  public void start() throws IOException
+  public void start()
   {
     serverAnnouncer.announce();
 
@@ -251,13 +251,8 @@ public class RealtimeManager implements QuerySegmentWalker
 
     private FirehoseV2 initFirehoseV2(Object metaData)
     {
-      try {
-        log.info("Calling the FireDepartment and getting a FirehoseV2.");
-        return fireDepartment.connect(metaData);
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+      log.info("Calling the FireDepartment and getting a FirehoseV2.");
+      return fireDepartment.connect(metaData);
     }
 
     private void initPlumber()
@@ -305,10 +300,6 @@ public class RealtimeManager implements QuerySegmentWalker
             closer.register(() -> plumber.finishJob());
           }
         }
-        catch (InterruptedException e) {
-          log.warn("Interrupted while running a firehose");
-          throw closer.rethrow(e);
-        }
         catch (Exception e) {
           log.makeAlert(
               e,
@@ -332,7 +323,7 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    private boolean runFirehoseV2(FirehoseV2 firehose) throws Exception
+    private boolean runFirehoseV2(FirehoseV2 firehose)
     {
       firehose.start();
 

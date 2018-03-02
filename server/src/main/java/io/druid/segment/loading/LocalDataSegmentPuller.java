@@ -19,6 +19,7 @@
 
 package io.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.io.Files;
 import io.druid.java.util.common.CompressionUtils;
@@ -47,7 +48,7 @@ import java.util.concurrent.CancellationException;
 
 /**
  */
-public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
+public class LocalDataSegmentPuller implements URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
@@ -88,7 +89,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
       }
 
       @Override
-      public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException
+      public CharSequence getCharContent(boolean ignoreEncodingErrors)
       {
         throw new UOE("CharSequence not supported");
       }
@@ -115,7 +116,7 @@ public class LocalDataSegmentPuller implements DataSegmentPuller, URIDataPuller
 
   private static final Logger log = new Logger(LocalDataSegmentPuller.class);
 
-  @Override
+  @VisibleForTesting
   public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException
   {
     getSegmentFiles(getFile(segment), dir);

@@ -898,7 +898,7 @@ public class SegmentMetadataQueryTest
   }
 
   @Test
-  public void testDefaultIntervalAndFiltering() throws Exception
+  public void testDefaultIntervalAndFiltering()
   {
     SegmentMetadataQuery testQuery = Druids.newSegmentMetadataQueryBuilder()
                                            .dataSource("testing")

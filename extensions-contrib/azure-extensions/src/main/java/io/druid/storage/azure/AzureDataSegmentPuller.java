@@ -19,22 +19,17 @@
 
 package io.druid.storage.azure;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
-import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 
-public class AzureDataSegmentPuller implements DataSegmentPuller
+public class AzureDataSegmentPuller
 {
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
 
@@ -55,7 +50,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     this.azureStorage = azureStorage;
   }
 
-  public io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
+  io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
       final String containerName,
       final String blobPath,
       final File outDir
@@ -63,7 +58,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
       throws SegmentLoadingException
   {
     try {
-      prepareOutDir(outDir);
+      FileUtils.forceMkdir(outDir);
 
       log.info(
           "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
@@ -104,23 +99,5 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
       }
       throw new SegmentLoadingException(e, e.getMessage());
     }
-
-  }
-
-  @Override
-  public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
-  {
-
-    final Map<String, Object> loadSpec = segment.getLoadSpec();
-    final String containerName = MapUtils.getString(loadSpec, "containerName");
-    final String blobPath = MapUtils.getString(loadSpec, "blobPath");
-
-    getSegmentFiles(containerName, blobPath, outDir);
-  }
-
-  @VisibleForTesting
-  void prepareOutDir(final File outDir) throws IOException
-  {
-    FileUtils.forceMkdir(outDir);
   }
 }

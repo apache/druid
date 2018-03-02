@@ -43,7 +43,7 @@ public class SelectQueryQueryToolChestTest
   );
 
   @Test
-  public void testComputeCacheKeyWithDifferentSortOrer() throws Exception
+  public void testComputeCacheKeyWithDifferentSortOrer()
   {
     final SelectQuery query1 = Druids.newSelectQueryBuilder()
                                      .dataSource("dummy")

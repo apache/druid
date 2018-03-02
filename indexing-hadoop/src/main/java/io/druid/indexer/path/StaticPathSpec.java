@@ -27,7 +27,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.java.util.common.logger.Logger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -36,7 +35,6 @@ import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
-import java.io.IOException;
 import java.util.Set;
 
 
@@ -58,7 +56,7 @@ public class StaticPathSpec implements PathSpec
   }
 
   @Override
-  public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
+  public Job addInputPaths(HadoopDruidIndexerConfig config, Job job)
   {
     log.info("Adding paths[%s]", paths);
 

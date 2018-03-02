@@ -31,8 +31,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.client.indexing.IndexingService;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
@@ -47,6 +45,8 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -555,7 +555,7 @@ public abstract class WorkerTaskManager
   {
     String getTaskId();
 
-    void handle() throws Exception;
+    void handle();
   }
 
   private class RunNotice implements Notice
@@ -574,7 +574,7 @@ public abstract class WorkerTaskManager
     }
 
     @Override
-    public void handle() throws Exception
+    public void handle()
     {
       TaskAnnouncement announcement = null;
       synchronized (lock) {
@@ -626,7 +626,7 @@ public abstract class WorkerTaskManager
     }
 
     @Override
-    public void handle() throws Exception
+    public void handle()
     {
       synchronized (lock) {
         final TaskDetails details = runningTasks.get(task.getId());
@@ -685,7 +685,7 @@ public abstract class WorkerTaskManager
     }
 
     @Override
-    public void handle() throws InterruptedException
+    public void handle()
     {
       synchronized (lock) {
         final TaskDetails details = runningTasks.get(taskId);

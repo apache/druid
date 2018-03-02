@@ -51,7 +51,6 @@ import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -176,7 +175,7 @@ public class GroupByRowProcessor
                   new Closeable()
                   {
                     @Override
-                    public void close() throws IOException
+                    public void close()
                     {
                       for (Closeable closeable : Lists.reverse(closeOnExit)) {
                         CloseQuietly.close(closeable);

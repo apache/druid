@@ -28,8 +28,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.HttpClient;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DiscoveryDruidNode;
@@ -43,15 +41,16 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.server.coordination.ChangeRequestHttpSyncer;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
-import io.druid.server.coordination.ChangeRequestHttpSyncer;
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
@@ -205,7 +204,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   }
 
   @LifecycleStop
-  public void stop() throws IOException
+  public void stop()
   {
     synchronized (lifecycleLock) {
       if (!lifecycleLock.canStop()) {

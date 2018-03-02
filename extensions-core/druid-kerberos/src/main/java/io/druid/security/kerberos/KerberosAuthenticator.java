@@ -156,7 +156,7 @@ public class KerberosAuthenticator implements Authenticator
           SignerSecretProvider signerSecretProvider = new SignerSecretProvider()
           {
             @Override
-            public void init(Properties config, ServletContext servletContext, long tokenValidity) throws Exception
+            public void init(Properties config, ServletContext servletContext, long tokenValidity)
             {
 
             }
@@ -182,7 +182,7 @@ public class KerberosAuthenticator implements Authenticator
 
       // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling in doFilterSuper
       @Override
-      protected AuthenticationToken getToken(HttpServletRequest request) throws IOException, AuthenticationException
+      protected AuthenticationToken getToken(HttpServletRequest request) throws AuthenticationException
       {
         AuthenticationToken token = null;
         String tokenStr = null;

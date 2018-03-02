@@ -62,13 +62,13 @@ public class SupervisorResourceTest extends EasyMockSupport
   private SupervisorResource supervisorResource;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
-    supervisorResource = new SupervisorResource(taskMaster, new AuthConfig(), AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    supervisorResource = new SupervisorResource(taskMaster, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
   }
 
   @Test
-  public void testSpecPost() throws Exception
+  public void testSpecPost()
   {
     SupervisorSpec spec = new TestSupervisorSpec("my-id", null) {
 
@@ -106,7 +106,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecGetAll() throws Exception
+  public void testSpecGetAll()
   {
     Set<String> supervisorIds = ImmutableSet.of("id1", "id2");
     SupervisorSpec spec1 = new TestSupervisorSpec("id1", null) {
@@ -155,7 +155,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecGet() throws Exception
+  public void testSpecGet()
   {
     SupervisorSpec spec = new TestSupervisorSpec("my-id", null);
 
@@ -186,7 +186,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecGetStatus() throws Exception
+  public void testSpecGetStatus()
   {
     SupervisorReport report = new SupervisorReport("id", DateTimes.nowUtc())
     {
@@ -224,7 +224,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testShutdown() throws Exception
+  public void testShutdown()
   {
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.stopAndRemoveSupervisor("my-id")).andReturn(true);
@@ -253,7 +253,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecGetAllHistory() throws Exception
+  public void testSpecGetAllHistory()
   {
     Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
     history.put("id1", null);
@@ -304,7 +304,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecGetHistory() throws Exception
+  public void testSpecGetHistory()
   {
     List<VersionedSupervisorSpec> versions = ImmutableList.of(
         new VersionedSupervisorSpec(null, "v1"),
@@ -339,7 +339,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testReset() throws Exception
+  public void testReset()
   {
     Capture<String> id1 = Capture.newInstance();
     Capture<String> id2 = Capture.newInstance();

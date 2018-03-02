@@ -51,7 +51,7 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
   private static final String REALTIME_QUERIES_RESOURCE = "/indexer/wikipedia_realtime_index_queries.json";
 
   @Test
-  public void testRealtimeIndexTask() throws Exception
+  public void testRealtimeIndexTask()
   {
     doTest();
   }

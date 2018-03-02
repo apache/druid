@@ -35,7 +35,7 @@ public class ApproximateHistogramAggregatorTest
   }
 
   @Test
-  public void testBufferAggregate() throws Exception
+  public void testBufferAggregate()
   {
     final float[] values = {23, 19, 10, 16, 36, 2, 9, 32, 30, 45};
     final int resolution = 5;

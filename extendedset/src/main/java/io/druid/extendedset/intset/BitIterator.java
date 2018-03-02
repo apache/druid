@@ -96,12 +96,6 @@ public final class BitIterator implements IntSet.IntIterator
   }
 
   @Override
-  public void remove()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public void skipAllBefore(int element)
   {
     if (element <= next) {

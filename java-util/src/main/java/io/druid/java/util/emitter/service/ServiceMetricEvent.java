@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.emitter.core.Event;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
@@ -32,7 +33,7 @@ import java.util.Map;
 
 /**
  */
-public class ServiceMetricEvent implements ServiceEvent
+public class ServiceMetricEvent implements Event
 {
   public static Builder builder()
   {
@@ -63,7 +64,6 @@ public class ServiceMetricEvent implements ServiceEvent
     this.value = value;
   }
 
-  @Override
   public DateTime getCreatedTime()
   {
     return createdTime;
@@ -75,13 +75,11 @@ public class ServiceMetricEvent implements ServiceEvent
     return feed;
   }
 
-  @Override
   public String getService()
   {
     return serviceDims.get("service");
   }
 
-  @Override
   public String getHost()
   {
     return serviceDims.get("host");
@@ -100,12 +98,6 @@ public class ServiceMetricEvent implements ServiceEvent
   public Number getValue()
   {
     return value;
-  }
-
-  @Override
-  public boolean isSafeToBuffer()
-  {
-    return true;
   }
 
   @Override

@@ -93,7 +93,7 @@ public class LongMaxAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     LongMaxAggregatorFactory one = new LongMaxAggregatorFactory("name1", "fieldName1");
     LongMaxAggregatorFactory oneMore = new LongMaxAggregatorFactory("name1", "fieldName1");

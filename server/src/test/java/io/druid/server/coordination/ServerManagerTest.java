@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.jackson.DefaultObjectMapper;
@@ -42,6 +41,7 @@ import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.YieldingAccumulator;
 import io.druid.java.util.common.guava.YieldingSequenceBase;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.DefaultQueryMetrics;
 import io.druid.query.Druids;
@@ -55,8 +55,8 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulationFn;
-import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchResultValue;
 import io.druid.segment.AbstractSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
@@ -101,7 +101,7 @@ public class ServerManagerTest
   private SegmentManager segmentManager;
 
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
 
@@ -114,7 +114,7 @@ public class ServerManagerTest
         new SegmentLoader()
         {
           @Override
-          public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+          public boolean isSegmentLoaded(DataSegment segment)
           {
             return false;
           }
@@ -129,13 +129,13 @@ public class ServerManagerTest
           }
 
           @Override
-          public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+          public File getSegmentFiles(DataSegment segment)
           {
             throw new UnsupportedOperationException();
           }
 
           @Override
-          public void cleanup(DataSegment segment) throws SegmentLoadingException
+          public void cleanup(DataSegment segment)
           {
 
           }
@@ -201,7 +201,7 @@ public class ServerManagerTest
   }
 
   @Test
-  public void testDelete1() throws Exception
+  public void testDelete1()
   {
     final String dataSouce = "test";
     final Interval interval = Intervals.of("2011-04-01/2011-04-02");
@@ -227,7 +227,7 @@ public class ServerManagerTest
   }
 
   @Test
-  public void testDelete2() throws Exception
+  public void testDelete2()
   {
     loadQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
@@ -418,7 +418,7 @@ public class ServerManagerTest
     }
   }
 
-  private <T> Future assertQueryable(
+  private Future assertQueryable(
       Granularity granularity,
       String dataSource,
       Interval interval,
@@ -464,7 +464,7 @@ public class ServerManagerTest
     );
   }
 
-  public void loadQueryable(String dataSource, String version, Interval interval) throws IOException
+  public void loadQueryable(String dataSource, String version, Interval interval)
   {
     try {
       segmentManager.loadSegment(
@@ -488,24 +488,19 @@ public class ServerManagerTest
 
   public void dropQueryable(String dataSource, String version, Interval interval)
   {
-    try {
-      segmentManager.dropSegment(
-          new DataSegment(
-              dataSource,
-              interval,
-              version,
-              ImmutableMap.<String, Object>of("version", version, "interval", interval),
-              Arrays.asList("dim1", "dim2", "dim3"),
-              Arrays.asList("metric1", "metric2"),
-              NoneShardSpec.instance(),
-              IndexIO.CURRENT_VERSION_ID,
-              123L
-          )
-      );
-    }
-    catch (SegmentLoadingException e) {
-      throw new RuntimeException(e);
-    }
+    segmentManager.dropSegment(
+        new DataSegment(
+            dataSource,
+            interval,
+            version,
+            ImmutableMap.of("version", version, "interval", interval),
+            Arrays.asList("dim1", "dim2", "dim3"),
+            Arrays.asList("metric1", "metric2"),
+            NoneShardSpec.instance(),
+            IndexIO.CURRENT_VERSION_ID,
+            123L
+        )
+    );
   }
 
   public static class MyQueryRunnerFactory implements QueryRunnerFactory<Result<SearchResultValue>, SearchQuery>
@@ -659,7 +654,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       synchronized (lock) {
         closed = true;

@@ -55,7 +55,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -139,7 +138,7 @@ public class GroupByQueryEngine
             new Closeable()
             {
               @Override
-              public void close() throws IOException
+              public void close()
               {
                 CloseQuietly.close(bufferHolder);
               }

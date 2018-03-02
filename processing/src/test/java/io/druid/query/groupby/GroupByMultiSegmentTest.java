@@ -305,7 +305,7 @@ public class GroupByMultiSegmentTest
   }
 
   @Test
-  public void testHavingAndNoLimitPushDown() throws Exception
+  public void testHavingAndNoLimitPushDown()
   {
     QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
     QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(

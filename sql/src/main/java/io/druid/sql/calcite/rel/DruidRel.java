@@ -128,7 +128,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
     return new Node()
     {
       @Override
-      public void run() throws InterruptedException
+      public void run()
       {
         runQuery().accumulate(
             sink,

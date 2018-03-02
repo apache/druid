@@ -28,7 +28,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -40,7 +39,7 @@ public class ReferenceCountingSegmentTest
   private ExecutorService exec;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     segment = new ReferenceCountingSegment(
         new AbstractSegment()
@@ -70,7 +69,7 @@ public class ReferenceCountingSegmentTest
           }
 
           @Override
-          public void close() throws IOException
+          public void close()
           {
           }
         }

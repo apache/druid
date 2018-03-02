@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -196,13 +195,13 @@ public class MySQLConnector extends SQLMetadataConnector
       final String valueColumn,
       final String key,
       final byte[] value
-  ) throws Exception
+  )
   {
     return getDBI().withHandle(
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(
                 StringUtils.format(

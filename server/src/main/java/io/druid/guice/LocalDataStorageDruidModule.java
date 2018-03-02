@@ -32,7 +32,6 @@ import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentFinder;
 import io.druid.segment.loading.LocalDataSegmentKiller;
-import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
@@ -72,11 +71,6 @@ public class LocalDataStorageDruidModule implements DruidModule
              .addBinding(LocalFileTimestampVersionFinder.URI_SCHEME)
              .to(LocalFileTimestampVersionFinder.class)
              .in(LazySingleton.class);
-
-    Binders.dataSegmentPullerBinder(binder)
-           .addBinding(SCHEME)
-           .to(LocalDataSegmentPuller.class)
-           .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(DataSegmentKiller.class))
             .addBinding(SCHEME)

@@ -97,7 +97,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -113,7 +112,7 @@ import java.util.stream.Collectors;
 public class TopNQueryRunnerTest
 {
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
     List<Object[]> parameters = new ArrayList<>();
@@ -136,7 +135,7 @@ public class TopNQueryRunnerTest
     return parameters;
   }
 
-  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners() throws IOException
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
     retVal.addAll(
@@ -2312,7 +2311,7 @@ public class TopNQueryRunnerTest
 
 
   @Test
-  public void testTopNDimExtractionToOne() throws IOException
+  public void testTopNDimExtractionToOne()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)

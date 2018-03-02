@@ -41,8 +41,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -57,9 +55,10 @@ import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import io.druid.server.metrics.MonitorsConfig;
@@ -804,7 +803,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
  */
 class QuotableWhiteSpaceSplitter implements Iterable<String>
 {
-  private static final Logger LOG = new Logger(QuotableWhiteSpaceSplitter.class);
   private final String string;
 
   public QuotableWhiteSpaceSplitter(String string)

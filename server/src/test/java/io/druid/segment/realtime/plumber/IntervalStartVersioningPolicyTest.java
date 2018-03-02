@@ -28,7 +28,7 @@ import org.junit.Test;
 public class IntervalStartVersioningPolicyTest
 {
   @Test
-  public void testGetVersion() throws Exception
+  public void testGetVersion()
   {
     IntervalStartVersioningPolicy policy = new IntervalStartVersioningPolicy();
     String version = policy.getVersion(Intervals.of("2013-01-01/2013-01-02"));

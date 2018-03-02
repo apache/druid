@@ -92,7 +92,7 @@ public class EmitterTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     httpClient = new MockHttpClient();
   }
@@ -187,7 +187,7 @@ public class EmitterTest
     return emitter;
   }
 
-  private HttpPostEmitter manualFlushEmitterWithBatchSizeAndBufferSize(int batchSize, long bufferSize)
+  private HttpPostEmitter manualFlushEmitterWithBatchSize(int batchSize)
   {
     HttpEmitterConfig config = new HttpEmitterConfig.Builder(TARGET_URL)
         .setFlushMillis(Long.MAX_VALUE)
@@ -482,7 +482,7 @@ public class EmitterTest
         new UnitEvent(bigString, 4)
     );
     final AtomicInteger counter = new AtomicInteger();
-    emitter = manualFlushEmitterWithBatchSizeAndBufferSize(1024 * 1024, 5 * 1024 * 1024);
+    emitter = manualFlushEmitterWithBatchSize(1024 * 1024);
     Assert.assertEquals(0, emitter.getTotalEmittedEvents());
 
     httpClient.setGoHandler(

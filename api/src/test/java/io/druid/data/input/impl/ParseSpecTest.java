@@ -29,7 +29,7 @@ import java.util.Collections;
 public class ParseSpecTest
 {
   @Test(expected = ParseException.class)
-  public void testDuplicateNames() throws Exception
+  public void testDuplicateNames()
   {
     @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
@@ -52,7 +52,7 @@ public class ParseSpecTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testDimAndDimExcluOverlap() throws Exception
+  public void testDimAndDimExcluOverlap()
   {
     @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
@@ -75,7 +75,7 @@ public class ParseSpecTest
   }
 
   @Test
-  public void testDimExclusionDuplicate() throws Exception
+  public void testDimExclusionDuplicate()
   {
     @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(

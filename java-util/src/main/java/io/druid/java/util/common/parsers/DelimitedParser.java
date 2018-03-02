@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.List;
 
 public class DelimitedParser extends AbstractFlatTextFormatParser
@@ -72,13 +71,8 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
     setFieldNames(header);
   }
 
-  public String getDelimiter()
-  {
-    return delimiter;
-  }
-
   @Override
-  protected List<String> parseLine(String input) throws IOException
+  protected List<String> parseLine(String input)
   {
     return splitter.splitToList(input);
   }
