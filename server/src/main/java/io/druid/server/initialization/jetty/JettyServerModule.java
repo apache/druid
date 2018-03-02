@@ -74,6 +74,7 @@ import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
+import org.joda.time.Period;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
@@ -376,8 +377,22 @@ public class JettyServerModule extends JerseyServletModule
           public void stop()
           {
             try {
-              log.info("Stopping jetty server...");
+              final Period unannounceDelay = config.getUnannouncePropogationDelay();
+              if (unannounceDelay != null) {
+                final long waitTime = unannounceDelay.toStandardDuration().getMillis();
+                if (waitTime > 0) {
+                  log.info("Waiting %s for unannouncement to propogate.", unannounceDelay);
+                  Thread.sleep(unannounceDelay.toStandardDuration().getMillis());
+                } else {
+                  log.debug("Skipping unannounce wait.");
+                }
+              }
+              log.info("Stopping Jetty Server...");
               server.stop();
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new RE(e, "Interrupted waiting for jetty shutdown.");
             }
             catch (Exception e) {
               log.warn(e, "Unable to stop Jetty server.");

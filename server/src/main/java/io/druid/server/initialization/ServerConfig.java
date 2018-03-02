@@ -64,6 +64,10 @@ public class ServerConfig
   @NotNull
   private Period gracefulShutdownTimeout = new Period("PT15s");
 
+  @JsonProperty
+  @NotNull
+  private Period unannouncePropogationDelay = Period.ZERO;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -109,6 +113,11 @@ public class ServerConfig
     return gracefulShutdownTimeout;
   }
 
+  public Period getUnannouncePropogationDelay()
+  {
+    return unannouncePropogationDelay;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -127,7 +136,8 @@ public class ServerConfig
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            Objects.equals(maxIdleTime, that.maxIdleTime) &&
-           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout);
+           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
+           Objects.equals(unannouncePropogationDelay, that.unannouncePropogationDelay);
   }
 
   @Override
@@ -143,7 +153,8 @@ public class ServerConfig
         maxScatterGatherBytes,
         maxQueryTimeout,
         maxRequestHeaderSize,
-        gracefulShutdownTimeout
+        gracefulShutdownTimeout,
+        unannouncePropogationDelay
     );
   }
 
@@ -160,6 +171,7 @@ public class ServerConfig
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
+           ", unannouncePropogationDelay=" + unannouncePropogationDelay +
            '}';
   }
 }
