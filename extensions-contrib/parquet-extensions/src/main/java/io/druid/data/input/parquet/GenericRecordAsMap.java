@@ -19,11 +19,13 @@
 package io.druid.data.input.parquet;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -89,6 +91,9 @@ public class GenericRecordAsMap implements Map<String, Object>
   public Object get(Object key)
   {
     Object field = record.get(key.toString());
+    if (field instanceof ArrayList) {
+      return Lists.transform((ArrayList) field, item -> String.valueOf(((GenericRecord) item).get(0)));
+    }
     if (field instanceof ByteBuffer) {
       if (binaryAsString) {
         return StringUtils.fromUtf8(((ByteBuffer) field).array());
