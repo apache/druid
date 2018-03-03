@@ -104,7 +104,7 @@ public class FileFetcher<T> extends Fetcher<T>
           retryCondition,
           outFile::delete,
           maxFetchRetry + 1,
-          StringUtils.format("Failed to downloadWithRetry object[%s]", object)
+          StringUtils.format("Failed to download object[%s]", object)
       );
     }
     catch (Exception e) {

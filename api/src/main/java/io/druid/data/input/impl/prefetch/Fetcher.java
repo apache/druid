@@ -233,7 +233,7 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
       // We use them first. See (*).
       return new OpenedObject<>(fetchedFiles.poll());
     } else if (cacheManager.cacheable()) {
-      // If cache is enabled, first downloadWithRetry an object to local storage and cache it.
+      // If cache is enabled, first download an object to local storage and cache it.
       try {
         // Since maxFetchCapacityBytes is 0, at most one file is fetched.
         fetch();
