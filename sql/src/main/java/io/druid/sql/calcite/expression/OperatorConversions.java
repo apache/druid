@@ -20,6 +20,7 @@
 package io.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
+import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.rex.RexCall;
@@ -131,18 +132,16 @@ public class OperatorConversions
 
     public OperatorBuilder returnType(final SqlTypeName typeName)
     {
-      this.returnTypeInference = ReturnTypes.explicit(typeName);
+      this.returnTypeInference = ReturnTypes.explicit(
+          factory -> Calcites.createSqlType(factory, typeName)
+      );
       return this;
     }
 
     public OperatorBuilder nullableReturnType(final SqlTypeName typeName)
     {
       this.returnTypeInference = ReturnTypes.explicit(
-          factory ->
-              factory.createTypeWithNullability(
-                  factory.createSqlType(typeName),
-                  true
-              )
+          factory -> Calcites.createSqlTypeWithNullability(factory, typeName, true)
       );
       return this;
     }
