@@ -33,6 +33,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -343,8 +344,8 @@ public class MemcachedCache implements Cache
           // (approx < 5% difference in counts across nodes, with 5 cache nodes)
           .setKetamaNodeRepetitions(1000)
           .setHashAlg(MURMUR3_128)
-          .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-          .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+          .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(StringUtils.toUpperCase(config.getProtocol())))
+          .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(StringUtils.toUpperCase(config.getLocator())))
           .setDaemon(true)
           .setFailureMode(FailureMode.Cancel)
           .setTranscoder(transcoder)

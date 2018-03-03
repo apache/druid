@@ -24,14 +24,14 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
-import io.druid.sql.calcite.planner.Calcites;
+import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -46,7 +46,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
 
-public class DruidStatementTest
+public class DruidStatementTest extends CalciteTestBase
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -60,7 +60,6 @@ public class DruidStatementTest
   @Before
   public void setUp() throws Exception
   {
-    Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(
@@ -162,7 +161,7 @@ public class DruidStatementTest
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {
     }).prepare(plannerFactory, sql, -1, AllowAllAuthenticator.ALLOW_ALL_RESULT);
-    
+
     // First frame, ask for 2 rows.
     Meta.Frame frame = statement.execute().nextFrame(DruidStatement.START_OFFSET, 2);
     Assert.assertEquals(
