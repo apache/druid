@@ -47,13 +47,13 @@ public class FileFetcher<T> extends Fetcher<T>
   private final ObjectOpenFunction<T> openObjectFunction;
   private final Predicate<Throwable> retryCondition;
   private final byte[] buffer;
+  // maximum retry for fetching an object from the remote site
+  private final int maxFetchRetry;
 
-  public int getMaxFetchRetries()
+  public int getMaxFetchRetry()
   {
-    return maxFetchRetries;
+    return maxFetchRetry;
   }
-
-  private int maxFetchRetries;
 
   FileFetcher(
       CacheManager<T> cacheManager,
@@ -62,7 +62,8 @@ public class FileFetcher<T> extends Fetcher<T>
       @Nullable File temporaryDirectory,
       PrefetchConfig prefetchConfig,
       ObjectOpenFunction<T> openObjectFunction,
-      Predicate<Throwable> retryCondition
+      Predicate<Throwable> retryCondition,
+      Integer maxFetchRetries
   )
   {
 
@@ -77,11 +78,11 @@ public class FileFetcher<T> extends Fetcher<T>
     this.openObjectFunction = openObjectFunction;
     this.retryCondition = retryCondition;
     this.buffer = new byte[BUFFER_SIZE];
-    this.maxFetchRetries = prefetchConfig.getMaxFetchRetry();
+    this.maxFetchRetry = maxFetchRetries;
   }
 
   /**
-   * Downloads an object. It retries downloading {@link PrefetchConfig#maxFetchRetry}
+   * Downloads an object. It retries downloading {@link #maxFetchRetry}
    * times and throws an exception.
    *
    * @param object  an object to be downloaded
@@ -102,7 +103,7 @@ public class FileFetcher<T> extends Fetcher<T>
           },
           retryCondition,
           outFile::delete,
-          maxFetchRetries + 1,
+          maxFetchRetry + 1,
           StringUtils.format("Failed to downloadWithRetry object[%s]", object)
       );
     }
@@ -120,7 +121,7 @@ public class FileFetcher<T> extends Fetcher<T>
   {
     return new OpenedObject<>(
         object,
-        new RetryingInputStream<>(object, openObjectFunction, retryCondition, getMaxFetchRetries()),
+        new RetryingInputStream<>(object, openObjectFunction, retryCondition, getMaxFetchRetry()),
         getNoopCloser()
     );
   }

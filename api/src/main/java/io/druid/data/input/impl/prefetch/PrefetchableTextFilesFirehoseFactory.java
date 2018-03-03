@@ -61,7 +61,7 @@ import java.util.concurrent.TimeUnit;
  * smaller than {@link PrefetchConfig#prefetchTriggerBytes}, a background prefetch thread automatically starts to fetch remaining
  * objects.
  * <br/>
- * - Retry: if an exception occurs while downloading an object, it retries again up to {@link PrefetchConfig#maxFetchRetry}.
+ * - Retry: if an exception occurs while downloading an object, it retries again up to {@link #maxFetchRetry}.
  * <p/>
  * <p>
  * This implementation can be useful when the cost for reading input objects is large as reading from AWS S3 because
@@ -95,6 +95,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   private final PrefetchConfig prefetchConfig;
 
   private List<T> objects;
+  private final int maxFetchRetry;
 
   public PrefetchableTextFilesFirehoseFactory(
       Long maxCacheCapacityBytes,
@@ -108,12 +109,12 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
         maxCacheCapacityBytes,
         maxFetchCapacityBytes,
         prefetchTriggerBytes,
-        fetchTimeout,
-        maxFetchRetry
+        fetchTimeout
     );
     this.cacheManager = new CacheManager<>(
         prefetchConfig.getMaxCacheCapacityBytes()
     );
+    this.maxFetchRetry = maxFetchRetry;
   }
 
   @JsonProperty
@@ -143,7 +144,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
   @JsonProperty
   public int getMaxFetchRetry()
   {
-    return prefetchConfig.getMaxFetchRetry();
+    return maxFetchRetry;
   }
 
   @VisibleForTesting
@@ -197,7 +198,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
             return openObjectStream(object, start);
           }
         },
-        getRetryCondition()
+        getRetryCondition(),
+        getMaxFetchRetry()
     );
 
     return new FileIteratingFirehose(

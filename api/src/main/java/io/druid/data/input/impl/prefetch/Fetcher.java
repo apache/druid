@@ -57,11 +57,6 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
 
   private final boolean prefetchEnabled;
 
-  // A roughly max size of total fetched objects, but the actual fetched size can be bigger. The reason is our current
-  // client implementations for cloud storages like s3 don't support range scan yet, so we must download the whole file
-  // at once. It's still possible for the size of cached/fetched data to not exceed these variables by estimating the
-  // after-fetch size, but it makes us consider the case when any files cannot be fetched due to their large size, which
-  // makes the implementation complicated.
   private final LinkedBlockingQueue<FetchedFile<T>> fetchedFiles = new LinkedBlockingQueue<>();
 
   // Number of bytes of current fetched files.

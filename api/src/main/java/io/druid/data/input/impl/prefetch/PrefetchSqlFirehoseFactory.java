@@ -100,7 +100,6 @@ public abstract class PrefetchSqlFirehoseFactory<T>
       Long maxFetchCapacityBytes,
       Long prefetchTriggerBytes,
       Long fetchTimeout,
-      Integer maxFetchRetry,
       ObjectMapper objectMapper
   )
   {
@@ -108,8 +107,7 @@ public abstract class PrefetchSqlFirehoseFactory<T>
         maxCacheCapacityBytes,
         maxFetchCapacityBytes,
         prefetchTriggerBytes,
-        fetchTimeout,
-        maxFetchRetry
+        fetchTimeout
     );
     this.cacheManager = new CacheManager<>(
         prefetchConfig.getMaxCacheCapacityBytes()
@@ -139,12 +137,6 @@ public abstract class PrefetchSqlFirehoseFactory<T>
   public long getFetchTimeout()
   {
     return prefetchConfig.getFetchTimeout();
-  }
-
-  @JsonProperty
-  public int getMaxFetchRetry()
-  {
-    return prefetchConfig.getMaxFetchRetry();
   }
 
   @VisibleForTesting

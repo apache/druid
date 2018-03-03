@@ -44,15 +44,12 @@ public class PrefetchConfig
   // timeout for fetching an object from the remote site
   private final long fetchTimeout;
 
-  // maximum retry for fetching an object from the remote site
-  private final int maxFetchRetry;
 
   public PrefetchConfig(
       Long maxCacheCapacityBytes,
       Long maxFetchCapacityBytes,
       Long prefetchTriggerBytes,
-      Long fetchTimeout,
-      Integer maxFetchRetry
+      Long fetchTimeout
   )
   {
     this.maxCacheCapacityBytes = maxCacheCapacityBytes == null
@@ -65,7 +62,6 @@ public class PrefetchConfig
                                 ? this.maxFetchCapacityBytes / 2
                                 : prefetchTriggerBytes;
     this.fetchTimeout = fetchTimeout == null ? DEFAULT_FETCH_TIMEOUT_MS : fetchTimeout;
-    this.maxFetchRetry = maxFetchRetry == null ? DEFAULT_MAX_FETCH_RETRY : maxFetchRetry;
   }
 
   public long getMaxCacheCapacityBytes()
@@ -86,11 +82,6 @@ public class PrefetchConfig
   public long getFetchTimeout()
   {
     return fetchTimeout;
-  }
-
-  public int getMaxFetchRetry()
-  {
-    return maxFetchRetry;
   }
 
 }

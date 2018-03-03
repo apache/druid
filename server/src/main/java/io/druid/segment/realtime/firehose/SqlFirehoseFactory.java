@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.google.common.base.Preconditions;
 import io.druid.data.input.impl.prefetch.PrefetchSqlFirehoseFactory;
 import io.druid.guice.annotations.Smile;
 import io.druid.metadata.SQLMetadataConnector;
@@ -48,6 +49,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
   private final List<String> sqls;
   private final ObjectMapper objectMapper;
   private final SQLMetadataConnector sqlMetadataConnector;
+  private final Boolean foldCase;
 
   @JsonCreator
   public SqlFirehoseFactory(
@@ -56,7 +58,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
-      @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
+      @JsonProperty("foldCase") Boolean foldCase,
       @JacksonInject SQLMetadataConnector sqlMetadataConnector,
       @JacksonInject @Smile ObjectMapper objectMapper
   )
@@ -66,17 +68,21 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
         maxFetchCapacityBytes,
         prefetchTriggerBytes,
         fetchTimeout,
-        maxFetchRetry,
         objectMapper
     );
+
+    Preconditions.checkArgument(sql.size() > 0, "No SQL queries provided");
+
     this.sqls = sql;
     this.objectMapper = objectMapper;
     this.sqlMetadataConnector = sqlMetadataConnector;
+    this.foldCase = (foldCase == null ? false : true);
   }
 
   @Override
   protected InputStream openObjectStream(String object, File fileName) throws IOException
   {
+    Preconditions.checkNotNull(sqlMetadataConnector, "SQL Metadata Connector not configured!");
     try (FileOutputStream fos = new FileOutputStream(fileName)) {
       sqlMetadataConnector.retryWithHandle(
           (handle) -> {
@@ -84,7 +90,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
                 object
             ).map(
                 (index, r, ctx) -> {
-                  Map<String, Object> resultRow = new HashMap<>();
+                  Map<String, Object> resultRow = foldCase ? new CaseFoldedMap() : new HashMap<>();
                   ResultSetMetaData resultMetadata;
                   try {
                     resultMetadata = r.getMetaData();
@@ -116,6 +122,29 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
     }
     return new FileInputStream(fileName);
 
+  }
+
+  private static class CaseFoldedMap extends HashMap<String, Object>
+  {
+    public static final long serialVersionUID = 1L;
+
+    @Override
+    public Object get(Object obj)
+    {
+      return super.get(((String) obj).toLowerCase());
+    }
+
+    @Override
+    public Object put(String key, Object value)
+    {
+      return super.put(key.toLowerCase(), value);
+    }
+
+    @Override
+    public boolean containsKey(Object obj)
+    {
+      return super.containsKey(((String) obj).toLowerCase());
+    }
   }
 
   @Override
