@@ -60,8 +60,15 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
         .setNumberOfValues(numberOfValues).buildUnion(region);
   }
 
+  /**
+   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * https://github.com/druid-io/druid/pull/3956
+   * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
+   * representing the current state of the aggregation, and is not affected by consequent
+   * aggregate() calls
+   */
   @Override
-  public void aggregate(final ByteBuffer buf, final int position)
+  public synchronized void aggregate(final ByteBuffer buf, final int position)
   {
     final ArrayOfDoublesSketch update = selector.getObject();
     if (update == null) {
@@ -73,8 +80,15 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
     union.update(update);
   }
 
+  /**
+   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * https://github.com/druid-io/druid/pull/3956
+   * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
+   * representing the current state of the aggregation, and is not affected by consequent
+   * aggregate() calls
+   */
   @Override
-  public Object get(final ByteBuffer buf, final int position)
+  public synchronized Object get(final ByteBuffer buf, final int position)
   {
     final WritableMemory mem = WritableMemory.wrap(buf);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
