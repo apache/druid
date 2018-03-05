@@ -48,8 +48,8 @@ public class TaskStatusPlusTest
     final TaskStatusPlus status = new TaskStatusPlus(
         "testId",
         "testType",
-        DateTime.now(),
-        DateTime.now(),
+        DateTimes.nowUtc(),
+        DateTimes.nowUtc(),
         TaskState.RUNNING,
         1000L,
         TaskLocation.create("testHost", 1010, -1)
