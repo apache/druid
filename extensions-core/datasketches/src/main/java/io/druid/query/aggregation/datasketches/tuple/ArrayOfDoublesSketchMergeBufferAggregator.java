@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
+import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
@@ -29,14 +30,20 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 
 public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregator
 {
+
+  private static final int NUM_STRIPES = 64; // for locking per buffer position
 
   private final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector;
   private final int nominalEntries;
   private final int numberOfValues;
   private final int maxIntermediateSize;
+  private Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   public ArrayOfDoublesSketchMergeBufferAggregator(
       final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
@@ -61,39 +68,49 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   }
 
   /**
-   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * This method uses locks because Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
    * representing the current state of the aggregation, and is not affected by consequent
    * aggregate() calls
    */
   @Override
-  public synchronized void aggregate(final ByteBuffer buf, final int position)
+  public void aggregate(final ByteBuffer buf, final int position)
   {
-    final ArrayOfDoublesSketch update = selector.getObject();
-    if (update == null) {
-      return;
+    final Lock lock = stripedLock.get(Objects.hash(buf, position)).writeLock();
+    try {
+      final ArrayOfDoublesSketch update = selector.getObject();
+      if (update == null) {
+        return;
+      }
+      final WritableMemory mem = WritableMemory.wrap(buf);
+      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
+      final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
+      union.update(update);
+    } finally {
+      lock.unlock();
     }
-    final WritableMemory mem = WritableMemory.wrap(buf);
-    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
-    union.update(update);
   }
 
   /**
-   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * This method uses locks because Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
    * representing the current state of the aggregation, and is not affected by consequent
    * aggregate() calls
    */
   @Override
-  public synchronized Object get(final ByteBuffer buf, final int position)
+  public Object get(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf);
-    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
-    return union.getResult();
+    final Lock lock = stripedLock.get(Objects.hash(buf, position)).readLock();
+    try {
+      final WritableMemory mem = WritableMemory.wrap(buf);
+      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
+      final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
+      return union.getResult();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override

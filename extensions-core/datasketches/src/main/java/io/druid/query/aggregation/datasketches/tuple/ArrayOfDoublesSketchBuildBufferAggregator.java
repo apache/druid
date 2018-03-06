@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
+import com.google.common.util.concurrent.Striped;
 import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
@@ -31,15 +32,21 @@ import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 
 public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregator
 {
+
+  private static final int NUM_STRIPES = 64; // for locking per buffer position
 
   private final DimensionSelector keySelector;
   private final BaseDoubleColumnValueSelector[] valueSelectors;
   private final int nominalEntries;
   private final int maxIntermediateSize;
   private final double[] values; // for sketch update call
+  private Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   public ArrayOfDoublesSketchBuildBufferAggregator(
       final DimensionSelector keySelector,
@@ -66,40 +73,50 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   }
 
   /**
-   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * This method uses locks because Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    */
   @Override
-  public synchronized void aggregate(final ByteBuffer buf, final int position)
+  public void aggregate(final ByteBuffer buf, final int position)
   {
-    final IndexedInts keys = keySelector.getRow();
-    final WritableMemory mem = WritableMemory.wrap(buf);
-    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
-    for (int i = 0; i < valueSelectors.length; i++) {
-      values[i] = valueSelectors[i].getDouble();
-    }
-    for (int i = 0; i < keys.size(); i++) {
-      final String key = keySelector.lookupName(keys.get(i));
-      sketch.update(key, values);
+    final Lock lock = stripedLock.get(Objects.hash(buf, position)).writeLock();
+    try {
+      final IndexedInts keys = keySelector.getRow();
+      final WritableMemory mem = WritableMemory.wrap(buf);
+      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
+      final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
+      for (int i = 0; i < valueSelectors.length; i++) {
+        values[i] = valueSelectors[i].getDouble();
+      }
+      for (int i = 0; i < keys.size(); i++) {
+        final String key = keySelector.lookupName(keys.get(i));
+        sketch.update(key, values);
+      }
+    } finally {
+      lock.unlock();
     }
   }
 
   /**
-   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * This method uses locks because Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
    * representing the current state of the aggregation, and is not affected by consequent
    * aggregate() calls
    */
   @Override
-  public synchronized Object get(final ByteBuffer buf, final int position)
+  public Object get(final ByteBuffer buf, final int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf);
-    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final ArrayOfDoublesUpdatableSketch sketch = (ArrayOfDoublesUpdatableSketch) ArrayOfDoublesSketches
-        .wrapSketch(region);
-    return sketch.compact();
+    final Lock lock = stripedLock.get(Objects.hash(buf, position)).readLock();
+    try {
+      final WritableMemory mem = WritableMemory.wrap(buf);
+      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
+      final ArrayOfDoublesUpdatableSketch sketch = (ArrayOfDoublesUpdatableSketch) ArrayOfDoublesSketches
+          .wrapSketch(region);
+      return sketch.compact();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
