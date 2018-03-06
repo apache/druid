@@ -19,6 +19,7 @@
 
 package io.druid.firehose.s3;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -36,7 +37,6 @@ import io.druid.initialization.DruidModule;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -95,7 +95,7 @@ public class StaticS3FirehoseFactoryTest
     {
       // Deserializer is need for AmazonS3Client even though it is injected.
       // See https://github.com/FasterXML/jackson-databind/issues/962.
-      return ImmutableList.of(new SimpleModule().addDeserializer(AmazonS3Client.class, new ItemDeserializer()));
+      return ImmutableList.of(new SimpleModule().addDeserializer(AmazonS3.class, new ItemDeserializer()));
     }
 
     @Override
@@ -105,13 +105,13 @@ public class StaticS3FirehoseFactoryTest
     }
 
     @Provides
-    public AmazonS3Client getAmazonS3Client()
+    public AmazonS3 getAmazonS3Client()
     {
       return SERVICE;
     }
   }
 
-  public static class ItemDeserializer extends StdDeserializer<AmazonS3Client>
+  public static class ItemDeserializer extends StdDeserializer<AmazonS3>
   {
     public ItemDeserializer()
     {
@@ -124,9 +124,7 @@ public class StaticS3FirehoseFactoryTest
     }
 
     @Override
-    public AmazonS3Client deserialize(
-        JsonParser jp, DeserializationContext ctxt
-    ) throws IOException
+    public AmazonS3 deserialize(JsonParser jp, DeserializationContext ctxt)
     {
       throw new UnsupportedOperationException();
     }
