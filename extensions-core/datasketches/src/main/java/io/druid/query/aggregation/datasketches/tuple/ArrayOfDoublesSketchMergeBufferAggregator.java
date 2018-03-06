@@ -74,14 +74,15 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
+    final ArrayOfDoublesSketch update = selector.getObject();
+    if (update == null) {
+      return;
+    }
+    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final Lock lock = stripedLock.get(Objects.hash(buf, position)).writeLock();
+    lock.lock();
     try {
-      final ArrayOfDoublesSketch update = selector.getObject();
-      if (update == null) {
-        return;
-      }
-      final WritableMemory mem = WritableMemory.wrap(buf);
-      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
       union.update(update);
     }
@@ -100,10 +101,11 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
+    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final Lock lock = stripedLock.get(Objects.hash(buf, position)).readLock();
+    lock.lock();
     try {
-      final WritableMemory mem = WritableMemory.wrap(buf);
-      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
       return union.getResult();
     }

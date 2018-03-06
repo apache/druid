@@ -79,15 +79,16 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
+    for (int i = 0; i < valueSelectors.length; i++) {
+      values[i] = valueSelectors[i].getDouble();
+    }
+    final IndexedInts keys = keySelector.getRow();
+    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final Lock lock = stripedLock.get(Objects.hash(buf, position)).writeLock();
+    lock.lock();
     try {
-      final IndexedInts keys = keySelector.getRow();
-      final WritableMemory mem = WritableMemory.wrap(buf);
-      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
       final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
-      for (int i = 0; i < valueSelectors.length; i++) {
-        values[i] = valueSelectors[i].getDouble();
-      }
       for (int i = 0; i < keys.size(); i++) {
         final String key = keySelector.lookupName(keys.get(i));
         sketch.update(key, values);
@@ -108,10 +109,11 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
+    final WritableMemory mem = WritableMemory.wrap(buf);
+    final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
     final Lock lock = stripedLock.get(Objects.hash(buf, position)).readLock();
+    lock.lock();
     try {
-      final WritableMemory mem = WritableMemory.wrap(buf);
-      final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
       final ArrayOfDoublesUpdatableSketch sketch = (ArrayOfDoublesUpdatableSketch) ArrayOfDoublesSketches
           .wrapSketch(region);
       return sketch.compact();
