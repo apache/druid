@@ -70,9 +70,6 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   /**
    * This method uses locks because Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
-   * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
-   * representing the current state of the aggregation, and is not affected by consequent
-   * aggregate() calls
    */
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
