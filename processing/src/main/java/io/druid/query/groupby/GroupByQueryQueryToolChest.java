@@ -47,6 +47,7 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
+import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
@@ -162,47 +163,45 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   )
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
-
     final DataSource dataSource = query.getDataSource();
-
     if (dataSource instanceof QueryDataSource) {
       final GroupByQuery subquery;
       try {
-        // Inject outer query context keys into subquery if they don't already exist in the subquery context.
-        // Unlike withOverriddenContext's normal behavior, we want keys present in the subquery to win.
-        final Map<String, Object> subqueryContext = Maps.newTreeMap();
-        if (query.getContext() != null) {
-          for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
-            if (entry.getValue() != null) {
-              subqueryContext.put(entry.getKey(), entry.getValue());
-            }
-          }
+        boolean pushDownQuery = shouldPushDownQuery(query);
+        if (pushDownQuery) {
+          GroupByQuery innerMostQuery = getInnerMostQuery(query);
+          GroupByQuery.Builder innerQueryBuilder = new GroupByQuery.Builder(innerMostQuery);
+          GroupByQuery.Builder pushDownQueryBuilder = new GroupByQuery.Builder(query);
+          // Unset the push down nested query flag so that the historical doesn't erroneously end up pushing down the query itself
+          pushDownQueryBuilder.overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false));
+          GroupByQuery queryToPushDown = pushDownQueryBuilder.build();
+          innerQueryBuilder.setQueryToPushDown(queryToPushDown);
+          GroupByQuery newInnerQuery = innerQueryBuilder.build();
+          Sequence<Row> pushDownQueryResults = groupByStrategy.mergeResults(runner, newInnerQuery, context);
+          return groupByStrategy.processSubqueryResult(newInnerQuery, queryToPushDown, resource, pushDownQueryResults);
         }
-        if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
-          subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
-        }
-        subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
+        final Map<String, Object> subqueryContext = getSubqueryContext(query, (QueryDataSource) dataSource);
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
       }
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
       }
 
+      GroupByQuery.Builder subqueryBuilder = new GroupByQuery.Builder(subquery);
+      subqueryBuilder.overrideContext(ImmutableMap.<String, Object>of(
+          //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
+          //in the end when returning results to user. (note this is only respected by groupBy v1)
+          GroupByQueryHelper.CTX_KEY_SORT_RESULTS,
+          false
+      ));
+      GroupByQuery newSubquery = subqueryBuilder.build();
       final Sequence<Row> subqueryResult = mergeGroupByResults(
           groupByStrategy,
-          subquery.withOverriddenContext(
-              ImmutableMap.<String, Object>of(
-                  //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                  //in the end when returning results to user. (note this is only respected by groupBy v1)
-                  GroupByQueryHelper.CTX_KEY_SORT_RESULTS,
-                  false
-              )
-          ),
+          newSubquery,
           resource,
           runner,
           context
       );
-
       final Sequence<Row> finalizingResults;
       if (QueryContexts.isFinalize(subquery, false)) {
         finalizingResults = new MappedSequence<>(
@@ -215,11 +214,47 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       } else {
         finalizingResults = subqueryResult;
       }
-
-      return groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults);
+      return groupByStrategy.processSubqueryResult(newSubquery, query, resource, finalizingResults);
     } else {
       return groupByStrategy.mergeResults(runner, query, context);
     }
+  }
+
+  public static boolean shouldPushDownQuery(GroupByQuery q)
+  {
+    return QueryContexts.parseBoolean(q, GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false);
+  }
+
+  private static GroupByQuery getInnerMostQuery(GroupByQuery query)
+  {
+    if (query.getDataSource() instanceof TableDataSource) {
+      return query;
+    }
+    QueryDataSource queryDataSource = (QueryDataSource) query.getDataSource();
+    // Make sure that we pass down the context values to the inner most query
+    final Map<String, Object> newSubQueryContext = getSubqueryContext(query, queryDataSource);
+    GroupByQuery subquery = (GroupByQuery) queryDataSource.getQuery();
+    subquery = subquery.withOverriddenContext(newSubQueryContext);
+    return getInnerMostQuery(subquery);
+  }
+
+  private static Map<String, Object> getSubqueryContext(GroupByQuery query, QueryDataSource dataSource)
+  {
+    final Map<String, Object> subqueryContext = Maps.newTreeMap();
+    // Inject outer query context keys into subquery if they don't already exist in the subquery context.
+    // Unlike withOverriddenContext's normal behavior, we want keys present in the subquery to win.
+    if (query.getContext() != null) {
+      for (Map.Entry<String, Object> entry : query.getContext().entrySet()) {
+        if (entry.getValue() != null) {
+          subqueryContext.put(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+    if (dataSource.getQuery().getContext() != null) {
+      subqueryContext.putAll(dataSource.getQuery().getContext());
+    }
+    subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
+    return subqueryContext;
   }
 
   @Override

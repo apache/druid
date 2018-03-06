@@ -71,7 +71,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
   private final List<File> files = Lists.newArrayList();
   private final List<File> dictionaryFiles = Lists.newArrayList();
-  private final boolean sortHasNonGroupingFields;
+  private final boolean sortHasNonGroupingFields;  //TODO: samarth what to do when there is sorting present different from grouping
 
   private boolean spillingAllowed = false;
 
