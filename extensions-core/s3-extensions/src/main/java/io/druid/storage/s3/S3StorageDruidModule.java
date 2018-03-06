@@ -127,7 +127,7 @@ public class S3StorageDruidModule implements DruidModule
       builder.setEndpointConfiguration(endpointConfiguration);
     }
 
-    return builder.build();
+    return builder.enableForceGlobalBucketAccess().build();
   }
 
   private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
