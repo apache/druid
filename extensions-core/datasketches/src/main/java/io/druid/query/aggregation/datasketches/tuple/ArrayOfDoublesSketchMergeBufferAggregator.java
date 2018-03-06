@@ -84,7 +84,8 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
       final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
       union.update(update);
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -105,7 +106,8 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
       final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
       return union.getResult();
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }

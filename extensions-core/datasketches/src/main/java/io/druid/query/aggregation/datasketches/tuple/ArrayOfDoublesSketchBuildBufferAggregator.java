@@ -92,7 +92,8 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
         final String key = keySelector.lookupName(keys.get(i));
         sketch.update(key, values);
       }
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
@@ -114,7 +115,8 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
       final ArrayOfDoublesUpdatableSketch sketch = (ArrayOfDoublesUpdatableSketch) ArrayOfDoublesSketches
           .wrapSketch(region);
       return sketch.compact();
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
