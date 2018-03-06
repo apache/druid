@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class TaskStatusPlus
 {
@@ -40,7 +41,7 @@ public class TaskStatusPlus
       @JsonProperty("id") String id,
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
-      @JsonProperty("state") @Nullable TaskState state,
+      @JsonProperty("statusCode") @Nullable TaskState state,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location
   )
@@ -74,7 +75,8 @@ public class TaskStatusPlus
     return queueInsertionTime;
   }
 
-  @JsonProperty
+  @Nullable
+  @JsonProperty("statusCode")
   public TaskState getState()
   {
     return state;
@@ -90,5 +92,41 @@ public class TaskStatusPlus
   public TaskLocation getLocation()
   {
     return location;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final TaskStatusPlus that = (TaskStatusPlus) o;
+    if (!id.equals(that.id)) {
+      return false;
+    }
+    if (!createdTime.equals(that.createdTime)) {
+      return false;
+    }
+    if (!queueInsertionTime.equals(that.queueInsertionTime)) {
+      return false;
+    }
+    if (!Objects.equals(state, that.state)) {
+      return false;
+    }
+    if (!Objects.equals(duration, that.duration)) {
+      return false;
+    }
+    return location.equals(that.location);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, createdTime, queueInsertionTime, state, duration, location);
   }
 }
