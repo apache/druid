@@ -218,7 +218,7 @@ public class QueryContexts
     }
   }
 
-  static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
+  public static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
   {
     Object val = query.getContextValue(key);
     if (val == null) {

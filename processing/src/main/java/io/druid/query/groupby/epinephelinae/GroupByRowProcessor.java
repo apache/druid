@@ -49,6 +49,7 @@ import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -67,7 +68,8 @@ public class GroupByRowProcessor
       final GroupByQueryResource resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final boolean wasQueryPushedDown
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -75,7 +77,8 @@ public class GroupByRowProcessor
 
     final AggregatorFactory[] aggregatorFactories = new AggregatorFactory[query.getAggregatorSpecs().size()];
     for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
-      aggregatorFactories[i] = query.getAggregatorSpecs().get(i);
+      AggregatorFactory af = query.getAggregatorSpecs().get(i);
+      aggregatorFactories[i] = wasQueryPushedDown ? af.getCombiningFactory() : af;
     }
 
 
@@ -99,7 +102,17 @@ public class GroupByRowProcessor
                                        ? BooleanValueMatcher.of(true)
                                        : filter.makeMatcher(columnSelectorFactory);
 
-    final FilteredSequence<Row> filteredSequence = new FilteredSequence<>(
+    final FilteredSequence<Row> filteredSequence = wasQueryPushedDown ? new FilteredSequence<>(
+        rows,
+        new Predicate<Row>()
+        {
+          @Override
+          public boolean apply(@Nullable Row row)
+          {
+            return true; // nothing to filter since it has already been done on the push down
+          }
+        }
+    ) : new FilteredSequence<>(
         rows,
         new Predicate<Row>()
         {
@@ -143,7 +156,7 @@ public class GroupByRowProcessor
 
               Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
-                  true,
+                  true, //todo: samarth think about this attribute. I think this might be false in our case?
                   rowSignature,
                   querySpecificConfig,
                   new Supplier<ByteBuffer>()

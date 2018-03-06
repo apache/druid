@@ -71,7 +71,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-public class GroupByStrategyV2 implements GroupByStrategy
+public class                  GroupByStrategyV2 implements GroupByStrategy
 {
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";
@@ -209,6 +209,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
       final Map<String, Object> responseContext
   )
   {
+    final boolean pushDownQuery = query.getPushedDownQuery() != null;
+    //TODO: samarth I don't think we need to worry about queryToUse here
+    final GroupByQuery queryToUse = pushDownQuery ? query.getPushedDownQuery() : query;
+
     // Merge streams using ResultMergeQueryRunner, then apply postaggregators, then apply limit (which may
     // involve materialization)
     final ResultMergeQueryRunner<Row> mergingQueryRunner = new ResultMergeQueryRunner<Row>(baseRunner)
@@ -216,13 +220,13 @@ public class GroupByStrategyV2 implements GroupByStrategy
       @Override
       protected Ordering<Row> makeOrdering(Query<Row> queryParam)
       {
-        return ((GroupByQuery) queryParam).getRowOrdering(true);
+        return (queryToUse).getRowOrdering(true);
       }
 
       @Override
       protected BinaryFn<Row, Row, Row> createMergeFn(Query<Row> queryParam)
       {
-        return new GroupByBinaryFnV2((GroupByQuery) queryParam);
+        return new GroupByBinaryFnV2(queryToUse);
       }
     };
 
@@ -241,7 +245,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         // Don't do "having" clause until the end of this method.
         null,
         query.getLimitSpec(),
-        query.getContext()
+        query.getContext(),
+        query.getPushedDownQuery()
     ).withOverriddenContext(
         ImmutableMap.<String, Object>of(
             "finalize", false,
@@ -264,23 +269,22 @@ public class GroupByStrategyV2 implements GroupByStrategy
           public Row apply(final Row row)
           {
             // Apply postAggregators and fudgeTimestamp if present and if this is the outermost mergeResults.
-
-            if (!query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+            if (!queryToUse.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
               return row;
             }
 
-            if (query.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
+            if (queryToUse.getPostAggregatorSpecs().isEmpty() && fudgeTimestamp == null) {
               return row;
             }
 
             final Map<String, Object> newMap;
 
-            if (query.getPostAggregatorSpecs().isEmpty()) {
+            if (queryToUse.getPostAggregatorSpecs().isEmpty()) {
               newMap = ((MapBasedRow) row).getEvent();
             } else {
               newMap = Maps.newLinkedHashMap(((MapBasedRow) row).getEvent());
 
-              for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+              for (PostAggregator postAggregator : queryToUse.getPostAggregatorSpecs()) {
                 newMap.put(postAggregator.getName(), postAggregator.compute(newMap));
               }
             }
@@ -290,9 +294,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
     );
 
-    // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
-    if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
-      return query.postProcess(rowSequence);
+    // Don't apply limit here for inner results, that will be pushed down to the BufferGrouper
+    if (queryToUse.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
+      return queryToUse.postProcess(rowSequence);
     } else {
       return rowSequence;
     }
@@ -306,15 +310,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
       Sequence<Row> subqueryResult
   )
   {
+    boolean wasQueryPushedDown = subquery.getPushedDownQuery() != null;
     final Sequence<Row> results = GroupByRowProcessor.process(
         query,
         subqueryResult,
-        GroupByQueryHelper.rowSignatureFor(subquery),
+        // Use the nestedQuery to obtain the row signature if it was pushed down to the historical nodes
+        GroupByQueryHelper.rowSignatureFor(wasQueryPushedDown ? subquery.getPushedDownQuery() : subquery),
         configSupplier.get(),
         resource,
         spillMapper,
         processingConfig.getTmpDir(),
-        processingConfig.intermediateComputeSizeBytes()
+        processingConfig.intermediateComputeSizeBytes(),
+        wasQueryPushedDown
     );
     return mergeResults(new QueryRunner<Row>()
     {

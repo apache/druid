@@ -42,6 +42,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
+import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -102,6 +103,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private final boolean applyLimitPushDown;
   private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
+  private final GroupByQuery pushedDownQuery;
 
   @JsonCreator
   public GroupByQuery(
@@ -115,7 +117,8 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("pushedDownQuery") GroupByQuery pushedDownQuery
   )
   {
     this(
@@ -130,7 +133,8 @@ public class GroupByQuery extends BaseQuery<Row>
         havingSpec,
         limitSpec,
         null,
-        context
+        context,
+        pushedDownQuery
     );
   }
 
@@ -167,7 +171,8 @@ public class GroupByQuery extends BaseQuery<Row>
       final HavingSpec havingSpec,
       final LimitSpec limitSpec,
       final @Nullable Function<Sequence<Row>, Sequence<Row>> postProcessingFn,
-      final Map<String, Object> context
+      final Map<String, Object> context,
+      final GroupByQuery pushedDownQuery
   )
   {
     super(dataSource, querySegmentSpec, false, context, granularity);
@@ -198,6 +203,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
     this.applyLimitPushDown = determineApplyLimitPushDown();
+    this.pushedDownQuery = pushedDownQuery;
   }
 
   @JsonProperty
@@ -241,6 +247,9 @@ public class GroupByQuery extends BaseQuery<Row>
   {
     return limitSpec;
   }
+
+  @JsonProperty
+  public GroupByQuery getPushedDownQuery() { return pushedDownQuery; }
 
   @Override
   public boolean hasFilters()
@@ -623,6 +632,13 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public GroupByQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
+    GroupByQuery pushedDownQueryWithSegmentSpec;
+    boolean isPushedDownQuery   = this.getPushedDownQuery() != null;
+    if (isPushedDownQuery) {
+      // In case of nested queries that are pushed down, we need to make sure that segment specs are changed on them too.
+      pushedDownQueryWithSegmentSpec = new Builder(this.getPushedDownQuery()).setQuerySegmentSpec(spec).build();
+      return new Builder(this).setQueryToPushDown(pushedDownQueryWithSegmentSpec).setQuerySegmentSpec(spec).build();
+    }
     return new Builder(this).setQuerySegmentSpec(spec).build();
   }
 
@@ -650,6 +666,10 @@ public class GroupByQuery extends BaseQuery<Row>
   public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
     return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
+  }
+
+  public GroupByQuery withPushedDownQuery(final GroupByQuery q) {
+    return new Builder(this).setQueryToPushDown(q).build();
   }
 
   private static void verifyOutputNames(
@@ -710,6 +730,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
+    private GroupByQuery pushedDownQuery;
 
     public Builder()
     {
@@ -729,6 +750,7 @@ public class GroupByQuery extends BaseQuery<Row>
       limitSpec = query.getLimitSpec();
       postProcessingFn = query.postProcessingFn;
       context = query.getContext();
+      pushedDownQuery = query.getPushedDownQuery();
     }
 
     public Builder(Builder builder)
@@ -747,6 +769,7 @@ public class GroupByQuery extends BaseQuery<Row>
       limit = builder.limit;
       orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);
       context = builder.context;
+      pushedDownQuery = builder.pushedDownQuery;
     }
 
     public Builder setDataSource(DataSource dataSource)
@@ -804,6 +827,12 @@ public class GroupByQuery extends BaseQuery<Row>
       ensureExplicitLimitSpecNotSet();
       this.limit = limit;
       this.postProcessingFn = null;
+      return this;
+    }
+
+    public Builder setQueryToPushDown(GroupByQuery q)
+    {
+      this.pushedDownQuery = q;
       return this;
     }
 
@@ -968,7 +997,8 @@ public class GroupByQuery extends BaseQuery<Row>
           havingSpec,
           theLimitSpec,
           postProcessingFn,
-          context
+          context,
+          pushedDownQuery
       );
     }
   }
