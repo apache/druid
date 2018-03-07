@@ -60,6 +60,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.indexing.common.task.Tasks;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
@@ -303,6 +304,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
     }
     return Joiner.on("_").join(TYPE, dataSource, suffix);
+  }
+
+  @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
   }
 
   @Override
@@ -849,17 +856,13 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
 
       for (SegmentsAndMetadata handedOff : handedOffList) {
-        if (handedOff == null) {
-          log.warn("Handoff failed for segments %s", handedOff.getSegments());
-        } else {
-          log.info(
-              "Handoff completed for segments[%s] with metadata[%s].",
-              Joiner.on(", ").join(
-                  handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
-              ),
-              Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
-          );
-        }
+        log.info(
+            "Handoff completed for segments[%s] with metadata[%s].",
+            Joiner.on(", ").join(
+                handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
+            ),
+            Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
+        );
       }
     }
     catch (InterruptedException | RejectedExecutionException e) {

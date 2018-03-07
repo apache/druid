@@ -51,13 +51,13 @@ import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.filtration.Filtration;
-import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -72,7 +72,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
 
-public class QuantileSqlAggregatorTest
+public class QuantileSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
 
@@ -88,8 +88,6 @@ public class QuantileSqlAggregatorTest
   @Before
   public void setUp() throws Exception
   {
-    Calcites.setSystemProperties();
-
     // Note: this is needed in order to properly register the serde for Histogram.
     new ApproximateHistogramDruidModule().configure(null);
 

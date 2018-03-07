@@ -39,6 +39,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -83,7 +84,17 @@ public class SelectorFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
+    super(
+        testName,
+        ROWS,
+        indexBuilder.schema(
+            new IncrementalIndexSchema.Builder()
+                .withDimensionsSpec(PARSER.getParseSpec().getDimensionsSpec()).build()
+        ),
+        finisher,
+        cnf,
+        optimize
+    );
   }
 
   @AfterClass
@@ -95,10 +106,10 @@ public class SelectorFilterTest extends BaseFilterTest
   @Test
   public void testWithTimeExtractionFnNull()
   {
-    assertFilterMatches(new SelectorDimFilter("dim0", null, new TimeDimExtractionFn("yyyy-mm-dd", "yyyy-mm")), ImmutableList.<String>of());
-    assertFilterMatches(new SelectorDimFilter("dim6", null, new TimeDimExtractionFn("yyyy-mm-dd", "yyyy-mm")), ImmutableList.<String>of("3", "4", "5"));
-    assertFilterMatches(new SelectorDimFilter("dim6", "2017-07", new TimeDimExtractionFn("yyyy-mm-dd", "yyyy-mm")), ImmutableList.<String>of("0", "1"));
-    assertFilterMatches(new SelectorDimFilter("dim6", "2017-05", new TimeDimExtractionFn("yyyy-mm-dd", "yyyy-mm")), ImmutableList.<String>of("2"));
+    assertFilterMatches(new SelectorDimFilter("dim0", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of());
+    assertFilterMatches(new SelectorDimFilter("dim6", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of("3", "4", "5"));
+    assertFilterMatches(new SelectorDimFilter("dim6", "2017-07", new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of("0", "1"));
+    assertFilterMatches(new SelectorDimFilter("dim6", "2017-05", new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)), ImmutableList.of("2"));
   }
 
   @Test

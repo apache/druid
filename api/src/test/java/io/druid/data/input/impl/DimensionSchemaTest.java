@@ -17,23 +17,33 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.http;
+package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
-import io.druid.segment.TestHelper;
-import io.druid.sql.calcite.util.CalciteTestBase;
-import io.druid.sql.http.SqlQuery;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class SqlQueryTest extends CalciteTestBase
+public class DimensionSchemaTest
 {
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   @Test
-  public void testSerde() throws Exception
+  public void testStringDimensionSchemaSerde() throws Exception
   {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final SqlQuery query = new SqlQuery("SELECT 1", SqlQuery.ResultFormat.ARRAY, ImmutableMap.of("useCache", false));
-    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
+    final StringDimensionSchema schema1 = new StringDimensionSchema("foo");
+    Assert.assertEquals(
+        schema1,
+        OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(schema1), DimensionSchema.class)
+    );
+
+    final StringDimensionSchema schema2 = new StringDimensionSchema(
+        "foo",
+        DimensionSchema.MultiValueHandling.ARRAY,
+        false
+    );
+    Assert.assertEquals(
+        schema2,
+        OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(schema2), DimensionSchema.class)
+    );
   }
 }

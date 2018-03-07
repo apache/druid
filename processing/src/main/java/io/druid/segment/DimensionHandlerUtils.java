@@ -62,16 +62,16 @@ public final class DimensionHandlerUtils
   )
   {
     if (capabilities == null) {
-      return new StringDimensionHandler(dimensionName, multiValueHandling);
+      return new StringDimensionHandler(dimensionName, multiValueHandling, true);
     }
 
     multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
 
     if (capabilities.getType() == ValueType.STRING) {
-      if (!capabilities.isDictionaryEncoded() || !capabilities.hasBitmapIndexes()) {
-        throw new IAE("String column must have dictionary encoding and bitmap index.");
+      if (!capabilities.isDictionaryEncoded()) {
+        throw new IAE("String column must have dictionary encoding.");
       }
-      return new StringDimensionHandler(dimensionName, multiValueHandling);
+      return new StringDimensionHandler(dimensionName, multiValueHandling, capabilities.hasBitmapIndexes());
     }
 
     if (capabilities.getType() == ValueType.LONG) {
@@ -87,7 +87,7 @@ public final class DimensionHandlerUtils
     }
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
-    return new StringDimensionHandler(dimensionName, multiValueHandling);
+    return new StringDimensionHandler(dimensionName, multiValueHandling, true);
   }
 
   public static List<ValueType> getValueTypesFromDimensionSpecs(List<DimensionSpec> dimSpecs)

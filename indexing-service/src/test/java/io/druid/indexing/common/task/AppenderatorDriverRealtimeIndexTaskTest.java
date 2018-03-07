@@ -360,19 +360,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
-                                                                                                  .findFirst();
-
-      Assert.assertTrue(
-          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
-          optional.isPresent()
+      Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          )
       );
-      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+      Assert.assertNotNull(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          executorRunnablePair
+      );
 
       // Simulate handoff.
       executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
@@ -424,19 +422,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
-                                                                                                  .findFirst();
-
-      Assert.assertTrue(
-          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
-          optional.isPresent()
+      Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          )
       );
-      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+      Assert.assertNotNull(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          executorRunnablePair
+      );
 
       // Simulate handoff.
       executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
@@ -491,19 +487,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
-                                                                                                  .findFirst();
-
-      Assert.assertTrue(
-          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
-          optional.isPresent()
+      Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          )
       );
-      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+      Assert.assertNotNull(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          executorRunnablePair
+      );
 
       // Simulate handoff.
       executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
@@ -563,19 +557,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     awaitHandoffs();
 
     for (DataSegment publishedSegment : publishedSegments) {
-      Optional<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> optional = handOffCallbacks.entrySet().stream()
-                                                                                                  .filter(e -> e.getKey().equals(new SegmentDescriptor(
-                                                                                                      publishedSegment.getInterval(),
-                                                                                                      publishedSegment.getVersion(),
-                                                                                                      publishedSegment.getShardSpec().getPartitionNum()
-                                                                                                  )))
-                                                                                                  .findFirst();
-
-      Assert.assertTrue(
-          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
-          optional.isPresent()
+      Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          )
       );
-      Pair<Executor, Runnable> executorRunnablePair = optional.get().getValue();
+      Assert.assertNotNull(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          executorRunnablePair
+      );
 
       // Simulate handoff.
       executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
