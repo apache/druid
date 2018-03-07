@@ -22,9 +22,9 @@ package io.druid.storage.s3;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
@@ -115,16 +115,22 @@ public class S3StorageDruidModule implements DruidModule
       AWSEndpointConfig endpointConfig
   )
   {
-    final AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard().withCredentials(provider);
+    // AmazonS3ClientBuilder can't be used because it makes integration tests failed
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
+    final AmazonS3Client client = new AmazonS3Client(provider, setProxyConfig(configuration, proxyConfig));
 
-    builder.setClientConfiguration(setProxyConfig(configuration, proxyConfig));
-    final EndpointConfiguration endpointConfiguration = toEndpointConfiguration(endpointConfig);
-    if (endpointConfiguration != null) {
-      builder.setEndpointConfiguration(endpointConfiguration);
+    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
+      if (StringUtils.isNotEmpty(endpointConfig.getServiceName()) &&
+          StringUtils.isNotEmpty(endpointConfig.getSigningRegion())) {
+        client.setEndpoint(endpointConfig.getUrl(), endpointConfig.getServiceName(), endpointConfig.getSigningRegion());
+      } else {
+        client.setEndpoint(endpointConfig.getUrl());
+      }
     }
 
-    return builder.enableForceGlobalBucketAccess().build();
+    client.setS3ClientOptions(S3ClientOptions.builder().enableForceGlobalBucketAccess().build());
+
+    return client;
   }
 
   private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
@@ -142,14 +148,5 @@ public class S3StorageDruidModule implements DruidModule
       conf.setProxyPassword(proxyConfig.getPassword());
     }
     return conf;
-  }
-
-  private static EndpointConfiguration toEndpointConfiguration(AWSEndpointConfig endpointConfig)
-  {
-    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      return new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion());
-    } else {
-      return null;
-    }
   }
 }

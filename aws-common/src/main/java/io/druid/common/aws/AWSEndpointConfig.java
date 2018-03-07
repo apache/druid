@@ -27,12 +27,21 @@ public class AWSEndpointConfig
   private String url;
 
   @JsonProperty
+  private String serviceName;
+
+  @JsonProperty
   private String signingRegion;
 
   @JsonProperty
   public String getUrl()
   {
     return url;
+  }
+
+  @JsonProperty
+  public String getServiceName()
+  {
+    return serviceName;
   }
 
   @JsonProperty
