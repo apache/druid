@@ -39,7 +39,6 @@ import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
-import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.List;
@@ -49,8 +48,6 @@ import java.util.List;
 public class S3StorageDruidModule implements DruidModule
 {
   public static final String SCHEME = "s3_zip";
-
-  private static final Logger log = new Logger(S3StorageDruidModule.class);
 
   @Override
   public List<? extends Module> getJacksonModules()
