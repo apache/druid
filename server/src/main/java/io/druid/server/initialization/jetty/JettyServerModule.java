@@ -299,7 +299,10 @@ public class JettyServerModule extends JerseyServletModule
 
     server.setHandler(new StatisticsHandler());
     server.setConnectors(connectors);
-    server.setStopTimeout(config.getGracefulShutdownTimeout().toStandardDuration().getMillis());
+    final long gracefulStop = config.getGracefulShutdownTimeout().toStandardDuration().getMillis();
+    if (gracefulStop > 0) {
+      server.setStopTimeout(gracefulStop);
+    }
     server.addLifeCycleListener(new LifeCycle.Listener()
     {
       @Override
