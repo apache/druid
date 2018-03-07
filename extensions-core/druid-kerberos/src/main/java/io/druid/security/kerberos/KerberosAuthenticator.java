@@ -330,8 +330,14 @@ public class KerberosAuthenticator implements Authenticator
               };
               if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
                 String signedToken = mySigner.sign(token.toString());
-                createAuthCookie(httpResponse, signedToken, getCookieDomain(),
-                                 getCookiePath(), token.getExpires(), isCookiePersistent(), isHttps
+                createAuthCookie(
+                    httpResponse,
+                    signedToken,
+                    getCookieDomain(),
+                    getCookiePath(),
+                    token.getExpires(),
+                    isCookiePersistent(),
+                    isHttps
                 );
               }
               doFilter(filterChain, httpRequest, httpResponse);
@@ -352,8 +358,14 @@ public class KerberosAuthenticator implements Authenticator
         }
         if (unauthorizedResponse) {
           if (!httpResponse.isCommitted()) {
-            createAuthCookie(httpResponse, "", getCookieDomain(),
-                             getCookiePath(), 0, isCookiePersistent(), isHttps
+            createAuthCookie(
+                httpResponse,
+                "",
+                getCookieDomain(),
+                getCookiePath(),
+                0,
+                isCookiePersistent(),
+                isHttps
             );
             // If response code is 401. Then WWW-Authenticate Header should be
             // present.. reset to 403 if not found..
