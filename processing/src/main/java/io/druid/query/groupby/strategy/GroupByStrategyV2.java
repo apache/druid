@@ -71,7 +71,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-public class                  GroupByStrategyV2 implements GroupByStrategy
+public class GroupByStrategyV2 implements GroupByStrategy
 {
   public static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
   public static final String CTX_KEY_OUTERMOST = "groupByOutermost";

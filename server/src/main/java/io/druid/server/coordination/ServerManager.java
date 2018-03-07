@@ -123,7 +123,7 @@ public class ServerManager implements QuerySegmentWalker
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     DataSource dataSource = query.getDataSource();
-    if (query instanceof GroupByQuery && dataSource instanceof  QueryDataSource) {
+    if (query instanceof GroupByQuery && dataSource instanceof QueryDataSource) {
       dataSource = ((GroupByQuery) ((QueryDataSource) dataSource).getQuery()).getDataSource();
     }
     if (!(dataSource instanceof TableDataSource)) {

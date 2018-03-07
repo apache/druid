@@ -42,7 +42,6 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Queries;
 import io.druid.query.Query;
-import io.druid.query.QueryContexts;
 import io.druid.query.QueryDataSource;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -249,7 +248,10 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @JsonProperty
-  public GroupByQuery getPushedDownQuery() { return pushedDownQuery; }
+  public GroupByQuery getPushedDownQuery()
+  {
+    return pushedDownQuery;
+  }
 
   @Override
   public boolean hasFilters()
@@ -633,7 +635,7 @@ public class GroupByQuery extends BaseQuery<Row>
   public GroupByQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     GroupByQuery pushedDownQueryWithSegmentSpec;
-    boolean isPushedDownQuery   = this.getPushedDownQuery() != null;
+    boolean isPushedDownQuery = this.getPushedDownQuery() != null;
     if (isPushedDownQuery) {
       // In case of nested queries that are pushed down, we need to make sure that segment specs are changed on them too.
       pushedDownQueryWithSegmentSpec = new Builder(this.getPushedDownQuery()).setQuerySegmentSpec(spec).build();
@@ -666,10 +668,6 @@ public class GroupByQuery extends BaseQuery<Row>
   public GroupByQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
     return new Builder(this).setPostAggregatorSpecs(postAggregatorSpecs).build();
-  }
-
-  public GroupByQuery withPushedDownQuery(final GroupByQuery q) {
-    return new Builder(this).setQueryToPushDown(q).build();
   }
 
   private static void verifyOutputNames(

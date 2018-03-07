@@ -39,8 +39,6 @@ import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Query;
-import io.druid.query.QueryContexts;
-import io.druid.query.QueryDataSource;
 import io.druid.query.QueryPlus;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -262,10 +260,11 @@ public class GroupByQueryHelper
     return types.build();
   }
 
-  public static Query getPushedDownQueryIfPresent(QueryPlus q) {
+  public static Query getPushedDownQueryIfPresent(QueryPlus q)
+  {
     Query query = q.getQuery();
     if (query instanceof GroupByQuery) {
-      GroupByQuery gp = (GroupByQuery)query;
+      GroupByQuery gp = (GroupByQuery) query;
       if (gp.getPushedDownQuery() != null) {
         query = gp.getPushedDownQuery();
       }
