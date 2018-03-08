@@ -58,6 +58,9 @@ public class InfluxParser implements Parser<String, Object>
     InfluxLineProtocolParser parser = new InfluxLineProtocolParser(tokenStream);
 
     List<InfluxLineProtocolParser.LineContext> lines = parser.lines().line();
+    if (parser.getNumberOfSyntaxErrors() != 0) {
+      throw new ParseException("Unable to parse line.");
+    }
     if (lines.size() != 1) {
       throw new ParseException("Multiple lines present; unable to parse more than one per record.");
     }
@@ -121,7 +124,6 @@ public class InfluxParser implements Parser<String, Object>
     return new Double(raw);
   }
 
-  // TODO: Support returning numeric value?
   private Object parseBool(String raw)
   {
     char first = raw.charAt(0);
@@ -148,12 +150,14 @@ public class InfluxParser implements Parser<String, Object>
 
   private void parseTimestamp(String timestamp, Map<String, Object> dest)
   {
+    // Influx timestamps come in nanoseconds; treat anything less than 1 ms as 0
     if (timestamp.length() < 7) {
-      throw new ParseException("Invalid ILP string (invalid timestamp)");
+      dest.put(TIMESTAMP_KEY, 0L);
+    } else {
+      timestamp = timestamp.substring(0, timestamp.length() - 6);
+      long timestampMillis = new Long(timestamp);
+      dest.put(TIMESTAMP_KEY, timestampMillis);
     }
-    timestamp = timestamp.substring(0, timestamp.length() - 6);
-    long timestampMillis = new Long(timestamp);
-    dest.put(TIMESTAMP_KEY, timestampMillis);
   }
 
   @Override

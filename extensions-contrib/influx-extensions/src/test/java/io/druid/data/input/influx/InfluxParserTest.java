@@ -21,6 +21,7 @@ package io.druid.data.input.influx;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.common.parsers.Parser;
 import junitparams.JUnitParamsRunner;
@@ -67,6 +68,16 @@ public class InfluxParserTest
             "negative timestamp",
             "foo,region=us-east-1,host=127.0.0.1 m=1.0,n=3.0,o=500i -123456789",
             Parsed.row("foo", -123L)
+                  .with("region", "us-east-1")
+                  .with("host", "127.0.0.1")
+                  .with("m", 1.0)
+                  .with("n", 3.0)
+                  .with("o", 500L)
+        ),
+        testCase(
+            "truncated timestamp",
+            "foo,region=us-east-1,host=127.0.0.1 m=1.0,n=3.0,o=500i 123",
+            Parsed.row("foo", 0L)
                   .with("region", "us-east-1")
                   .with("host", "127.0.0.1")
                   .with("m", 1.0)
@@ -164,6 +175,31 @@ public class InfluxParserTest
     }
 
     Assert.fail("Exception not thrown");
+  }
+
+  public Object[] failureTestData()
+  {
+    return Lists.newArrayList(
+        Pair.of("Empty line", ""),
+        Pair.of("Invalid measurement", "invalid measurement"),
+        Pair.of("Invalid timestamp", "foo i=123 123x")
+    ).toArray();
+  }
+
+  @Test
+  @Parameters(method = "failureTestData")
+  public void testParseFailures(Pair<String, String> testCase)
+  {
+    Parser<String, Object> parser = new InfluxParser(null);
+    try {
+      Map res = parser.parseToMap(testCase.rhs);
+    }
+    catch (ParseException t) {
+      assertThat(t, isA(ParseException.class));
+      return;
+    }
+
+    Assert.fail(testCase.rhs + ": exception not thrown");
   }
 
   private static class Parsed
