@@ -37,6 +37,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
+import io.druid.indexer.path.DatasourcePathSpec;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -265,7 +266,8 @@ public class IndexGeneratorJob implements Jobby
     private static final HashFunction hashFunction = Hashing.murmur3_128();
 
     private AggregatorFactory[] aggregators;
-    private AggregatorFactory[] combiningAggs;
+
+    private AggregatorFactory[] aggsForSerializingSegmentInputRow;
     private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
 
     @Override
@@ -274,9 +276,16 @@ public class IndexGeneratorJob implements Jobby
     {
       super.setup(context);
       aggregators = config.getSchema().getDataSchema().getAggregators();
-      combiningAggs = new AggregatorFactory[aggregators.length];
-      for (int i = 0; i < aggregators.length; ++i) {
-        combiningAggs[i] = aggregators[i].getCombiningFactory();
+
+      if (DatasourcePathSpec.checkIfReindexingAndIsUseAggEnabled(config.getSchema().getIOConfig().getPathSpec())) {
+        aggsForSerializingSegmentInputRow = aggregators;
+      } else {
+        // Note: this is required for "delta-ingestion" use case where we are reading rows stored in Druid as well
+        // as late arriving data on HDFS etc.
+        aggsForSerializingSegmentInputRow = new AggregatorFactory[aggregators.length];
+        for (int i = 0; i < aggregators.length; ++i) {
+          aggsForSerializingSegmentInputRow[i] = aggregators[i].getCombiningFactory();
+        }
       }
       typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
                                                            .getDataSchema()
@@ -313,7 +322,7 @@ public class IndexGeneratorJob implements Jobby
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
       byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
-                                  InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, reportParseExceptions)
+                                  InputRowSerde.toBytes(typeHelperMap, inputRow, aggsForSerializingSegmentInputRow, reportParseExceptions)
                                                                       :
                                   InputRowSerde.toBytes(typeHelperMap, inputRow, aggregators, reportParseExceptions);
 
