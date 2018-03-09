@@ -39,6 +39,7 @@ import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -126,6 +127,9 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     // Add Gzip handler at the very end
     handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(root));
 
-    server.setHandler(handlerList);
+    final StatisticsHandler statisticsHandler = new StatisticsHandler();
+    statisticsHandler.setHandler(handlerList);
+
+    server.setHandler(statisticsHandler);
   }
 }

@@ -69,7 +69,6 @@ import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -296,7 +295,6 @@ public class JettyServerModule extends JerseyServletModule
       connector.setConnectionFactories(monitoredConnFactories);
     }
 
-    server.setHandler(new StatisticsHandler());
     server.setConnectors(connectors);
     final long gracefulStop = config.getGracefulShutdownTimeout().toStandardDuration().getMillis();
     if (gracefulStop > 0) {
