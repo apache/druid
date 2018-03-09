@@ -20,11 +20,12 @@
 package io.druid.emitter.ambari.metrics;
 
 import com.google.common.collect.Maps;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -32,6 +33,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 
 @RunWith(JUnitParamsRunner.class)
@@ -104,6 +110,37 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
       path = metric.getMetricName();
     }
     Assert.assertEquals(expectedPath, path);
+  }
+
+  @Test
+  public void testWhiteListedStringArrayDimension() throws IOException
+  {
+    File mapFile = File.createTempFile("testing-" + System.nanoTime(), ".json");
+    mapFile.deleteOnExit();
+
+    try (OutputStream outputStream = new FileOutputStream(mapFile)) {
+      IOUtils.copyLarge(
+          getClass().getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
+          outputStream
+      );
+    }
+
+    WhiteListBasedDruidToTimelineEventConverter converter = new WhiteListBasedDruidToTimelineEventConverter(
+        prefix,
+        "druid",
+        mapFile.getAbsolutePath(),
+        new DefaultObjectMapper()
+    );
+
+    ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+        .setDimension("gcName", new String[] {"g1"})
+        .build(createdTime, "jvm/gc/cpu", 10)
+        .build(serviceName, hostname);
+
+    TimelineMetric metric = converter.druidEventToTimelineMetric(event);
+
+    Assert.assertNotNull(metric);
+    Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", metric.getMetricName());
   }
 
   private Object[] parametersForTestGetName()

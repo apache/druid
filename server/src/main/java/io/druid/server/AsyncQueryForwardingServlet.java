@@ -26,8 +26,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.selector.Server;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
@@ -44,7 +44,7 @@ import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Escalator;
+import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -58,10 +58,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -113,7 +111,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
-  private final Escalator escalator;
 
   private HttpClient broadcastClient;
 
@@ -127,8 +124,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       @Router DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      GenericQueryMetricsFactory queryMetricsFactory,
-      Escalator escalator
+      GenericQueryMetricsFactory queryMetricsFactory
   )
   {
     this.warehouse = warehouse;
@@ -140,7 +136,6 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryMetricsFactory = queryMetricsFactory;
-    this.escalator = escalator;
   }
 
   @Override
@@ -214,11 +209,14 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               );
             }
           };
-          broadcastClient
+
+          Request broadcastReq = broadcastClient
               .newRequest(rewriteURI(request, server.getScheme(), server.getHost()))
               .method(HttpMethod.DELETE)
-              .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-              .send(completeListener);
+              .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+
+          copyRequestHeaders(request, broadcastReq);
+          broadcastReq.send(completeListener);
         }
         interruptedQueryCount.incrementAndGet();
       }
@@ -331,15 +329,15 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   protected static URI makeURI(String scheme, String host, String requestURI, String rawQueryString)
   {
     try {
-      return new URI(
-          scheme,
-          host,
-          requestURI,
-          rawQueryString == null ? null : URLDecoder.decode(rawQueryString, "UTF-8"),
-          null
-      );
+      return new URIBuilder()
+          .setScheme(scheme)
+          .setHost(host)
+          .setPath(requestURI)
+          // No need to encode-decode queryString, it is already encoded
+          .setQuery(rawQueryString)
+          .build();
     }
-    catch (UnsupportedEncodingException | URISyntaxException e) {
+    catch (URISyntaxException e) {
       log.error(e, "Unable to rewrite URI [%s]", e.getMessage());
       throw Throwables.propagate(e);
     }
@@ -348,7 +346,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected HttpClient newHttpClient()
   {
-    return escalator.createEscalatedJettyClient(httpClientProvider.get());
+    return httpClientProvider.get();
   }
 
   @Override

@@ -19,9 +19,12 @@
 
 package org.apache.hadoop.fs;
 
+import com.google.common.base.Throwables;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 /**
  * This wrapper class is created to be able to access some of the the "protected" methods inside Hadoop's
@@ -50,12 +53,49 @@ public class HadoopFsWrapper
   public static boolean rename(FileSystem fs, Path from, Path to, boolean replaceExisting) throws IOException
   {
     try {
-      fs.rename(from, to, replaceExisting ? Options.Rename.OVERWRITE : Options.Rename.NONE);
+      // Note: Using reflection instead of simpler
+      // fs.rename(from, to, replaceExisting ? Options.Rename.OVERWRITE : Options.Rename.NONE);
+      // due to the issues discussed in https://github.com/druid-io/druid/pull/3787
+      Method renameMethod = findRenameMethodRecursively(fs.getClass());
+      renameMethod.invoke(fs, from, to, new Options.Rename[]{Options.Rename.NONE});
       return true;
     }
-    catch (FileAlreadyExistsException ex) {
-      log.info(ex, "Destination exists while renaming [%s] to [%s]", from, to);
-      return false;
+    catch (InvocationTargetException ex) {
+      if (ex.getTargetException() instanceof FileAlreadyExistsException) {
+        log.info(ex, "Destination exists while renaming [%s] to [%s]", from, to);
+        return false;
+      } else {
+        throw Throwables.propagate(ex);
+      }
+    }
+    catch (NoSuchMethodException | IllegalAccessException ex) {
+
+      for (Method method : fs.getClass().getDeclaredMethods()) {
+        log.error(method.toGenericString());
+      }
+      throw Throwables.propagate(ex);
+    }
+  }
+
+  /**
+   * Finds "rename" method recursively through the FileSystem class hierarchy. This is required because
+   * clazz.getMethod(..) only returns PUBLIC methods in clazz hierarchy.
+   * and clazz.getDeclaredMethod(..) only returns all methods declared in clazz but not inherited ones.
+   */
+  private static Method findRenameMethodRecursively(Class<?> clazz) throws NoSuchMethodException
+  {
+    try {
+      Method renameMethod = clazz.getDeclaredMethod("rename", Path.class, Path.class, Options.Rename[].class);
+      renameMethod.setAccessible(true);
+      return renameMethod;
+    }
+    catch (NoSuchMethodException ex) {
+      Class<?> superClazz = clazz.getSuperclass();
+      if (superClazz == null) {
+        throw ex;
+      } else {
+        return findRenameMethodRecursively(superClazz);
+      }
     }
   }
 }

@@ -22,8 +22,6 @@ package io.druid.query.aggregation.histogram;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
@@ -103,7 +101,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    return ByteBuffer.allocate(1 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
+    return ByteBuffer.allocate(1 + fieldNameBytes.length + Integer.BYTES * 2 + Float.BYTES * 2)
                      .put(AggregatorUtil.APPROX_HIST_FOLDING_CACHE_TYPE_ID)
                      .put(fieldNameBytes)
                      .putInt(resolution)

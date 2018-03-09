@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.12.0-SNAPSHOT</version>
+    <version>0.13.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,7 +54,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.12.0-SNAPSHOT</tag>
+        <tag>0.13.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -63,6 +63,7 @@
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.10.0</avatica.version>
         <calcite.version>1.15.0</calcite.version>
+        <fastutil.version>8.1.0</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.3.19.v20170502</jetty.version>
@@ -70,9 +71,11 @@
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.5</log4j.version>
+        <!-- HttpClient has not yet been ported to Netty 4.x -->
+        <netty3.version>3.10.6.Final</netty3.version>
         <!-- Update to Netty 4.1 is not possible yet, see https://github.com/druid-io/druid/issues/4390 and comments
              in https://github.com/druid-io/druid/pull/4973 -->
-        <netty.version>4.0.52.Final</netty.version>
+        <netty4.version>4.0.52.Final</netty4.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.7.3</hadoop.compile.version>
@@ -84,6 +87,9 @@
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
+        <repoOrgId>org-apache-id</repoOrgId>
+        <repoOrgName>org-apache-name</repoOrgName>
+        <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
     </properties>
 
     <modules>
@@ -140,18 +146,22 @@
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
+        <module>extensions-contrib/opentsdb-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
 
+  <repositories>
+    <repository>
+        <id>${repoOrgId}</id>
+        <name>${repoOrgName}</name>
+        <url>${repoOrgUrl}</url>
+    </repository>
+  </repositories>
+
     <dependencyManagement>
         <dependencies>
             <!-- Compile Scope -->
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>java-util</artifactId>
-                <version>1.3.3</version>
-            </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
@@ -484,8 +494,13 @@
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+                <version>${netty3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
-                <version>${netty.version}</version>
+                <version>${netty4.version}</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -707,6 +722,21 @@
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
                 <version>5.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.asynchttpclient</groupId>
+                <artifactId>async-http-client</artifactId>
+                <version>2.0.37</version>
+            </dependency>
+            <dependency>
+                <groupId>org.gridkit.lab</groupId>
+                <artifactId>jvm-attach-api</artifactId>
+                <version>1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>4.5.1</version>
             </dependency>
 
             <!-- Test Scope -->
@@ -944,6 +974,7 @@
                     </signaturesFiles>
                     <excludes>
                         <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
+                        <exclude>io/druid/java/util/common/DateTimes.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>

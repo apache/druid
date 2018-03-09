@@ -29,7 +29,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.12.0-SNAPSHOT</version>
+        <version>0.13.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -223,6 +223,8 @@
                                         <argument>io.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:graphite-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>io.druid.extensions.contrib:druid-opentsdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-orc-extensions</argument>
                                         <argument>-c</argument>

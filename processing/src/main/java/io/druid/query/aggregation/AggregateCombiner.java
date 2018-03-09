@@ -71,6 +71,12 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
   void fold(ColumnValueSelector selector);
 
   @Override
+  default boolean isNull()
+  {
+    return false;
+  }
+
+  @Override
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // Usually AggregateCombiner has nothing to inspect

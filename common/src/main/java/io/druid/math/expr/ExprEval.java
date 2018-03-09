@@ -20,11 +20,13 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandling;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.java.util.common.IAE;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -50,7 +52,7 @@ public abstract class ExprEval<T>
     return new DoubleExprEval(doubleValue);
   }
 
-  public static ExprEval of(String stringValue)
+  public static ExprEval of(@Nullable String stringValue)
   {
     return new StringExprEval(stringValue);
   }
@@ -108,6 +110,7 @@ public abstract class ExprEval<T>
 
   public abstract double asDouble();
 
+  @Nullable
   public String asString()
   {
     return value == null ? null : String.valueOf(value);
@@ -228,9 +231,9 @@ public abstract class ExprEval<T>
 
   private static class StringExprEval extends ExprEval<String>
   {
-    private StringExprEval(String value)
+    private StringExprEval(@Nullable String value)
     {
-      super(Strings.emptyToNull(value));
+      super(NullHandling.emptyToNullIfNeeded(value));
     }
 
     @Override
@@ -243,10 +246,12 @@ public abstract class ExprEval<T>
     public final int asInt()
     {
       if (value == null) {
+        assert NullHandling.replaceWithDefault();
         return 0;
       }
 
       final Integer theInt = Ints.tryParse(value);
+      assert NullHandling.replaceWithDefault() || theInt != null;
       return theInt == null ? 0 : theInt;
     }
 
@@ -255,6 +260,7 @@ public abstract class ExprEval<T>
     {
       // GuavaUtils.tryParseLong handles nulls, no need for special null handling here.
       final Long theLong = GuavaUtils.tryParseLong(value);
+      assert NullHandling.replaceWithDefault() || theLong != null;
       return theLong == null ? 0L : theLong;
     }
 
@@ -262,10 +268,12 @@ public abstract class ExprEval<T>
     public final double asDouble()
     {
       if (value == null) {
+        assert NullHandling.replaceWithDefault();
         return 0.0;
       }
 
       final Double theDouble = Doubles.tryParse(value);
+      assert NullHandling.replaceWithDefault() || theDouble != null;
       return theDouble == null ? 0.0 : theDouble;
     }
 

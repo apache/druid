@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import com.metamx.common.StringUtils;
+import io.druid.common.config.NullHandling;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilterUtils;
@@ -177,19 +178,28 @@ public class MapVirtualColumn implements VirtualColumn
     @Override
     public double getDouble()
     {
+      assert NullHandling.replaceWithDefault();
       return 0.0;
     }
 
     @Override
     public float getFloat()
     {
+      assert NullHandling.replaceWithDefault();
       return 0.0f;
     }
 
     @Override
     public long getLong()
     {
+      assert NullHandling.replaceWithDefault();
       return 0L;
+    }
+
+    @Override
+    public boolean isNull()
+    {
+      return false;
     }
 
     @Override

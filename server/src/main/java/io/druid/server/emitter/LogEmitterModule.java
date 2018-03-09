@@ -25,9 +25,9 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.LoggingEmitter;
-import com.metamx.emitter.core.LoggingEmitterConfig;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.LoggingEmitter;
+import io.druid.java.util.emitter.core.LoggingEmitterConfig;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 

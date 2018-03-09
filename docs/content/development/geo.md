@@ -8,16 +8,28 @@ Druid supports filtering specially spatially indexed columns based on an origin 
 In any of the data specs, there is the option of providing spatial dimensions. For example, for a JSON data spec, spatial dimensions can be specified as follows:
 
 ```json
-"dataSpec" : {
-    "format": "JSON",
-    "dimensions": <some_dims>,
-    "spatialDimensions": [
-        {
-            "dimName": "coordinates",
-            "dims": ["lat", "long"]
-        },
-        ...
-    ]
+{
+	"type": "hadoop",
+	"dataSchema": {
+		"dataSource": "DatasourceName",
+		"parser": {
+			"type": "string",
+			"parseSpec": {
+				"format": "json",
+				"timestampSpec": {
+					"column": "timestamp",
+					"format": "auto"
+				},
+				"dimensionsSpec": {
+					"dimensions": [],
+					"spatialDimensions": [{
+						"dimName": "coordinates",
+						"dims": ["lat", "long"]
+					}]
+				}
+			}
+		}
+	}
 }
 ```
 

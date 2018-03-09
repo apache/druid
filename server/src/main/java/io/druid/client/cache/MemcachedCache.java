@@ -31,13 +31,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Ints;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -344,8 +344,8 @@ public class MemcachedCache implements Cache
           // (approx < 5% difference in counts across nodes, with 5 cache nodes)
           .setKetamaNodeRepetitions(1000)
           .setHashAlg(MURMUR3_128)
-          .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-          .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+          .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(StringUtils.toUpperCase(config.getProtocol())))
+          .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(StringUtils.toUpperCase(config.getLocator())))
           .setDaemon(true)
           .setFailureMode(FailureMode.Cancel)
           .setTranscoder(transcoder)
@@ -500,7 +500,7 @@ public class MemcachedCache implements Cache
   private static byte[] serializeValue(NamedKey key, byte[] value)
   {
     byte[] keyBytes = key.toByteArray();
-    return ByteBuffer.allocate(Ints.BYTES + keyBytes.length + value.length)
+    return ByteBuffer.allocate(Integer.BYTES + keyBytes.length + value.length)
                      .putInt(keyBytes.length)
                      .put(keyBytes)
                      .put(value)

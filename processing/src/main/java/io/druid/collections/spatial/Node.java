@@ -21,8 +21,6 @@ package io.druid.collections.spatial;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 
@@ -181,10 +179,10 @@ public class Node
   public int getSizeInBytes()
   {
     return ImmutableNode.HEADER_NUM_BYTES
-           + 2 * getNumDims() * Floats.BYTES
-           + Ints.BYTES // size of the set
+           + 2 * getNumDims() * Float.BYTES
+           + Integer.BYTES // size of the set
            + bitmap.getSizeInBytes()
-           + getChildren().size() * Ints.BYTES;
+           + getChildren().size() * Integer.BYTES;
   }
 
   public int storeInByteBuffer(ByteBuffer buffer, int position)
@@ -202,11 +200,11 @@ public class Node
     buffer.put(bytes);
 
     int pos = buffer.position();
-    int childStartOffset = pos + getChildren().size() * Ints.BYTES;
+    int childStartOffset = pos + getChildren().size() * Integer.BYTES;
     for (Node child : getChildren()) {
       buffer.putInt(pos, childStartOffset);
       childStartOffset = child.storeInByteBuffer(buffer, childStartOffset);
-      pos += Ints.BYTES;
+      pos += Integer.BYTES;
     }
 
     return childStartOffset;

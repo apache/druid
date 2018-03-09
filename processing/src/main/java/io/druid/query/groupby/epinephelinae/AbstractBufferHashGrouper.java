@@ -20,7 +20,6 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -30,7 +29,7 @@ import java.nio.ByteBuffer;
 
 public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyType>
 {
-  protected static final int HASH_SIZE = Ints.BYTES;
+  protected static final int HASH_SIZE = Integer.BYTES;
   protected static final Logger log = new Logger(AbstractBufferHashGrouper.class);
 
   protected final Supplier<ByteBuffer> bufferSupplier;

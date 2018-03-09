@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.LongColumnSelector;
@@ -33,35 +35,77 @@ import java.io.Closeable;
 public interface ColumnarLongs extends Closeable
 {
   int size();
+
   long get(int index);
+
   void fill(int index, long[] toFill);
 
   @Override
   void close();
 
-  default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset)
+  default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {
-    class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
-    {
-      @Override
-      public long getLong()
+    if (nullValueBitmap.isEmpty()) {
+      class HistoricalLongColumnSelector implements LongColumnSelector, HistoricalColumnSelector<Long>
       {
-        return ColumnarLongs.this.get(offset.getOffset());
-      }
+        @Override
+        public boolean isNull()
+        {
+          return false;
+        }
 
-      @Override
-      public double getDouble(int offset)
-      {
-        return ColumnarLongs.this.get(offset);
-      }
+        @Override
+        public long getLong()
+        {
+          return ColumnarLongs.this.get(offset.getOffset());
+        }
 
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("columnar", ColumnarLongs.this);
-        inspector.visit("offset", offset);
+        @Override
+        public double getDouble(int offset)
+        {
+          return ColumnarLongs.this.get(offset);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarLongs.this);
+          inspector.visit("offset", offset);
+        }
       }
+      return new HistoricalLongColumnSelector();
+    } else {
+      class HistoricalLongColumnSelectorWithNulls implements LongColumnSelector, HistoricalColumnSelector<Long>
+      {
+        @Override
+        public boolean isNull()
+        {
+          return nullValueBitmap.get(offset.getOffset());
+        }
+
+        @Override
+        public long getLong()
+        {
+          assert NullHandling.replaceWithDefault() || !isNull();
+          return ColumnarLongs.this.get(offset.getOffset());
+        }
+
+        @Override
+        public double getDouble(int offset)
+        {
+          assert NullHandling.replaceWithDefault() || !nullValueBitmap.get(offset);
+          return ColumnarLongs.this.get(offset);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("columnar", ColumnarLongs.this);
+          inspector.visit("offset", offset);
+          inspector.visit("nullValueBitmap", nullValueBitmap);
+        }
+      }
+      return new HistoricalLongColumnSelectorWithNulls();
     }
-    return new HistoricalLongColumnSelector();
   }
 }

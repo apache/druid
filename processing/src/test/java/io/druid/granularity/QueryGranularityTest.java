@@ -50,6 +50,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TimeZone;
 
 /**
  */
@@ -315,7 +316,7 @@ public class QueryGranularityTest
   @Test
   public void testPeriodDaylightSaving() throws Exception
   {
-    final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-04T00:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
@@ -361,7 +362,7 @@ public class QueryGranularityTest
   @Test
   public void testIterableMonth() throws Exception
   {
-    final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
@@ -378,7 +379,7 @@ public class QueryGranularityTest
   @Test
   public void testIterableWeek() throws Exception
   {
-    final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
@@ -405,7 +406,7 @@ public class QueryGranularityTest
   @Test
   public void testPeriodTruncateDays() throws Exception
   {
-    final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
     final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
     PeriodGranularity periodOrigin = new PeriodGranularity(
         new Period("P2D"),
@@ -485,7 +486,7 @@ public class QueryGranularityTest
   public void testCompoundPeriodTruncate() throws Exception
   {
     {
-      final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+      final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
       final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       PeriodGranularity periodOrigin = new PeriodGranularity(
           new Period("P1M2D"),
@@ -530,7 +531,7 @@ public class QueryGranularityTest
     }
 
     {
-      final DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+      final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
       final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       PeriodGranularity periodOrigin = new PeriodGranularity(
           new Period("PT12H5M"),
@@ -666,13 +667,13 @@ public class QueryGranularityTest
     Assert.assertEquals(new PeriodGranularity(
         new Period("P1D"),
         DateTimes.EPOCH,
-        DateTimeZone.forID("America/Los_Angeles")
+        DateTimes.inferTzfromString("America/Los_Angeles")
     ), gran);
 
     PeriodGranularity expected = new PeriodGranularity(
         new Period("P1D"),
         DateTimes.of("2012-01-01"),
-        DateTimeZone.forID("America/Los_Angeles")
+        DateTimes.inferTzfromString("America/Los_Angeles")
     );
 
     String jsonOut = mapper.writeValueAsString(expected);
@@ -811,4 +812,54 @@ public class QueryGranularityTest
       Assert.assertNotNull(String.valueOf(i), Class.forName(className, true, loader));
     }
   }
+  
+  @Test
+  public void testTruncateKathmandu() throws Exception
+  {
+    final DateTimeZone tz = DateTimeZone.forTimeZone(TimeZone.getTimeZone("Asia/Kathmandu"));
+    final DateTime date = new DateTime("2011-03-15T21:42:23.898+05:45", tz);
+    final PeriodGranularity year = new PeriodGranularity(new Period("P1Y"), null, tz);
+    final PeriodGranularity hour = new PeriodGranularity(new Period("PT1H"), null, tz);
+    final PeriodGranularity twoHour = new PeriodGranularity(new Period("PT2H"), null, tz);
+
+    Assert.assertEquals(
+        new DateTime("2011-01-01T00:00:00.000+05:45", tz),
+        year.toDateTime(year.bucketStart(date).getMillis())
+    );
+    Assert.assertEquals(
+        new DateTime("2011-03-15T21:00:00.000+05:45", tz),
+        hour.toDateTime(hour.bucketStart(date).getMillis())
+    );
+
+    Assert.assertEquals(
+        new DateTime("2011-03-15T20:00:00.000+05:45", tz),
+        twoHour.toDateTime(twoHour.bucketStart(date).getMillis())
+    );
+  }
+  
+  @Test
+  public void testTruncateDhaka() throws Exception
+  {
+    final DateTimeZone tz = DateTimeZone.forTimeZone(TimeZone.getTimeZone("Asia/Dhaka"));
+    final DateTime date = new DateTime("2011-03-15T21:42:23.898+06:00", tz);
+    final PeriodGranularity year = new PeriodGranularity(new Period("P1Y"), null, tz);
+    final PeriodGranularity hour = new PeriodGranularity(new Period("PT1H"), null, tz);
+    final PeriodGranularity twoHour = new PeriodGranularity(new Period("PT2H"), null, tz);
+
+    Assert.assertEquals(
+        new DateTime("2011-01-01T00:00:00.000+06:00", tz),
+        year.toDateTime(year.bucketStart(date).getMillis())
+    );
+    Assert.assertEquals(
+        new DateTime("2011-03-15T21:00:00.000+06:00", tz),
+        hour.toDateTime(hour.bucketStart(date).getMillis())
+    );
+
+    Assert.assertEquals(
+        new DateTime("2011-03-15T20:00:00.000+06:00", tz),
+        twoHour.toDateTime(twoHour.bucketStart(date).getMillis())
+    );
+  }
+  
+
 }

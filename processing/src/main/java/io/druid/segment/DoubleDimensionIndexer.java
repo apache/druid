@@ -21,6 +21,8 @@ package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.common.config.NullHandling;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
@@ -28,18 +30,23 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.TimeAndDimsHolder;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
+  public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.<Double>naturalNullsFirst();
 
   @Override
-  public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
+  public Double processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
-    return DimensionHandlerUtils.convertObjectToDouble(dimValues);
+    Double ret = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+    // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+    return ret == null ? DimensionHandlerUtils.ZERO_DOUBLE : ret;
   }
 
   @Override
@@ -91,12 +98,21 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
     final int dimIndex = desc.getIndex();
     class IndexerDoubleColumnSelector implements DoubleColumnSelector
     {
+
+      @Override
+      public boolean isNull()
+      {
+        final Object[] dims = currEntry.get().getDims();
+        return dimIndex >= dims.length || dims[dimIndex] == null;
+      }
+
       @Override
       public double getDouble()
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          assert NullHandling.replaceWithDefault();
           return 0.0;
         }
         return (Double) dims[dimIndex];
@@ -128,13 +144,13 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Double lhs, @Nullable Double rhs)
   {
-    return Double.compare(DimensionHandlerUtils.nullToZero(lhs), DimensionHandlerUtils.nullToZero(rhs));
+    return DOUBLE_COMPARATOR.compare(lhs, rhs);
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Double lhs, @Nullable Double rhs)
   {
-    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
+    return Objects.equals(lhs, rhs);
   }
 
   @Override

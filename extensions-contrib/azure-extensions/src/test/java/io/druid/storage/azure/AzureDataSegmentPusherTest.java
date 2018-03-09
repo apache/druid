@@ -128,7 +128,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void uploadDataSegmentTest() throws StorageException, IOException, URISyntaxException
   {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
-    final int version = 9;
+    final int binaryVersion = 9;
     final File compressedSegmentData = new File("index.zip");
     final File descriptorFile = new File("descriptor.json");
     final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment);
@@ -142,7 +142,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
     DataSegment pushedDataSegment = pusher.uploadDataSegment(
         dataSegment,
-        version,
+        binaryVersion,
         0, // empty file
         compressedSegmentData,
         descriptorFile,
@@ -151,11 +151,28 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     );
 
     assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());
-    assertEquals(version, (int) pushedDataSegment.getBinaryVersion());
+    assertEquals(binaryVersion, (int) pushedDataSegment.getBinaryVersion());
     Map<String, Object> loadSpec = pushedDataSegment.getLoadSpec();
     assertEquals(AzureStorageDruidModule.SCHEME, MapUtils.getString(loadSpec, "type"));
     assertEquals(azurePaths.get("index"), MapUtils.getString(loadSpec, "blobPath"));
 
     verifyAll();
+  }
+
+  @Test
+  public void getPathForHadoopTest()
+  {
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    String hadoopPath = pusher.getPathForHadoop();
+    Assert.assertEquals("wasbs://container@account.blob.core.windows.net/", hadoopPath);
+  }
+
+  @Test
+  public void storageDirContainsNoColonsTest()
+  {
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    DataSegment withColons = dataSegment.withVersion("2018-01-05T14:54:09.295Z");
+    String segmentPath = pusher.getStorageDir(withColons);
+    Assert.assertFalse("Path should not contain any columns", segmentPath.contains(":"));
   }
 }

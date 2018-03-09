@@ -21,10 +21,10 @@ package io.druid.segment.virtual;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import io.druid.common.config.NullHandling;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
@@ -39,6 +39,7 @@ import io.druid.segment.ConstantColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
+import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -74,19 +75,28 @@ public class ExpressionSelectors
       @Override
       public double getDouble()
       {
+        // No Assert for null handling as baseSelector already have it.
         return baseSelector.getDouble();
       }
 
       @Override
       public float getFloat()
       {
+        // No Assert for null handling as baseSelector already have it.
         return baseSelector.getFloat();
       }
 
       @Override
       public long getLong()
       {
+        // No Assert for null handling as baseSelector already have it.
         return baseSelector.getLong();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return baseSelector.isNull();
       }
 
       @Nullable
@@ -151,6 +161,9 @@ public class ExpressionSelectors
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.
       final ExprEval eval = expression.eval(bindings);
+      if (NullHandling.sqlCompatible() && eval.isNull()) {
+        return NilColumnValueSelector.instance();
+      }
       return new ConstantColumnValueSelector<>(
           eval.asLong(),
           (float) eval.asDouble(),
@@ -192,13 +205,16 @@ public class ExpressionSelectors
     if (baseSelector instanceof ConstantColumnValueSelector) {
       // Optimization for dimension selectors on constants.
       return DimensionSelectorUtils.constantSelector(baseSelector.getObject().asString(), extractionFn);
+    } else if (baseSelector instanceof NilColumnValueSelector) {
+      // Optimization for null dimension selector.
+      return NullDimensionSelector.instance();
     } else if (extractionFn == null) {
       class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
       {
         @Override
         protected String getValue()
         {
-          return Strings.emptyToNull(baseSelector.getObject().asString());
+          return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
         }
 
         @Override
@@ -214,7 +230,7 @@ public class ExpressionSelectors
         @Override
         protected String getValue()
         {
-          return extractionFn.apply(Strings.emptyToNull(baseSelector.getObject().asString()));
+          return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
         }
 
         @Override

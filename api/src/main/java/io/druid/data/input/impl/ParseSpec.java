@@ -22,6 +22,7 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Preconditions;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.Parser;
@@ -47,8 +48,8 @@ public abstract class ParseSpec
 
   protected ParseSpec(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec)
   {
-    this.timestampSpec = timestampSpec;
-    this.dimensionsSpec = dimensionsSpec;
+    this.timestampSpec = Preconditions.checkNotNull(timestampSpec, "parseSpec requires timestampSpec");
+    this.dimensionsSpec = Preconditions.checkNotNull(dimensionsSpec, "parseSpec requires dimensionSpec");
   }
 
   @JsonProperty

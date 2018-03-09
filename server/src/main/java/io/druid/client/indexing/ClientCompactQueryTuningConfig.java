@@ -58,6 +58,12 @@ public class ClientCompactQueryTuningConfig
   }
 
   @JsonProperty
+  public String getType()
+  {
+    return "index";
+  }
+
+  @JsonProperty
   public int getMaxRowsInMemory()
   {
     return maxRowsInMemory;

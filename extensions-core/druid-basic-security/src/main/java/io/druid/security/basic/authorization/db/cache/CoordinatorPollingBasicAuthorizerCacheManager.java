@@ -21,16 +21,14 @@ package io.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.http.client.Request;
 import io.druid.client.coordinator.Coordinator;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
@@ -38,6 +36,8 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.Request;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.authentication.BytesFullResponseHandler;
@@ -212,7 +212,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
     cacheDir.mkdirs();
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserRoleMapFilename(prefix));
-    Files.write(userMapBytes, userMapFile);
+    FileUtils.writeAtomically(userMapFile, out -> out.write(userMapBytes));
   }
 
   @Nullable
@@ -228,7 +228,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       );
     }
     catch (Exception e) {
-      LOG.makeAlert(e, "Encountered exception while fetching user and role map for authorizer [%s]", prefix);
+      LOG.makeAlert(e, "Encountered exception while fetching user and role map for authorizer [%s]", prefix).emit();
       if (isInit) {
         if (commonCacheConfig.getCacheDirectory() != null) {
           try {
@@ -237,7 +237,8 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
           }
           catch (Exception e2) {
             e2.addSuppressed(e);
-            LOG.makeAlert(e2, "Encountered exception while loading user-role map snapshot for authorizer [%s]", prefix);
+            LOG.makeAlert(e2, "Encountered exception while loading user-role map snapshot for authorizer [%s]", prefix)
+               .emit();
           }
         }
       }
