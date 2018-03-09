@@ -30,7 +30,6 @@ import javax.annotation.Nullable;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
 
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.Aggregator;
@@ -54,14 +53,8 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
 {
 
-  public static final Comparator<ArrayOfDoublesSketch> COMPARATOR = Comparator.nullsFirst(new Comparator<ArrayOfDoublesSketch>()
-  {
-    @Override
-    public int compare(final ArrayOfDoublesSketch a, final ArrayOfDoublesSketch b)
-    {
-      return Doubles.compare(a.getEstimate(), b.getEstimate());
-    }
-  });
+  public static final Comparator<ArrayOfDoublesSketch> COMPARATOR =
+      Comparator.comparingDouble(ArrayOfDoublesSketch::getEstimate);
 
   private final String name;
   private final String fieldName;
@@ -276,15 +269,10 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     if (this == o) {
       return true;
     }
-    if (o == null || getClass().equals(o.getClass())) {
+    if (!(o instanceof ArrayOfDoublesSketchAggregatorFactory)) {
       return false;
     }
-    if (!super.equals(o)) {
-      return false;
-    }
-
     final ArrayOfDoublesSketchAggregatorFactory that = (ArrayOfDoublesSketchAggregatorFactory) o;
-
     if (!name.equals(that.name)) {
       return false;
     }

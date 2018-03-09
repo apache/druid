@@ -31,8 +31,11 @@ public class ArrayOfDoublesSketchJsonSerializer extends JsonSerializer<ArrayOfDo
 {
 
   @Override
-  public void serialize(final ArrayOfDoublesSketch sketch, final JsonGenerator generator,
-      final SerializerProvider provider) throws IOException, JsonProcessingException
+  public void serialize(
+      final ArrayOfDoublesSketch sketch,
+      final JsonGenerator generator,
+      final SerializerProvider provider
+  ) throws IOException, JsonProcessingException
   {
     generator.writeBinary(sketch.toByteArray());
   }

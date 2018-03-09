@@ -62,7 +62,7 @@ public abstract class ArrayOfDoublesSketchPostAggregator implements PostAggregat
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof ArrayOfDoublesSketchPostAggregator)) {
       return false;
     }
     final ArrayOfDoublesSketchPostAggregator that = (ArrayOfDoublesSketchPostAggregator) o;

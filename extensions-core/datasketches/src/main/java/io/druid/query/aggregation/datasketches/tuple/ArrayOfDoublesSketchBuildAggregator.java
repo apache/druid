@@ -28,6 +28,11 @@ import io.druid.segment.data.IndexedInts;
 
 import java.util.List;
 
+/**
+ * This aggregator builds sketches from raw data.
+ * The input is in the form of a key and array of double values.
+ * The output is ArrayOfDoublesSketch.
+ */
 public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 {
 
@@ -43,7 +48,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   )
   {
     this.keySelector = keySelector;
-    this.valueSelectors = valueSelectors.toArray(new BaseDoubleColumnValueSelector[valueSelectors.size()]);
+    this.valueSelectors = valueSelectors.toArray(new BaseDoubleColumnValueSelector[0]);
     values = new double[valueSelectors.size()];
     sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(nominalEntries)
         .setNumberOfValues(valueSelectors.size()).build();

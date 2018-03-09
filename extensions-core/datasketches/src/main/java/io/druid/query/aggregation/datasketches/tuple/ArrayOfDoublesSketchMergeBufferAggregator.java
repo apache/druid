@@ -30,10 +30,14 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
+/**
+ * This aggregator merges existing sketches.
+ * The input column contains ArrayOfDoublesSketch.
+ * The output is ArrayOfDoublesSketch that is a union of the input sketches.
+ */
 public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregator
 {
 
@@ -43,7 +47,7 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   private final int nominalEntries;
   private final int numberOfValues;
   private final int maxIntermediateSize;
-  private Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   public ArrayOfDoublesSketchMergeBufferAggregator(
       final BaseObjectColumnValueSelector<ArrayOfDoublesSketch> selector,
@@ -78,9 +82,12 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
     if (update == null) {
       return;
     }
+    // Wrapping memory and ArrayOfDoublesUnion is inexpensive compared to union operations.
+    // Maintaining a cache of wrapped objects per buffer position like in Theta sketch aggregator
+    // might might be considered, but it would increase complexity including relocate() support.
     final WritableMemory mem = WritableMemory.wrap(buf);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.get(Objects.hash(buf, position)).writeLock();
+    final Lock lock = stripedLock.getAt(ArrayOfDoublesSketchBuildBufferAggregator.lockIndex(position)).writeLock();
     lock.lock();
     try {
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);
@@ -103,7 +110,7 @@ public class ArrayOfDoublesSketchMergeBufferAggregator implements BufferAggregat
   {
     final WritableMemory mem = WritableMemory.wrap(buf);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.get(Objects.hash(buf, position)).readLock();
+    final Lock lock = stripedLock.getAt(ArrayOfDoublesSketchBuildBufferAggregator.lockIndex(position)).readLock();
     lock.lock();
     try {
       final ArrayOfDoublesUnion union = ArrayOfDoublesSketches.wrapUnion(region);

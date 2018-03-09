@@ -83,23 +83,47 @@ public class ArrayOfDoublesSketchModule implements DruidModule
   {
     return Arrays.<Module>asList(
         new SimpleModule("ArrayOfDoublesSketchModule").registerSubtypes(
-            new NamedType(ArrayOfDoublesSketchAggregatorFactory.class, ARRAY_OF_DOUBLES_SKETCH),
-            new NamedType(ArrayOfDoublesSketchToEstimatePostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_AND_BOUNDS_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchToNumEntriesPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_NUM_ENTRIES_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchToMeansPostAggregator.class, ARRAY_OF_DOUBLES_SKETCH_TO_MEANS_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchToVariancesPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_VARIANCES_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchToQuantilesSketchPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchSetOpPostAggregator.class, ARRAY_OF_DOUBLES_SKETCH_SET_OP_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchTTestPostAggregator.class, ARRAY_OF_DOUBLES_SKETCH_T_TEST_POST_AGG),
-            new NamedType(ArrayOfDoublesSketchToStringPostAggregator.class, ARRAY_OF_DOUBLES_SKETCH_TO_STRING_POST_AGG))
-            .addSerializer(ArrayOfDoublesSketch.class, new ArrayOfDoublesSketchJsonSerializer()
-        )
+            new NamedType(
+                ArrayOfDoublesSketchAggregatorFactory.class,
+                ARRAY_OF_DOUBLES_SKETCH
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToEstimatePostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_AND_BOUNDS_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToNumEntriesPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_NUM_ENTRIES_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToMeansPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_MEANS_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToVariancesPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_VARIANCES_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToQuantilesSketchPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchSetOpPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_SET_OP_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchTTestPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_T_TEST_POST_AGG
+            ),
+            new NamedType(
+                ArrayOfDoublesSketchToStringPostAggregator.class,
+                ARRAY_OF_DOUBLES_SKETCH_TO_STRING_POST_AGG
+            )
+        ).addSerializer(ArrayOfDoublesSketch.class, new ArrayOfDoublesSketchJsonSerializer())
     );
   }
 

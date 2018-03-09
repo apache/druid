@@ -74,6 +74,9 @@ public abstract class ArrayOfDoublesSketchMultiPostAggregator extends ArrayOfDou
     if (!super.equals(o)) {
       return false;
     }
+    if (!(o instanceof ArrayOfDoublesSketchMultiPostAggregator)) {
+      return false;
+    }
     final ArrayOfDoublesSketchMultiPostAggregator that = (ArrayOfDoublesSketchMultiPostAggregator) o;
     return fields.equals(that.fields);
   }

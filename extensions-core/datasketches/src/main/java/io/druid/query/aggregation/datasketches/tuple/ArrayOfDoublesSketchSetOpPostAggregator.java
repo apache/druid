@@ -112,6 +112,9 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
     if (!super.equals(o)) {
       return false;
     }
+    if (!(o instanceof ArrayOfDoublesSketchSetOpPostAggregator)) {
+      return false;
+    }
     final ArrayOfDoublesSketchSetOpPostAggregator that = (ArrayOfDoublesSketchSetOpPostAggregator) o;
     if (nominalEntries != that.nominalEntries) {
       return false;

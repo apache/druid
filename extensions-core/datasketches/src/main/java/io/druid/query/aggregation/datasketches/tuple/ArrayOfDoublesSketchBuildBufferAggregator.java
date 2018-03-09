@@ -32,21 +32,25 @@ import io.druid.segment.data.IndexedInts;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
+/**
+ * This aggregator builds sketches from raw data.
+ * The input is in the form of a key and array of double values.
+ * The output is ArrayOfDoublesSketch.
+ */
 public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  private static final int NUM_STRIPES = 64; // for locking per buffer position
+  private static final int NUM_STRIPES = 64; // for locking per buffer position (power of 2 to improve index computation)
 
   private final DimensionSelector keySelector;
   private final BaseDoubleColumnValueSelector[] valueSelectors;
   private final int nominalEntries;
   private final int maxIntermediateSize;
   private final double[] values; // for sketch update call
-  private Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
+  private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   public ArrayOfDoublesSketchBuildBufferAggregator(
       final DimensionSelector keySelector,
@@ -56,7 +60,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   )
   {
     this.keySelector = keySelector;
-    this.valueSelectors = valueSelectors.toArray(new BaseDoubleColumnValueSelector[valueSelectors.size()]);
+    this.valueSelectors = valueSelectors.toArray(new BaseDoubleColumnValueSelector[0]);
     this.nominalEntries = nominalEntries;
     this.maxIntermediateSize = maxIntermediateSize;
     values = new double[valueSelectors.size()];
@@ -83,9 +87,12 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
       values[i] = valueSelectors[i].getDouble();
     }
     final IndexedInts keys = keySelector.getRow();
+    // Wrapping memory and ArrayOfDoublesSketch is inexpensive compared to sketch operations.
+    // Maintaining a cache of wrapped objects per buffer position like in Theta sketch aggregator
+    // might might be considered, but it would increase complexity including relocate() support.
     final WritableMemory mem = WritableMemory.wrap(buf);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.get(Objects.hash(buf, position)).writeLock();
+    final Lock lock = stripedLock.getAt(lockIndex(position)).writeLock();
     lock.lock();
     try {
       final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
@@ -111,7 +118,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   {
     final WritableMemory mem = WritableMemory.wrap(buf);
     final WritableMemory region = mem.writableRegion(position, maxIntermediateSize);
-    final Lock lock = stripedLock.get(Objects.hash(buf, position)).readLock();
+    final Lock lock = stripedLock.getAt(lockIndex(position)).readLock();
     lock.lock();
     try {
       final ArrayOfDoublesUpdatableSketch sketch = (ArrayOfDoublesUpdatableSketch) ArrayOfDoublesSketches
@@ -145,6 +152,19 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   {
     inspector.visit("keySelector", keySelector);
     inspector.visit("valueSelectors", valueSelectors);
+  }
+
+  // compute lock index to avoid boxing in Striped.get() call
+  static int lockIndex(final int position)
+  {
+    return smear(position) % NUM_STRIPES;
+  }
+
+  // from https://github.com/google/guava/blob/master/guava/src/com/google/common/util/concurrent/Striped.java#L536-L548
+  private static int smear(int hashCode)
+  {
+    hashCode ^= (hashCode >>> 20) ^ (hashCode >>> 12);
+    return hashCode ^ (hashCode >>> 7) ^ (hashCode >>> 4);
   }
 
 }

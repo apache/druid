@@ -25,6 +25,11 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.BaseObjectColumnValueSelector;
 
+/**
+ * This aggregator merges existing sketches.
+ * The input column contains ArrayOfDoublesSketch.
+ * The output is ArrayOfDoublesSketch that is a union of the input sketches.
+ */
 public class ArrayOfDoublesSketchMergeAggregator implements Aggregator
 {
 
