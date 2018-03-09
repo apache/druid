@@ -40,7 +40,6 @@ import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
@@ -140,6 +139,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         }
       }
     }
+  }
+
+  private static boolean isNilSelector(final DimensionSelector selector)
+  {
+    return selector.nameLookupPossibleInAdvance()
+        && selector.getValueCardinality() == 1
+        && selector.lookupName(0) == null;
   }
 
   public static class LongSearchColumnSelectorStrategy
