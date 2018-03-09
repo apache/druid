@@ -335,4 +335,10 @@ public class ExprListenerImpl extends ExprBaseListener
 
     nodes.put(ctx, args);
   }
+
+  @Override
+  public void exitNull(ExprParser.NullContext ctx)
+  {
+    nodes.put(ctx, new StringExpr(null));
+  }
 }

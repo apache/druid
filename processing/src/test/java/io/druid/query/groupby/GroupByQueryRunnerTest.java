@@ -2304,7 +2304,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithTimeZone()
   {
-    DateTimeZone tz = DateTimeZone.forID("America/Los_Angeles");
+    DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
 
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -3525,6 +3525,68 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel47", "rows", 1L, "idx", 166L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel123", "rows", 1L, "idx", 97L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel555", "rows", 1L, "idx", 126L)
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithLookupAndLimitAndSortByDimsFirst()
+  {
+    Map<String, String> map = new HashMap<>();
+    map.put("automotive", "9");
+    map.put("business", "8");
+    map.put("entertainment", "7");
+    map.put("health", "6");
+    map.put("mezzanine", "5");
+    map.put("news", "4");
+    map.put("premium", "3");
+    map.put("technology", "2");
+    map.put("travel", "1");
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new ExtractionDimensionSpec(
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false)
+                )
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setLimitSpec(new DefaultLimitSpec(Lists.<OrderByColumnSpec>newArrayList(
+            new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)), 11))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setContext(ImmutableMap.of("sortByDimsFirst", true))
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "1", "rows", 1L, "idx", 119L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "1", "rows", 1L, "idx", 126L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "2", "rows", 1L, "idx", 78L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "2", "rows", 1L, "idx", 97L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "3", "rows", 3L, "idx", 2900L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "3", "rows", 3L, "idx", 2505L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "4", "rows", 1L, "idx", 121L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "4", "rows", 1L, "idx", 114L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "5", "rows", 3L, "idx", 2870L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "5", "rows", 3L, "idx", 2447L),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "6", "rows", 1L, "idx", 120L)
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -7436,7 +7498,9 @@ public class GroupByQueryRunnerTest
         query.getLimitSpec().build(
             query.getDimensions(),
             query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getPostAggregatorSpecs(),
+            query.getGranularity(),
+            query.getContextSortByDimsFirst()
         )
     );
 
@@ -7497,7 +7561,9 @@ public class GroupByQueryRunnerTest
         query.getLimitSpec().build(
             query.getDimensions(),
             query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getPostAggregatorSpecs(),
+            query.getGranularity(),
+            query.getContextSortByDimsFirst()
         )
     );
 
@@ -7700,7 +7766,9 @@ public class GroupByQueryRunnerTest
         query.getLimitSpec().build(
             query.getDimensions(),
             query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getPostAggregatorSpecs(),
+            query.getGranularity(),
+            query.getContextSortByDimsFirst()
         )
     );
 
@@ -7762,7 +7830,9 @@ public class GroupByQueryRunnerTest
         query.getLimitSpec().build(
             query.getDimensions(),
             query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getPostAggregatorSpecs(),
+            query.getGranularity(),
+            query.getContextSortByDimsFirst()
         )
     );
 
@@ -7823,7 +7893,9 @@ public class GroupByQueryRunnerTest
         query.getLimitSpec().build(
             query.getDimensions(),
             query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getPostAggregatorSpecs(),
+            query.getGranularity(),
+            query.getContextSortByDimsFirst()
         )
     );
 

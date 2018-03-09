@@ -27,9 +27,10 @@ import java.util.List;
 
 public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
+  long UNKNOWN_REMAINING_SEGMENT_SIZE = -1L;
   /**
-   * Return a map of (dataSource, number of remaining segments) for all dataSources.
+   * Return a map of (dataSource, total size of remaining segments) for all dataSources.
    * This method should consider all segments except the segments returned by {@link #next()}.
    */
-  Object2LongOpenHashMap<String> remainingSegments();
+  Object2LongOpenHashMap<String> remainingSegmentSizeBytes();
 }

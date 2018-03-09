@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -52,7 +53,9 @@ public final class NoopLimitSpec implements LimitSpec
   public Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggs,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      Granularity granularity,
+      boolean sortByDimsFirst
   )
   {
     return Functions.identity();

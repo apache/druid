@@ -19,18 +19,32 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.IndexIO;
 import io.druid.segment.data.ColumnarFloats;
 import io.druid.segment.data.ReadableOffset;
 
 /**
-*/
+ */
 public class FloatsColumn implements GenericColumn
 {
-  private final ColumnarFloats column;
+  /**
+   * Factory method to create FloatsColumn.
+   */
+  public static FloatsColumn create(ColumnarFloats column, ImmutableBitmap nullValueBitmap)
+  {
+    if (nullValueBitmap.isEmpty()) {
+      return new FloatsColumn(column);
+    } else {
+      return new FloatsColumnWithNulls(column, nullValueBitmap);
+    }
+  }
 
-  public FloatsColumn(final ColumnarFloats column)
+  final ColumnarFloats column;
+
+  FloatsColumn(final ColumnarFloats column)
   {
     this.column = column;
   }
@@ -44,7 +58,8 @@ public class FloatsColumn implements GenericColumn
   @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
-    return column.makeColumnValueSelector(offset);
+    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory()
+                                                                        .makeEmptyImmutableBitmap());
   }
 
   @Override
@@ -63,6 +78,12 @@ public class FloatsColumn implements GenericColumn
   public double getDoubleSingleValueRow(int rowNum)
   {
     return (double) column.get(rowNum);
+  }
+
+  @Override
+  public boolean isNull(int rowNum)
+  {
+    return false;
   }
 
   @Override

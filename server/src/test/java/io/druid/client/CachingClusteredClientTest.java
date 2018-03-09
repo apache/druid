@@ -255,7 +255,7 @@ public class CachingClusteredClientTest
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = ImmutableList.of();
   private static final Granularity GRANULARITY = Granularities.DAY;
-  private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
+  private static final DateTimeZone TIMEZONE = DateTimes.inferTzfromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
 

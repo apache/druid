@@ -28,7 +28,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.ServerView;
 import io.druid.client.TimelineServerView;
 import io.druid.guice.ManageLifecycle;
@@ -40,6 +39,7 @@ import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.metadata.AllColumnIncluderator;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
@@ -121,6 +121,7 @@ public class DruidSchema extends AbstractSchema
 
   private boolean refreshImmediately = false;
   private long lastRefresh = 0L;
+  private long lastFailure = 0L;
   private boolean isServerViewInitialized = false;
 
   @Inject
@@ -197,7 +198,13 @@ public class DruidSchema extends AbstractSchema
                     final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
 
                     while (true) {
+                      // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
+                      final boolean wasRecentFailure = DateTimes.utc(lastFailure)
+                                                                .plus(config.getMetadataRefreshPeriod())
+                                                                .isAfterNow();
+
                       if (isServerViewInitialized &&
+                          !wasRecentFailure &&
                           (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
                           (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
                         break;
@@ -211,6 +218,7 @@ public class DruidSchema extends AbstractSchema
                     // Mutable segments need a refresh every period, since new columns could be added dynamically.
                     segmentsNeedingRefresh.addAll(mutableSegments);
 
+                    lastFailure = 0L;
                     lastRefresh = System.currentTimeMillis();
                     refreshImmediately = false;
                   }
@@ -258,6 +266,7 @@ public class DruidSchema extends AbstractSchema
                     // Add our segments and dataSources back to their refresh and rebuild lists.
                     segmentsNeedingRefresh.addAll(segmentsToRefresh);
                     dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
+                    lastFailure = System.currentTimeMillis();
                     lock.notifyAll();
                   }
                 }

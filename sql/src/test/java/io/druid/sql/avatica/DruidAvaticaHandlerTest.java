@@ -41,17 +41,18 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Escalator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -89,7 +90,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Executors;
 
-public class DruidAvaticaHandlerTest
+public class DruidAvaticaHandlerTest extends CalciteTestBase
 {
   private static final AvaticaServerConfig AVATICA_CONFIG = new AvaticaServerConfig()
   {
@@ -128,7 +129,6 @@ public class DruidAvaticaHandlerTest
   @Before
   public void setUp() throws Exception
   {
-    Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig);
@@ -256,7 +256,7 @@ public class DruidAvaticaHandlerTest
         "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1"
     );
 
-    final DateTimeZone timeZone = DateTimeZone.forID("America/Los_Angeles");
+    final DateTimeZone timeZone = DateTimes.inferTzfromString("America/Los_Angeles");
     final DateTime localDateTime = new DateTime("2000-01-01T00Z", timeZone);
 
     final List<Map<String, Object>> resultRows = getRows(resultSet);
@@ -282,6 +282,21 @@ public class DruidAvaticaHandlerTest
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.of("x", "a", "y", "a")
+        ),
+        getRows(resultSet)
+    );
+  }
+
+  @Test
+  public void testSelectBoolean() throws Exception
+  {
+    final ResultSet resultSet = client.createStatement().executeQuery(
+        "SELECT dim2, dim2 IS NULL AS isnull FROM druid.foo LIMIT 1"
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("dim2", "a", "isnull", false)
         ),
         getRows(resultSet)
     );

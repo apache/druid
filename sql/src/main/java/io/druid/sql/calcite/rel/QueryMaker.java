@@ -385,6 +385,8 @@ public class QueryMaker
       return ColumnMetaData.Rep.of(Float.class);
     } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
       return ColumnMetaData.Rep.of(Double.class);
+    } else if (sqlType == SqlTypeName.BOOLEAN) {
+      return ColumnMetaData.Rep.of(Boolean.class);
     } else if (sqlType == SqlTypeName.OTHER) {
       return ColumnMetaData.Rep.of(Object.class);
     } else {

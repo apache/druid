@@ -67,7 +67,7 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
 
   private static void writeToBuffer(ByteBuffer buffer, IntList list, int numBytes, int maxValue)
   {
-    ByteBuffer helperBuffer = ByteBuffer.allocate(Ints.BYTES);
+    ByteBuffer helperBuffer = ByteBuffer.allocate(Integer.BYTES);
     for (int i = 0; i < list.size(); i++) {
       int val = list.getInt(i);
       if (val < 0) {
@@ -78,7 +78,7 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
       }
 
       helperBuffer.putInt(0, val);
-      buffer.put(helperBuffer.array(), Ints.BYTES - numBytes, numBytes);
+      buffer.put(helperBuffer.array(), Integer.BYTES - numBytes, numBytes);
     }
     buffer.position(0);
   }
@@ -130,13 +130,13 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
 
   public int getNumBytesNoPadding()
   {
-    return buffer.remaining() - (Ints.BYTES - numBytes);
+    return buffer.remaining() - (Integer.BYTES - numBytes);
   }
 
   public void writeBytesNoPaddingTo(HeapByteBufferWriteOutBytes out)
   {
     ByteBuffer toWrite = buffer.slice();
-    toWrite.limit(toWrite.limit() - (Ints.BYTES - numBytes));
+    toWrite.limit(toWrite.limit() - (Integer.BYTES - numBytes));
     out.write(toWrite);
   }
 

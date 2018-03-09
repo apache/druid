@@ -19,7 +19,6 @@
 
 package io.druid.query.groupby.epinephelinae.column;
 
-import com.google.common.primitives.Floats;
 import io.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
@@ -31,7 +30,7 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   @Override
   public int getGroupingKeySize()
   {
-    return Floats.BYTES;
+    return Float.BYTES;
   }
 
   @Override

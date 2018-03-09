@@ -36,6 +36,9 @@ public class ExtensionsConfig
   private String directory = "extensions";
 
   @JsonProperty
+  private boolean useExtensionClassloaderFirst = false;
+
+  @JsonProperty
   private String hadoopDependenciesDir = "hadoop-dependencies";
 
   @JsonProperty
@@ -56,6 +59,11 @@ public class ExtensionsConfig
   public String getDirectory()
   {
     return directory;
+  }
+
+  public boolean isUseExtensionClassloaderFirst()
+  {
+    return useExtensionClassloaderFirst;
   }
 
   public String getHadoopDependenciesDir()
@@ -84,6 +92,7 @@ public class ExtensionsConfig
     return "ExtensionsConfig{" +
            "searchCurrentClassloader=" + searchCurrentClassloader +
            ", directory='" + directory + '\'' +
+           ", useExtensionClassloaderFirst=" + useExtensionClassloaderFirst +
            ", hadoopDependenciesDir='" + hadoopDependenciesDir + '\'' +
            ", hadoopContainerDruidClasspath='" + hadoopContainerDruidClasspath + '\'' +
            ", addExtensionsToHadoopContainer=" + addExtensionsToHadoopContainer +

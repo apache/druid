@@ -24,43 +24,86 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.ibm.icu.text.SimpleDateFormat;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  */
 public class TimeDimExtractionFn extends DimExtractionFn
 {
   private final String timeFormat;
-  private final ThreadLocal<SimpleDateFormat> timeFormatter;
   private final String resultFormat;
-  private final ThreadLocal<SimpleDateFormat> resultFormatter;
+  private final Supplier<Function<String, String>> fn;
+  private final boolean joda;
 
   @JsonCreator
   public TimeDimExtractionFn(
       @JsonProperty("timeFormat") String timeFormat,
-      @JsonProperty("resultFormat") String resultFormat
+      @JsonProperty("resultFormat") String resultFormat,
+      @JsonProperty("joda") boolean joda
   )
   {
     Preconditions.checkNotNull(timeFormat, "timeFormat must not be null");
     Preconditions.checkNotNull(resultFormat, "resultFormat must not be null");
 
+    this.joda = joda;
     this.timeFormat = timeFormat;
-    this.timeFormatter = ThreadLocal.withInitial(() -> {
-      SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.timeFormat);
-      formatter.setLenient(true);
-      return formatter;
-    });
-
     this.resultFormat = resultFormat;
-    this.resultFormatter = ThreadLocal.withInitial(() -> {
-      SimpleDateFormat formatter = new SimpleDateFormat(TimeDimExtractionFn.this.resultFormat);
-      return formatter;
-    });
+    this.fn = makeFunctionSupplier();
+  }
+
+  private Supplier<Function<String, String>> makeFunctionSupplier()
+  {
+    if (joda) {
+      final DateTimes.UtcFormatter parser = DateTimes.wrapFormatter(DateTimeFormat.forPattern(timeFormat));
+      final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(resultFormat));
+
+      final Function<String, String> fn = value -> {
+        DateTime date;
+        try {
+          date = parser.parse(value);
+        }
+        catch (IllegalArgumentException e) {
+          return value;
+        }
+        return formatter.print(date);
+      };
+
+      // Single shared function, since Joda formatters are thread-safe.
+      return () -> fn;
+    } else {
+      final ThreadLocal<Function<String, String>> threadLocal = ThreadLocal.withInitial(
+          () -> {
+            final SimpleDateFormat parser = new SimpleDateFormat(timeFormat);
+            final SimpleDateFormat formatter = new SimpleDateFormat(resultFormat);
+            parser.setLenient(true);
+
+            return value -> {
+              Date date;
+              try {
+                date = parser.parse(value);
+              }
+              catch (ParseException e) {
+                return value;
+              }
+              return formatter.format(date);
+            };
+          }
+      );
+
+      // Thread-local, since SimpleDateFormats are not thread-safe.
+      return threadLocal::get;
+    }
   }
 
   @Override
@@ -81,26 +124,25 @@ public class TimeDimExtractionFn extends DimExtractionFn
       return null;
     }
 
-    Date date;
-    try {
-      date = timeFormatter.get().parse(dimValue);
-    }
-    catch (ParseException e) {
-      return dimValue;
-    }
-    return resultFormatter.get().format(date);
+    return fn.get().apply(dimValue);
   }
 
-  @JsonProperty("timeFormat")
+  @JsonProperty
   public String getTimeFormat()
   {
     return timeFormat;
   }
 
-  @JsonProperty("resultFormat")
+  @JsonProperty
   public String getResultFormat()
   {
     return resultFormat;
+  }
+
+  @JsonProperty
+  public boolean isJoda()
+  {
+    return joda;
   }
 
   @Override
@@ -116,16 +158,7 @@ public class TimeDimExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public String toString()
-  {
-    return "TimeDimExtractionFn{" +
-           "timeFormat='" + timeFormat + '\'' +
-           ", resultFormat='" + resultFormat + '\'' +
-           '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -133,24 +166,25 @@ public class TimeDimExtractionFn extends DimExtractionFn
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    TimeDimExtractionFn that = (TimeDimExtractionFn) o;
-
-    if (!resultFormat.equals(that.resultFormat)) {
-      return false;
-    }
-    if (!timeFormat.equals(that.timeFormat)) {
-      return false;
-    }
-
-    return true;
+    final TimeDimExtractionFn that = (TimeDimExtractionFn) o;
+    return joda == that.joda &&
+           Objects.equals(timeFormat, that.timeFormat) &&
+           Objects.equals(resultFormat, that.resultFormat);
   }
 
   @Override
   public int hashCode()
   {
-    int result = timeFormat.hashCode();
-    result = 31 * result + resultFormat.hashCode();
-    return result;
+    return Objects.hash(timeFormat, resultFormat, joda);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TimeDimExtractionFn{" +
+           "timeFormat='" + timeFormat + '\'' +
+           ", resultFormat='" + resultFormat + '\'' +
+           ", joda=" + joda +
+           '}';
   }
 }

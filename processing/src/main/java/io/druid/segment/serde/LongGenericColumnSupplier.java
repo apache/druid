@@ -20,6 +20,7 @@
 package io.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.LongsColumn;
 import io.druid.segment.data.CompressedColumnarLongsSupplier;
@@ -29,15 +30,17 @@ import io.druid.segment.data.CompressedColumnarLongsSupplier;
 public class LongGenericColumnSupplier implements Supplier<GenericColumn>
 {
   private final CompressedColumnarLongsSupplier column;
+  private final ImmutableBitmap nullValueBitmap;
 
-  public LongGenericColumnSupplier(CompressedColumnarLongsSupplier column)
+  public LongGenericColumnSupplier(CompressedColumnarLongsSupplier column, ImmutableBitmap nullValueBitmap)
   {
     this.column = column;
+    this.nullValueBitmap = nullValueBitmap;
   }
 
   @Override
   public GenericColumn get()
   {
-    return new LongsColumn(column.get());
+    return LongsColumn.create(column.get(), nullValueBitmap);
   }
 }
