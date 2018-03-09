@@ -22,8 +22,15 @@ package io.druid.segment;
 import org.joda.time.DateTime;
 
 /**
+ * Cursor is an interface for iteration over a range of data points, used during query execution. {@link
+ * QueryableIndexStorageAdapter.QueryableIndexCursor} is an implementation for historical segments, and {@link
+ * io.druid.segment.incremental.IncrementalIndexStorageAdapter.IncrementalIndexCursor} is an implementation for {@link
+ * io.druid.segment.incremental.IncrementalIndex}.
+ *
+ * Cursor interface is conceptually similar to {@link TimeAndDimsPointer}, that is used for historical segment
+ * creation rather than query execution. If those interfaces could be collapsed (and if it is worthwhile) is yet to be
+ * determined.
  */
-
 public interface Cursor
 {
   ColumnSelectorFactory getColumnSelectorFactory();

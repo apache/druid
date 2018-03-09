@@ -40,6 +40,10 @@ import java.util.Map;
  * io.druid.segment.incremental.IncrementalIndexRow}, {@link RowPointer}) is that "time and dims" is logical composite
  * of only time point and dimension and metric values, not tied to a specific position in any data structure (aka "row
  * index").
+ *
+ * TimeAndDimsPointer intrface is conceptually similar to {@link Cursor}, that is used for query execution rather than
+ * historical segments creation. If those interfaces could be collapsed (and if it is worthwhile) is yet to be
+ * determined.
  */
 public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
 {

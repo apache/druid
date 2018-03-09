@@ -48,7 +48,10 @@ public interface TransformableRowIterator extends RowIterator
    * required to return after all subsequent {@link #mark()} calls), but the data of the returned pointer should not
    * be accessed before the first call to {@link #mark()}.
    *
-   * This method is used in {@link RowCombiningTimeAndDimsIterator} implementation.
+   * This method is used in {@link RowCombiningTimeAndDimsIterator} implementation. getMarkedPointer() returns {@link
+   * TimeAndDimsPointer} instead of {@link RowPointer} (like {@link #getPointer()}) merely because {@link
+   * RowCombiningTimeAndDimsIterator} doesn't need this method to return anything more specific than {@link
+   * TimeAndDimsPointer}.
    */
   TimeAndDimsPointer getMarkedPointer();
 }
