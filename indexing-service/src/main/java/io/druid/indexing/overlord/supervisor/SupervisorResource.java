@@ -229,7 +229,7 @@ public class SupervisorResource
                   }
                 }
             );
-            return Response.ok(supervisorHistory).build();
+            return Response.ok(authorizedSupervisorHistory).build();
           }
         }
     );

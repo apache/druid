@@ -69,10 +69,16 @@ public final class DateTimes
     {
       return innerFormatter.parseDateTime(instant);
     }
+
+    public String print(final DateTime instant)
+    {
+      return innerFormatter.print(instant);
+    }
   }
 
   /**
    * Creates a {@link UtcFormatter} that wraps around a {@link DateTimeFormatter}.
+   *
    * @param formatter inner {@link DateTimeFormatter} used to parse {@link String}
    */
   public static UtcFormatter wrapFormatter(final DateTimeFormatter formatter)
