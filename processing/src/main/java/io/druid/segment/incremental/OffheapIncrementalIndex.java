@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
+public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<BufferAggregator>
 {
   private static final Logger log = new Logger(OffheapIncrementalIndex.class);
 
@@ -95,7 +95,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  public FactsHolder getFacts()
+  protected FactsHolder getFacts()
   {
     return facts;
   }

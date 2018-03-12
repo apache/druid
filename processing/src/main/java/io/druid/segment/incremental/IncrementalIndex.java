@@ -437,7 +437,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return rollup;
   }
 
-  public abstract FactsHolder getFacts();
+  protected abstract FactsHolder getFacts();
 
   public abstract boolean canAppendRow();
 
@@ -642,15 +642,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return numEntries.get();
   }
 
-  private long getMinTimeMillis()
-  {
-    return getFacts().getMinTimeMillis();
-  }
+  protected abstract long getMinTimeMillis();
 
-  private long getMaxTimeMillis()
-  {
-    return getFacts().getMaxTimeMillis();
-  }
+  protected abstract long getMaxTimeMillis();
 
   public AggregatorType[] getAggs()
   {
