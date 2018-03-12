@@ -1,4 +1,4 @@
 com.google.common.collect.MapMaker @ Create java.util.concurrent.ConcurrentHashMap directly
 com.google.common.collect.Maps#newConcurrentMap() @ Create java.util.concurrent.ConcurrentHashMap directly
-com.google.common.util.concurrent.Futures.transform(com.google.common.util.concurrent.ListenableFuture<I>, com.google.common.util.concurrent.AsyncFunction<? super I,? extends O>) @ Use io.druid.java.util.common.concurrent.ListenableFutures#transformAsync
+com.google.common.util.concurrent.Futures#transform(com.google.common.util.concurrent.ListenableFuture<I>, com.google.common.util.concurrent.AsyncFunction<? super I,? extends O>) @ Use io.druid.java.util.common.concurrent.ListenableFutures#transformAsync
 com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()
