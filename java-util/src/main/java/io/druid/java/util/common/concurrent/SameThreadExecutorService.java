@@ -25,10 +25,10 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * A simple class that implements the ExecutorService interface, but runs the code on a call to submit
+ * Use io.druid.java.util.common.concurrent.Execs#sameThreadExecutor() to get the instance
  */
 public class SameThreadExecutorService extends AbstractExecutorService
 {
-  // Use io.druid.java.util.common.concurrent.Execs#sameThreadExecutor()
   SameThreadExecutorService()
   {
 
