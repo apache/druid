@@ -21,6 +21,7 @@ package io.druid.segment.incremental;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -297,6 +298,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       ValueType type = TYPE_MAP.get(dimSchema.getValueType());
       String dimName = dimSchema.getName();
       ColumnCapabilitiesImpl capabilities = makeCapabilitesFromValueType(type);
+      capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
+
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {
@@ -549,6 +552,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     synchronized (dimensionDescs) {
       dims = new Object[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
+        if (Strings.isNullOrEmpty(dimension)) {
+          continue;
+        }
         boolean wasNewDim = false;
         ColumnCapabilitiesImpl capabilities;
         DimensionDesc desc = dimensionDescs.get(dimension);

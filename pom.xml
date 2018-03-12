@@ -87,6 +87,9 @@
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
+        <repoOrgId>org-apache-id</repoOrgId>
+        <repoOrgName>org-apache-name</repoOrgName>
+        <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
     </properties>
 
     <modules>
@@ -147,6 +150,14 @@
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
+
+  <repositories>
+    <repository>
+        <id>${repoOrgId}</id>
+        <name>${repoOrgName}</name>
+        <url>${repoOrgUrl}</url>
+    </repository>
+  </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -721,6 +732,11 @@
                 <groupId>org.gridkit.lab</groupId>
                 <artifactId>jvm-attach-api</artifactId>
                 <version>1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>4.5.1</version>
             </dependency>
 
             <!-- Test Scope -->

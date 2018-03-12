@@ -21,12 +21,13 @@ package io.druid.segment;
 
 import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.java.util.common.ISE;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -37,11 +38,13 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 {
   private final String dimensionName;
   private final MultiValueHandling multiValueHandling;
+  private final boolean hasBitmapIndexes;
 
-  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling)
+  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
   {
     this.dimensionName = dimensionName;
     this.multiValueHandling = multiValueHandling;
+    this.hasBitmapIndexes = hasBitmapIndexes;
   }
 
   @Override
@@ -207,18 +210,26 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer(multiValueHandling);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes);
   }
 
   @Override
-  public DimensionMergerV9 makeMerger(
+  public DimensionMergerV9<int[]> makeMerger(
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   )
   {
+    // Sanity-check capabilities.
+    if (hasBitmapIndexes != capabilities.hasBitmapIndexes()) {
+      throw new ISE(
+          "capabilities.hasBitmapIndexes[%s] != this.hasBitmapIndexes[%s]",
+          capabilities.hasBitmapIndexes(),
+          hasBitmapIndexes
+      );
+    }
+
     return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress);
   }
-
 }
