@@ -21,11 +21,11 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -33,9 +33,9 @@ public class KafkaSupervisorReportPayload
 {
   private final String dataSource;
   private final String topic;
-  private final Integer partitions;
-  private final Integer replicas;
-  private final Long durationSeconds;
+  private final int partitions;
+  private final int replicas;
+  private final long durationSeconds;
   private final List<TaskReportData> activeTasks;
   private final List<TaskReportData> publishingTasks;
   private final Map<Integer, Long> latestOffsets;
@@ -46,9 +46,9 @@ public class KafkaSupervisorReportPayload
   public KafkaSupervisorReportPayload(
       String dataSource,
       String topic,
-      Integer partitions,
-      Integer replicas,
-      Long durationSeconds,
+      int partitions,
+      int replicas,
+      long durationSeconds,
       @Nullable Map<Integer, Long> latestOffsets,
       @Nullable Map<Integer, Long> minimumLag,
       @Nullable Long aggregateLag,
@@ -60,8 +60,8 @@ public class KafkaSupervisorReportPayload
     this.partitions = partitions;
     this.replicas = replicas;
     this.durationSeconds = durationSeconds;
-    this.activeTasks = Lists.newArrayList();
-    this.publishingTasks = Lists.newArrayList();
+    this.activeTasks = new ArrayList<>();
+    this.publishingTasks = new ArrayList<>();
     this.latestOffsets = latestOffsets;
     this.minimumLag = minimumLag;
     this.aggregateLag = aggregateLag;
@@ -92,19 +92,19 @@ public class KafkaSupervisorReportPayload
   }
 
   @JsonProperty
-  public Integer getPartitions()
+  public int getPartitions()
   {
     return partitions;
   }
 
   @JsonProperty
-  public Integer getReplicas()
+  public int getReplicas()
   {
     return replicas;
   }
 
   @JsonProperty
-  public Long getDurationSeconds()
+  public long getDurationSeconds()
   {
     return durationSeconds;
   }
