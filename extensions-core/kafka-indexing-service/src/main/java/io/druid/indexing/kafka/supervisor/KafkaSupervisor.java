@@ -1984,14 +1984,13 @@ public class KafkaSupervisor implements Supervisor
     return false;
   }
 
-  private KafkaSupervisorReport generateReport(boolean includeOffsets)
+  private SupervisorReport<KafkaSupervisorReportPayload> generateReport(boolean includeOffsets)
   {
     int numPartitions = partitionGroups.values().stream().mapToInt(Map::size).sum();
 
     Map<Integer, Long> partitionLag = getLagPerPartition(getHighestCurrentOffsets());
-    KafkaSupervisorReport report = new KafkaSupervisorReport(
+    final KafkaSupervisorReportPayload payload = new KafkaSupervisorReportPayload(
         dataSource,
-        DateTimes.nowUtc(),
         ioConfig.getTopic(),
         numPartitions,
         ioConfig.getReplicas(),
@@ -2000,6 +1999,11 @@ public class KafkaSupervisor implements Supervisor
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? offsetsLastUpdated : null
+    );
+    SupervisorReport<KafkaSupervisorReportPayload> report = new SupervisorReport<>(
+        dataSource,
+        DateTimes.nowUtc(),
+        payload
     );
 
     List<TaskReportData> taskReports = Lists.newArrayList();
@@ -2058,7 +2062,7 @@ public class KafkaSupervisor implements Supervisor
         }
       }
 
-      taskReports.forEach(report::addTask);
+      taskReports.forEach(payload::addTask);
     }
     catch (Exception e) {
       log.warn(e, "Failed to generate status report");
