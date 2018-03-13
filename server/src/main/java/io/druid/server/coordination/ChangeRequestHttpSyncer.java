@@ -26,17 +26,17 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.druid.concurrent.LifecycleLock;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
 import io.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import io.druid.java.util.http.client.response.ClientResponse;
 import io.druid.java.util.http.client.response.InputStreamResponseHandler;
-import io.druid.concurrent.LifecycleLock;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.RE;
-import io.druid.java.util.common.RetryUtils;
-import io.druid.java.util.common.StringUtils;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -59,6 +59,8 @@ import java.util.concurrent.TimeUnit;
 public class ChangeRequestHttpSyncer<T>
 {
   private static final EmittingLogger log = new EmittingLogger(ChangeRequestHttpSyncer.class);
+
+  public static final long HTTP_TIMEOUT_EXTRA_MS = 5000;
 
   private static final long MAX_RETRY_BACKOFF = TimeUnit.MINUTES.toMillis(2);
 
@@ -87,8 +89,8 @@ public class ChangeRequestHttpSyncer<T>
   private ChangeRequestHistory.Counter counter = null;
   private long unstableStartTime = -1;
   private int consecutiveFailedAttemptCount = 0;
-  private long lastSuccessfulSyncTime = System.currentTimeMillis();
-  private long lastSyncTime = System.currentTimeMillis();
+  private long lastSuccessfulSyncTime = 0;
+  private long lastSyncTime = 0;
 
   public ChangeRequestHttpSyncer(
       ObjectMapper smileMapper,
@@ -110,7 +112,7 @@ public class ChangeRequestHttpSyncer<T>
     this.responseTypeReferences = responseTypeReferences;
     this.serverTimeoutMS = serverTimeoutMS;
     this.serverUnstabilityTimeout = serverUnstabilityTimeout;
-    this.serverHttpTimeout = serverTimeoutMS + 5000;
+    this.serverHttpTimeout = serverTimeoutMS + HTTP_TIMEOUT_EXTRA_MS;
     this.listener = listener;
     this.logIdentity = StringUtils.format("%s_%s", baseServerURL, System.currentTimeMillis());
   }
@@ -154,10 +156,10 @@ public class ChangeRequestHttpSyncer<T>
   {
     long currTime = System.currentTimeMillis();
 
-    return ImmutableMap.of("notSyncedForSecs", (currTime - lastSyncTime) / 1000,
-                           "notSuccessfullySyncedFor", (currTime - lastSuccessfulSyncTime) / 1000,
+    return ImmutableMap.of("notSyncedForSecs", lastSyncTime == 0 ? "Never Synced" : (currTime - lastSyncTime) / 1000,
+                           "notSuccessfullySyncedFor", lastSuccessfulSyncTime == 0 ? "Never Successfully Synced" : (currTime - lastSuccessfulSyncTime) / 1000,
                            "consecutiveFailedAttemptCount", consecutiveFailedAttemptCount,
-                           "started", startStopLock.isStarted()
+                           "syncScheduled", startStopLock.isStarted()
     );
   }
 
@@ -269,8 +271,16 @@ public class ChangeRequestHttpSyncer<T>
 
                   counter = changes.getCounter();
 
-                  initializationLatch.countDown();
-                  consecutiveFailedAttemptCount = 0;
+                  if (!initializationLatch.await(1, TimeUnit.MILLISECONDS)) {
+                    initializationLatch.countDown();
+                    log.info("[%s] synced successfully for the first time.", logIdentity);
+                  }
+
+                  if (consecutiveFailedAttemptCount > 0) {
+                    consecutiveFailedAttemptCount = 0;
+                    log.info("[%s] synced successfully.", logIdentity);
+                  }
+
                   lastSuccessfulSyncTime = System.currentTimeMillis();
                 }
                 catch (Exception ex) {
