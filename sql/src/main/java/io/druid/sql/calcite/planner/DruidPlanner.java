@@ -321,7 +321,7 @@ public class DruidPlanner implements Closeable
     return new PlannerResult(
         resultsSupplier,
         typeFactory.createStructType(
-            ImmutableList.of(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
+            ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
             ImmutableList.of("PLAN")
         )
     );

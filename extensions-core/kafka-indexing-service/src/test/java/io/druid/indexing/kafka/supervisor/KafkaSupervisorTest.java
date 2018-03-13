@@ -29,13 +29,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.java.util.common.parsers.JSONPathFieldSpec;
-import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
@@ -60,6 +58,8 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.TestHelper;
@@ -1133,14 +1133,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.updateCurrentAndLatestOffsets().run();
-    SupervisorReport report = supervisor.getStatus();
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
     Assert.assertEquals(DATASOURCE, report.getId());
-    Assert.assertTrue(report.getPayload() instanceof KafkaSupervisorReport.KafkaSupervisorReportPayload);
 
-    KafkaSupervisorReport.KafkaSupervisorReportPayload payload = (KafkaSupervisorReport.KafkaSupervisorReportPayload)
-        report.getPayload();
+    KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
     Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
@@ -1224,14 +1222,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.updateCurrentAndLatestOffsets().run();
-    SupervisorReport report = supervisor.getStatus();
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
     Assert.assertEquals(DATASOURCE, report.getId());
-    Assert.assertTrue(report.getPayload() instanceof KafkaSupervisorReport.KafkaSupervisorReportPayload);
 
-    KafkaSupervisorReport.KafkaSupervisorReportPayload payload = (KafkaSupervisorReport.KafkaSupervisorReportPayload)
-        report.getPayload();
+    KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
     Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
@@ -1338,14 +1334,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.updateCurrentAndLatestOffsets().run();
-    SupervisorReport report = supervisor.getStatus();
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
     Assert.assertEquals(DATASOURCE, report.getId());
-    Assert.assertTrue(report.getPayload() instanceof KafkaSupervisorReport.KafkaSupervisorReportPayload);
 
-    KafkaSupervisorReport.KafkaSupervisorReportPayload payload = (KafkaSupervisorReport.KafkaSupervisorReportPayload)
-        report.getPayload();
+    KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
     Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
@@ -2060,12 +2054,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     private final String taskType;
     private final TaskLocation location;
+    private final String dataSource;
 
     public TestTaskRunnerWorkItem(Task task, ListenableFuture<TaskStatus> result, TaskLocation location)
     {
       super(task.getId(), result);
       this.taskType = task.getType();
       this.location = location;
+      this.dataSource = task.getDataSource();
     }
 
     @Override
@@ -2079,6 +2075,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       return taskType;
     }
+
+    @Override
+    public String getDataSource() 
+    {
+      return dataSource;
+    }
+ 
   }
 
   private static class TestableKafkaSupervisor extends KafkaSupervisor

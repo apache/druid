@@ -22,10 +22,11 @@ package io.druid.indexing.overlord.supervisor;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 
 public interface Supervisor
 {
-  void start();
+  void start() throws IOException;
 
   /**
    * @param stopGracefully If true, supervisor will cleanly shutdown managed tasks if possible (for example signalling

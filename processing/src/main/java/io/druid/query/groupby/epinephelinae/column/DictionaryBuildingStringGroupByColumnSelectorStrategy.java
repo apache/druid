@@ -75,7 +75,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
     }
     int rowSize = row.size();
     newRow.ensureSize(rowSize);
-    for (int i = 0; i < row.size(); i++) {
+    for (int i = 0; i < rowSize; i++) {
       final String value = dimSelector.lookupName(row.get(i));
       final int dictId = reverseDictionary.getInt(value);
       if (dictId < 0) {

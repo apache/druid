@@ -28,8 +28,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.HttpClient;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DiscoveryDruidNode;
@@ -40,22 +38,27 @@ import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.server.coordination.ChangeRequestHttpSyncer;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
-import io.druid.server.coordination.ChangeRequestHttpSyncer;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -328,8 +331,42 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   //segmentViewInitialized on all registered segment callbacks.
   private void serverInventoryInitialized()
   {
+    long start = System.currentTimeMillis();
+    long serverSyncWaitTimeout = config.getServerTimeout() + 2 * ChangeRequestHttpSyncer.HTTP_TIMEOUT_EXTRA_MS;
+
+    List<DruidServerHolder> uninitializedServers = new ArrayList<>();
     for (DruidServerHolder server : servers.values()) {
-      server.awaitInitialization();
+      if (!server.isSyncedSuccessfullyAtleastOnce()) {
+        uninitializedServers.add(server);
+      }
+    }
+
+    while (!uninitializedServers.isEmpty() && ((System.currentTimeMillis() - start) < serverSyncWaitTimeout)) {
+      try {
+        Thread.sleep(5000);
+      }
+      catch (InterruptedException ex) {
+        throw new RE(ex, "Interrupted while waiting for queryable server initial successful sync.");
+      }
+
+      log.info("Checking whether all servers have been synced at least once yet....");
+      Iterator<DruidServerHolder> iter = uninitializedServers.iterator();
+      while (iter.hasNext()) {
+        if (iter.next().isSyncedSuccessfullyAtleastOnce()) {
+          iter.remove();
+        }
+      }
+    }
+
+    if (uninitializedServers.isEmpty()) {
+      log.info("All servers have been synced successfully at least once.");
+    } else {
+      for (DruidServerHolder server : uninitializedServers) {
+        log.warn(
+            "Server[%s] might not yet be synced successfully. We will continue to retry that in the background.",
+            server.druidServer.getName()
+        );
+      }
     }
 
     inventoryInitializationLatch.countDown();
@@ -495,17 +532,17 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       syncer.stop();
     }
 
-    //best effort wait for first fetch of segment listing from server.
-    void awaitInitialization()
+    boolean isSyncedSuccessfullyAtleastOnce()
     {
       try {
-        if (!syncer.awaitInitialization(syncer.getServerHttpTimeout())) {
-          log.warn("Await initialization timed out for server [%s].", druidServer.getName());
-        }
+        return syncer.awaitInitialization(1);
       }
       catch (InterruptedException ex) {
-        log.warn("Await initialization interrupted while waiting on server [%s].", druidServer.getName());
-        Thread.currentThread().interrupt();
+        throw new RE(
+            ex,
+            "Interrupted while waiting for queryable server[%s] initial successful sync.",
+            druidServer.getName()
+        );
       }
     }
 
