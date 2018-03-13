@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import io.druid.data.input.impl.prefetch.PrefetchSqlFirehoseFactory;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
@@ -53,7 +54,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
 
   @JsonCreator
   public SqlFirehoseFactory(
-      @JsonProperty("sqls") List<String> sql,
+      @JsonProperty("sqls") List<String> sqls,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
@@ -71,9 +72,9 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
         objectMapper
     );
 
-    Preconditions.checkArgument(sql.size() > 0, "No SQL queries provided");
+    Preconditions.checkArgument(sqls.size() > 0, "No SQL queries provided");
 
-    this.sqls = sql;
+    this.sqls = sqls;
     this.objectMapper = objectMapper;
     this.sqlMetadataConnector = sqlMetadataConnector;
     this.foldCase = (foldCase == null ? false : true);
@@ -131,19 +132,19 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
     @Override
     public Object get(Object obj)
     {
-      return super.get(((String) obj).toLowerCase());
+      return super.get(StringUtils.toLowerCase((String) obj));
     }
 
     @Override
     public Object put(String key, Object value)
     {
-      return super.put(key.toLowerCase(), value);
+      return super.put(StringUtils.toLowerCase(key), value);
     }
 
     @Override
     public boolean containsKey(Object obj)
     {
-      return super.containsKey(((String) obj).toLowerCase());
+      return super.containsKey(StringUtils.toLowerCase((String) obj));
     }
   }
 

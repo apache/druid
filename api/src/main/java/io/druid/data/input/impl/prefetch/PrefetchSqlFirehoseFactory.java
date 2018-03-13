@@ -87,7 +87,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class PrefetchSqlFirehoseFactory<T>
     implements FirehoseFactory<InputRowParser<Map<String, Object>>>
 {
-  private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
+  private static final Logger LOG = new Logger(PrefetchSqlFirehoseFactory.class);
 
   private final PrefetchConfig prefetchConfig;
   private final CacheManager<T> cacheManager;
