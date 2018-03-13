@@ -28,6 +28,7 @@ import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import io.druid.query.Query;
 import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
+import org.joda.time.DateTime;
 
 import java.util.Map;
 
@@ -84,6 +85,12 @@ public class EmittingRequestLogger implements RequestLogger
     public String getFeed()
     {
       return feed;
+    }
+
+    @JsonProperty("timestamp")
+    public DateTime getCreatedTime()
+    {
+      return request.getTimestamp();
     }
 
     @JsonProperty("service")

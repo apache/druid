@@ -144,7 +144,13 @@ public class DruidMeta extends MetaImpl
   )
   {
     final StatementHandle statement = createStatement(ch);
-    final DruidStatement druidStatement = getDruidStatement(statement);
+    final DruidStatement druidStatement;
+    try {
+      druidStatement = getDruidStatement(statement);
+    }
+    catch (NoSuchStatementException e) {
+      throw new IllegalStateException(e);
+    }
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
     AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
     if (authenticationResult == null) {
@@ -174,7 +180,7 @@ public class DruidMeta extends MetaImpl
       final long maxRowCount,
       final int maxRowsInFirstFrame,
       final PrepareCallback callback
-  )
+  ) throws NoSuchStatementException
   {
     // Ignore "callback", this class is designed for use with LocalService which doesn't use it.
     final DruidStatement druidStatement = getDruidStatement(statement);
@@ -250,7 +256,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle statement,
       final List<TypedValue> parameterValues,
       final int maxRowsInFirstFrame
-  )
+  ) throws NoSuchStatementException
   {
     Preconditions.checkArgument(parameterValues.isEmpty(), "Expected parameterValues to be empty");
 
@@ -306,7 +312,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle sh,
       final QueryState state,
       final long offset
-  )
+  ) throws NoSuchStatementException
   {
     final DruidStatement druidStatement = getDruidStatement(sh);
     final boolean isDone = druidStatement.isDone();
@@ -594,11 +600,13 @@ public class DruidMeta extends MetaImpl
   }
 
   @Nonnull
-  private DruidStatement getDruidStatement(final StatementHandle statement)
+  private DruidStatement getDruidStatement(final StatementHandle statement) throws NoSuchStatementException
   {
     final DruidConnection connection = getDruidConnection(statement.connectionId);
     final DruidStatement druidStatement = connection.getStatement(statement.id);
-    Preconditions.checkState(druidStatement != null, "Statement[%s] does not exist", statement.id);
+    if (druidStatement == null) {
+      throw new NoSuchStatementException(statement);
+    }
     return druidStatement;
   }
 
