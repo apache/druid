@@ -194,14 +194,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testGetSupervisorStatus() throws Exception
   {
-    SupervisorReport report = new SupervisorReport("id1", DateTimes.nowUtc())
-    {
-      @Override
-      public Object getPayload()
-      {
-        return null;
-      }
-    };
+    SupervisorReport<Void> report = new SupervisorReport<>("id1", DateTimes.nowUtc(), null);
 
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
         "id1", new TestSupervisorSpec("id1", supervisor1)

@@ -155,7 +155,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
         for (int i = 0; i < vals.size(); ++i) {
           IndexedInts subVals = columnarMultiInts.get(i);
           assertEquals(subVals.size(), vals.get(i).length);
-          for (int j = 0; j < subVals.size(); ++j) {
+          for (int j = 0, size = subVals.size(); j < size; ++j) {
             assertEquals(subVals.get(j), vals.get(i)[j]);
           }
         }
@@ -277,7 +277,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
       for (int i = 0; i < vals.size(); ++i) {
         IndexedInts subVals = columnarMultiInts.get(i);
         assertEquals(subVals.size(), vals.get(i).length);
-        for (int j = 0; j < subVals.size(); ++j) {
+        for (int j = 0, size = subVals.size(); j < size; ++j) {
           assertEquals(subVals.get(j), vals.get(i)[j]);
         }
       }

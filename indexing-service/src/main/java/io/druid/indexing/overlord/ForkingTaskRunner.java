@@ -772,6 +772,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     {
       return task.getType();
     }
+
+    @Override
+    public String getDataSource()
+    {
+      return task.getDataSource();
+    }
   }
 
   private static class ProcessHolder

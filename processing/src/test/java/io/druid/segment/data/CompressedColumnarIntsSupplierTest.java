@@ -205,7 +205,7 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
 
         try {
           for (int i = 0; i < numRuns; ++i) {
-            for (int j = 0; j < columnarInts.size(); ++j) {
+            for (int j = 0, size = columnarInts.size(); j < size; ++j) {
               final long val = vals[j];
               final long indexedVal = columnarInts.get(j);
               if (Longs.compare(val, indexedVal) != 0) {
@@ -285,7 +285,7 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
 
     // sequential access
     int[] indices = new int[vals.length];
-    for (int i = 0; i < columnarInts.size(); ++i) {
+    for (int i = 0, size = columnarInts.size(); i < size; ++i) {
       Assert.assertEquals(vals[i], columnarInts.get(i), 0.0);
       indices[i] = i;
     }
