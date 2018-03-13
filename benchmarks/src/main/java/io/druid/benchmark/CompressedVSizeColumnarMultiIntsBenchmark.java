@@ -152,7 +152,7 @@ public class CompressedVSizeColumnarMultiIntsBenchmark
   {
     for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
       IndexedInts row = uncompressed.get(i);
-      for (int j = 0; j < row.size(); j++) {
+      for (int j = 0, rowSize = row.size(); j < rowSize; j++) {
         blackhole.consume(row.get(j));
       }
     }
@@ -165,7 +165,7 @@ public class CompressedVSizeColumnarMultiIntsBenchmark
   {
     for (int i = filter.nextSetBit(0); i >= 0; i = filter.nextSetBit(i + 1)) {
       IndexedInts row = compressed.get(i);
-      for (int j = 0; j < row.size(); j++) {
+      for (int j = 0, rowSize = row.size(); j < rowSize; j++) {
         blackhole.consume(row.get(j));
       }
     }

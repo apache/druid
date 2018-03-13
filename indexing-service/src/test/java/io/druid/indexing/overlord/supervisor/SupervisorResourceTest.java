@@ -218,14 +218,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   @Test
   public void testSpecGetStatus()
   {
-    SupervisorReport report = new SupervisorReport("id", DateTimes.nowUtc())
-    {
-      @Override
-      public Object getPayload()
-      {
-        return null;
-      }
-    };
+    SupervisorReport<Void> report = new SupervisorReport<>("id", DateTimes.nowUtc(), null);
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.getSupervisorStatus("my-id")).andReturn(Optional.of(report));

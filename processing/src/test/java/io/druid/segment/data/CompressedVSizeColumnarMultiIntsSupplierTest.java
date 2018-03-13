@@ -107,7 +107,7 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
       final IndexedInts vSizeIndexedInts = iterator.next();
 
       Assert.assertEquals(ints.length, vSizeIndexedInts.size());
-      for (int i = 0; i < vSizeIndexedInts.size(); i++) {
+      for (int i = 0, size = vSizeIndexedInts.size(); i < size; i++) {
         Assert.assertEquals(ints[i], vSizeIndexedInts.get(i));
       }
       row++;

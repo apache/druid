@@ -1343,7 +1343,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         State state
     )
     {
-      super(taskId, taskType, worker, location);
+      super(taskId, task == null ? null : task.getType(), worker, location, task == null ? null : task.getDataSource());
       this.state = Preconditions.checkNotNull(state);
       Preconditions.checkArgument(task == null || taskType == null || taskType.equals(task.getType()));
 

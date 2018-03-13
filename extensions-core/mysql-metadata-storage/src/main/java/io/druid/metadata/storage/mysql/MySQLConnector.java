@@ -34,7 +34,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.util.BooleanMapper;
+import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.File;
 import java.sql.SQLException;
@@ -162,17 +162,19 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   public boolean tableExists(Handle handle, String tableName)
   {
-    // ensure database defaults to utf8, otherwise bail
-    boolean isUtf8 = handle
-        .createQuery("SELECT @@character_set_database = 'utf8'")
-        .map(BooleanMapper.FIRST)
+    String databaseCharset = handle
+        .createQuery("SELECT @@character_set_database")
+        .map(StringMapper.FIRST)
         .first();
 
-    if (!isUtf8) {
+    if (!databaseCharset.matches("utf8.*")) {
       throw new ISE(
-          "Database default character set is not UTF-8." + System.lineSeparator()
-          + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
+          "Druid requires its MySQL database to be created with an UTF8 charset, found `%1$s`. "
+          + "The recommended charset is `utf8mb4`.",
+          databaseCharset
       );
+    } else if (!"utf8mb4".equals(databaseCharset)) {
+      log.warn("The current database charset `%1$s` does not match the recommended charset `utf8mb4`", databaseCharset);
     }
 
     return !handle.createQuery("SHOW tables LIKE :tableName")

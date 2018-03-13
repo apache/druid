@@ -1133,14 +1133,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.updateCurrentAndLatestOffsets().run();
-    SupervisorReport report = supervisor.getStatus();
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
     Assert.assertEquals(DATASOURCE, report.getId());
-    Assert.assertTrue(report.getPayload() instanceof KafkaSupervisorReport.KafkaSupervisorReportPayload);
 
-    KafkaSupervisorReport.KafkaSupervisorReportPayload payload = (KafkaSupervisorReport.KafkaSupervisorReportPayload)
-        report.getPayload();
+    KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
     Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
@@ -1224,14 +1222,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.updateCurrentAndLatestOffsets().run();
-    SupervisorReport report = supervisor.getStatus();
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
     Assert.assertEquals(DATASOURCE, report.getId());
-    Assert.assertTrue(report.getPayload() instanceof KafkaSupervisorReport.KafkaSupervisorReportPayload);
 
-    KafkaSupervisorReport.KafkaSupervisorReportPayload payload = (KafkaSupervisorReport.KafkaSupervisorReportPayload)
-        report.getPayload();
+    KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
     Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
@@ -1338,14 +1334,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.updateCurrentAndLatestOffsets().run();
-    SupervisorReport report = supervisor.getStatus();
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
     Assert.assertEquals(DATASOURCE, report.getId());
-    Assert.assertTrue(report.getPayload() instanceof KafkaSupervisorReport.KafkaSupervisorReportPayload);
 
-    KafkaSupervisorReport.KafkaSupervisorReportPayload payload = (KafkaSupervisorReport.KafkaSupervisorReportPayload)
-        report.getPayload();
+    KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
     Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
@@ -2060,12 +2054,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     private final String taskType;
     private final TaskLocation location;
+    private final String dataSource;
 
     public TestTaskRunnerWorkItem(Task task, ListenableFuture<TaskStatus> result, TaskLocation location)
     {
       super(task.getId(), result);
       this.taskType = task.getType();
       this.location = location;
+      this.dataSource = task.getDataSource();
     }
 
     @Override
@@ -2079,6 +2075,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       return taskType;
     }
+
+    @Override
+    public String getDataSource() 
+    {
+      return dataSource;
+    }
+ 
   }
 
   private static class TestableKafkaSupervisor extends KafkaSupervisor

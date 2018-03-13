@@ -23,11 +23,11 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.metadata.MetadataSupervisorManager;
 
 import javax.annotation.Nullable;
@@ -138,7 +138,7 @@ public class SupervisorManager
   public Optional<SupervisorReport> getSupervisorStatus(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    return supervisor == null ? Optional.<SupervisorReport>absent() : Optional.fromNullable(supervisor.lhs.getStatus());
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStatus());
   }
 
   public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)

@@ -394,6 +394,12 @@ public class OverlordTest
         {
           return task.getType();
         }
+
+        @Override
+        public String getDataSource()
+        {
+          return task.getDataSource();
+        }
       };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);
       return future;
