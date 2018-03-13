@@ -27,7 +27,7 @@ public class AWSProxyConfig
   private String host;
 
   @JsonProperty
-  private int port = -1;
+  private int port = -1; // AWS's default proxy port is -1
 
   @JsonProperty
   private String username;

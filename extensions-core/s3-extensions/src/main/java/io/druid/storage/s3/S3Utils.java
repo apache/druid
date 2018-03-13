@@ -89,7 +89,7 @@ public class S3Utils
       return s3Client.doesObjectExist(bucketName, objectKey);
     }
     catch (AmazonS3Exception e) {
-      if (e.getStatusCode() == 403) {
+      if (e.getStatusCode() == 404) {
         // Object is inaccessible to current user, but does exist.
         return true;
       }

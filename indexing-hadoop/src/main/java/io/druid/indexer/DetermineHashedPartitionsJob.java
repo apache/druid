@@ -396,8 +396,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     public int getPartition(LongWritable interval, BytesWritable text, int numPartitions)
     {
 
-      final String jobTrackerString = config.get("mapred.job.tracker");
-      if ((jobTrackerString != null && jobTrackerString.equals("local")) || determineIntervals) {
+      if ("local".equals(config.get("mapred.job.tracker")) || determineIntervals) {
         return 0;
       } else {
         return reducerLookup.get(interval);
