@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.query.CacheStrategy;
+import io.druid.query.Druids;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -38,10 +39,15 @@ import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.segment.column.ValueType;
+import io.druid.timeline.LogicalSegment;
+import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SegmentMetadataQueryQueryToolChestTest
 {
@@ -268,6 +274,37 @@ public class SegmentMetadataQueryQueryToolChestTest
             mergeLenient(analysis1, analysis2),
             mergeLenient(analysis1, analysis2)
         ).getAggregators()
+    );
+  }
+
+  @Test
+  public void testFilterSegments()
+  {
+    final SegmentMetadataQueryConfig config = new SegmentMetadataQueryConfig();
+    final SegmentMetadataQueryQueryToolChest toolChest = new SegmentMetadataQueryQueryToolChest(config);
+
+    final List<LogicalSegment> filteredSegments = toolChest.filterSegments(
+        Druids.newSegmentMetadataQueryBuilder().dataSource("foo").merge(true).build(),
+        ImmutableList
+            .of(
+                "2000-01-01/P1D",
+                "2000-01-04/P1D",
+                "2000-01-09/P1D",
+                "2000-01-09/P1D"
+            )
+            .stream()
+            .map(interval -> (LogicalSegment) () -> new Interval(interval))
+            .collect(Collectors.toList())
+    );
+
+    Assert.assertEquals(Period.weeks(1), config.getDefaultHistory());
+    Assert.assertEquals(
+        ImmutableList.of(
+            new Interval("2000-01-04/P1D"),
+            new Interval("2000-01-09/P1D"),
+            new Interval("2000-01-09/P1D")
+        ),
+        filteredSegments.stream().map(LogicalSegment::getInterval).collect(Collectors.toList())
     );
   }
 
