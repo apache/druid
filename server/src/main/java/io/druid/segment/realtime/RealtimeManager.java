@@ -249,7 +249,7 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    private FirehoseV2 initFirehoseV2(Object metaData)
+    private FirehoseV2 initFirehoseV2(Object metaData) throws IOException
     {
       log.info("Calling the FireDepartment and getting a FirehoseV2.");
       return fireDepartment.connect(metaData);
