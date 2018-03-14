@@ -43,7 +43,7 @@
     </dependency>
     <dependency>
       <groupId>io.druid</groupId>
-      <artifactId>druid-api</artifactId>
+      <artifactId>druid-common</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>

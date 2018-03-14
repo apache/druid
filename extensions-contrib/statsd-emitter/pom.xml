@@ -41,18 +41,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-api</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>java-util</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>com.timgroup</groupId>
       <artifactId>java-statsd-client</artifactId>
       <version>3.0.1</version>
