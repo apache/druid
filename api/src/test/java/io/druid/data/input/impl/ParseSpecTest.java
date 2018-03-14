@@ -103,7 +103,7 @@ public class ParseSpecTest
   }
 
   @Test
-  public void testDefaultTimestampSpec() throws Exception
+  public void testDefaultTimestampSpec()
   {
     expectedException.expect(NullPointerException.class);
     expectedException.expectMessage("parseSpec requires timestampSpec");
@@ -124,7 +124,7 @@ public class ParseSpecTest
   }
 
   @Test
-  public void testDimensionSpecRequired() throws Exception
+  public void testDimensionSpecRequired()
   {
     expectedException.expect(NullPointerException.class);
     expectedException.expectMessage("parseSpec requires dimensionSpec");

@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +68,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testCreateUpdateAndRemoveSupervisor() throws IOException
+  public void testCreateUpdateAndRemoveSupervisor()
   {
     SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1);
     SupervisorSpec spec2 = new TestSupervisorSpec("id1", supervisor2);
@@ -193,7 +192,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetSupervisorStatus() throws IOException
+  public void testGetSupervisorStatus()
   {
     SupervisorReport<Void> report = new SupervisorReport<>("id1", DateTimes.nowUtc(), null);
 
@@ -227,7 +226,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testStopThrowsException() throws IOException
+  public void testStopThrowsException()
   {
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
         "id1", new TestSupervisorSpec("id1", supervisor1)
@@ -245,7 +244,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void testResetSupervisor() throws IOException
+  public void testResetSupervisor()
   {
     Map<String, SupervisorSpec> existingSpecs = ImmutableMap.<String, SupervisorSpec>of(
         "id1", new TestSupervisorSpec("id1", supervisor1)
