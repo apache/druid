@@ -28,6 +28,13 @@ import java.io.IOException;
 public interface Emitter extends Closeable, Flushable
 {
   void start();
+
+  /**
+   * Emit an event. This method must not throw exceptions. If it receives input it considers to be invalid,
+   * or has an internal problem, it may deal with that by logging a warning instead. Implementations that do
+   * this should consider throttling warnings to avoid excessive logs, since a busy Druid cluster can emit a
+   * high volume of metric events.
+   */
   void emit(Event event);
 
   @Override
