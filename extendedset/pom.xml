@@ -39,7 +39,7 @@
 
     <dependency>
       <groupId>io.druid</groupId>
-      <artifactId>java-util</artifactId>
+      <artifactId>druid-common</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
 

@@ -41,7 +41,7 @@ import java.util.Set;
  * There is a lot of code copy and pasted from JSONParser. JSONParser needs to be rewritten
  * to actually take a map transformer instead of what it is doing now. For the purposes of moving forward in 0.7.0,
  * I am going to have a different parser to lower case data from JSON. This code needs to be removed the next time
- * we touch java-util.
+ * we touch druid-common.
  */
 @Deprecated
 public class JSONToLowerParser implements Parser<String, Object>
