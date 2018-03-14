@@ -19,47 +19,23 @@
 
 package io.druid.server.security;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import io.druid.java.util.http.client.HttpClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.segment.TestHelper;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class NoopEscalator implements Escalator
+public class EscalatorTest
 {
-  private static final NoopEscalator INSTANCE = new NoopEscalator();
-
-  @JsonCreator
-  public static NoopEscalator getInstance()
+  @Test
+  public void testSerde() throws Exception
   {
-    return INSTANCE;
-  }
-
-  @Override
-  public HttpClient createEscalatedClient(HttpClient baseClient)
-  {
-    return baseClient;
-  }
-
-  @Override
-  public AuthenticationResult createEscalatedAuthenticationResult()
-  {
-    return AllowAllAuthenticator.ALLOW_ALL_RESULT;
-  }
-
-  @Override
-  public boolean equals(final Object obj)
-  {
-    //noinspection ObjectEquality
-    return obj.getClass() == getClass();
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return 0;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NoopEscalator{}";
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Assert.assertEquals(
+        NoopEscalator.getInstance(),
+        objectMapper.readValue(
+            objectMapper.writeValueAsString(NoopEscalator.getInstance()),
+            Escalator.class
+        )
+    );
   }
 }

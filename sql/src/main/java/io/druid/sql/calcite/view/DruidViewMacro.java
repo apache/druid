@@ -21,6 +21,7 @@ package io.druid.sql.calcite.view;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import io.druid.server.security.Escalator;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.schema.DruidSchema;
@@ -36,11 +37,13 @@ import java.util.List;
 public class DruidViewMacro implements TableMacro
 {
   private final PlannerFactory plannerFactory;
+  private final Escalator escalator;
   private final String viewSql;
 
-  public DruidViewMacro(final PlannerFactory plannerFactory, final String viewSql)
+  public DruidViewMacro(final PlannerFactory plannerFactory, final Escalator escalator, final String viewSql)
   {
     this.plannerFactory = plannerFactory;
+    this.escalator = escalator;
     this.viewSql = viewSql;
   }
 
@@ -49,7 +52,9 @@ public class DruidViewMacro implements TableMacro
   {
     final RelDataType rowType;
     try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
-      rowType = planner.plan(viewSql).rowType();
+      // Using an escalator here is a hack, but it's currently needed to get the row type. Ideally, some
+      // later refactoring would make this unnecessary, since there is no actual query going out herem.
+      rowType = planner.plan(viewSql, escalator.createEscalatedAuthenticationResult()).rowType();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

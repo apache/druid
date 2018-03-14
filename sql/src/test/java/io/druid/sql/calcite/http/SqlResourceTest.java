@@ -32,7 +32,6 @@ import io.druid.query.ResourceLimitExceededException;
 import io.druid.server.security.AllowAllAuthenticator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
-import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
@@ -108,9 +107,7 @@ public class SqlResourceTest extends CalciteTestBase
             operatorTable,
             macroTable,
             plannerConfig,
-            new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new NoopEscalator(),
             CalciteTests.getJsonMapper()
         )
     );
