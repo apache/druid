@@ -40,7 +40,6 @@ import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.segment.column.ValueType;
 import io.druid.timeline.LogicalSegment;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -293,16 +292,16 @@ public class SegmentMetadataQueryQueryToolChestTest
                 "2000-01-09/P1D"
             )
             .stream()
-            .map(interval -> (LogicalSegment) () -> new Interval(interval))
+            .map(interval -> (LogicalSegment) () -> Intervals.of(interval))
             .collect(Collectors.toList())
     );
 
     Assert.assertEquals(Period.weeks(1), config.getDefaultHistory());
     Assert.assertEquals(
         ImmutableList.of(
-            new Interval("2000-01-04/P1D"),
-            new Interval("2000-01-09/P1D"),
-            new Interval("2000-01-09/P1D")
+            Intervals.of("2000-01-04/P1D"),
+            Intervals.of("2000-01-09/P1D"),
+            Intervals.of("2000-01-09/P1D")
         ),
         filteredSegments.stream().map(LogicalSegment::getInterval).collect(Collectors.toList())
     );
