@@ -150,8 +150,10 @@ public class NettyHttpClient extends AbstractHttpClient
     } else {
       channel = channelFuture.getChannel();
     }
-
+    //CHECKSTYLE.OFF: Regexp
+    // String.nullToEmpty usage here is irrelevant to null handling of the data.
     final String urlFile = Strings.nullToEmpty(url.getFile());
+    //CHECKSTYLE.ON: Regexp
     final HttpRequest httpRequest = new DefaultHttpRequest(
         HttpVersion.HTTP_1_1,
         method,

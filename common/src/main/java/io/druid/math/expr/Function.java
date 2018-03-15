@@ -74,7 +74,7 @@ interface Function
     @Override
     protected final ExprEval eval(ExprEval param)
     {
-      if (NullHandling.sqlCompatible() && param.isNull()) {
+      if (NullHandling.sqlCompatible() && param.isNumericNull()) {
         return ExprEval.of(null);
       }
       if (param.type() == ExprType.LONG) {

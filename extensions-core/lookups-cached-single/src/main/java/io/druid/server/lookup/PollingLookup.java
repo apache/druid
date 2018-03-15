@@ -20,11 +20,11 @@
 package io.druid.server.lookup;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
@@ -33,6 +33,7 @@ import io.druid.server.lookup.cache.polling.OnHeapPollingCache;
 import io.druid.server.lookup.cache.polling.PollingCache;
 import io.druid.server.lookup.cache.polling.PollingCacheFactory;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -107,6 +108,7 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
+  @Nullable
   public String apply(@NotNull String key)
   {
     final CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
@@ -119,7 +121,7 @@ public class PollingLookup extends LookupExtractor
         // it must've been closed after swapping while I was getting it.  Try again.
         return this.apply(key);
       }
-      return Strings.emptyToNull((String) cache.get(key));
+      return NullHandling.emptyToNullIfNeeded((String) cache.get(key));
     }
     finally {
       if (cacheRefKeeper != null && cache != null) {

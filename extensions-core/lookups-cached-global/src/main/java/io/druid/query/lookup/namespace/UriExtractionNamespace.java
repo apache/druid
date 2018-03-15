@@ -395,12 +395,15 @@ public class UriExtractionNamespace implements ExtractionNamespace
           Preconditions.checkNotNull(columns, "`columns` list required").size() > 1,
           "Must specify more than one column to have a key value pair"
       );
+      //CHECKSTYLE.OFF: Regexp
+      // String.emptytoNull usage here is irrelevant to null handling of the data.
       final DelimitedParser delegate = new DelimitedParser(
           Strings.emptyToNull(delimiter),
           Strings.emptyToNull(listDelimiter),
           hasHeaderRow,
           skipHeaderRows
       );
+      //CHECKSTYLE.ON: Regexp
       Preconditions.checkArgument(
           !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
           "Must specify both `keyColumn` and `valueColumn` or neither `keyColumn` nor `valueColumn`"

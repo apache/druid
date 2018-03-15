@@ -260,11 +260,15 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
         "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
     );
     final String lookupTier = lookupTierIsDatasource ? dataSourceTaskIdHolder.getDataSource() : this.lookupTier;
+
+    //CHECKSTYLE.OFF: Regexp
+    // String.emptytoNull usage here is irrelevant to null handling of the data.
     return Preconditions.checkNotNull(
         lookupTier == null ? DEFAULT_TIER : Strings.emptyToNull(lookupTier),
         "Cannot have empty lookup tier from %s",
         lookupTierIsDatasource ? "bound value" : LookupModule.PROPERTY_BASE
     );
+    //CHECKSTYLE.ON: Regexp
   }
 
   public String getLookupKey()

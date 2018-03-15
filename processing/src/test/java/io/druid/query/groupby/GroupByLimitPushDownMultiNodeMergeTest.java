@@ -93,6 +93,7 @@ import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -561,7 +562,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         "d2", 13L,
         "a0", 2L
     );
-
+    System.out.println(results);
     Assert.assertEquals(4, results.size());
     Assert.assertEquals(expectedRow0, results.get(0));
     Assert.assertEquals(expectedRow1, results.get(1));

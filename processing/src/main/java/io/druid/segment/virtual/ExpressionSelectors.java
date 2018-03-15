@@ -161,7 +161,7 @@ public class ExpressionSelectors
     if (bindings.equals(ExprUtils.nilBindings())) {
       // Optimization for constant expressions.
       final ExprEval eval = expression.eval(bindings);
-      if (NullHandling.sqlCompatible() && eval.isNull()) {
+      if (NullHandling.sqlCompatible() && eval.isNumericNull()) {
         return NilColumnValueSelector.instance();
       }
       return new ConstantColumnValueSelector<>(

@@ -86,9 +86,12 @@ public class EmitterModule implements Module
         ExtraServiceDimensions.class
     );
     String version = getClass().getPackage().getImplementationVersion();
+    //CHECKSTYLE.OFF: Regexp
+    // String.nullToempty usage here is irrelevant to null handling of the data.
     extraServiceDimensions
         .addBinding("version")
         .toInstance(Strings.nullToEmpty(version)); // Version is null during `mvn test`.
+    //CHECKSTYLE.ON: Regexp
   }
 
   @Provides

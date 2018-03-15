@@ -20,13 +20,13 @@
 package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IAE;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -66,7 +66,7 @@ public class LookupExtractionFnTest
 
   public LookupExtractionFnTest(boolean retainMissing, String replaceMissing, Optional<Boolean> injective)
   {
-    this.replaceMissing = Strings.emptyToNull(replaceMissing);
+    this.replaceMissing = NullHandling.emptyToNullIfNeeded(replaceMissing);
     this.retainMissing = retainMissing;
     this.injective = injective.orElse(null);
   }
@@ -74,7 +74,7 @@ public class LookupExtractionFnTest
   @Test
   public void testEqualsAndHash()
   {
-    if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
+    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
       // skip
       return;
     }
@@ -111,7 +111,7 @@ public class LookupExtractionFnTest
   @Test
   public void testSimpleSerDe() throws IOException
   {
-    if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
+    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
       // skip
       return;
     }
@@ -146,12 +146,12 @@ public class LookupExtractionFnTest
   @Test(expected = IllegalArgumentException.class)
   public void testIllegalArgs()
   {
-    if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
+    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
       @SuppressWarnings("unused") // expected exception
       final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
           new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
           retainMissing,
-          Strings.emptyToNull(replaceMissing),
+          NullHandling.emptyToNullIfNeeded(replaceMissing),
           injective,
           false
       );
@@ -163,7 +163,7 @@ public class LookupExtractionFnTest
   @Test
   public void testCacheKey()
   {
-    if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
+    if (retainMissing && !NullHandling.isNullOrEquivalent(replaceMissing)) {
       // skip
       return;
     }
@@ -178,7 +178,7 @@ public class LookupExtractionFnTest
         false
     );
 
-    if (Strings.isNullOrEmpty(replaceMissing) || retainMissing) {
+    if (NullHandling.isNullOrEquivalent(replaceMissing) || retainMissing) {
       Assert.assertFalse(
           Arrays.equals(
               lookupExtractionFn.getCacheKey(),

@@ -91,10 +91,13 @@ public class ListeningAnnouncerConfig
    */
   public String getAnnouncementPath(String listenerName)
   {
+    //CHECKSTYLE.OFF: Regexp
+    // String.nullToempty usage here is irrelevant to null handling of the data.
     return ZKPaths.makePath(
         getListenersPath(), Preconditions.checkNotNull(
             Strings.emptyToNull(listenerName), "Listener name cannot be null"
         )
     );
+    //CHECKSTYPE.OFF: Regexp
   }
 }

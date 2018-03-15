@@ -160,7 +160,9 @@ public class LookupDimensionSpecTest
   public void testApply(DimensionSpec dimensionSpec, Map<String, String> map)
   {
     for (Map.Entry<String, String> entry : map.entrySet()) {
+      //CHECKSTYLE.OFF: Regexp
       Assert.assertEquals(Strings.emptyToNull(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
+      //CHECKSTYLE.ON: Regexp
     }
   }
 

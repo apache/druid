@@ -22,11 +22,11 @@ package io.druid.benchmark;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
@@ -610,7 +610,7 @@ public class FilterPartitionBenchmark
       if (extractionFn == null) {
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
-        final String valueOrNull = Strings.emptyToNull(value);
+        final String valueOrNull = NullHandling.emptyToNullIfNeeded(value);
 
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {

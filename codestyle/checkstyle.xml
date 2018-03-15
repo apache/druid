@@ -170,5 +170,15 @@
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use java.lang.Primitive.BYTES instead."/>
     </module>
+    <module name="Regexp">
+      <property name="format" value="Strings.emptyToNull"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use io.druid.common.config.NullHandling.emptyToNullIfNeeded instead"/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="Strings.nullToEmpty"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use io.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
+    </module>
   </module>
 </module>

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilterUtils;
@@ -77,7 +78,7 @@ public class LookupDimensionSpec implements DimensionSpec
   {
     this.retainMissingValue = retainMissingValue;
     this.optimize = optimize == null ? true : optimize;
-    this.replaceMissingValueWith = Strings.emptyToNull(replaceMissingValueWith);
+    this.replaceMissingValueWith = NullHandling.emptyToNullIfNeeded(replaceMissingValueWith);
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be Null");
     this.outputName = Preconditions.checkNotNull(outputName, "outputName can not be Null");
     this.lookupReferencesManager = lookupReferencesManager;
@@ -166,12 +167,16 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
+
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     byte[] dimExtractionFnBytes = Strings.isNullOrEmpty(name)
                                   ? getLookup().getCacheKey()
                                   : StringUtils.toUtf8(name);
     byte[] outputNameBytes = StringUtils.toUtf8(outputName);
+    //CHECKSTYLE.OFF: Regexp
+    // String.nullToEmpty usage here is irrelevant to null handling of the data.
     byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingValueWith));
+    //CHECKSTYLE.ON: Regexp
 
 
     return ByteBuffer.allocate(6

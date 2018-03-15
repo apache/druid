@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  */
 public abstract class ExprEval<T>
 {
-  public static ExprEval ofLong(Number longValue)
+  public static ExprEval ofLong(@Nullable Number longValue)
   {
     return new LongExprEval(longValue);
   }
@@ -40,7 +40,7 @@ public abstract class ExprEval<T>
     return new LongExprEval(longValue);
   }
 
-  public static ExprEval ofDouble(Number doubleValue)
+  public static ExprEval ofDouble(@Nullable Number doubleValue)
   {
     return new DoubleExprEval(doubleValue);
   }
@@ -69,7 +69,7 @@ public abstract class ExprEval<T>
     }
   }
 
-  public static ExprEval bestEffortOf(Object val)
+  public static ExprEval bestEffortOf(@Nullable Object val)
   {
     if (val instanceof ExprEval) {
       return (ExprEval) val;
@@ -83,7 +83,7 @@ public abstract class ExprEval<T>
     return new StringExprEval(val == null ? null : String.valueOf(val));
   }
 
-  final T value;
+  @Nullable final T value;
 
   private ExprEval(T value)
   {
@@ -100,10 +100,7 @@ public abstract class ExprEval<T>
   /**
    * returns true if numeric primitive value for this ExprEval is null, otherwise false.
    */
-  public boolean isNull()
-  {
-    return value == null;
-  }
+  public abstract boolean isNumericNull();
 
   public abstract int asInt();
 
@@ -126,7 +123,7 @@ public abstract class ExprEval<T>
   private abstract static class NumericExprEval extends ExprEval<Number>
   {
 
-    private NumericExprEval(Number value)
+    private NumericExprEval(@Nullable Number value)
     {
       super(value == null ? NullHandling.defaultDoubleValue() : value);
     }
@@ -148,11 +145,17 @@ public abstract class ExprEval<T>
     {
       return value.doubleValue();
     }
+
+    @Override
+    public boolean isNumericNull()
+    {
+      return value == null;
+    }
   }
 
   private static class DoubleExprEval extends NumericExprEval
   {
-    private DoubleExprEval(Number value)
+    private DoubleExprEval(@Nullable Number value)
     {
       super(value);
     }
@@ -192,7 +195,7 @@ public abstract class ExprEval<T>
 
   private static class LongExprEval extends NumericExprEval
   {
-    private LongExprEval(Number value)
+    private LongExprEval(@Nullable Number value)
     {
       super(value);
     }
@@ -292,7 +295,7 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public boolean isNull()
+    public boolean isNumericNull()
     {
       return asNumber() == null;
     }

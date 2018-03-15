@@ -302,8 +302,11 @@ public class JobHelper
 
   public static void injectDruidProperties(Configuration configuration, List<String> listOfAllowedPrefix)
   {
+    //CHECKSTYLE.OFF: Regexp
+    // String.nulltoEmpty usage here is irrelevant to null handling of the data.
     String mapJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.MAP_JAVA_OPTS));
     String reduceJavaOpts = Strings.nullToEmpty(configuration.get(MRJobConfig.REDUCE_JAVA_OPTS));
+    //CHECKSTYLE.ON: regexp
 
     for (String propName : System.getProperties().stringPropertyNames()) {
       for (String prefix : listOfAllowedPrefix) {

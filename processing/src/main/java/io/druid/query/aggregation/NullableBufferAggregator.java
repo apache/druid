@@ -27,13 +27,13 @@ import java.nio.ByteBuffer;
 /**
  * The result of a NullableBufferAggregator will be null if all the values to be aggregated are null values or no values are aggregated at all.
  * If any of the value is non-null, the result would be the aggregated value of the delegate aggregator.
- * Note that the delegate aggregator is not required to perform check for isNull on the columnValueSelector as only non-null values
+ * Note that the delegate aggregator is not required to perform check for {@link NullableBufferAggregator#isNull(ByteBuffer, int)} on the columnValueSelector as only non-null values
  * will be passed to the delegate aggregator.
  */
 public class NullableBufferAggregator implements BufferAggregator
 {
-  private static final byte IS_NULL_BYTE = (byte) 1;
-  private static final byte IS_NOT_NULL_BYTE = (byte) 0;
+  private static final byte IS_NULL_BYTE = (byte) 0;
+  private static final byte IS_NOT_NULL_BYTE = (byte) 1;
   private final BufferAggregator delegate;
   private final BaseNullableColumnValueSelector selector;
 

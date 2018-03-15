@@ -82,9 +82,7 @@ public class DoubleLastAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(
-      ColumnSelectorFactory metricFactory, ColumnValueSelector selector
-  )
+  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new DoubleLastBufferAggregator(
         metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),

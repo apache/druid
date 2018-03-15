@@ -58,6 +58,9 @@ public class ParserUtils
   )
   {
     return (input) -> {
+      //CHECKSTYLE.OFF: Regexp
+      // TODO: java-util does not depen on druid-common.NullHandling is not accessible here.
+      // Fix null semantics for CSV and TSV parsers.
       if (input != null && input.contains(listDelimiter)) {
         return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
                             .map(Strings::emptyToNull)
@@ -65,6 +68,7 @@ public class ParserUtils
       } else {
         return Strings.emptyToNull(input);
       }
+      //CHECKSTYLE.ON: Regexp
     };
   }
 

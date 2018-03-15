@@ -119,6 +119,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public void queryId(QueryType query)
   {
     //CHECKSTYLE.OFF: Regexp
+    // String.nullToEmpty usage here is irrelevant to null handling of the data.
     setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
     //CHECKSTYLE.ON: Regexp
   }

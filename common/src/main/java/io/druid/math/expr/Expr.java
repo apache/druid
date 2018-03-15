@@ -372,12 +372,12 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
     if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
     } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
-      if (NullHandling.sqlCompatible() && (leftVal.isNull() || rightVal.isNull())) {
+      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
         return ExprEval.of(null);
       }
       return ExprEval.of(evalLong(leftVal.asLong(), rightVal.asLong()));
     } else {
-      if (NullHandling.sqlCompatible() && (leftVal.isNull() || rightVal.isNull())) {
+      if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
         return ExprEval.of(null);
       }
       return ExprEval.of(evalDouble(leftVal.asDouble(), rightVal.asDouble()));

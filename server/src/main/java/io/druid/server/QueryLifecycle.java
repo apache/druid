@@ -288,12 +288,16 @@ public class QueryLifecycle
 
     try {
       final long queryTimeNs = System.nanoTime() - startNs;
+
+      //CHECKSTYLE.OFF: Regexp
+      // String.nullToEmpty usage here is irrelevant to null handling of the data.
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,
           toolChest,
           baseQuery,
           Strings.nullToEmpty(remoteAddress)
       );
+      //CHECKSTYLE.ON: Regexp
       queryMetrics.success(success);
       queryMetrics.reportQueryTime(queryTimeNs);
 
@@ -326,7 +330,8 @@ public class QueryLifecycle
           statsMap.put("reason", e.toString());
         }
       }
-
+      //CHECKSTYLE.OFF: Regexp
+      // String.nullToEmpty usage here is irrelevant to null handling of the data.
       requestLogger.log(
           new RequestLogLine(
               DateTimes.utc(startMs),
@@ -335,6 +340,7 @@ public class QueryLifecycle
               new QueryStats(statsMap)
           )
       );
+      //CHECKSTYLE.ON: Regexp
     }
     catch (Exception ex) {
       log.error(ex, "Unable to log query [%s]!", baseQuery);

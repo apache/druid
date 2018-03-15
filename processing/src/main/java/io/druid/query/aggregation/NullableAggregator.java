@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 /**
  * The result of a NullableAggregator will be null if all the values to be aggregated are null values or no values are aggregated at all.
  * If any of the value is non-null, the result would be the aggregated value of the delegate aggregator.
- * Note that the delegate aggregator is not required to perform check for isNull on the columnValueSelector as only non-null values
+ * Note that the delegate aggregator is not required to perform check for {@link NullableAggregator#isNull} on the columnValueSelector as only non-null values
  * will be passed to the delegate aggregator.
  */
 public class NullableAggregator implements Aggregator
