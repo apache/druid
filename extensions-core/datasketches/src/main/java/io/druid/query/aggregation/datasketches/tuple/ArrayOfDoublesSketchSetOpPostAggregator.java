@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.Util;
@@ -44,8 +46,8 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
   public ArrayOfDoublesSketchSetOpPostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("func") final String func,
-      @JsonProperty("nominalEntries") final Integer nominalEntries,
-      @JsonProperty("numberOfValues") final Integer numberOfValues,
+      @JsonProperty("nominalEntries") @Nullable final Integer nominalEntries,
+      @JsonProperty("numberOfValues") @Nullable final Integer numberOfValues,
       @JsonProperty("fields") List<PostAggregator> fields
   )
   {
@@ -56,7 +58,7 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
     Util.checkIfPowerOf2(this.nominalEntries, "size");
 
     if (fields.size() <= 1) {
-      throw new IAE("Illegal number of fields[%s], must be > 1", fields.size());
+      throw new IAE("Illegal number of fields[%d], must be > 1", fields.size());
     }
   }
 

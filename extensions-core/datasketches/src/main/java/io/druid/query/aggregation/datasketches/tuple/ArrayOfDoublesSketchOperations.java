@@ -30,6 +30,10 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesIntersection;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
+
+import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.ISE;
+
 import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 
 public class ArrayOfDoublesSketchOperations
@@ -64,9 +68,7 @@ public class ArrayOfDoublesSketchOperations
     } else if (serializedSketch instanceof ArrayOfDoublesSketch) {
       return (ArrayOfDoublesSketch) serializedSketch;
     }
-    throw new IllegalStateException(
-      "Object is not of a type that can deserialize to sketch: " + serializedSketch.getClass()
-    );
+    throw new ISE("Object is not of a type that can deserialize to sketch: %s", serializedSketch.getClass());
   }
 
   public static ArrayOfDoublesSketch deserializeFromBase64EncodedString(final String str)
@@ -104,7 +106,7 @@ public class ArrayOfDoublesSketchOperations
         return intersection.getResult();
       case NOT:
         if (sketches.length < 1) {
-          throw new IllegalArgumentException("A-Not-B requires at least 1 sketch");
+          throw new IAE("A-Not-B requires at least 1 sketch");
         }
 
         if (sketches.length == 1) {
@@ -120,7 +122,7 @@ public class ArrayOfDoublesSketchOperations
         }
         return result;
       default:
-        throw new IllegalArgumentException("Unknown sketch operation " + func);
+        throw new IAE("Unknown sketch operation %s", func.toString());
     }
   }
 

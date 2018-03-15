@@ -23,6 +23,8 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -34,20 +36,28 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketchIterator;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 
+/**
+ * Returns a quanitles DoublesSketch constructed from a given column of double values from a given
+ * ArrayOfDoublesSketch using parameter k that determines the accuracy and size of the quantiles sketch.
+ * The column number is optional (the default is 1).
+ * The parameter k is optional (the default is defined in the sketch library).
+ * The result is a serialized quantiles sketch.
+ * See https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html
+ */
 public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 
+  private static final int DEFAULT_QUANTILES_SKETCH_SIZE = 128;
+
   private final int column;
   private final int k;
-
-  private static final int DEFAULT_QUANTILES_SKETCH_SIZE = 128;
 
   @JsonCreator
   public ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("column") final Integer column,
-      @JsonProperty("k") final Integer k
+      @JsonProperty("column") @Nullable final Integer column,
+      @JsonProperty("k") @Nullable final Integer k
   )
   {
     super(name, field);
@@ -75,7 +85,7 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
     final UpdateDoublesSketch qs = UpdateDoublesSketch.builder().setK(k).build();
     final ArrayOfDoublesSketchIterator it = sketch.iterator();
     while (it.next()) {
-      qs.update(it.getValues()[column - 1]);
+      qs.update(it.getValues()[column - 1]); // convert 1-based column number to zero-based index
     }
     return qs;
   }

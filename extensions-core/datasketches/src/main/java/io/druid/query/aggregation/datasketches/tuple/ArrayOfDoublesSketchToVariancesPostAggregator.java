@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 
@@ -33,6 +34,10 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
+/**
+ * Returns a list of variance values from a given ArrayOfDoublesSketch.
+ * The result will be N double values, where N is the number of double values kept in the sketch per key.
+ */
 public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 
@@ -50,9 +55,7 @@ public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDouble
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     final SummaryStatistics[] stats = new SummaryStatistics[sketch.getNumValues()];
-    for (int i = 0; i < stats.length; i++) {
-      stats[i] = new SummaryStatistics();
-    }
+    Arrays.setAll(stats, i -> new SummaryStatistics());
     final ArrayOfDoublesSketchIterator it = sketch.iterator();
     while (it.next()) {
       final double[] values = it.getValues();
@@ -61,9 +64,7 @@ public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDouble
       }
     }
     final double[] variances = new double[sketch.getNumValues()];
-    for (int i = 0; i < variances.length; i++) {
-      variances[i] = stats[i].getVariance();
-    }
+    Arrays.setAll(variances, i -> stats[i].getVariance());
     return variances;
   }
 

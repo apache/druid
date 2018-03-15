@@ -31,6 +31,10 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
+/**
+ * Returns a list of mean values from a given ArrayOfDoublesSketch.
+ * The result will be N double values, where N is the number of double values kept in the sketch per key.
+ */
 public class ArrayOfDoublesSketchToMeansPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 

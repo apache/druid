@@ -23,6 +23,8 @@ import io.druid.segment.data.ObjectStrategy;
 
 import java.nio.ByteBuffer;
 
+import javax.annotation.Nullable;
+
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
@@ -51,8 +53,12 @@ public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayO
   }
 
   @Override
-  public byte[] toBytes(final ArrayOfDoublesSketch sketch)
+  @Nullable
+  public byte[] toBytes(@Nullable final ArrayOfDoublesSketch sketch)
   {
+    if (sketch == null) {
+      return null;
+    }
     return sketch.toByteArray();
   }
 

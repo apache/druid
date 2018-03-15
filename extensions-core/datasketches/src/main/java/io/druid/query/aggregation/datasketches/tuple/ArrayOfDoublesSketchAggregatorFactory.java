@@ -54,7 +54,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
 {
 
   public static final Comparator<ArrayOfDoublesSketch> COMPARATOR =
-      Comparator.comparingDouble(ArrayOfDoublesSketch::getEstimate);
+      Comparator.nullsFirst(Comparator.comparingDouble(ArrayOfDoublesSketch::getEstimate));
 
   private final String name;
   private final String fieldName;

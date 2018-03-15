@@ -29,6 +29,9 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
+/**
+ * Returns the number of retained entries from a given ArrayOfDoublesSketch.
+ */
 public class ArrayOfDoublesSketchToNumEntriesPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 
@@ -51,14 +54,7 @@ public class ArrayOfDoublesSketchToNumEntriesPostAggregator extends ArrayOfDoubl
   @Override
   public Comparator<Integer> getComparator()
   {
-    return new Comparator<Integer>()
-    {
-      @Override
-      public int compare(final Integer a, final Integer b)
-      {
-        return Integer.compare(a, b);
-      }
-    };
+    return Comparator.naturalOrder();
   }
 
   @Override

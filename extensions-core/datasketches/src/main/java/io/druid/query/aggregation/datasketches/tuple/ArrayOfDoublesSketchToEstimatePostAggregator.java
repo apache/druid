@@ -24,12 +24,14 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.primitives.Doubles;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
+/**
+ * Returns a distinct count estimate from a given ArrayOfDoublesSketch.
+ */
 public class ArrayOfDoublesSketchToEstimatePostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 
@@ -52,14 +54,7 @@ public class ArrayOfDoublesSketchToEstimatePostAggregator extends ArrayOfDoubles
   @Override
   public Comparator<Double> getComparator()
   {
-    return new Comparator<Double>()
-    {
-      @Override
-      public int compare(final Double a, final Double b)
-      {
-        return Doubles.compare(a, b);
-      }
-    };
+    return Comparator.naturalOrder();
   }
 
   @Override

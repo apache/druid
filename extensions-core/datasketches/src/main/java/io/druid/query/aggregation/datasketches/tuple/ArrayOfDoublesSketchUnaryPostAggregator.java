@@ -25,6 +25,7 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.cache.CacheKeyBuilder;
@@ -36,11 +37,13 @@ public abstract class ArrayOfDoublesSketchUnaryPostAggregator extends ArrayOfDou
 {
 
   private final PostAggregator field;
+  private Set<String> dependentFields;
 
   @JsonCreator
   public ArrayOfDoublesSketchUnaryPostAggregator(
       final String name,
-      final PostAggregator field)
+      final PostAggregator field
+  )
   {
     super(name);
     this.field = Preconditions.checkNotNull(field, "field is null");
@@ -55,8 +58,10 @@ public abstract class ArrayOfDoublesSketchUnaryPostAggregator extends ArrayOfDou
   @Override
   public Set<String> getDependentFields()
   {
-    final Set<String> dependentFields = super.getDependentFields();
-    dependentFields.addAll(field.getDependentFields());
+    if (dependentFields == null) {
+      dependentFields = Sets.newHashSet(super.getDependentFields());
+      dependentFields.addAll(field.getDependentFields());
+    }
     return dependentFields;
   }
 

@@ -23,6 +23,8 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
@@ -31,6 +33,13 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
+/**
+ * Returns a distinct count estimate and error bounds from a given ArrayOfDoublesSketch."
+ * The result will be three double values: estimate of the number of distinct keys, lower bound and upper bound.
+ * The bounds are given at the given number of standard deviations (optional, defaults to 1).
+ * This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%, 95.4% and 99.7%
+ * confidence intervals.
+ */
 public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {
 
@@ -40,7 +49,7 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends Array
   public ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
       @JsonProperty("name") final String name,
       @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("numStdDevs") final Integer numStdDevs
+      @JsonProperty("numStdDevs") @Nullable final Integer numStdDevs
   )
   {
     super(name, field);

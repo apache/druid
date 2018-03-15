@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,11 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
+/**
+ * Performs Student's t-test and returns a list of p-values given two ArrayOfDoublesSketches.
+ * The result will be N double values, where N is the number of double values kept in the sketch per key.
+ * See http://commons.apache.org/proper/commons-math/javadocs/api-3.4/org/apache/commons/math3/stat/inference/TTest.html
+ */
 public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketchMultiPostAggregator
 {
 
@@ -46,7 +52,7 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
   {
     super(name, fields);
     if (fields.size() != 2) {
-      throw new IAE("Illegal number of fields[%s], must be 2", fields.size());
+      throw new IAE("Illegal number of fields[%d], must be 2", fields.size());
     }
   }
 
@@ -59,15 +65,14 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
-    final ArrayOfDoublesSketch[] sketches = new ArrayOfDoublesSketch[getFields().size()];
-    for (int i = 0; i < sketches.length; i++) {
-      sketches[i] = (ArrayOfDoublesSketch) getFields().get(i).compute(combinedAggregators);
-    }
     final ArrayOfDoublesSketch sketch1 = (ArrayOfDoublesSketch) getFields().get(0).compute(combinedAggregators);
     final ArrayOfDoublesSketch sketch2 = (ArrayOfDoublesSketch) getFields().get(1).compute(combinedAggregators);
     if (sketch1.getNumValues() != sketch2.getNumValues()) {
-      throw new IAE("Sketches have different number of values: " + sketch1.getNumValues() + " and "
-          + sketch2.getNumValues());
+      throw new IAE(
+          "Sketches have different number of values: %d and %d",
+          sketch1.getNumValues(),
+          sketch2.getNumValues()
+      );
     }
 
     final SummaryStatistics[] stats1 = getStats(sketch1);
@@ -85,9 +90,7 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
   private static SummaryStatistics[] getStats(final ArrayOfDoublesSketch sketch)
   {
     final SummaryStatistics[] stats = new SummaryStatistics[sketch.getNumValues()];
-    for (int i = 0; i < stats.length; i++) {
-      stats[i] = new SummaryStatistics();
-    }
+    Arrays.setAll(stats, i -> new SummaryStatistics());
     final ArrayOfDoublesSketchIterator it = sketch.iterator();
     while (it.next()) {
       final double[] values = it.getValues();

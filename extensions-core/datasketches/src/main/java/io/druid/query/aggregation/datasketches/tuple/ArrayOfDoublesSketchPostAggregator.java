@@ -19,12 +19,12 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -53,7 +53,7 @@ public abstract class ArrayOfDoublesSketchPostAggregator implements PostAggregat
   @Override
   public Set<String> getDependentFields()
   {
-    return Sets.newHashSet();
+    return Collections.emptySet();
   }
 
   @Override

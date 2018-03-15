@@ -25,6 +25,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Sets;
 
 import io.druid.query.aggregation.PostAggregator;
 
@@ -35,6 +36,7 @@ public abstract class ArrayOfDoublesSketchMultiPostAggregator extends ArrayOfDou
 {
 
   private final List<PostAggregator> fields;
+  private Set<String> dependentFields;
 
   @JsonCreator
   public ArrayOfDoublesSketchMultiPostAggregator(final String name, final List<PostAggregator> fields)
@@ -46,9 +48,11 @@ public abstract class ArrayOfDoublesSketchMultiPostAggregator extends ArrayOfDou
   @Override
   public Set<String> getDependentFields()
   {
-    final Set<String> dependentFields = super.getDependentFields();
-    for (final PostAggregator field : fields) {
-      dependentFields.addAll(field.getDependentFields());
+    if (dependentFields == null) {
+      dependentFields = Sets.newHashSet(super.getDependentFields());
+      for (final PostAggregator field : fields) {
+        dependentFields.addAll(field.getDependentFields());
+      }
     }
     return dependentFields;
   }
