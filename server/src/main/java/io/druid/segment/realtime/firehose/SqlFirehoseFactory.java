@@ -29,7 +29,9 @@ import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.StringUtils;
 import io.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.ResultIterator;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
+import org.skife.jdbi.v2.exceptions.StatementException;
 
 
 import java.io.File;
@@ -118,6 +120,12 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
               fos.write(objectMapper.writeValueAsBytes(resultIterator.next()));
             }
             return null;
+          },
+          (exception) -> {
+            final boolean isStatementException = exception instanceof StatementException ||
+                                                 (exception instanceof CallbackFailedException
+                                                  && exception.getCause() instanceof StatementException);
+            return sqlMetadataConnector.isTransientException(exception) && !(isStatementException);
           }
       );
     }
