@@ -102,6 +102,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
   private final boolean applyLimitPushDown;
   private final Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
+  private final GroupByQuery pushedDownQuery;
 
   @JsonCreator
   public GroupByQuery(
@@ -115,7 +116,8 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("pushedDownQuery") GroupByQuery pushedDownQuery
   )
   {
     this(
@@ -130,7 +132,8 @@ public class GroupByQuery extends BaseQuery<Row>
         havingSpec,
         limitSpec,
         null,
-        context
+        context,
+        pushedDownQuery
     );
   }
 
@@ -172,7 +175,8 @@ public class GroupByQuery extends BaseQuery<Row>
       final HavingSpec havingSpec,
       final LimitSpec limitSpec,
       final @Nullable Function<Sequence<Row>, Sequence<Row>> postProcessingFn,
-      final Map<String, Object> context
+      final Map<String, Object> context,
+      final GroupByQuery pushedDownQuery
   )
   {
     super(dataSource, querySegmentSpec, false, context, granularity);
@@ -203,6 +207,7 @@ public class GroupByQuery extends BaseQuery<Row>
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
     this.applyLimitPushDown = determineApplyLimitPushDown();
+    this.pushedDownQuery = pushedDownQuery;
   }
 
   @JsonProperty
@@ -245,6 +250,12 @@ public class GroupByQuery extends BaseQuery<Row>
   public LimitSpec getLimitSpec()
   {
     return limitSpec;
+  }
+
+  @JsonProperty
+  public GroupByQuery getPushedDownQuery()
+  {
+    return pushedDownQuery;
   }
 
   @Override
@@ -620,6 +631,13 @@ public class GroupByQuery extends BaseQuery<Row>
   @Override
   public GroupByQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
+    GroupByQuery pushedDownQueryWithSegmentSpec;
+    boolean isPushedDownQuery = this.getPushedDownQuery() != null;
+    if (isPushedDownQuery) {
+      // In case of nested queries that are pushed down, we need to make sure that segment specs are changed on them too.
+      pushedDownQueryWithSegmentSpec = new Builder(this.getPushedDownQuery()).setQuerySegmentSpec(spec).build();
+      return new Builder(this).setQueryToPushDown(pushedDownQueryWithSegmentSpec).setQuerySegmentSpec(spec).build();
+    }
     return new Builder(this).setQuerySegmentSpec(spec).build();
   }
 
@@ -707,6 +725,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private Function<Sequence<Row>, Sequence<Row>> postProcessingFn;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
+    private GroupByQuery pushedDownQuery;
 
     public Builder()
     {
@@ -726,6 +745,7 @@ public class GroupByQuery extends BaseQuery<Row>
       limitSpec = query.getLimitSpec();
       postProcessingFn = query.postProcessingFn;
       context = query.getContext();
+      pushedDownQuery = query.getPushedDownQuery();
     }
 
     public Builder(Builder builder)
@@ -744,6 +764,7 @@ public class GroupByQuery extends BaseQuery<Row>
       limit = builder.limit;
       orderByColumnSpecs = new ArrayList<>(builder.orderByColumnSpecs);
       context = builder.context;
+      pushedDownQuery = builder.pushedDownQuery;
     }
 
     public Builder setDataSource(DataSource dataSource)
@@ -801,6 +822,12 @@ public class GroupByQuery extends BaseQuery<Row>
       ensureExplicitLimitSpecNotSet();
       this.limit = limit;
       this.postProcessingFn = null;
+      return this;
+    }
+
+    public Builder setQueryToPushDown(GroupByQuery q)
+    {
+      this.pushedDownQuery = q;
       return this;
     }
 
@@ -965,9 +992,26 @@ public class GroupByQuery extends BaseQuery<Row>
           havingSpec,
           theLimitSpec,
           postProcessingFn,
-          context
+          context,
+          pushedDownQuery
       );
     }
+  }
+
+  @Override
+  public QuerySegmentSpec getQuerySegmentSpecForLookUp()
+  {
+    return getInnerMostQuerySegmentSpec(this);
+  }
+
+  private static QuerySegmentSpec getInnerMostQuerySegmentSpec(GroupByQuery query)
+  {
+    if (query.getDataSource() instanceof QueryDataSource) {
+      QueryDataSource ds = (QueryDataSource) query.getDataSource();
+      GroupByQuery subQuery = (GroupByQuery) ds.getQuery();
+      return getInnerMostQuerySegmentSpec(subQuery);
+    }
+    return query.getQuerySegmentSpec();
   }
 
   @Override

@@ -40,6 +40,7 @@ import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryDataSource;
 import io.druid.query.QueryMetrics;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -50,6 +51,7 @@ import io.druid.query.ReferenceCountingSegmentQueryRunner;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.TableDataSource;
+import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.ReferenceCountingSegment;
@@ -121,6 +123,9 @@ public class ServerManager implements QuerySegmentWalker
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     DataSource dataSource = query.getDataSource();
+    if (query instanceof GroupByQuery && dataSource instanceof QueryDataSource) {
+      dataSource = ((GroupByQuery) ((QueryDataSource) dataSource).getQuery()).getDataSource();
+    }
     if (!(dataSource instanceof TableDataSource)) {
       throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
     }

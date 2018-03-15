@@ -38,6 +38,8 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -256,5 +258,17 @@ public class GroupByQueryHelper
 
     // Don't include post-aggregators since we don't know what types they are.
     return types.build();
+  }
+
+  public static Query getPushedDownQueryIfPresent(QueryPlus q)
+  {
+    Query query = q.getQuery();
+    if (query instanceof GroupByQuery) {
+      GroupByQuery gp = (GroupByQuery) query;
+      if (gp.getPushedDownQuery() != null) {
+        query = gp.getPushedDownQuery();
+      }
+    }
+    return query;
   }
 }

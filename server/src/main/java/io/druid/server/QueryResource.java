@@ -46,8 +46,8 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ForbiddenException;
 import org.joda.time.DateTime;
 

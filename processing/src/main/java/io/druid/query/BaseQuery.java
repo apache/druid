@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -28,11 +29,13 @@ import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import java.security.acl.Group;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -109,7 +112,12 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public QueryRunner<T> getRunner(QuerySegmentWalker walker)
   {
-    return querySegmentSpec.lookup(this, walker);
+    return getQuerySegmentSpecForLookUp().lookup(this, walker);
+  }
+
+  public QuerySegmentSpec getQuerySegmentSpecForLookUp()
+  {
+    return querySegmentSpec;
   }
 
   @Override
