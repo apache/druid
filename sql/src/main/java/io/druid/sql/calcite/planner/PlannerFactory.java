@@ -24,9 +24,7 @@ import com.google.inject.Inject;
 import io.druid.guice.annotations.Json;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.QueryLifecycleFactory;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.Escalator;
 import io.druid.sql.calcite.rel.QueryMaker;
 import io.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
@@ -64,10 +62,7 @@ public class PlannerFactory
   private final ExprMacroTable macroTable;
   private final PlannerConfig plannerConfig;
   private final ObjectMapper jsonMapper;
-
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final Escalator escalator;
 
   @Inject
   public PlannerFactory(
@@ -76,9 +71,7 @@ public class PlannerFactory
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
-      final AuthConfig authConfig,
       final AuthorizerMapper authorizerMapper,
-      final Escalator escalator,
       final @Json ObjectMapper jsonMapper
   )
   {
@@ -87,9 +80,7 @@ public class PlannerFactory
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.plannerConfig = plannerConfig;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.escalator = escalator;
     this.jsonMapper = jsonMapper;
   }
 
@@ -151,8 +142,7 @@ public class PlannerFactory
     return new DruidPlanner(
         Frameworks.getPlanner(frameworkConfig),
         plannerContext,
-        authorizerMapper,
-        escalator
+        authorizerMapper
     );
   }
 }

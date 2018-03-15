@@ -58,7 +58,7 @@ public class NativeIOTest
   @Test
   public void testDisabledFadviseChunkedCopy() throws Exception
   {
-    boolean possible = NativeIO.getFadvisePossible();
+    boolean possible = NativeIO.isFadvisePossible();
 
     NativeIO.setFadvisePossible(false);
     File f = tempFolder.newFile();
@@ -70,6 +70,24 @@ public class NativeIOTest
     byte[] data = Files.readAllBytes(f.toPath());
 
     NativeIO.setFadvisePossible(possible);
+    Assert.assertTrue(Arrays.equals(bytes, data));
+  }
+
+  @Test
+  public void testDisabledSyncFileRangePossible() throws Exception
+  {
+    boolean possible = NativeIO.isSyncFileRangePossible();
+
+    NativeIO.setSyncFileRangePossible(false);
+    File f = tempFolder.newFile();
+    byte[] bytes = new byte[]{(byte) 0x8, (byte) 0x9};
+
+    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+    NativeIO.chunkedCopy(bis, f);
+
+    byte[] data = Files.readAllBytes(f.toPath());
+
+    NativeIO.setSyncFileRangePossible(possible);
     Assert.assertTrue(Arrays.equals(bytes, data));
   }
 

@@ -37,7 +37,6 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.DruidPlanner;
@@ -118,9 +117,7 @@ public class SqlBenchmark
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
-        new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopEscalator(),
         CalciteTests.getJsonMapper()
     );
     groupByQuery = GroupByQuery
@@ -182,7 +179,10 @@ public class SqlBenchmark
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
     try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
-      final PlannerResult plannerResult = planner.plan(sqlQuery);
+      final PlannerResult plannerResult = planner.plan(
+          sqlQuery,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
       final List<Object[]> results = plannerResult.run().toList();
       blackhole.consume(results);
     }
