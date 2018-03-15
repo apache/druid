@@ -93,7 +93,7 @@ public class TaskMonitorTest
     }
   }
 
-  private class TestTask extends NoopTask
+  private static class TestTask extends NoopTask
   {
     private final int numMaxFails;
 
