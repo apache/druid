@@ -233,7 +233,7 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
     );
   }
 
-  private class TestParallelIndexSinglePhaseSupervisorTask extends ParallelIndexSinglePhaseSupervisorTask
+  private static class TestParallelIndexSinglePhaseSupervisorTask extends ParallelIndexSinglePhaseSupervisorTask
   {
 
     TestParallelIndexSinglePhaseSupervisorTask(

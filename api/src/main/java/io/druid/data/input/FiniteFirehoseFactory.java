@@ -19,6 +19,7 @@
 
 package io.druid.data.input;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.druid.data.input.impl.InputRowParser;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ public interface FiniteFirehoseFactory<T extends InputRowParser, S> extends Fire
   /**
    * Returns true if the {@link FirehoseFactory} supports parallel batch indexing.
    */
+  @JsonIgnore
   @Override
   default boolean isSplittable()
   {
@@ -45,11 +47,13 @@ public interface FiniteFirehoseFactory<T extends InputRowParser, S> extends Fire
   /**
    * Returns an iterator of {@link InputSplit}s.
    */
+  @JsonIgnore
   Iterator<InputSplit<S>> getSplits() throws IOException;
 
   /**
    * Returns number of splits returned by {@link #getSplits()}.
    */
+  @JsonIgnore
   int getNumSplits() throws IOException;
 
   /**
