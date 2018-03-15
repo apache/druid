@@ -971,22 +971,6 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @Override
-  public QuerySegmentSpec getQuerySegmentSpecForLookUp()
-  {
-    return getInnerMostQuerySegmentSpec(this);
-  }
-
-  private static QuerySegmentSpec getInnerMostQuerySegmentSpec(GroupByQuery query)
-  {
-    if (query.getDataSource() instanceof QueryDataSource) {
-      QueryDataSource ds = (QueryDataSource) query.getDataSource();
-      GroupByQuery subQuery = (GroupByQuery) ds.getQuery();
-      return getInnerMostQuerySegmentSpec(subQuery);
-    }
-    return query.getQuerySegmentSpec();
-  }
-
-  @Override
   public String toString()
   {
     return "GroupByQuery{" +

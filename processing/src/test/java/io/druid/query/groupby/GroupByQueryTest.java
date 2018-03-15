@@ -28,6 +28,7 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.query.BaseQuery;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -129,6 +130,6 @@ public class GroupByQueryTest
         .setAggregatorSpecs(aggs)
         .setGranularity(Granularities.DAY)
         .build();
-    Assert.assertEquals(innerQuerySegmentSpec, query.getQuerySegmentSpecForLookUp());
+    Assert.assertEquals(innerQuerySegmentSpec, BaseQuery.getQuerySegmentSpecForLookUp(query));
   }
 }
