@@ -235,6 +235,9 @@ public abstract class ExprEval<T>
 
   private static class StringExprEval extends ExprEval<String>
   {
+    private volatile boolean numericValComputed = false;
+    private volatile Number numericVal;
+
     private StringExprEval(@Nullable String value)
     {
       super(NullHandling.emptyToNullIfNeeded(value));
@@ -285,13 +288,26 @@ public abstract class ExprEval<T>
       if (value == null) {
         return null;
       }
+      if (numericValComputed) {
+        return numericVal;
+      }
+      Number rv = null;
       Long v = GuavaUtils.tryParseLong(value);
       // Do NOT use ternary operator here, because it makes Java to convert Long to Double
       if (v != null) {
-        return v;
+        rv = v;
       } else {
-        return Doubles.tryParse(value);
+        rv = Doubles.tryParse(value);
       }
+
+      numericVal = rv;
+      numericValComputed = true;
+      return rv;
+    }
+
+    private void cache(Number number){
+      numericVal = number;
+      numericValComputed = true;
     }
 
     @Override
