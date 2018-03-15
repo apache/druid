@@ -198,46 +198,44 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonMapper.writeValueAsBytes(query));
+    final ServletInputStream servletInputStream = new ServletInputStream()
+    {
+      private boolean finished;
+
+      @Override
+      public boolean isFinished()
+      {
+        return finished;
+      }
+
+      @Override
+      public boolean isReady()
+      {
+        return true;
+      }
+
+      @Override
+      public void setReadListener(final ReadListener readListener)
+      {
+        // do nothing
+      }
+
+      @Override
+      public int read()
+      {
+        final int b = inputStream.read();
+        if (b < 0) {
+          finished = true;
+        }
+        return b;
+      }
+    };
     EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
     requestMock.setAttribute("io.druid.proxy.objectMapper", jsonMapper);
     EasyMock.expectLastCall();
     EasyMock.expect(requestMock.getRequestURI()).andReturn("/druid/v2/");
     EasyMock.expect(requestMock.getMethod()).andReturn("POST");
-    EasyMock.expect(requestMock.getInputStream())
-            .andReturn(
-                new ServletInputStream()
-                {
-                  private boolean finished;
-
-                  @Override
-                  public boolean isFinished()
-                  {
-                    return finished;
-                  }
-
-                  @Override
-                  public boolean isReady()
-                  {
-                    return true;
-                  }
-
-                  @Override
-                  public void setReadListener(final ReadListener readListener)
-                  {
-                    // do nothing
-                  }
-
-                  @Override
-                  public int read()
-                  {
-                    final int b = inputStream.read();
-                    if (b < 0) {
-                      finished = true;
-                    }
-                    return b;
-                  }
-                }
-            );
+    EasyMock.expect(requestMock.getInputStream()).andReturn(servletInputStream);
     requestMock.setAttribute("io.druid.proxy.query", query);
     requestMock.setAttribute("io.druid.proxy.to.host", "1.2.3.4:9999");
     requestMock.setAttribute("io.druid.proxy.to.host.scheme", "http");
