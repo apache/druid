@@ -22,8 +22,9 @@ package io.druid.data.input.impl;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.Firehose;
-import io.druid.data.input.FirehoseFactory;
+import io.druid.data.input.InputSplit;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
@@ -36,6 +37,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 /**
  * This is an abstract class for firehose factory for making firehoses reading text files.
@@ -44,7 +46,7 @@ import java.util.NoSuchElementException;
  * @param <T> object type representing input data
  */
 public abstract class AbstractTextFilesFirehoseFactory<T>
-    implements FirehoseFactory<StringInputRowParser>
+    implements FiniteFirehoseFactory<StringInputRowParser, T>
 {
   private static final Logger LOG = new Logger(AbstractTextFilesFirehoseFactory.class);
 
@@ -53,9 +55,7 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
   {
-    if (objects == null) {
-      objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
-    }
+    initializeObjectsIfNeeded();
     final Iterator<T> iterator = objects.iterator();
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
@@ -88,6 +88,36 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
         },
         firehoseParser
     );
+  }
+
+  protected void initializeObjectsIfNeeded() throws IOException
+  {
+    if (objects == null) {
+      objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
+    }
+  }
+
+  public List<T> getObjects()
+  {
+    return objects;
+  }
+
+  @Override
+  public Iterator<InputSplit<T>> getSplits() throws IOException
+  {
+    initializeObjectsIfNeeded();
+    return getObjects()
+        .stream()
+        .map(InputSplit::new)
+        .collect(Collectors.toList())
+        .iterator();
+  }
+
+  @Override
+  public int getNumSplits() throws IOException
+  {
+    initializeObjectsIfNeeded();
+    return getObjects().size();
   }
 
   /**

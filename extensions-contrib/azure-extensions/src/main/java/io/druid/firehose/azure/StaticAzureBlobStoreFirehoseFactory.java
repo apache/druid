@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import io.druid.data.input.FiniteFirehoseFactory;
+import io.druid.data.input.InputSplit;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.azure.AzureByteSource;
@@ -33,6 +36,7 @@ import io.druid.storage.azure.AzureUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -142,5 +146,19 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
   protected Predicate<Throwable> getRetryCondition()
   {
     return AzureUtils.AZURE_RETRY;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<StringInputRowParser, AzureBlob> withSplit(InputSplit<AzureBlob> split)
+  {
+    return new StaticAzureBlobStoreFirehoseFactory(
+        azureStorage,
+        Collections.singletonList(split.get()),
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

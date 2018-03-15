@@ -24,7 +24,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.io.CountingOutputStream;
+import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.Firehose;
+import io.druid.data.input.InputSplit;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -605,6 +607,12 @@ public class PrefetchableTextFilesFirehoseFactoryTest
 
     private int readCount;
     private int numConnectionResets;
+
+    @Override
+    public FiniteFirehoseFactory<StringInputRowParser, File> withSplit(InputSplit<File> split)
+    {
+      throw new UnsupportedOperationException();
+    }
 
     private class TestInputStream extends InputStream
     {

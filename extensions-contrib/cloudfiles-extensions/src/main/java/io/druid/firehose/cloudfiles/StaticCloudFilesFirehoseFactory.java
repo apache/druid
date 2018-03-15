@@ -23,6 +23,9 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
+import io.druid.data.input.FiniteFirehoseFactory;
+import io.druid.data.input.InputSplit;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -34,6 +37,7 @@ import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -141,5 +145,19 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   protected Predicate<Throwable> getRetryCondition()
   {
     return CloudFilesUtils.CLOUDFILESRETRY;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<StringInputRowParser, CloudFilesBlob> withSplit(InputSplit<CloudFilesBlob> split)
+  {
+    return new StaticCloudFilesFirehoseFactory(
+        cloudFilesApi,
+        Collections.singletonList(split.get()),
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

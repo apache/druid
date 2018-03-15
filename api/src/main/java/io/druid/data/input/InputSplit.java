@@ -17,17 +17,22 @@
  * under the License.
  */
 
-package io.druid.segment.indexing;
-
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+package io.druid.data.input;
 
 /**
+ * Input unit for distributed batch ingestion. Used in {@link FiniteFirehoseFactory}.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "realtime", value = RealtimeIOConfig.class)
-})
-public interface IOConfig
+public class InputSplit<T>
 {
+  private final T split;
+
+  public InputSplit(T split)
+  {
+    this.split = split;
+  }
+
+  public T get()
+  {
+    return split;
+  }
 }

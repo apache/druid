@@ -29,6 +29,7 @@ import io.druid.data.input.InputRow;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * An extendable linear shard spec containing the information of core partitions.  This class contains two variables of
@@ -108,5 +109,29 @@ public class NumberedShardSpec implements ShardSpec
            "partitionNum=" + partitionNum +
            ", partitions=" + partitions +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (!(o instanceof NumberedShardSpec)) {
+      return false;
+    }
+
+    final NumberedShardSpec that = (NumberedShardSpec) o;
+    if (partitionNum != that.partitionNum) {
+      return false;
+    }
+    return partitions == that.partitions;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(partitionNum, partitions);
   }
 }

@@ -31,7 +31,6 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -43,6 +42,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
+import io.druid.indexing.common.Counters;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestUtils;
@@ -61,6 +61,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -216,7 +217,13 @@ public class IngestSegmentFirehoseFactoryTest
     };
     final LocalTaskActionClientFactory tac = new LocalTaskActionClientFactory(
         TASK_STORAGE,
-        new TaskActionToolbox(TASK_LOCKBOX, mdc, newMockEmitter(), EasyMock.createMock(SupervisorManager.class))
+        new TaskActionToolbox(
+            TASK_LOCKBOX,
+            mdc,
+            newMockEmitter(),
+            EasyMock.createMock(SupervisorManager.class),
+            new Counters()
+        )
     );
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);

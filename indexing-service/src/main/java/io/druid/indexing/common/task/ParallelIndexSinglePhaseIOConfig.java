@@ -17,17 +17,25 @@
  * under the License.
  */
 
-package io.druid.segment.indexing;
+package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import io.druid.data.input.FirehoseFactory;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+
+import javax.annotation.Nullable;
 
 /**
+ * Same with {@link IndexIOConfig} except its JSON type name.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "realtime", value = RealtimeIOConfig.class)
-})
-public interface IOConfig
+@JsonTypeName("parallelIndexSinglePhase")
+public class ParallelIndexSinglePhaseIOConfig extends IndexIOConfig
 {
+  public ParallelIndexSinglePhaseIOConfig(
+      FirehoseFactory firehoseFactory,
+      @Nullable Boolean appendToExisting
+  )
+  {
+    super(firehoseFactory, appendToExisting);
+  }
 }

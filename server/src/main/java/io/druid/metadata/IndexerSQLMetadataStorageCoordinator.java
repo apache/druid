@@ -111,15 +111,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> getUsedSegmentsForInterval(
-      final String dataSource,
-      final Interval interval
-  ) throws IOException
-  {
-    return getUsedSegmentsForIntervals(dataSource, ImmutableList.of(interval));
-  }
-
-  @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
       final String dataSource, final List<Interval> intervals
   ) throws IOException

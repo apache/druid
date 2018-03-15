@@ -67,9 +67,9 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
-import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
+import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -563,7 +563,7 @@ public class IndexTask extends AbstractTask
       final TaskToolbox toolbox,
       final DataSchema dataSchema,
       final ShardSpecs shardSpecs,
-      Map<Interval, String> versions,
+      final Map<Interval, String> versions,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException

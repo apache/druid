@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.DateTimes;
@@ -32,6 +31,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.jackson.JacksonUtils;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -77,17 +77,17 @@ public class IndexingServiceClient
       }
     }
 
-    runQuery(new ClientAppendQuery(dataSource, segments));
+    runTask(new ClientAppendQuery(dataSource, segments));
   }
 
   public void killSegments(String dataSource, Interval interval)
   {
-    runQuery(new ClientKillQuery(dataSource, interval));
+    runTask(new ClientKillQuery(dataSource, interval));
   }
 
   public void upgradeSegment(DataSegment dataSegment)
   {
-    runQuery(new ClientConversionQuery(dataSegment));
+    runTask(new ClientConversionQuery(dataSegment));
   }
 
   public String compactSegments(
@@ -108,21 +108,21 @@ public class IndexingServiceClient
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
-    return runQuery(new ClientCompactQuery(dataSource, segments, tuningConfig, context));
+    return runTask(new ClientCompactQuery(dataSource, segments, tuningConfig, context));
   }
 
-  private String runQuery(Object queryObject)
+  public String runTask(Object taskObject)
   {
     try {
       final FullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.POST,
               "/druid/indexer/v1/task"
-          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(queryObject))
+          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskObject))
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Failed to post query[%s]", queryObject);
+        throw new ISE("Failed to post task[%s]", taskObject);
       }
 
       final Map<String, Object> resultMap = jsonMapper.readValue(
@@ -130,7 +130,40 @@ public class IndexingServiceClient
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
       final String taskId = (String) resultMap.get("task");
-      return Preconditions.checkNotNull(taskId, "Null task id for query[%s]", queryObject);
+      return Preconditions.checkNotNull(taskId, "Null task id for task[%s]", taskObject);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public String killTask(String taskId)
+  {
+    try {
+      final FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.POST,
+              StringUtils.format("/druid/indexer/v1/task/%s/shutdown", taskId)
+          )
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE("Failed to kill task[%s]", taskId);
+      }
+
+      final Map<String, Object> resultMap = jsonMapper.readValue(
+          response.getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+      final String killedTaskId = (String) resultMap.get("task");
+      Preconditions.checkNotNull(killedTaskId, "Null task id returned for task[%s]", taskId);
+      Preconditions.checkState(
+          taskId.equals(killedTaskId),
+          "Requested to kill task[%s], but another task[%s] was killed!",
+          taskId,
+          killedTaskId
+      );
+      return killedTaskId;
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -196,6 +229,30 @@ public class IndexingServiceClient
           {
           }
       );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Nullable
+  public TaskStatusResponse getTaskStatus(String taskId)
+  {
+    try {
+      final FullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s/status", taskId))
+      );
+
+      if (responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
+        return jsonMapper.readValue(
+            responseHolder.getContent(),
+            new TypeReference<TaskStatusResponse>()
+            {
+            }
+        );
+      } else {
+        return null;
+      }
     }
     catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);

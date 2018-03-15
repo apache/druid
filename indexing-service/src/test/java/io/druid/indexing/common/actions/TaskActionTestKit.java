@@ -21,6 +21,7 @@ package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
+import io.druid.indexing.common.Counters;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -111,7 +112,8 @@ public class TaskActionTestKit extends ExternalResource
         taskLockbox,
         metadataStorageCoordinator,
         new NoopServiceEmitter(),
-        EasyMock.createMock(SupervisorManager.class)
+        EasyMock.createMock(SupervisorManager.class),
+        new Counters()
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();

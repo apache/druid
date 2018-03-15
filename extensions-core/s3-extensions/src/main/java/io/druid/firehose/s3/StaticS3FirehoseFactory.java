@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import io.druid.data.input.FiniteFirehoseFactory;
+import io.druid.data.input.InputSplit;
+import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
@@ -41,6 +44,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -257,5 +261,30 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   protected Predicate<Throwable> getRetryCondition()
   {
     return S3Utils.S3RETRY;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<StringInputRowParser, S3Object> withSplit(InputSplit<S3Object> split)
+  {
+    final String authority = split.get().getBucketName();
+    final String path = split.get().getKey();
+    final URI splitUri;
+    if (authority.endsWith("/") && path.startsWith("/")) {
+      splitUri = URI.create(authority + path.substring(1));
+    } else if (!authority.endsWith("/") && !path.startsWith("/")) {
+      splitUri = URI.create(authority + "/" + path);
+    } else {
+      splitUri = URI.create(authority + path);
+    }
+    return new StaticS3FirehoseFactory(
+        s3Client,
+        Collections.singletonList(splitUri),
+        null,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
   }
 }

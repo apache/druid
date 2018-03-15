@@ -31,7 +31,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
@@ -39,6 +38,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -890,8 +890,20 @@ public class TaskLockbox
 
     boolean addTask(Task task)
     {
-      Preconditions.checkArgument(taskLock.getGroupId().equals(task.getGroupId()));
-      Preconditions.checkArgument(taskLock.getPriority() == task.getPriority());
+      Preconditions.checkArgument(
+          taskLock.getGroupId().equals(task.getGroupId()),
+          "groupId[%s] of task[%s] is different from the existing lockPosse's groupId[%s]",
+          task.getGroupId(),
+          task.getId(),
+          taskLock.getGroupId()
+      );
+      Preconditions.checkArgument(
+          taskLock.getPriority() == task.getPriority(),
+          "priority[%s] of task[%s] is different from the existing lockPosse's priority[%s]",
+          task.getPriority(),
+          task.getId(),
+          taskLock.getPriority()
+      );
       return taskIds.add(task.getId());
     }
 

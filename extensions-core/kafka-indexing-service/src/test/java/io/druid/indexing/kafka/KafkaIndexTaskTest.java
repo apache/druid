@@ -38,6 +38,7 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.indexing.common.Counters;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.core.NoopEmitter;
 import io.druid.java.util.emitter.service.ServiceEmitter;
@@ -1958,7 +1959,8 @@ public class KafkaIndexTaskTest
             ));
             return true;
           }
-        }
+        },
+        new Counters()
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

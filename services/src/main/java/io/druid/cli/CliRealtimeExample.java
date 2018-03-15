@@ -138,7 +138,7 @@ public class CliRealtimeExample extends ServerRunnable
     }
   }
 
-  private static class NoopDataSegmentPusher implements DataSegmentPusher
+  public static class NoopDataSegmentPusher implements DataSegmentPusher
   {
 
     @Override

@@ -36,6 +36,7 @@ import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.coordinator.CoordinatorClient;
+import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.guice.Binders;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
@@ -168,6 +169,7 @@ public class CliPeon extends GuiceRunnable
             JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
             configureTaskActionClient(binder);
+            binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
 
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
