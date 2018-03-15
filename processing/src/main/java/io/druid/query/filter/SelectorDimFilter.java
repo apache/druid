@@ -76,12 +76,12 @@ public class SelectorDimFilter implements DimFilter
     byte[] valueBytes = (value == null) ? new byte[]{} : StringUtils.toUtf8(value);
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    return ByteBuffer.allocate(6 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
+    return ByteBuffer.allocate(5 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
                      .put(DimFilterUtils.SELECTOR_CACHE_ID)
-                     .put(value == null ? (byte) 1 : (byte) 0)
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(dimensionBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
+                     .put(value == null ? (byte) 1 : (byte) 0)
                      .put(valueBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
