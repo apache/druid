@@ -147,7 +147,7 @@ public abstract class ExternalDataIncrementalIndex<AggregatorType> extends Incre
 
     Iterable<io.druid.segment.incremental.IncrementalIndex.TimeAndDims> timeRangeIterable(boolean descending, long timeStart, long timeEnd);
 
-    Iterable<io.druid.segment.incremental.IncrementalIndex.TimeAndDims> keySet();
+    Iterable<TimeAndDims> keySet();
 
     /**
      * @return the previous rowIndex associated with the specified key, or
