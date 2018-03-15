@@ -73,6 +73,11 @@ public abstract class ExternalDataIncrementalIndex<AggregatorType> extends Incre
     return getFacts().timeRangeIterable(descending, timeStart, timeEnd);
   }
 
+  public Iterable<io.druid.segment.incremental.IncrementalIndex.TimeAndDims> keySet()
+  {
+    return getFacts().keySet();
+  }
+
   public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs, final boolean descending)
   {
     return new Iterable<Row>()
