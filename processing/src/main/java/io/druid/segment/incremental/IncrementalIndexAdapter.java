@@ -91,7 +91,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     int rowNum = 0;
-    for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
+    for (IncrementalIndex.TimeAndDims timeAndDims : index.keySet()) {
       final Object[] dims = timeAndDims.getDims();
 
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
@@ -174,7 +174,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
          * iterator() call to ensure the counter starts at 0.
          */
         return Iterators.transform(
-            index.getFacts().keySet().iterator(),
+            index.keySet().iterator(),
             new Function<IncrementalIndex.TimeAndDims, Rowboat>()
             {
               int count = 0;
