@@ -77,7 +77,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
   public void hashValues(DimensionSelector dimSelector, HyperLogLogCollector collector)
   {
     IndexedInts row = dimSelector.getRow();
-    for (int i = 0; i < row.size(); i++) {
+    for (int i = 0, rowSize = row.size(); i < rowSize; i++) {
       int index = row.get(i);
       final String value = dimSelector.lookupName(index);
       // SQL standard spec does not count null values,

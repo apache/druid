@@ -55,6 +55,7 @@ import io.druid.indexing.overlord.http.security.TaskResourceFilter;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
@@ -70,6 +71,7 @@ import io.druid.server.security.ResourceAction;
 import io.druid.server.security.ResourceType;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -460,7 +462,8 @@ public class OverlordResource
                     new WaitingTask(
                         task.getId(),
                         task.getType(),
-                        SettableFuture.create()
+                        SettableFuture.create(),
+                        task.getDataSource()
                     )
                     {
                       @Override
@@ -481,15 +484,18 @@ public class OverlordResource
   private static class WaitingTask extends TaskRunnerWorkItem
   {
     private final String taskType;
+    private final String dataSource;
 
     WaitingTask(
         String taskId,
         String taskType,
-        ListenableFuture<TaskStatus> result
+        ListenableFuture<TaskStatus> result,
+        String dataSource
     )
     {
       super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
       this.taskType = taskType;
+      this.dataSource = dataSource;
     }
 
     @Override
@@ -502,6 +508,12 @@ public class OverlordResource
     public String getTaskType()
     {
       return taskType;
+    }
+
+    @Override
+    public String getDataSource()
+    {
+      return dataSource;
     }
   }
 
@@ -595,20 +607,22 @@ public class OverlordResource
         )
     );
 
-    final List<TaskStatusPlus> completeTasks = recentlyFinishedTasks
-        .stream()
-        .map(status -> new TaskStatusPlus(
-                 status.getId(),
-                 taskFunction.apply(status.getId()).getType(),
-                 taskStorageQueryAdapter.getCreatedTime(status.getId()),
-                 // Would be nice to include the real queue insertion time, but the TaskStorage API doesn't yet allow it.
-                 DateTimes.EPOCH,
-                 status.getStatusCode(),
-                 status.getDuration(),
-                 TaskLocation.unknown()
-             )
-        )
-        .collect(Collectors.toList());
+    final List<TaskStatusPlus> completeTasks = Lists.newArrayList(Iterables.transform(
+        recentlyFinishedTasks,
+        status -> {
+          final Pair<DateTime, String> pair = taskStorageQueryAdapter.getCreatedDateAndDataSource(status.getId());
+          return new TaskStatusPlus(
+              status.getId(),
+              taskFunction.apply(status.getId()).getType(),
+              pair.lhs,
+              // Would be nice to include the real queue insertion time, but the
+              // TaskStorage API doesn't yet allow it.
+              DateTimes.EPOCH,
+              status.getStatusCode(),
+              status.getDuration(),
+              TaskLocation.unknown(),
+              pair.rhs);
+        }));
 
     return Response.ok(completeTasks).build();
   }
@@ -718,6 +732,26 @@ public class OverlordResource
     }
   }
 
+  @GET
+  @Path("/dataSources/{dataSource}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRunningTasksByDataSource(@PathParam("dataSource") String dataSource,
+      @Context HttpServletRequest request)
+  {
+    Optional<TaskRunner> ts = taskMaster.getTaskRunner();
+    if (!ts.isPresent()) {
+      return Response.status(Response.Status.NOT_FOUND).entity("No tasks are running").build();
+    }
+    Collection<? extends TaskRunnerWorkItem> runningTasks = ts.get().getRunningTasks();
+    if (runningTasks == null || runningTasks.isEmpty()) {
+      return Response.status(Response.Status.NOT_FOUND)
+          .entity("No running tasks found for the datasource : " + dataSource).build();
+    }
+    List<TaskRunnerWorkItem> taskRunnerWorkItemList = runningTasks.stream()
+        .filter(task -> dataSource.equals(task.getDataSource())).collect(Collectors.toList());
+    return Response.ok(taskRunnerWorkItemList).build();
+  }
+
   private Response workItemsResponse(final Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>> fn)
   {
     return asLeaderWith(
@@ -742,7 +776,8 @@ public class OverlordResource
                             workItem.getQueueInsertionTime(),
                             null,
                             null,
-                            workItem.getLocation()
+                            workItem.getLocation(),
+                            workItem.getDataSource()
                         );
                       }
                     }

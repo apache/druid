@@ -2560,6 +2560,51 @@ public class IndexMergerTestBase
     }
   }
 
+  @Test
+  public void testDimensionWithEmptyName() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
+    toPersist.add(new MapBasedInputRow(
+        timestamp,
+        Arrays.asList("", "dim2"),
+        ImmutableMap.<String, Object>of("", "1", "dim2", "2")
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.persist(
+                toPersist,
+                tempDir,
+                indexSpec,
+                null
+            )
+        )
+    );
+
+    Assert.assertEquals(3, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(
+        Arrays.asList("dim1", "dim2"),
+        Lists.newArrayList(index.getAvailableDimensions())
+    );
+    Assert.assertEquals(3, index.getColumnNames().size());
+
+    assertDimCompression(index, indexSpec.getDimensionCompression());
+
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index.getMetadata().getAggregators()
+    );
+
+    Assert.assertEquals(
+        Granularities.NONE,
+        index.getMetadata().getQueryGranularity()
+    );
+  }
+
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
   {
     IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null, new DimensionsSpec(schema, null, null));

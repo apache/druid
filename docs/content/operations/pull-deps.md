@@ -40,6 +40,30 @@ Don't use the default remote repositories, only use the repositories provided di
 
 Version to use for extension coordinate that doesn't have a version information. For example, if extension coordinate is `io.druid.extensions:mysql-metadata-storage`, and default version is `#{DRUIDVERSION}`, then this coordinate will be treated as `io.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`
 
+`--use-proxy`
+
+Use http/https proxy to send request to the remote repository servers. `--proxy-host` and `--proxy-port` must be set explicitly if this option is enabled.  
+
+`--proxy-type`
+
+Set the proxy type, Should be either *http* or *https*, default value is *https*.
+
+`--proxy-host`
+
+Set the proxy host. e.g. proxy.com.
+
+`--proxy-port`
+
+Set the proxy port number. e.g. 8080.
+
+`--proxy-username`
+
+Set a username to connect to the proxy, this option is only required if the proxy server uses authentication.
+
+`--proxy-password`
+
+Set a password to connect to the proxy, this option is only required if the proxy server uses authentication.
+
 To run `pull-deps`, you should
 
 1) Specify `druid.extensions.directory` and `druid.extensions.hadoopDependenciesDir`, these two properties tell `pull-deps` where to put extensions. If you don't specify them,  default values will be used, see [Configuration](../configuration/index.html).

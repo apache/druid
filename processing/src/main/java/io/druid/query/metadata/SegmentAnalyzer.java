@@ -276,9 +276,9 @@ public class SegmentAnalyzer
               }
               long current = accumulated;
               while (!cursor.isDone()) {
-                final IndexedInts vals = selector.getRow();
-                for (int i = 0; i < vals.size(); ++i) {
-                  final String dimVal = selector.lookupName(vals.get(i));
+                final IndexedInts row = selector.getRow();
+                for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
+                  final String dimVal = selector.lookupName(row.get(i));
                   if (dimVal != null && !dimVal.isEmpty()) {
                     current += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
                   }
