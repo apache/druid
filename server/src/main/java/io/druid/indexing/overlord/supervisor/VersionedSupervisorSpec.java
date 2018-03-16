@@ -45,4 +45,31 @@ public class VersionedSupervisorSpec
   {
     return version;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    VersionedSupervisorSpec that = (VersionedSupervisorSpec) o;
+
+    if (getSpec() != null ? !getSpec().equals(that.getSpec()) : that.getSpec() != null) {
+      return false;
+    }
+    return getVersion() != null ? getVersion().equals(that.getVersion()) : that.getVersion() == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = getSpec() != null ? getSpec().hashCode() : 0;
+    result = 31 * result + (getVersion() != null ? getVersion().hashCode() : 0);
+    return result;
+  }
 }
