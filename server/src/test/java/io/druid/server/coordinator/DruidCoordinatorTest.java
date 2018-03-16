@@ -222,7 +222,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test
-  public void testMoveSegment() throws Exception
+  public void testMoveSegment()
   {
     segment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(segment.getIdentifier()).andReturn("dummySegment");
@@ -366,7 +366,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
           @Override
           public void childEvent(
               CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
-          ) throws Exception
+          )
           {
             if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
               if (assignSegmentLatch.getCount() > 0) {

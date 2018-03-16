@@ -310,7 +310,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         defaultMQPullConsumer.shutdown();
         pullMessageService.shutdown(false);

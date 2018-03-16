@@ -23,7 +23,6 @@ package io.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.lifecycle.Lifecycle;
 
 
@@ -58,7 +57,7 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
         new Lifecycle.Handler()
         {
           @Override
-          public void start() throws Exception
+          public void start()
           {
             connector.createSegmentTable();
           }

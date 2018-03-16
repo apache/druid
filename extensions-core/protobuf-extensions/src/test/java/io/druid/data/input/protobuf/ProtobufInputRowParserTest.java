@@ -56,7 +56,7 @@ public class ProtobufInputRowParserTest
   private ParseSpec parseSpec;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
@@ -79,7 +79,7 @@ public class ProtobufInputRowParserTest
   }
 
   @Test
-  public void testShortMessageType() throws Exception
+  public void testShortMessageType()
   {
     //configure parser with desc file, and specify which file name to use
     @SuppressWarnings("unused") // expected to create parser without exception
@@ -89,7 +89,7 @@ public class ProtobufInputRowParserTest
 
 
   @Test
-  public void testLongMessageType() throws Exception
+  public void testLongMessageType()
   {
     //configure parser with desc file, and specify which file name to use
     @SuppressWarnings("unused") // expected to create parser without exception
@@ -99,7 +99,7 @@ public class ProtobufInputRowParserTest
 
 
   @Test(expected = ParseException.class)
-  public void testBadProto() throws Exception
+  public void testBadProto()
   {
     //configure parser with desc file
     @SuppressWarnings("unused") // expected exception
@@ -108,7 +108,7 @@ public class ProtobufInputRowParserTest
   }
 
   @Test(expected = ParseException.class)
-  public void testMalformedDescriptorUrl() throws Exception
+  public void testMalformedDescriptorUrl()
   {
     //configure parser with non existent desc file
     @SuppressWarnings("unused") // expected exception
@@ -116,7 +116,7 @@ public class ProtobufInputRowParserTest
   }
 
   @Test
-  public void testSingleDescriptorNoMessageType() throws Exception
+  public void testSingleDescriptorNoMessageType()
   {
     // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
     @SuppressWarnings("unused") // expected to create parser without exception

@@ -116,7 +116,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
   }
 
   @SuppressWarnings("unused") // Supposedly called by Caliper
-  public Object timeBufferAggregate(int reps) throws Exception
+  public Object timeBufferAggregate(int reps)
   {
     for (int i = 0; i < reps; ++i) {
       agg.aggregate(buf, pos);
@@ -139,7 +139,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
   }
 
-  public static void main(String[] args) throws Exception
+  public static void main(String[] args)
   {
     Runner.main(CardinalityAggregatorBenchmark.class, args);
   }

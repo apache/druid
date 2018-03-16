@@ -32,7 +32,7 @@ import java.util.Properties;
 public class DruidCoordinatorConfigTest
 {
   @Test
-  public void testDeserialization() throws Exception
+  public void testDeserialization()
   {
     ConfigurationObjectFactory factory = Config.createFactory(new Properties());
 

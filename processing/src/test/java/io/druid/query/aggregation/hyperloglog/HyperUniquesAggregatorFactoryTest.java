@@ -44,14 +44,14 @@ public class HyperUniquesAggregatorFactoryTest
   private final HashFunction fn = Hashing.murmur3_128();
 
   @Test
-  public void testDeserializeV0() throws Exception
+  public void testDeserializeV0()
   {
     Object v0 = aggregatorFactory.deserialize(V0_BASE64);
     Assert.assertEquals("deserialized value is HLLCV0", HLLCV0.class, v0.getClass());
   }
 
   @Test
-  public void testCompare1() throws Exception
+  public void testCompare1()
   {
     HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
     HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
@@ -67,7 +67,7 @@ public class HyperUniquesAggregatorFactoryTest
   }
 
   @Test
-  public void testCompare2() throws Exception
+  public void testCompare2()
   {
     Random rand = new Random(0);
     HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
@@ -131,7 +131,7 @@ public class HyperUniquesAggregatorFactoryTest
   }
 
   @Test
-  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception
+  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases()
   {
     // given
     Random rand = new Random(0);

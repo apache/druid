@@ -937,7 +937,7 @@ public class IndexTaskTest
     final TaskActionClient actionClient = new TaskActionClient()
     {
       @Override
-      public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+      public <RetType> RetType submit(TaskAction<RetType> taskAction)
       {
         if (taskAction instanceof LockListAction) {
           return (RetType) Collections.singletonList(
@@ -1006,7 +1006,7 @@ public class IndexTaskTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+      public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
       {
         segments.add(segment);
         return segment;

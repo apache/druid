@@ -45,13 +45,6 @@ public class EmittingLogger extends Logger
     EmittingLogger.emitter = emitter;
   }
 
-  public EmittingLogger(String className)
-  {
-    super(className);
-
-    this.className = className;
-  }
-
   public EmittingLogger(Class clazz)
   {
     super(clazz);
@@ -113,7 +106,7 @@ public class EmittingLogger extends Logger
     }
 
     @Override
-    protected void finalize() throws Throwable
+    protected void finalize()
     {
       if (!emitted) {
         logIt("Alert not emitted, emitting. %s: %s");

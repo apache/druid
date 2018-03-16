@@ -75,20 +75,4 @@ public class Monitors
       }
     };
   }
-
-  public static Monitor or(Monitor... monitors)
-  {
-    return new CompoundMonitor(monitors)
-    {
-      @Override
-      public boolean shouldReschedule(List<Boolean> reschedules)
-      {
-        boolean b = false;
-        for (boolean reschedule : reschedules) {
-          b = b || reschedule;
-        }
-        return b;
-      }
-    };
-  }
 }

@@ -203,7 +203,7 @@ public class MultiSegmentSelectQueryTest
   }
 
   @Parameterized.Parameters(name = "fromNext={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));
   }

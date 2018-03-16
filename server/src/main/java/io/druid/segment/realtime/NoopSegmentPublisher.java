@@ -21,14 +21,12 @@ package io.druid.segment.realtime;
 
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
-
 /**
  */
 public class NoopSegmentPublisher implements SegmentPublisher
 {
   @Override
-  public void publishSegment(DataSegment segment) throws IOException
+  public void publishSegment(DataSegment segment)
   {
     // do nothing
   }

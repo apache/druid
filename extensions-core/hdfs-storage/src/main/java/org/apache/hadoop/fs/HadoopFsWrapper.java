@@ -50,7 +50,7 @@ public class HadoopFsWrapper
    *
    * @throws IOException if trying to overwrite a non-empty directory
    */
-  public static boolean rename(FileSystem fs, Path from, Path to, boolean replaceExisting) throws IOException
+  public static boolean rename(FileSystem fs, Path from, Path to, boolean replaceExisting)
   {
     try {
       // Note: Using reflection instead of simpler

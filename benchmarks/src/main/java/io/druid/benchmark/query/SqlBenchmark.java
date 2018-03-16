@@ -90,7 +90,7 @@ public class SqlBenchmark
   private String sqlQuery;
 
   @Setup(Level.Trial)
-  public void setup() throws Exception
+  public void setup()
   {
     tmpDir = Files.createTempDir();
     log.info("Starting benchmark setup using tmpDir[%s], rows[%,d].", tmpDir, rowsPerSegment);
@@ -163,7 +163,7 @@ public class SqlBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void queryNative(Blackhole blackhole) throws Exception
+  public void queryNative(Blackhole blackhole)
   {
     final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, Maps.newHashMap());
     final List<Row> resultList = resultSequence.toList();

@@ -21,8 +21,6 @@ package io.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.metrics.cgroups.CgroupDiscoverer;
-import io.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import io.druid.java.util.metrics.cgroups.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,14 +42,12 @@ public class CpuAcctDeltaMonitorTest
   private File procDir;
   private File cgroupDir;
   private File cpuacctDir;
-  private CgroupDiscoverer discoverer;
 
   @Before
   public void setUp() throws IOException
   {
     cgroupDir = temporaryFolder.newFolder();
     procDir = temporaryFolder.newFolder();
-    discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     cpuacctDir = new File(
         cgroupDir,
@@ -62,7 +58,7 @@ public class CpuAcctDeltaMonitorTest
   }
 
   @Test
-  public void testMonitorWontCrash() throws Exception
+  public void testMonitorWontCrash()
   {
     final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
         "some_feed",

@@ -59,7 +59,7 @@ public class ReservoirSegmentSamplerTest
   List<DataSegment> segments;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);

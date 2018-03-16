@@ -34,9 +34,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -67,6 +64,9 @@ import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -74,7 +74,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -160,7 +159,7 @@ public abstract class BaseFilterTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> constructorFeeder() throws IOException
+  public static Collection<Object[]> constructorFeeder()
   {
     return makeConstructors();
   }
@@ -191,7 +190,7 @@ public abstract class BaseFilterTest
                 new Closeable()
                 {
                   @Override
-                  public void close() throws IOException
+                  public void close()
                   {
                     index.close();
                   }
@@ -210,7 +209,7 @@ public abstract class BaseFilterTest
                 new Closeable()
                 {
                   @Override
-                  public void close() throws IOException
+                  public void close()
                   {
                     index.close();
                   }
@@ -229,7 +228,7 @@ public abstract class BaseFilterTest
                 new Closeable()
                 {
                   @Override
-                  public void close() throws IOException
+                  public void close()
                   {
                     index.close();
                   }

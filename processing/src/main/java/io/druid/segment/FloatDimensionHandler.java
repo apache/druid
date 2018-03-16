@@ -26,7 +26,6 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public class FloatDimensionHandler implements DimensionHandler<Float, Float, Float>
 {
@@ -55,7 +54,7 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
-  ) throws IOException
+  )
   {
     return new FloatDimensionMergerV9(
         dimensionName,

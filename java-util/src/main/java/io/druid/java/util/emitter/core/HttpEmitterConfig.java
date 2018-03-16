@@ -84,12 +84,6 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
       return this;
     }
 
-    public Builder setFlushTimeOut(long flushTimeOut)
-    {
-      this.flushTimeOut = flushTimeOut;
-      return this;
-    }
-
     public Builder setBasicAuthentication(String basicAuthentication)
     {
       this.basicAuthentication = basicAuthentication;
@@ -123,12 +117,6 @@ public class HttpEmitterConfig extends BaseHttpEmittingConfig
     public Builder setHttpTimeoutAllowanceFactor(float httpTimeoutAllowanceFactor)
     {
       this.httpTimeoutAllowanceFactor = httpTimeoutAllowanceFactor;
-      return this;
-    }
-
-    public Builder setMinHttpTimeoutMillis(int minHttpTimeoutMillis)
-    {
-      this.minHttpTimeoutMillis = minHttpTimeoutMillis;
       return this;
     }
 

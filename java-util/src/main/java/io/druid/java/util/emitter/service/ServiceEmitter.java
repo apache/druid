@@ -54,16 +54,6 @@ public class ServiceEmitter implements Emitter
     this.emitter = emitter;
   }
 
-  public String getService()
-  {
-    return serviceDimensions.get("service");
-  }
-
-  public String getHost()
-  {
-    return serviceDimensions.get("host");
-  }
-
   @Override
   @LifecycleStart
   public void start()

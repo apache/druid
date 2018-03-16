@@ -30,7 +30,7 @@ import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
 public class HttpClientPipelineFactory implements ChannelPipelineFactory
 {
   @Override
-  public ChannelPipeline getPipeline() throws Exception
+  public ChannelPipeline getPipeline()
   {
     ChannelPipeline pipeline = new DefaultChannelPipeline();
 

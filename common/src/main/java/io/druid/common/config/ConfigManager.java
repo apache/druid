@@ -129,7 +129,7 @@ public class ConfigManager
             {
               @Override
               @SuppressWarnings("unchecked")
-              public ConfigHolder<T> call() throws Exception
+              public ConfigHolder<T> call()
               {
                 if (!started) {
                   watchedConfigs.put(key, new ConfigHolder<T>(null, serde));
@@ -272,7 +272,7 @@ public class ConfigManager
     }
 
     @Override
-    public ScheduledExecutors.Signal call() throws Exception
+    public ScheduledExecutors.Signal call()
     {
       if (stop) {
         return ScheduledExecutors.Signal.STOP;

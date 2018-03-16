@@ -54,13 +54,14 @@ public class KafkaEmitterConfigTest
   }
 
   @Test
-  public void testSerDeNotRequiredKafkaProducerConfig() throws IOException
+  public void testSerDeNotRequiredKafkaProducerConfig()
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", "metricTest",
                                                                    "alertTest", "clusterNameTest",
                                                                    null
     );
     try {
+      @SuppressWarnings("unused")
       KafkaEmitter emitter = new KafkaEmitter(kafkaEmitterConfig, mapper);
     }
     catch (NullPointerException e) {

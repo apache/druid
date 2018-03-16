@@ -58,7 +58,7 @@ public class IndexSpecTest
   }
 
   @Test
-  public void testDefaults() throws Exception
+  public void testDefaults()
   {
     final IndexSpec spec = new IndexSpec();
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());

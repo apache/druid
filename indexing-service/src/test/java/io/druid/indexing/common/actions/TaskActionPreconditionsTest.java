@@ -79,7 +79,7 @@ public class TaskActionPreconditionsTest
   }
 
   @Test
-  public void testCheckLockCoversSegments() throws Exception
+  public void testCheckLockCoversSegments()
   {
     final List<Interval> intervals = ImmutableList.of(
         Intervals.of("2017-01-01/2017-01-02"),
@@ -103,7 +103,7 @@ public class TaskActionPreconditionsTest
   }
 
   @Test
-  public void testCheckLargeLockCoversSegments() throws Exception
+  public void testCheckLargeLockCoversSegments()
   {
     final List<Interval> intervals = ImmutableList.of(
         Intervals.of("2017-01-01/2017-01-04")
@@ -125,7 +125,7 @@ public class TaskActionPreconditionsTest
   }
 
   @Test
-  public void testCheckLockCoversSegmentsWithOverlappedIntervals() throws Exception
+  public void testCheckLockCoversSegmentsWithOverlappedIntervals()
   {
     final List<Interval> lockIntervals = ImmutableList.of(
         Intervals.of("2016-12-31/2017-01-01"),

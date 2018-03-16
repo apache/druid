@@ -33,7 +33,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.concurrent.LifecycleLock;
@@ -45,6 +44,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -185,7 +185,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             @Override
             public VersionedIntervalTimeline<String, DataSegment> inTransaction(
                 Handle handle, TransactionStatus status
-            ) throws Exception
+            )
             {
               return handle
                   .createQuery(StringUtils.format(
@@ -250,7 +250,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               Batch batch = handle.createBatch();
 
@@ -286,7 +286,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               handle.createStatement(
                   StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
@@ -404,7 +404,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                                   Map<String, Object> stringObjectMap,
                                   FoldController foldController,
                                   StatementContext statementContext
-                              ) throws SQLException
+                              )
                               {
                                 druidDataSources.add(
                                     MapUtils.getString(stringObjectMap, "datasource")
@@ -437,7 +437,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           new TransactionCallback<List<DataSegment>>()
           {
             @Override
-            public List<DataSegment> inTransaction(Handle handle, TransactionStatus status) throws Exception
+            public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
             {
               return handle
                   .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
@@ -532,7 +532,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         new TransactionCallback<List<Interval>>()
         {
           @Override
-          public List<Interval> inTransaction(Handle handle, TransactionStatus status) throws Exception
+          public List<Interval> inTransaction(Handle handle, TransactionStatus status)
           {
             Iterator<Interval> iter = handle
                 .createQuery(

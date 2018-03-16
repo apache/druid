@@ -41,7 +41,7 @@ import java.util.Map;
 public class SingleDimensionShardSpecTest
 {
   @Test
-  public void testIsInChunk() throws Exception
+  public void testIsInChunk()
   {
     Map<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>> tests = ImmutableMap.<SingleDimensionShardSpec, List<Pair<Boolean, Map<String, String>>>>builder()
         .put(

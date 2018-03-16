@@ -180,7 +180,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void unannounceSegment(DataSegment segment) throws IOException
+  public void unannounceSegment(DataSegment segment)
   {
     synchronized (lock) {
       final SegmentZNode segmentZNode = segmentLookup.remove(segment);
@@ -269,7 +269,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+  public void unannounceSegments(Iterable<DataSegment> segments)
   {
     for (DataSegment segment : segments) {
       unannounceSegment(segment);

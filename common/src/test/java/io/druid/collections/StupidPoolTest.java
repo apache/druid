@@ -28,8 +28,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class StupidPoolTest
 {
   private Supplier<String> generator;
@@ -48,7 +46,7 @@ public class StupidPoolTest
   }
 
   @After
-  public void tearDown() throws IOException
+  public void tearDown()
   {
     if (resourceHolderObj != null) {
       resourceHolderObj.close();
@@ -64,7 +62,7 @@ public class StupidPoolTest
   }
 
   @Test(expected = ISE.class)
-  public void testExceptionInResourceHolderGet() throws IOException
+  public void testExceptionInResourceHolderGet()
   {
     resourceHolderObj.close();
     resourceHolderObj.get();

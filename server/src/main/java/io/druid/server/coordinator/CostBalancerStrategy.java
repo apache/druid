@@ -25,9 +25,8 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.java.util.emitter.EmittingLogger;
-
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
@@ -345,7 +344,7 @@ public class CostBalancerStrategy implements BalancerStrategy
               new Callable<Pair<Double, ServerHolder>>()
               {
                 @Override
-                public Pair<Double, ServerHolder> call() throws Exception
+                public Pair<Double, ServerHolder> call()
                 {
                   return Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server);
                 }

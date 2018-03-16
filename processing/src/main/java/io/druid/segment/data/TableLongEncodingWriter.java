@@ -72,7 +72,7 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException
+  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy)
   {
     metaOut.put(CompressionFactory.setEncodingFlag(strategy.getId()));
     metaOut.put(CompressionFactory.LongEncodingFormat.TABLE.getId());

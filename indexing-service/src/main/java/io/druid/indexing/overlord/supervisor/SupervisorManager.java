@@ -234,7 +234,7 @@ public class SupervisorManager
       if (persistSpec) {
         metadataSupervisorManager.insert(id, new NoopSupervisorSpec());
       }
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
 
     supervisors.put(id, Pair.of(supervisor, spec));

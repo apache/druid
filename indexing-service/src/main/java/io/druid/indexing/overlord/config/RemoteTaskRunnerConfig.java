@@ -100,29 +100,14 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return maxRetriesBeforeBlacklist;
   }
 
-  public void setMaxRetriesBeforeBlacklist(int maxRetriesBeforeBlacklist)
-  {
-    this.maxRetriesBeforeBlacklist = maxRetriesBeforeBlacklist;
-  }
-
   public Period getWorkerBlackListBackoffTime()
   {
     return workerBlackListBackoffTime;
   }
 
-  public void setWorkerBlackListBackoffTime(Period taskBlackListBackoffTime)
-  {
-    this.workerBlackListBackoffTime = taskBlackListBackoffTime;
-  }
-
   public Period getWorkerBlackListCleanupPeriod()
   {
     return workerBlackListCleanupPeriod;
-  }
-
-  public void setWorkerBlackListCleanupPeriod(Period workerBlackListCleanupPeriod)
-  {
-    this.workerBlackListCleanupPeriod = workerBlackListCleanupPeriod;
   }
 
   public int getMaxPercentageBlacklistWorkers()

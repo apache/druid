@@ -108,7 +108,7 @@ public class TestKafkaExtractionCluster
     closer.register(new Closeable()
     {
       @Override
-      public void close() throws IOException
+      public void close()
       {
         zkClient.close();
       }
@@ -168,7 +168,7 @@ public class TestKafkaExtractionCluster
     closer.register(new Closeable()
     {
       @Override
-      public void close() throws IOException
+      public void close()
       {
         kafkaServer.shutdown();
         kafkaServer.awaitShutdown();
@@ -194,7 +194,7 @@ public class TestKafkaExtractionCluster
     try (final AutoCloseable autoCloseable = new AutoCloseable()
     {
       @Override
-      public void close() throws Exception
+      public void close()
       {
         if (zkClient.exists(zkKafkaPath)) {
           try {
@@ -223,7 +223,7 @@ public class TestKafkaExtractionCluster
     try (final AutoCloseable autoCloseable = new AutoCloseable()
     {
       @Override
-      public void close() throws Exception
+      public void close()
       {
         producer.close();
       }
@@ -281,7 +281,7 @@ public class TestKafkaExtractionCluster
     closer.register(new Closeable()
     {
       @Override
-      public void close() throws IOException
+      public void close()
       {
         factory.close();
       }
@@ -322,7 +322,7 @@ public class TestKafkaExtractionCluster
     closer.register(new Closeable()
     {
       @Override
-      public void close() throws IOException
+      public void close()
       {
         producer.close();
       }

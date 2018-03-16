@@ -181,8 +181,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
     // them as a generic request.
-    final boolean isQueryEndpoint = requestURI.startsWith("/druid/v2")
-                                    && !requestURI.startsWith("/druid/v2/sql");
+    final boolean isQueryEndpoint = requestURI.startsWith("/druid/v2") && !requestURI.startsWith("/druid/v2/sql");
 
     final boolean isAvatica = requestURI.startsWith("/druid/v2/sql/avatica");
 
@@ -408,7 +407,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
-  private static String getAvaticaConnectionId(Map<String, Object> requestMap) throws IOException
+  private static String getAvaticaConnectionId(Map<String, Object> requestMap)
   {
     Object connectionIdObj = requestMap.get("connectionId");
     if (connectionIdObj == null) {
@@ -517,7 +516,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super.onFailure(response, failure);
     }
 
-    private void emitQueryTime(long requestTimeNs, boolean success) throws JsonProcessingException
+    private void emitQueryTime(long requestTimeNs, boolean success)
     {
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,

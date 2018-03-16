@@ -28,7 +28,6 @@ import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 
-import java.io.IOException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -127,14 +126,14 @@ public class LoggingEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
 
   }
 
   @Override
   @LifecycleStop
-  public void close() throws IOException
+  public void close()
   {
     final boolean wasStarted = started.getAndSet(false);
     if (wasStarted) {
