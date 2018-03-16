@@ -22,10 +22,9 @@ package io.druid.indexing.overlord.supervisor;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -61,6 +60,20 @@ import java.util.Set;
 @Path("/druid/indexer/v1/supervisor")
 public class SupervisorResource
 {
+  private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_READ_RA_GENERATOR =
+      supervisorSpec -> {
+        if (supervisorSpec.getSpec() == null) {
+          return null;
+        }
+        if (supervisorSpec.getSpec().getDataSources() == null) {
+          return null;
+        }
+        return Iterables.transform(
+            supervisorSpec.getSpec().getDataSources(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        );
+      };
+
   private final TaskMaster taskMaster;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
@@ -216,26 +229,14 @@ public class SupervisorResource
           @Override
           public Response apply(final SupervisorManager manager)
           {
-            final Map<String, List<VersionedSupervisorSpec>> supervisorHistory = manager.getSupervisorHistory();
-
-            final Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
-                req,
-                manager,
-                supervisorHistory.keySet()
-            );
-
-            final Map<String, List<VersionedSupervisorSpec>> authorizedSupervisorHistory = Maps.filterKeys(
-                supervisorHistory,
-                new Predicate<String>()
-                {
-                  @Override
-                  public boolean apply(String id)
-                  {
-                    return authorizedSupervisorIds.contains(id);
-                  }
-                }
-            );
-            return Response.ok(authorizedSupervisorHistory).build();
+            return Response.ok(
+                AuthorizationUtils.filterAuthorizedResources(
+                    req,
+                    manager.getSupervisorHistory(),
+                    SPEC_DATASOURCE_READ_RA_GENERATOR,
+                    authorizerMapper
+                )
+            ).build();
           }
         }
     );
@@ -244,8 +245,9 @@ public class SupervisorResource
   @GET
   @Path("/{id}/history")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(SupervisorResourceFilter.class)
-  public Response specGetHistory(@PathParam("id") final String id)
+  public Response specGetHistory(
+      @Context final HttpServletRequest req,
+      @PathParam("id") final String id)
   {
     return asLeaderWithSupervisorManager(
         new Function<SupervisorManager, Response>()
@@ -253,23 +255,32 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            Map<String, List<VersionedSupervisorSpec>> history = manager.getSupervisorHistory();
-            if (history.containsKey(id)) {
-              return Response.ok(history.get(id)).build();
-            } else {
-              return Response.status(Response.Status.NOT_FOUND)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     StringUtils.format(
-                                         "No history for [%s] (history available for %s)",
-                                         id,
-                                         history.keySet()
-                                     )
-                                 )
-                             )
-                             .build();
+            Map<String, List<VersionedSupervisorSpec>> supervisorHistory = manager.getSupervisorHistory();
+            Iterable<VersionedSupervisorSpec> historyForId = supervisorHistory.get(id);
+            if (historyForId != null) {
+              final List<VersionedSupervisorSpec> authorizedHistoryForId =
+                  Lists.newArrayList(
+                      AuthorizationUtils.filterAuthorizedResources(
+                          req,
+                          historyForId,
+                          SPEC_DATASOURCE_READ_RA_GENERATOR,
+                          authorizerMapper
+                      )
+                  );
+              if (authorizedHistoryForId.size() > 0) {
+                return Response.ok(authorizedHistoryForId).build();
+              }
             }
+
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   StringUtils.format("No history for [%s].", id)
+                               )
+                           )
+                           .build();
+
           }
         }
     );
