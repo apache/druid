@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -52,14 +53,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
-import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.ForbiddenException;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceAction;
-import io.druid.server.security.ResourceType;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -240,7 +235,12 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         log.error(e, "Encountered exception in run():");
       }
 
-      return TaskStatus.failure(getId(), null, effectiveException.getMessage(), null);
+      return TaskStatus.failure(
+          getId(),
+          getTaskCompletionMetrics(),
+          Throwables.getStackTraceAsString(effectiveException),
+          getTaskCompletionContext()
+      );
     }
     finally {
       if (chatHandlerProvider.isPresent()) {
@@ -414,7 +414,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       @QueryParam("windows") List<Integer> windows
   )
   {
-    authorizationCheck(req, Action.READ);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
 
@@ -454,27 +454,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     context.put("ingestionState", ingestionState);
     return context;
   }
-
-  /**
-   * Authorizes action to be performed on this task's datasource
-   *
-   * @return authorization result
-   */
-  private Access authorizationCheck(final HttpServletRequest req, Action action)
-  {
-    ResourceAction resourceAction = new ResourceAction(
-        new Resource(spec.getDataSchema().getDataSource(), ResourceType.DATASOURCE),
-        action
-    );
-
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
-    }
-
-    return access;
-  }
-
 
   public static class InnerProcessingStatsGetter implements TaskMetricsGetter
   {

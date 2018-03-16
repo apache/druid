@@ -34,7 +34,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -167,7 +166,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected Pair<Integer, List<String>> addToFacts(
+    protected AddToFactsResult addToFacts(
         AggregatorFactory[] metrics,
         boolean deserializeComplexMetrics,
         boolean reportParseExceptions,
@@ -236,8 +235,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       rowContainer.set(null);
 
-
-      return Pair.of(numEntries.get(), new ArrayList<>());
+      return new AddToFactsResult(numEntries.get(), new ArrayList<>());
     }
 
     @Override

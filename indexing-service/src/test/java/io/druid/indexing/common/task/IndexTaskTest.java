@@ -837,7 +837,7 @@ public class IndexTaskTest
 
     TaskStatus status = runTask(indexTask).lhs;
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals("Max parse exceptions exceeded, terminating task...", status.getErrorMsg());
+    checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "determinePartitions",
@@ -1041,10 +1041,7 @@ public class IndexTaskTest
 
     TaskStatus status = runTask(indexTask).lhs;
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(
-        "Max parse exceptions exceeded, terminating task...",
-        status.getErrorMsg()
-    );
+    checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
@@ -1147,10 +1144,7 @@ public class IndexTaskTest
 
     TaskStatus status = runTask(indexTask).lhs;
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(
-        "Max parse exceptions exceeded, terminating task...",
-        status.getErrorMsg()
-    );
+    checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "determinePartitions",
@@ -1308,7 +1302,8 @@ public class IndexTaskTest
 
     TaskStatus status = runTask(indexTask).lhs;
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals("Max parse exceptions exceeded, terminating task...", status.getErrorMsg());
+
+    checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "determinePartitions",
@@ -1317,6 +1312,12 @@ public class IndexTaskTest
         Arrays.asList("Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
     Assert.assertEquals(expectedUnparseables, status.getContext().get("unparseableEvents"));
+  }
+
+  public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)
+  {
+    // full stacktrace will be too long and make tests brittle (e.g. if line # changes), just match the main message
+    Assert.assertTrue(status.getErrorMsg().contains("Max parse exceptions exceeded, terminating task..."));
   }
 
   private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask indexTask) throws Exception

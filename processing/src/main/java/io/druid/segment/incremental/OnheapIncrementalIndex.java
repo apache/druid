@@ -23,7 +23,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
@@ -104,7 +103,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  protected Pair<Integer, List<String>> addToFacts(
+  protected AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -151,7 +150,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    return Pair.of(numEntries.get(), parseExceptionMessages);
+    return new AddToFactsResult(numEntries.get(), parseExceptionMessages);
   }
 
   @Override

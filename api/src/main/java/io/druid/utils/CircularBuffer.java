@@ -35,6 +35,7 @@ public class CircularBuffer<E>
 
   public CircularBuffer(int capacity)
   {
+    Preconditions.checkArgument(capacity > 0, "Capacity must be greater than 0.");
     buffer = (E[]) new Object[capacity];
   }
 

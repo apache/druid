@@ -42,6 +42,7 @@ import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexing.common.task.IndexTaskTest;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.core.NoopEmitter;
 import io.druid.java.util.emitter.service.ServiceEmitter;
@@ -1105,7 +1106,7 @@ public class KafkaIndexTaskTest
 
     // Wait for task to exit
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals("Max parse exceptions exceeded, terminating task...", status.getErrorMsg());
+    IndexTaskTest.checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     // Check metrics
     Assert.assertEquals(3, task.getFireDepartmentMetrics().processed());

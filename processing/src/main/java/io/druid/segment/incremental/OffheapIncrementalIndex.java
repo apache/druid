@@ -26,7 +26,6 @@ import io.druid.collections.ResourceHolder;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
@@ -139,7 +138,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected Pair<Integer, List<String>> addToFacts(
+  protected AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -239,7 +238,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
     rowContainer.set(null);
-    return Pair.of(numEntries.get(), new ArrayList<>());
+    return new AddToFactsResult(numEntries.get(), new ArrayList<>());
   }
 
   @Override

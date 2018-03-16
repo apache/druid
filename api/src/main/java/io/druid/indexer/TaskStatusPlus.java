@@ -124,6 +124,12 @@ public class TaskStatusPlus
     return location;
   }
 
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
   @Nullable
   @JsonProperty("metrics")
   public Map<String, Object> getMetrics()
@@ -180,11 +186,15 @@ public class TaskStatusPlus
       return false;
     }
 
-    if (!Objects.equals(errorMsg, that.errorMsg)) {
+    if (!Objects.equals(dataSource, that.dataSource)) {
       return false;
     }
 
-    if (!Objects.equals(location, that.location)) {
+    if (!Objects.equals(metrics, that.metrics)) {
+      return false;
+    }
+
+    if (!Objects.equals(errorMsg, that.errorMsg)) {
       return false;
     }
 
@@ -202,16 +212,10 @@ public class TaskStatusPlus
         state,
         duration,
         location,
+        dataSource,
         metrics,
         errorMsg,
         context
     );
   }
-  
-  @JsonProperty
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-  
 }

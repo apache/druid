@@ -83,14 +83,8 @@ import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.ForbiddenException;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceAction;
-import io.druid.server.security.ResourceType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -113,7 +107,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -280,7 +273,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       @QueryParam("full") String full
   )
   {
-    authorizationCheck(req, Action.READ);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, List<String>> events = Maps.newHashMap();
 
     boolean needsDeterminePartitions = false;
@@ -304,11 +297,17 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     if (needsDeterminePartitions) {
-      events.put("determinePartitions", getMessagesFromSavedParseExceptions(determinePartitionsSavedParseExceptions));
+      events.put(
+          "determinePartitions",
+          IndexTaskUtils.getMessagesFromSavedParseExceptions(determinePartitionsSavedParseExceptions)
+      );
     }
 
     if (needsBuildSegments) {
-      events.put("buildSegments", getMessagesFromSavedParseExceptions(buildSegmentsSavedParseExceptions));
+      events.put(
+          "buildSegments",
+          IndexTaskUtils.getMessagesFromSavedParseExceptions(buildSegmentsSavedParseExceptions)
+      );
     }
 
     return Response.ok(events).build();
@@ -322,7 +321,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       @QueryParam("full") String full
   )
   {
-    authorizationCheck(req, Action.READ);
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
 
@@ -377,27 +376,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     returnMap.put("totals", totalsMap);
     return Response.ok(returnMap).build();
   }
-
-  /**
-   * Authorizes action to be performed on this task's datasource
-   *
-   * @return authorization result
-   */
-  private Access authorizationCheck(final HttpServletRequest req, Action action)
-  {
-    ResourceAction resourceAction = new ResourceAction(
-        new Resource(ingestionSchema.getDataSchema().getDataSource(), ResourceType.DATASOURCE),
-        action
-    );
-
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
-    }
-
-    return access;
-  }
-
 
   @JsonProperty("spec")
   public IndexIngestionSpec getIngestionSchema()
@@ -470,7 +448,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       return TaskStatus.failure(
           getId(),
           getTaskCompletionMetrics(),
-          e.getMessage(),
+          Throwables.getStackTraceAsString(e),
           getTaskCompletionContext()
       );
     }
@@ -485,8 +463,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionContext()
   {
     Map<String, Object> context = Maps.newHashMap();
-    List<String> determinePartitionsParseExceptionMessages = getMessagesFromSavedParseExceptions(determinePartitionsSavedParseExceptions);
-    List<String> buildSegmentsParseExceptionMessages = getMessagesFromSavedParseExceptions(buildSegmentsSavedParseExceptions);
+    List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        determinePartitionsSavedParseExceptions);
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        buildSegmentsSavedParseExceptions);
     if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
       Map<String, Object> unparseableEventsMap = Maps.newHashMap();
       unparseableEventsMap.put("determinePartitions", determinePartitionsParseExceptionMessages);
@@ -976,33 +956,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
           }
 
-
           if (addResult.getParseException() != null) {
-            throw addResult.getParseException();
+            handleParseException(addResult.getParseException());
           } else {
             buildSegmentsFireDepartmentMetrics.incrementProcessed();
           }
         }
         catch (ParseException e) {
-          if (e.isFromPartiallyValidRow()) {
-            buildSegmentsFireDepartmentMetrics.incrementProcessedWithErrors();
-          } else {
-            buildSegmentsFireDepartmentMetrics.incrementUnparseable();
-          }
-
-          if (tuningConfig.isLogParseExceptions()) {
-            log.error(e, "Encountered parse exception:");
-          }
-
-          if (buildSegmentsSavedParseExceptions != null) {
-            buildSegmentsSavedParseExceptions.add(e);
-          }
-
-          if (buildSegmentsFireDepartmentMetrics.unparseable()
-              + buildSegmentsFireDepartmentMetrics.processedWithErrors() > tuningConfig.getMaxParseExceptions()) {
-            log.error("Max parse exceptions exceeded, terminating task...");
-            throw new RuntimeException("Max parse exceptions exceeded, terminating task...", e);
-          }
+          handleParseException(e);
         }
       }
 
@@ -1052,19 +1013,27 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  @Nullable
-  public static List<String> getMessagesFromSavedParseExceptions(CircularBuffer<Throwable> savedParseExceptions)
+  private void handleParseException(ParseException e)
   {
-    if (savedParseExceptions == null) {
-      return null;
+    if (e.isFromPartiallyValidRow()) {
+      buildSegmentsFireDepartmentMetrics.incrementProcessedWithErrors();
+    } else {
+      buildSegmentsFireDepartmentMetrics.incrementUnparseable();
     }
 
-    List<String> events = new ArrayList<>();
-    for (int i = 0; i < savedParseExceptions.size(); i++) {
-      events.add(savedParseExceptions.getLatest(i).getMessage());
+    if (ingestionSchema.tuningConfig.isLogParseExceptions()) {
+      log.error(e, "Encountered parse exception:");
     }
 
-    return events;
+    if (buildSegmentsSavedParseExceptions != null) {
+      buildSegmentsSavedParseExceptions.add(e);
+    }
+
+    if (buildSegmentsFireDepartmentMetrics.unparseable()
+        + buildSegmentsFireDepartmentMetrics.processedWithErrors() > ingestionSchema.tuningConfig.getMaxParseExceptions()) {
+      log.error("Max parse exceptions exceeded, terminating task...");
+      throw new RuntimeException("Max parse exceptions exceeded, terminating task...", e);
+    }
   }
 
   private static boolean exceedMaxRowsInSegment(int numRowsInSegment, IndexTuningConfig indexTuningConfig)
@@ -1553,9 +1522,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
              Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-             Objects.equals(logParseExceptions, that.logParseExceptions) &&
-             Objects.equals(maxParseExceptions, that.maxParseExceptions) &&
-             Objects.equals(maxSavedParseExceptions, that.maxSavedParseExceptions);
+             logParseExceptions == that.logParseExceptions &&
+             maxParseExceptions == that.maxParseExceptions &&
+             maxSavedParseExceptions == that.maxSavedParseExceptions;
     }
 
     @Override

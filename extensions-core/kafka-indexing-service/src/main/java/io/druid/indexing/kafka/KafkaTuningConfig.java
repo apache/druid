@@ -278,9 +278,9 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
            Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod) &&
-           Objects.equals(logParseExceptions, that.logParseExceptions) &&
-           Objects.equals(maxParseExceptions, that.maxParseExceptions) &&
-           Objects.equals(maxSavedParseExceptions, that.maxSavedParseExceptions);
+           logParseExceptions == that.logParseExceptions &&
+           maxParseExceptions == that.maxParseExceptions &&
+           maxSavedParseExceptions == that.maxSavedParseExceptions;
   }
 
   @Override
