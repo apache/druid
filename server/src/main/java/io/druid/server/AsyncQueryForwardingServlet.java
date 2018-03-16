@@ -26,14 +26,15 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.selector.Server;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.jackson.JacksonUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -174,31 +175,34 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     final ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
     request.setAttribute(OBJECTMAPPER_ATTRIBUTE, objectMapper);
 
-    final Server defaultServer = hostFinder.getDefaultServer();
-    request.setAttribute(HOST_ATTRIBUTE, defaultServer.getHost());
-    request.setAttribute(SCHEME_ATTRIBUTE, defaultServer.getScheme());
+    final String requestURI = request.getRequestURI();
+    final String method = request.getMethod();
+    final Server targetServer;
 
     // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
     // them as a generic request.
-    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2")
-                                    && !request.getRequestURI().startsWith("/druid/v2/sql");
+    final boolean isQueryEndpoint = requestURI.startsWith("/druid/v2")
+                                    && !requestURI.startsWith("/druid/v2/sql");
 
-    final boolean isAvatica = request.getRequestURI().startsWith("/druid/v2/sql/avatica");
+    final boolean isAvatica = requestURI.startsWith("/druid/v2/sql/avatica");
 
     if (isAvatica) {
-      Map<String, Object> requestMap = objectMapper.readValue(request.getInputStream(), Map.class);
+      Map<String, Object> requestMap = objectMapper.readValue(
+          request.getInputStream(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
       String connectionId = getAvaticaConnectionId(requestMap);
-      Server targetServer = hostFinder.findServerAvatica(connectionId);
+      targetServer = hostFinder.findServerAvatica(connectionId);
       byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
-      request.setAttribute(HOST_ATTRIBUTE, targetServer.getHost());
-      request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
-    } else if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
+    } else if (isQueryEndpoint && HttpMethod.DELETE.is(method)) {
       // query cancellation request
-      for (final Server server: hostFinder.getAllServers()) {
+      targetServer = hostFinder.pickDefaultServer();
+
+      for (final Server server : hostFinder.getAllServers()) {
         // send query cancellation to all brokers this query may have gone to
-        // to keep the code simple, the proxy servlet will also send a request to one of the default brokers
-        if (!server.getHost().equals(defaultServer.getHost())) {
+        // to keep the code simple, the proxy servlet will also send a request to the default targetServer.
+        if (!server.getHost().equals(targetServer.getHost())) {
           // issue async requests
           Response.CompleteListener completeListener = result -> {
             if (result.isFailed()) {
@@ -220,17 +224,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         }
         interruptedQueryCount.incrementAndGet();
       }
-    } else if (isQueryEndpoint && HttpMethod.POST.is(request.getMethod())) {
+    } else if (isQueryEndpoint && HttpMethod.POST.is(method)) {
       // query request
       try {
         Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
-          final Server server = hostFinder.getServer(inputQuery);
-          request.setAttribute(HOST_ATTRIBUTE, server.getHost());
-          request.setAttribute(SCHEME_ATTRIBUTE, server.getScheme());
+          targetServer = hostFinder.pickServer(inputQuery);
           if (inputQuery.getId() == null) {
             inputQuery = inputQuery.withId(UUID.randomUUID().toString());
           }
+        } else {
+          targetServer = hostFinder.pickDefaultServer();
         }
         request.setAttribute(QUERY_ATTRIBUTE, inputQuery);
       }
@@ -258,8 +262,22 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         handleException(response, objectMapper, e);
         return;
       }
+    } else {
+      targetServer = hostFinder.pickDefaultServer();
     }
 
+    request.setAttribute(HOST_ATTRIBUTE, targetServer.getHost());
+    request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
+
+    doService(request, response);
+  }
+
+  protected void doService(
+      HttpServletRequest request,
+      HttpServletResponse response
+  ) throws ServletException, IOException
+  {
+    // Just call the superclass service method. Overriden in tests.
     super.service(request, response);
   }
 
@@ -318,7 +336,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   @Override
   protected String rewriteTarget(HttpServletRequest request)
   {
-    return rewriteURI(request, (String) request.getAttribute(SCHEME_ATTRIBUTE), (String) request.getAttribute(HOST_ATTRIBUTE)).toString();
+    return rewriteURI(
+        request,
+        (String) request.getAttribute(SCHEME_ATTRIBUTE),
+        (String) request.getAttribute(HOST_ATTRIBUTE)
+    ).toString();
   }
 
   protected URI rewriteURI(HttpServletRequest request, String scheme, String host)
