@@ -41,12 +41,10 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.DruidNode;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Escalator;
-import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
@@ -160,13 +158,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             operatorTable,
             macroTable,
             plannerConfig,
-            new AuthConfig(),
             CalciteTests.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
             CalciteTests.getJsonMapper()
         ),
         AVATICA_CONFIG,
-        new AuthConfig(),
         injector
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
@@ -744,13 +739,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             operatorTable,
             macroTable,
             plannerConfig,
-            new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new NoopEscalator(),
             CalciteTests.getJsonMapper()
         ),
         smallFrameConfig,
-        new AuthConfig(),
         injector
     )
     {

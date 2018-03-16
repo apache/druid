@@ -34,7 +34,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -67,7 +66,6 @@ public class DruidMeta extends MetaImpl
   private final PlannerFactory plannerFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
-  private final AuthConfig authConfig;
   private final List<Authenticator> authenticators;
 
   // Used to track logical connections.
@@ -81,14 +79,12 @@ public class DruidMeta extends MetaImpl
   public DruidMeta(
       final PlannerFactory plannerFactory,
       final AvaticaServerConfig config,
-      final AuthConfig authConfig,
       final Injector injector
   )
   {
     super(null);
     this.plannerFactory = Preconditions.checkNotNull(plannerFactory, "plannerFactory");
     this.config = config;
-    this.authConfig = authConfig;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
             .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
@@ -189,7 +185,8 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult == null) {
       throw new ForbiddenException("Authentication failed.");
     }
-    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
+    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult)
+                                              .getSignature();
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,

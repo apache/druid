@@ -20,10 +20,10 @@
 package io.druid.server.router;
 
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.selector.Server;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.Query;
 
 import java.util.Collection;
@@ -90,7 +90,7 @@ public class QueryHostFinder
     return chosenServer;
   }
 
-  public <T> Server getServer(Query<T> query)
+  public <T> Server pickServer(Query<T> query)
   {
     Server server = findServer(query);
 
@@ -107,7 +107,7 @@ public class QueryHostFinder
     return server;
   }
 
-  public Server getDefaultServer()
+  public Server pickDefaultServer()
   {
     Server server = findDefaultServer();
 
