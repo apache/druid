@@ -83,7 +83,8 @@ public abstract class ExprEval<T>
     return new StringExprEval(val == null ? null : String.valueOf(val));
   }
 
-  @Nullable final T value;
+  @Nullable
+  final T value;
 
   private ExprEval(T value)
   {
@@ -305,7 +306,8 @@ public abstract class ExprEval<T>
       return rv;
     }
 
-    private void cache(Number number){
+    private void cache(Number number)
+    {
       numericVal = number;
       numericValComputed = true;
     }
