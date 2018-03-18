@@ -19,7 +19,6 @@
 
 package io.druid.segment.incremental;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.segment.DimensionIndexer;
@@ -28,6 +27,7 @@ import io.druid.segment.column.ValueType;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  */
@@ -38,6 +38,9 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
   // 2. 8 bytes for saving its value or the array position and length (in the case of String)
   static final Integer ALLOC_PER_DIM = 12;
   static  final Integer NO_DIM = -1;
+  static final Integer TIME_STAMP_INDEX = 0;
+  static final Integer DIMS_LENGTH_INDEX = TIME_STAMP_INDEX + Long.BYTES;
+  static final Integer DIMS_INDEX = DIMS_LENGTH_INDEX + Integer.BYTES;
 
   InternalDataIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
@@ -47,6 +50,14 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
+  }
+
+  static int getDimIndexInBuffer(ByteBuffer buff, int dimIndex) {
+    int dimsLength = getDimsLength(buff);
+    if (dimIndex >= dimsLength) {
+      return NO_DIM;
+    }
+    return DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
   }
 
   ByteBuffer timeAndDimsSerialization(TimeAndDims timeAndDims)
@@ -76,10 +87,10 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     ByteBuffer buf = ByteBuffer.allocate(allocSize);
     buf.putLong(timeAndDims.getTimestamp());
     buf.putInt(dims.length);
-    int currDimsIndex = Long.BYTES + Integer.BYTES;
-    int currArrayIndex = Long.BYTES + Integer.BYTES + ALLOC_PER_DIM * dims.length;
-    for (int i = 0; i < dims.length; i++) {
-      ValueType valueType = getDimValueType(i);
+    int currDimsIndex = DIMS_INDEX;
+    int currArrayIndex = DIMS_INDEX + ALLOC_PER_DIM * dims.length;
+    for (int dimIndex = 0; dimIndex < dims.length; dimIndex++) {
+      ValueType valueType = getDimValueType(dimIndex);
       if (valueType == null) {
         buf.putInt(currDimsIndex, NO_DIM);
         currDimsIndex += ALLOC_PER_DIM;
@@ -89,19 +100,19 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
         case LONG:
           buf.putInt(currDimsIndex, valueType.ordinal());
           currDimsIndex += Integer.BYTES;
-          buf.putLong(currDimsIndex, (Long) dims[i]);
+          buf.putLong(currDimsIndex, (Long) dims[dimIndex]);
           currDimsIndex += Long.BYTES;
           break;
         case FLOAT:
           buf.putInt(currDimsIndex, valueType.ordinal());
           currDimsIndex += Integer.BYTES;
-          buf.putFloat(currDimsIndex, (Float) dims[i]);
+          buf.putFloat(currDimsIndex, (Float) dims[dimIndex]);
           currDimsIndex += Long.BYTES;
           break;
         case DOUBLE:
           buf.putInt(currDimsIndex, valueType.ordinal());
           currDimsIndex += Integer.BYTES;
-          buf.putDouble(currDimsIndex, (Double) dims[i]);
+          buf.putDouble(currDimsIndex, (Double) dims[dimIndex]);
           currDimsIndex += Long.BYTES;
           break;
         case STRING:
@@ -109,7 +120,7 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
           currDimsIndex += Integer.BYTES;
           buf.putInt(currDimsIndex, currArrayIndex);
           currDimsIndex += Integer.BYTES;
-          int[] array = (int[]) dims[i];
+          int[] array = (int[]) dims[dimIndex];
           buf.putInt(currDimsIndex, array.length);
           currDimsIndex += Integer.BYTES;
           for (int j = 0; j < array.length; j++) {
@@ -138,36 +149,76 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return capabilities.getType();
   }
 
-  static DimensionIndexer getDimIndexer(int dimIndex)
-  {
-    synchronized (dimensionDescs) {
-      return ImmutableList.copyOf(dimensionDescs.values());
-    }
-    DimensionDesc dimensionDesc = getDimensions().get(dimIndex);
-    if (dimensionDesc == null) {
+  static long getTimestamp(ByteBuffer buff) {
+    return buff.getLong(TIME_STAMP_INDEX);
+  }
+
+  static int getDimsLength(ByteBuffer buff) {
+    return buff.getInt(DIMS_LENGTH_INDEX);
+  }
+
+  static Object getDimValue(ByteBuffer buff, int dimIndex) {
+    Object dimObject = null;
+    int dimsLength = getDimsLength(buff);
+    if (dimIndex >= dimsLength) {
       return null;
     }
-    return dimensionDesc.getIndexer();
+    int dimType = buff.getInt(getDimIndexInBuffer(buff, dimIndex));
+    if (dimType == NO_DIM) {
+      return null;
+    } else if (dimType == ValueType.DOUBLE.ordinal()) {
+      dimObject = buff.getDouble(getDimIndexInBuffer(buff, dimIndex) + Integer.BYTES);
+    } else if (dimType == ValueType.FLOAT.ordinal()) {
+      dimObject = buff.getFloat(getDimIndexInBuffer(buff, dimIndex) + Integer.BYTES);
+    } else if (dimType == ValueType.LONG.ordinal()) {
+      dimObject = buff.getLong(getDimIndexInBuffer(buff, dimIndex) + Integer.BYTES);
+    } else if (dimType == ValueType.STRING.ordinal()) {
+      int arrayIndex = buff.getInt(getDimIndexInBuffer(buff, dimIndex) + Integer.BYTES);
+      int arraySize = buff.getInt(getDimIndexInBuffer(buff, dimIndex) + 2 * Integer.BYTES);
+      int[] array = new int[arraySize];
+      for (int i = 0; i < arraySize; i++) {
+        array[i] = buff.getInt(arrayIndex);
+        arrayIndex += Integer.BYTES;
+      }
+      dimObject = array;
+    }
+
+    return dimObject;
+  }
+
+  static boolean checkDimsAllNull(ByteBuffer buff) {
+    int dimsLength = getDimsLength(buff);
+    for (int index = 0; index < dimsLength; index++) {
+      if (buff.getInt(getDimIndexInBuffer(buff, index)) != NO_DIM) {
+        return false;
+      }
+    }
+    return true;
   }
 
   static final class TimeAndDimsByteBuffersComp implements Comparator<ByteBuffer>
   {
-    public TimeAndDimsByteBuffersComp() {}
+    private List<DimensionDesc> dimensionDescs;
+
+    public TimeAndDimsByteBuffersComp(List<DimensionDesc> dimDescs)
+    {
+      this.dimensionDescs = dimDescs;
+    }
 
     @Override
     public int compare(ByteBuffer lhs, ByteBuffer rhs)
     {
-      int retVal = Longs.compare(lhs.getLong(0), rhs.getLong(0));
-      int numComparisons = Math.min(lhs.getInt(Long.BYTES), rhs.getInt(Long.BYTES)); // dims length
+      int retVal = Longs.compare(getTimestamp(lhs), getTimestamp(rhs));
+      int numComparisons = Math.min(getDimsLength(lhs), getDimsLength(rhs));
 
-      int index = 0;
-      while (retVal == 0 && index < numComparisons) {
-        int lhsType = lhs.getInt(Long.BYTES + Integer.BYTES + index * ALLOC_PER_DIM);
-        int rhsType = rhs.getInt(Long.BYTES + Integer.BYTES + index * ALLOC_PER_DIM);
+      int dimIndex = 0;
+      while (retVal == 0 && dimIndex < numComparisons) {
+        int lhsType = lhs.getInt(getDimIndexInBuffer(lhs, dimIndex));
+        int rhsType = rhs.getInt(getDimIndexInBuffer(rhs, dimIndex));
 
         if (lhsType == NO_DIM) {
           if (rhsType == NO_DIM) {
-            ++index;
+            ++dimIndex;
             continue;
           }
           return -1;
@@ -177,18 +228,20 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
           return 1;
         }
 
-        final DimensionIndexer indexer = getDimIndexer(index);
-        retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
-        ++index;
+        final DimensionIndexer indexer = dimensionDescs.get(dimIndex).getIndexer();
+        Object lhsObject = getDimValue(lhs, dimIndex);
+        Object rhsObject = getDimValue(rhs, dimIndex);
+        retVal = indexer.compareUnsortedEncodedKeyComponents(lhsObject, rhsObject);
+        ++dimIndex;
       }
 
       if (retVal == 0) {
-        int lengthDiff = Ints.compare(lhs.getInt(Long.BYTES), rhs.getInt(Long.BYTES)); // dims length
+        int lengthDiff = Ints.compare(getDimsLength(lhs), getDimsLength(rhs));
         if (lengthDiff == 0) {
           return 0;
         }
-        Object[] largerDims = lengthDiff > 0 ? lhs.dims : rhs.dims;
-        return allNull(largerDims, numComparisons) ? 0 : lengthDiff;
+        ByteBuffer largerDims = lengthDiff > 0 ? lhs : rhs;
+        return checkDimsAllNull(largerDims) ? 0 : lengthDiff;
       }
 
       return retVal;
