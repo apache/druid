@@ -56,13 +56,13 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
   Result<TopNResultValue> result2;
   TopNBinaryFn fn;
 
-  public static void main(String[] args) throws Exception
+  public static void main(String[] args)
   {
     Runner.main(TopNBinaryFnBenchmark.class, args);
   }
 
   @Override
-  protected void setUp() throws Exception
+  protected void setUp()
   {
 
     final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);

@@ -154,19 +154,16 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
       if (parts.length != 3) {
         throw new RE("Bad entry [%s]", entry);
       }
-      final int heirarchyId = Integer.parseInt(parts[0]);
       final Set<String> controllers = new HashSet<>(Arrays.asList(parts[1].split(Pattern.quote(","))));
       final Path path = Paths.get(parts[2]);
-      return new PidCgroupEntry(heirarchyId, controllers, path);
+      return new PidCgroupEntry(controllers, path);
     }
 
-    final int heirarchyId;
     final Set<String> controllers;
     final Path path;
 
-    private PidCgroupEntry(int heirarchyId, Set<String> controllers, Path path)
+    private PidCgroupEntry(Set<String> controllers, Path path)
     {
-      this.heirarchyId = heirarchyId;
       this.controllers = controllers;
       this.path = path;
     }

@@ -92,7 +92,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     setUp(resourceFilter);
   }

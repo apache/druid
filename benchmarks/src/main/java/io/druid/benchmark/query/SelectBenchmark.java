@@ -290,7 +290,7 @@ public class SelectBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryIncrementalIndex(Blackhole blackhole) throws Exception
+  public void queryIncrementalIndex(Blackhole blackhole)
   {
     SelectQuery queryCopy = query.withPagingSpec(PagingSpec.newSpec(pagingThreshold));
 
@@ -320,7 +320,7 @@ public class SelectBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryQueryableIndex(Blackhole blackhole) throws Exception
+  public void queryQueryableIndex(Blackhole blackhole)
   {
     SelectQuery queryCopy = query.withPagingSpec(PagingSpec.newSpec(pagingThreshold));
 
@@ -350,7 +350,7 @@ public class SelectBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole) throws Exception
+  public void queryMultiQueryableIndex(Blackhole blackhole)
   {
     SelectQuery queryCopy = query.withPagingSpec(PagingSpec.newSpec(pagingThreshold));
 

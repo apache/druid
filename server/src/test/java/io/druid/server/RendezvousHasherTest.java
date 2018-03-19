@@ -37,7 +37,7 @@ public class RendezvousHasherTest
   private static final Logger log = new Logger(RendezvousHasherTest.class);
 
   @Test
-  public void testBasic() throws Exception
+  public void testBasic()
   {
     RendezvousHasher hasher = new RendezvousHasher();
 
@@ -66,7 +66,7 @@ public class RendezvousHasherTest
   }
 
   @Test
-  public void testAddNode() throws Exception
+  public void testAddNode()
   {
     RendezvousHasher hasher = new RendezvousHasher();
     Set<String> nodes = new HashSet<>();
@@ -103,7 +103,7 @@ public class RendezvousHasherTest
   }
 
   @Test
-  public void testRemoveNode() throws Exception
+  public void testRemoveNode()
   {
     RendezvousHasher hasher = new RendezvousHasher();
     Set<String> nodes = new HashSet<>();
@@ -140,7 +140,7 @@ public class RendezvousHasherTest
   }
 
   @Test
-  public void testInconsistentView1() throws Exception
+  public void testInconsistentView1()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:1");
@@ -159,7 +159,7 @@ public class RendezvousHasherTest
   }
 
   @Test
-  public void testInconsistentView2() throws Exception
+  public void testInconsistentView2()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:1");
@@ -177,7 +177,7 @@ public class RendezvousHasherTest
   }
 
   @Test
-  public void testInconsistentView3() throws Exception
+  public void testInconsistentView3()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:3");
@@ -193,7 +193,7 @@ public class RendezvousHasherTest
   }
 
   @Test
-  public void testInconsistentView4() throws Exception
+  public void testInconsistentView4()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:2");
@@ -212,7 +212,7 @@ public class RendezvousHasherTest
       Set<String> nodes,
       Set<String> nodes2,
       double expectedDiffRatio
-  ) throws Exception
+  )
   {
     RendezvousHasher hasher = new RendezvousHasher();
     Map<String, String> uuidServerMap = new HashMap<>();

@@ -47,7 +47,7 @@ public class RetryUtils
      * This is called once {@link Task#perform()} fails. Retrying is stopped once this method throws an exception,
      * so errors inside this method should be ignored if you don't want to stop retrying.
      */
-    void cleanup() throws Exception;
+    void cleanup();
   }
 
   /**
@@ -112,16 +112,6 @@ public class RetryUtils
   ) throws Exception
   {
     return retry(f, shouldRetry, quietTries, maxTries, null, null);
-  }
-
-  public static <T> T retry(
-      final Task<T> f,
-      final Predicate<Throwable> shouldRetry,
-      final int maxTries,
-      final String messageOnRetry
-  ) throws Exception
-  {
-    return retry(f, shouldRetry, 0, maxTries, null, messageOnRetry);
   }
 
   public static <T> T retry(

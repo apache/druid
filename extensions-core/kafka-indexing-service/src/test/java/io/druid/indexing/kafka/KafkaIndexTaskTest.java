@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -43,10 +42,6 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexing.common.task.IndexTaskTest;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.core.NoopEmitter;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -89,6 +84,10 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.JSONPathFieldSpec;
 import io.druid.java.util.common.parsers.JSONPathSpec;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import io.druid.metadata.EntryExistsException;
@@ -1899,7 +1898,7 @@ public class KafkaIndexTaskTest
         new Callable<TaskStatus>()
         {
           @Override
-          public TaskStatus call() throws Exception
+          public TaskStatus call()
           {
             try {
               if (task.isReady(toolbox.getTaskActionClient())) {
@@ -2230,23 +2229,14 @@ public class KafkaIndexTaskTest
     metadataStorageCoordinator = null;
   }
 
-  private Set<SegmentDescriptor> publishedDescriptors() throws IOException
+  private Set<SegmentDescriptor> publishedDescriptors()
   {
     return FluentIterable.from(
         metadataStorageCoordinator.getUsedSegmentsForInterval(
             DATA_SCHEMA.getDataSource(),
             Intervals.of("0000/3000")
         )
-    ).transform(
-        new Function<DataSegment, SegmentDescriptor>()
-        {
-          @Override
-          public SegmentDescriptor apply(DataSegment input)
-          {
-            return input.toDescriptor();
-          }
-        }
-    ).toSet();
+    ).transform(DataSegment::toDescriptor).toSet();
   }
 
   private void unlockAppenderatorBasePersistDirForTask(KafkaIndexTask task)
@@ -2306,7 +2296,7 @@ public class KafkaIndexTaskTest
     return values;
   }
 
-  public long countEvents(final Task task) throws Exception
+  public long countEvents(final Task task)
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

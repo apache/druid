@@ -110,20 +110,6 @@ public class Request
     return this;
   }
 
-  public Request setHeaderValues(String header, Iterable<String> value)
-  {
-    headers.replaceValues(header, value);
-    return this;
-  }
-
-  public Request setHeaderValues(Multimap<String, String> inHeaders)
-  {
-    for (Map.Entry<String, Collection<String>> entry : inHeaders.asMap().entrySet()) {
-      this.setHeaderValues(entry.getKey(), entry.getValue());
-    }
-    return this;
-  }
-
   public Request addHeader(String header, String value)
   {
     headers.put(header, value);
@@ -147,11 +133,6 @@ public class Request
   public Request setContent(byte[] bytes)
   {
     return setContent(null, bytes);
-  }
-
-  public Request setContent(byte[] bytes, int offset, int length)
-  {
-    return setContent(null, bytes, offset, length);
   }
 
   public Request setContent(ChannelBuffer content)

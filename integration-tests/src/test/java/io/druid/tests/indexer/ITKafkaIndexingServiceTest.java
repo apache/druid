@@ -258,7 +258,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return (indexer.getPendingTasks().size() + indexer.getRunningTasks().size() + indexer.getWaitingTasks()
                                                                                                  .size()) == 0;
@@ -272,7 +272,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
           new Callable<Boolean>()
           {
             @Override
-            public Boolean call() throws Exception
+            public Boolean call()
             {
               return coordinator.areSegmentsLoaded(DATASOURCE);
             }
@@ -299,7 +299,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   }
 
   @AfterClass
-  public void afterClass() throws Exception
+  public void afterClass()
   {
     LOG.info("teardown");
     if (config.manageKafkaTopic()) {

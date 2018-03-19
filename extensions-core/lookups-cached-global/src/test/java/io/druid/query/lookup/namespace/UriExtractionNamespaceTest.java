@@ -318,7 +318,7 @@ public class UriExtractionNamespaceTest
   }
 
   @Test
-  public void testSimpleToString() throws IOException
+  public void testSimpleToString()
   {
     final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
     for (UriExtractionNamespace.FlatDataParser parser : ImmutableList.of(

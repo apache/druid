@@ -39,7 +39,7 @@ import java.util.Properties;
 public class SegmentMetadataQueryConfigTest
 {
   @Test
-  public void testSerdeSegmentMetadataQueryConfig() throws Exception
+  public void testSerdeSegmentMetadataQueryConfig()
   {
     Injector injector = Guice.createInjector(
         new Module()

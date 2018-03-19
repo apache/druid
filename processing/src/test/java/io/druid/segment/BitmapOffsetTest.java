@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -47,7 +46,7 @@ public class BitmapOffsetTest
   private static final int[] TEST_VALS_FLIP = {2412101, 212312, 49120, 27412, 291, 4, 2, 1};
 
   @Parameterized.Parameters
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
         Sets.cartesianProduct(
@@ -75,7 +74,7 @@ public class BitmapOffsetTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     MutableBitmap mutable = factory.makeEmptyMutableBitmap();
     for (int val : TEST_VALS) {

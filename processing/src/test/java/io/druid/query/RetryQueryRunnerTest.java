@@ -86,7 +86,7 @@ public class RetryQueryRunnerTest
 
 
   @Test
-  public void testRunWithMissingSegments() throws Exception
+  public void testRunWithMissingSegments()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
@@ -130,7 +130,7 @@ public class RetryQueryRunnerTest
 
 
   @Test
-  public void testRetry() throws Exception
+  public void testRetry()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
@@ -178,7 +178,7 @@ public class RetryQueryRunnerTest
   }
 
   @Test
-  public void testRetryMultiple() throws Exception
+  public void testRetryMultiple()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
@@ -226,7 +226,7 @@ public class RetryQueryRunnerTest
   }
 
   @Test(expected = SegmentMissingException.class)
-  public void testException() throws Exception
+  public void testException()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
@@ -258,7 +258,7 @@ public class RetryQueryRunnerTest
   }
 
   @Test
-  public void testNoDuplicateRetry() throws Exception
+  public void testNoDuplicateRetry()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);

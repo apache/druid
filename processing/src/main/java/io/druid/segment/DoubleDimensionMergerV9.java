@@ -63,7 +63,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   }
 
   @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
+  public void writeMergedValueMetadata(List<IndexableAdapter> adapters)
   {
     // double columns do not have additional metadata
   }
@@ -81,7 +81,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   }
 
   @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
+  public void writeIndexes(List<IntBuffer> segmentRowNumConversions)
   {
     // double columns do not have indexes
   }
@@ -93,7 +93,7 @@ public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
   }
 
   @Override
-  public ColumnDescriptor makeColumnDescriptor() throws IOException
+  public ColumnDescriptor makeColumnDescriptor()
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.DOUBLE);

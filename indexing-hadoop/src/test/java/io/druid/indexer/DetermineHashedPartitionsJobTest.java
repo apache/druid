@@ -44,7 +44,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -129,7 +128,7 @@ public class DetermineHashedPartitionsJobTest
       int expectedNumTimeBuckets,
       int[] expectedNumOfShards,
       Granularity segmentGranularity
-  ) throws IOException
+  )
   {
     this.expectedNumOfShards = expectedNumOfShards;
     this.expectedNumTimeBuckets = expectedNumTimeBuckets;

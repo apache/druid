@@ -38,7 +38,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.SegmentDescriptor;
-import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestCommitterSupplier;
 import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
@@ -228,7 +227,7 @@ public class StreamAppenderatorDriverFailTest
   private static class NoopUsedSegmentChecker implements UsedSegmentChecker
   {
     @Override
-    public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers) throws IOException
+    public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers)
     {
       return ImmutableSet.of();
     }
@@ -306,7 +305,7 @@ public class StreamAppenderatorDriverFailTest
     @Override
     public AppenderatorAddResult add(
         SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier, boolean allowIncrementalPersists
-    ) throws IndexSizeExceededException, SegmentNotWritableException
+    )
     {
       rows.computeIfAbsent(identifier, k -> new ArrayList<>()).add(row);
       numRows++;
@@ -337,7 +336,7 @@ public class StreamAppenderatorDriverFailTest
     }
 
     @Override
-    public void clear() throws InterruptedException
+    public void clear()
     {
       rows.clear();
     }
@@ -397,13 +396,13 @@ public class StreamAppenderatorDriverFailTest
           {
             @Override
             public SegmentsAndMetadata get(long timeout, TimeUnit unit)
-                throws InterruptedException, TimeoutException, ExecutionException
+                throws InterruptedException
             {
               throw new InterruptedException("Interrupt test while pushing segments");
             }
 
             @Override
-            public SegmentsAndMetadata get() throws InterruptedException, ExecutionException
+            public SegmentsAndMetadata get() throws InterruptedException
             {
               throw new InterruptedException("Interrupt test while pushing segments");
             }

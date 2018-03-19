@@ -21,8 +21,6 @@ package io.druid.security.basic.authorization.db.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.HttpClient;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ManageLifecycle;
@@ -30,6 +28,7 @@ import io.druid.guice.annotations.EscalatedClient;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.security.basic.BasicAuthDBConfig;
 import io.druid.security.basic.CommonCacheNotifier;
 import io.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
@@ -43,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 @ManageLifecycle
 public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
 {
-  private static final EmittingLogger LOG = new EmittingLogger(CoordinatorBasicAuthorizerCacheNotifier.class);
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private CommonCacheNotifier cacheNotifier;

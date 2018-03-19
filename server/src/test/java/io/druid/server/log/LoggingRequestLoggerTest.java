@@ -93,7 +93,7 @@ public class LoggingRequestLoggerTest
   );
 
   @BeforeClass
-  public static void setUpStatic() throws Exception
+  public static void setUpStatic()
   {
     appender = OutputStreamAppender
         .newBuilder()

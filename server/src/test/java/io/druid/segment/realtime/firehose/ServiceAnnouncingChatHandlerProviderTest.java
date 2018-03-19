@@ -32,8 +32,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-
 @RunWith(EasyMockRunner.class)
 public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
 {
@@ -52,25 +50,25 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
   private ServiceAnnouncer serviceAnnouncer;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     chatHandlerProvider = new ServiceAnnouncingChatHandlerProvider(node, serviceAnnouncer, new ServerConfig());
   }
 
   @Test
-  public void testRegistrationDefault() throws IOException
+  public void testRegistrationDefault()
   {
     testRegistrationWithAnnounce(false);
   }
 
   @Test
-  public void testRegistrationWithAnnounce() throws IOException
+  public void testRegistrationWithAnnounce()
   {
     testRegistrationWithAnnounce(true);
   }
 
   @Test
-  public void testRegistrationWithoutAnnounce() throws IOException
+  public void testRegistrationWithoutAnnounce()
   {
     ChatHandler testChatHandler = new TestChatHandler();
 
@@ -84,7 +82,7 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
     Assert.assertFalse("chatHandler did not deregister", chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent());
   }
 
-  private void testRegistrationWithAnnounce(boolean useThreeArgConstructor) throws IOException
+  private void testRegistrationWithAnnounce(boolean useThreeArgConstructor)
   {
     ChatHandler testChatHandler = new TestChatHandler();
     Capture<DruidNode> captured = Capture.newInstance();

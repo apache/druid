@@ -197,13 +197,13 @@ public class MySQLConnector extends SQLMetadataConnector
       final String valueColumn,
       final String key,
       final byte[] value
-  ) throws Exception
+  )
   {
     return getDBI().withHandle(
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(
                 StringUtils.format(

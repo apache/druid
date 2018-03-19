@@ -22,7 +22,6 @@ package io.druid.server.lookup;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.loading.LoadingCache;
@@ -130,7 +129,7 @@ public class LoadingLookup extends LookupExtractor
     }
 
     @Override
-    public String call() throws Exception
+    public String call()
     {
       // avoid returning null and return an empty string to cache it.
       return Strings.nullToEmpty(dataFetcher.fetch(key));
@@ -147,7 +146,7 @@ public class LoadingLookup extends LookupExtractor
     }
 
     @Override
-    public List<String> call() throws Exception
+    public List<String> call()
     {
       return dataFetcher.reverseFetchKeys(value);
     }

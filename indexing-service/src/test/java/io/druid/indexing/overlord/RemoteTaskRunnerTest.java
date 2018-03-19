@@ -28,8 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskStatus;
@@ -42,6 +40,8 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -109,7 +109,7 @@ public class RemoteTaskRunnerTest
   }
 
   @Test
-  public void testStartWithNoWorker() throws Exception
+  public void testStartWithNoWorker()
   {
     makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
   }
@@ -453,7 +453,7 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
   }
 
-  private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
+  private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config)
   {
     remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(config);
   }
@@ -638,7 +638,7 @@ public class RemoteTaskRunnerTest
   }
 
   @Test
-  public void testSortByInsertionTime() throws Exception
+  public void testSortByInsertionTime()
   {
     RemoteTaskRunnerWorkItem item1 = new RemoteTaskRunnerWorkItem("b", "t", null, null, "ds_test")
         .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:03Z"));

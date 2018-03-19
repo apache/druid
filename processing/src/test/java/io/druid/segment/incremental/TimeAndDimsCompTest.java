@@ -37,7 +37,7 @@ import static io.druid.segment.incremental.IncrementalIndex.TimeAndDims;
 public class TimeAndDimsCompTest
 {
   @Test
-  public void testBasic() throws IndexSizeExceededException
+  public void testBasic()
   {
     IncrementalIndex index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))

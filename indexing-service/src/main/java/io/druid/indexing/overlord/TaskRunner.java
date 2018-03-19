@@ -21,7 +21,6 @@ package io.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ListenableFuture;
-
 import io.druid.guice.annotations.PublicApi;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
@@ -98,7 +97,10 @@ public interface TaskRunner
   Optional<ScalingStats> getScalingStats();
 
   /**
-   * Start the state of the runner
+   * Start the state of the runner.
+   *
+   * This method is unused, but TaskRunner is {@link PublicApi}, so we cannot remove it.
    */
+  @SuppressWarnings("unused")
   void start();
 }

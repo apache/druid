@@ -24,13 +24,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.java.util.common.Intervals;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,7 +38,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 
 @RunWith(Parameterized.class)
@@ -46,7 +45,7 @@ public class EmptyIndexTest
 {
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return ImmutableList.of(
         new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},

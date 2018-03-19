@@ -355,7 +355,6 @@ public class DeterminePartitionsJob implements Jobby
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       SingleDimensionPartitionsSpec spec = (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
@@ -521,7 +520,6 @@ public class DeterminePartitionsJob implements Jobby
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       if (config == null) {
         synchronized (DeterminePartitionsDimSelectionBaseReducer.class) {
@@ -608,7 +606,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     protected void innerReduce(
         Context context, SortableBytes keyBytes, Iterable<DimValueCount> combinedIterable
-    ) throws IOException, InterruptedException
+    ) throws IOException
     {
       final ByteBuffer groupKey = ByteBuffer.wrap(keyBytes.getGroupKey());
       groupKey.position(4); // Skip partition
@@ -844,17 +842,17 @@ public class DeterminePartitionsJob implements Jobby
   public static class DeterminePartitionsDimSelectionOutputFormat extends FileOutputFormat
   {
     @Override
-    public RecordWriter getRecordWriter(final TaskAttemptContext job) throws IOException, InterruptedException
+    public RecordWriter getRecordWriter(final TaskAttemptContext job)
     {
       return new RecordWriter<SortableBytes, List<ShardSpec>>()
       {
         @Override
-        public void write(SortableBytes keyBytes, List<ShardSpec> partitions) throws IOException, InterruptedException
+        public void write(SortableBytes keyBytes, List<ShardSpec> partitions)
         {
         }
 
         @Override
-        public void close(TaskAttemptContext context) throws IOException, InterruptedException
+        public void close(TaskAttemptContext context)
         {
 
         }

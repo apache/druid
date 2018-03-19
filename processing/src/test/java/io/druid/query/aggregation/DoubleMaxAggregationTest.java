@@ -93,7 +93,7 @@ public class DoubleMaxAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     DoubleMaxAggregatorFactory one = new DoubleMaxAggregatorFactory("name1", "fieldName1");
     DoubleMaxAggregatorFactory oneMore = new DoubleMaxAggregatorFactory("name1", "fieldName1");

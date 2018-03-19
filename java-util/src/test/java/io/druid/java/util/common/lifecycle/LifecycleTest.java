@@ -45,7 +45,7 @@ public class LifecycleTest
   private static final Lifecycle.Handler dummyHandler = new Lifecycle.Handler()
   {
     @Override
-    public void start() throws Exception
+    public void start()
     {
       // do nothing
     }
@@ -70,7 +70,7 @@ public class LifecycleTest
       final AtomicBoolean started = new AtomicBoolean(false);
 
       @Override
-      public void start() throws Exception
+      public void start()
       {
         if (!started.compareAndSet(false, true)) {
           handlerFailedCount.incrementAndGet();
@@ -128,7 +128,7 @@ public class LifecycleTest
       final AtomicBoolean started = new AtomicBoolean(false);
 
       @Override
-      public void start() throws Exception
+      public void start()
       {
         if (!started.compareAndSet(false, true)) {
           failedCount.incrementAndGet();
@@ -284,7 +284,7 @@ public class LifecycleTest
     Lifecycle.Handler stoppingHandler = new Lifecycle.Handler()
     {
       @Override
-      public void start() throws Exception
+      public void start()
       {
         // do nothing
       }

@@ -40,7 +40,7 @@ public class ConsistentHasherTest
   private static final Logger log = new Logger(ConsistentHasherTest.class);
 
   @Test
-  public void testBasic() throws Exception
+  public void testBasic()
   {
     ConsistentHasher hasher = new ConsistentHasher(TEST_HASH_FN);
     Set<String> nodes = new HashSet<>();
@@ -70,7 +70,7 @@ public class ConsistentHasherTest
   }
 
   @Test
-  public void testAddNode() throws Exception
+  public void testAddNode()
   {
     ConsistentHasher hasher = new ConsistentHasher(TEST_HASH_FN);
     Set<String> nodes = new HashSet<>();
@@ -110,7 +110,7 @@ public class ConsistentHasherTest
   }
 
   @Test
-  public void testRemoveNode() throws Exception
+  public void testRemoveNode()
   {
     ConsistentHasher hasher = new ConsistentHasher(TEST_HASH_FN);
     Set<String> nodes = new HashSet<>();
@@ -150,7 +150,7 @@ public class ConsistentHasherTest
   }
 
   @Test
-  public void testInconsistentView1() throws Exception
+  public void testInconsistentView1()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:1");
@@ -169,7 +169,7 @@ public class ConsistentHasherTest
   }
 
   @Test
-  public void testInconsistentView2() throws Exception
+  public void testInconsistentView2()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:1");
@@ -187,7 +187,7 @@ public class ConsistentHasherTest
   }
 
   @Test
-  public void testInconsistentView3() throws Exception
+  public void testInconsistentView3()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:3");
@@ -203,7 +203,7 @@ public class ConsistentHasherTest
   }
 
   @Test
-  public void testInconsistentView4() throws Exception
+  public void testInconsistentView4()
   {
     Set<String> nodes = new HashSet<>();
     nodes.add("localhost:2");
@@ -222,7 +222,7 @@ public class ConsistentHasherTest
       Set<String> nodes,
       Set<String> nodes2,
       double expectedDiffRatio
-  ) throws Exception
+  )
   {
     ConsistentHasher hasher = new ConsistentHasher(TEST_HASH_FN);
     hasher.updateKeys(nodes);

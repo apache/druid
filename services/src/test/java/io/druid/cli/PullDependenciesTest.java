@@ -28,7 +28,6 @@ import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.DependencyRequest;
-import org.eclipse.aether.resolution.DependencyResolutionException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -85,7 +84,7 @@ public class PullDependenciesTest
         new DefaultTeslaAether()
         {
           @Override
-          public List<Artifact> resolveArtifacts(DependencyRequest request) throws DependencyResolutionException
+          public List<Artifact> resolveArtifacts(DependencyRequest request)
           {
             return getArtifactsForExtension(request.getCollectRequest().getRoot().getArtifact());
           }

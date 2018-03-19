@@ -33,14 +33,14 @@ public class RoaringBitmapFactoryTest
 
   // testing https://github.com/metamx/bytebuffer-collections/issues/26
   @Test
-  public void testIssue26() throws Exception
+  public void testIssue26()
   {
     checkEmptyComplement(new ConciseBitmapFactory());
     checkEmptyComplement(new RoaringBitmapFactory());
   }
 
   // used by issue 26
-  private void checkEmptyComplement(BitmapFactory bitmapFactory) throws Exception
+  private void checkEmptyComplement(BitmapFactory bitmapFactory)
   {
     int numRow = 5104234;
     ImmutableBitmap bitmap = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), numRow);
@@ -52,7 +52,7 @@ public class RoaringBitmapFactoryTest
   }
 
   @Test
-  public void testUnwrapWithNull() throws Exception
+  public void testUnwrapWithNull()
   {
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
 
@@ -74,7 +74,7 @@ public class RoaringBitmapFactoryTest
   }
 
   @Test
-  public void testUnwrapMerge() throws Exception
+  public void testUnwrapMerge()
   {
     RoaringBitmapFactory factory = new RoaringBitmapFactory();
 

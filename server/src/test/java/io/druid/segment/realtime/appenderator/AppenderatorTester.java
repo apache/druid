@@ -237,25 +237,25 @@ public class AppenderatorTester implements AutoCloseable
         new DataSegmentAnnouncer()
         {
           @Override
-          public void announceSegment(DataSegment segment) throws IOException
+          public void announceSegment(DataSegment segment)
           {
 
           }
 
           @Override
-          public void unannounceSegment(DataSegment segment) throws IOException
+          public void unannounceSegment(DataSegment segment)
           {
 
           }
 
           @Override
-          public void announceSegments(Iterable<DataSegment> segments) throws IOException
+          public void announceSegments(Iterable<DataSegment> segments)
           {
 
           }
 
           @Override
-          public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+          public void unannounceSegments(Iterable<DataSegment> segments)
           {
 
           }
