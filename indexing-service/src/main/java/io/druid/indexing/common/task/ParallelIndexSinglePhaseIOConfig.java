@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
@@ -32,8 +33,8 @@ import javax.annotation.Nullable;
 public class ParallelIndexSinglePhaseIOConfig extends IndexIOConfig
 {
   public ParallelIndexSinglePhaseIOConfig(
-      FirehoseFactory firehoseFactory,
-      @Nullable Boolean appendToExisting
+      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
   )
   {
     super(firehoseFactory, appendToExisting);

@@ -88,6 +88,7 @@ public abstract class IngestionTestBase
     storageCoordinator.start();
     return new TaskActionToolbox(
         lockbox,
+        taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
         null,

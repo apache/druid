@@ -981,6 +981,7 @@ public class RealtimeIndexTaskTest
     taskLockbox.syncFromStorage();
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
+        taskStorage,
         mdc,
         emitter,
         EasyMock.createMock(SupervisorManager.class),

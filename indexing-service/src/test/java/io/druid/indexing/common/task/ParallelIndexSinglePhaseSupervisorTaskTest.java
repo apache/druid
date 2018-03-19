@@ -49,6 +49,7 @@ import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,6 +64,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -133,6 +135,7 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
   public void testIsReady() throws Exception
   {
     final ParallelIndexSinglePhaseSupervisorTask task = newTask(
+        Intervals.of("2017/2018"),
         new ParallelIndexSinglePhaseIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null),
             false
@@ -154,10 +157,29 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
     }
   }
 
+  @Test
+  public void testWithoutInterval() throws Exception
+  {
+    final ParallelIndexSinglePhaseSupervisorTask task = newTask(
+        null,
+        new ParallelIndexSinglePhaseIOConfig(
+            new LocalFirehoseFactory(inputDir, "test_*", null),
+            false
+        )
+    );
+    actionClient = createActionClient(task);
+    toolbox = createTaskToolbox(task);
+
+    prepareTaskForLocking(task);
+    Assert.assertTrue(task.isReady(actionClient));
+    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+  }
+
   @Test()
   public void testRunInParallel() throws Exception
   {
     final ParallelIndexSinglePhaseSupervisorTask task = newTask(
+        Intervals.of("2017/2018"),
         new ParallelIndexSinglePhaseIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null),
             false
@@ -175,6 +197,7 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
   public void testRunInSequential() throws Exception
   {
     final ParallelIndexSinglePhaseSupervisorTask task = newTask(
+        Intervals.of("2017/2018"),
         new ParallelIndexSinglePhaseIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null)
             {
@@ -195,7 +218,10 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
   }
 
-  private ParallelIndexSinglePhaseSupervisorTask newTask(ParallelIndexSinglePhaseIOConfig ioConfig)
+  private ParallelIndexSinglePhaseSupervisorTask newTask(
+      Interval interval,
+      ParallelIndexSinglePhaseIOConfig ioConfig
+  )
   {
     // set up ingestion spec
     final ParallelIndexSinglePhaseIngestionSpec singlePhaseIngestionSpec = new ParallelIndexSinglePhaseIngestionSpec(
@@ -214,7 +240,7 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
             new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.MINUTE,
-                Arrays.asList(Intervals.of("2017/2018"))
+                interval == null ? null : Collections.singletonList(interval)
             ),
             null,
             getObjectMapper()

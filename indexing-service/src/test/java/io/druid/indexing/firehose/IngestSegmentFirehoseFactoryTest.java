@@ -219,6 +219,7 @@ public class IngestSegmentFirehoseFactoryTest
         TASK_STORAGE,
         new TaskActionToolbox(
             TASK_LOCKBOX,
+            TASK_STORAGE,
             mdc,
             newMockEmitter(),
             EasyMock.createMock(SupervisorManager.class),

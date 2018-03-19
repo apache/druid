@@ -34,8 +34,10 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.appenderator.CountingActionBasedSegmentAllocator;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SurrogateLockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -92,11 +94,14 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
   private static final String TYPE = "parallelIndexSinglePhaseSubIndex";
 
   private final IndexTask.IndexIngestionSpec ingestionSchema;
+  private final String supervisorTaskId;
 
+  // TODO: add attempt
   @JsonCreator
   public ParallelIndexSinglePhaseSubTask(
       @JsonProperty("id") final String id,
       @JsonProperty("groupId") final String groupId,
+      @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("spec") final IndexTask.IndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context
@@ -111,6 +116,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
     );
 
     this.ingestionSchema = ingestionSchema;
+    this.supervisorTaskId = supervisorTaskId;
 
     if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
       throw new UnsupportedOperationException("Guaranteed rollup is not supported");
@@ -158,6 +164,12 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
     return ingestionSchema;
   }
 
+  @JsonProperty
+  public String getSupervisorTaskId()
+  {
+    return supervisorTaskId;
+  }
+
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
@@ -184,7 +196,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
     if (determineIntervals) {
       final SortedSet<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
       intervals.addAll(shardSpecs.getIntervals());
-      final Map<Interval, TaskLock> locks = Tasks.tryAcquireExclusiveLocks(toolbox.getTaskActionClient(), intervals);
+      final Map<Interval, TaskLock> locks = tryAcquireExclusiveSurrogateLocks(toolbox.getTaskActionClient(), intervals);
       versions = locks.entrySet().stream()
                       .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getVersion()));
 
@@ -214,6 +226,23 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
     );
 
     return TaskStatus.success(getId(), new TaskReport(getId(), pushedSegments));
+  }
+
+  private Map<Interval, TaskLock> tryAcquireExclusiveSurrogateLocks(
+      TaskActionClient client,
+      SortedSet<Interval> intervals
+  )
+      throws IOException
+  {
+    final Map<Interval, TaskLock> lockMap = new HashMap<>();
+    for (Interval interval : Tasks.computeCompactIntervals(intervals)) {
+      final TaskLock lock = Preconditions.checkNotNull(
+          client.submit(new SurrogateLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval, supervisorTaskId)),
+          "Cannot acquire a lock for interval[%s]", interval
+      );
+      lockMap.put(interval, lock);
+    }
+    return lockMap;
   }
 
   private static boolean isGuaranteedRollup(IndexTask.IndexIOConfig ioConfig, IndexTask.IndexTuningConfig tuningConfig)

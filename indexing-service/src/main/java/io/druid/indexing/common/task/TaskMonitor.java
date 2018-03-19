@@ -92,13 +92,13 @@ public class TaskMonitor
                     log.warn("task[%s] failed!", taskId);
                     if (monitorEntry.numRetry < maxRetry) {
                       log.info(
-                          "We still have chnaces[%d/%d]. Retrying task[%s]",
+                          "We still have chnaces[%d/%d] to complete. Retrying task[%s]",
                           monitorEntry.numRetry,
                           maxRetry,
                           taskId
                       );
-                      retry(monitorEntry.task);
                       monitorEntry.incrementNumRetry();
+                      retry(monitorEntry.task);
                     } else {
                       log.error(
                           "task[%s] failed after [%d] retries",
@@ -157,7 +157,10 @@ public class TaskMonitor
 
   public void killAll()
   {
-    taskFutureMap.keySet().forEach(indexingServiceClient::killTask);
+    taskFutureMap.keySet().forEach(taskId -> {
+      log.info("Request to kill subtask[%s]", taskId);
+      indexingServiceClient.killTask(taskId);
+    });
     taskFutureMap.clear();
   }
 
@@ -168,6 +171,7 @@ public class TaskMonitor
 
   private static class MonitorEntry
   {
+    // TODO: should change task id
     private final Task task;
     private final SettableFuture<TaskStatus> future;
 

@@ -1938,6 +1938,7 @@ public class KafkaIndexTaskTest
     taskLockbox = new TaskLockbox(taskStorage);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
+        taskStorage,
         metadataStorageCoordinator,
         emitter,
         new SupervisorManager(null)

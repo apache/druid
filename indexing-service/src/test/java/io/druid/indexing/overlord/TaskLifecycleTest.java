@@ -532,6 +532,7 @@ public class TaskLifecycleTest
         taskStorage,
         new TaskActionToolbox(
             taskLockbox,
+            taskStorage,
             mdc,
             emitter,
             EasyMock.createMock(SupervisorManager.class),

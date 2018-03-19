@@ -110,6 +110,7 @@ public class TaskActionTestKit extends ExternalResource
     );
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
+        taskStorage,
         metadataStorageCoordinator,
         new NoopServiceEmitter(),
         EasyMock.createMock(SupervisorManager.class),

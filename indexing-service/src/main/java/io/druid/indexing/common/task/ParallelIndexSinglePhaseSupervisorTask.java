@@ -243,6 +243,8 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
 
       if (state != TaskState.SUCCESS) {
         // if this fails, kill all sub tasks
+        // Note: this doesn't work when this task is killed by users. We need a way for gracefully shutting down tasks
+        // for resource cleanup.
         taskMonitor.killAll();
       }
     }
@@ -347,6 +349,7 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
     return new ParallelIndexSinglePhaseSubTask(
         null,
         getGroupId(),
+        getId(),
         null,
         new IndexIngestionSpec(
             ingestionSchema.getDataSchema(),

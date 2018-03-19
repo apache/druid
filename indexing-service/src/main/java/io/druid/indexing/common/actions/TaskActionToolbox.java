@@ -21,14 +21,16 @@ package io.druid.indexing.common.actions;
 
 import com.google.inject.Inject;
 import io.druid.indexing.common.Counters;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 
 public class TaskActionToolbox
 {
   private final TaskLockbox taskLockbox;
+  private final TaskStorage taskStorage;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
@@ -37,6 +39,7 @@ public class TaskActionToolbox
   @Inject
   public TaskActionToolbox(
       TaskLockbox taskLockbox,
+      TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       ServiceEmitter emitter,
       SupervisorManager supervisorManager,
@@ -44,6 +47,7 @@ public class TaskActionToolbox
   )
   {
     this.taskLockbox = taskLockbox;
+    this.taskStorage = taskStorage;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
     this.supervisorManager = supervisorManager;
@@ -53,6 +57,11 @@ public class TaskActionToolbox
   public TaskLockbox getTaskLockbox()
   {
     return taskLockbox;
+  }
+
+  public TaskStorage getTaskStorage()
+  {
+    return taskStorage;
   }
 
   public IndexerMetadataStorageCoordinator getIndexerMetadataStorageCoordinator()
