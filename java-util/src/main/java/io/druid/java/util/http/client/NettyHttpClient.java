@@ -108,16 +108,6 @@ public class NettyHttpClient extends AbstractHttpClient
     pool.close();
   }
 
-  public HttpClient withReadTimeout(Duration readTimeout)
-  {
-    return new NettyHttpClient(pool, readTimeout, compressionCodec, timer);
-  }
-
-  public NettyHttpClient withTimer(Timer timer)
-  {
-    return new NettyHttpClient(pool, defaultReadTimeout, compressionCodec, timer);
-  }
-
   @Override
   public <Intermediate, Final> ListenableFuture<Final> go(
       final Request request,
@@ -196,7 +186,7 @@ public class NettyHttpClient extends AbstractHttpClient
           private volatile ClientResponse<Intermediate> response = null;
 
           @Override
-          public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception
+          public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
           {
             if (log.isDebugEnabled()) {
               log.debug("[%s] messageReceived: %s", requestDesc, e.getMessage());
@@ -274,7 +264,7 @@ public class NettyHttpClient extends AbstractHttpClient
           }
 
           @Override
-          public void exceptionCaught(ChannelHandlerContext context, ExceptionEvent event) throws Exception
+          public void exceptionCaught(ChannelHandlerContext context, ExceptionEvent event)
           {
             if (log.isDebugEnabled()) {
               final Throwable cause = event.getCause();
@@ -305,7 +295,7 @@ public class NettyHttpClient extends AbstractHttpClient
           }
 
           @Override
-          public void channelDisconnected(ChannelHandlerContext context, ChannelStateEvent event) throws Exception
+          public void channelDisconnected(ChannelHandlerContext context, ChannelStateEvent event)
           {
             if (log.isDebugEnabled()) {
               log.debug("[%s] Channel disconnected", requestDesc);
@@ -337,7 +327,7 @@ public class NettyHttpClient extends AbstractHttpClient
         new ChannelFutureListener()
         {
           @Override
-          public void operationComplete(ChannelFuture future) throws Exception
+          public void operationComplete(ChannelFuture future)
           {
             if (!future.isSuccess()) {
               channel.close();

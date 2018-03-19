@@ -632,7 +632,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException
+    public void handle() throws ExecutionException, InterruptedException
     {
       // check for consistency
       // if already received request for this sequenceName and dataSourceMetadata combination then return

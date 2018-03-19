@@ -24,23 +24,23 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import io.druid.java.util.http.client.HttpClient;
 import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.PathChildrenCacheFactory;
-import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;
 import io.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -105,7 +105,7 @@ public class RemoteTaskRunnerTestUtils
     testingCluster.stop();
   }
 
-  RemoteTaskRunner makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
+  RemoteTaskRunner makeRemoteTaskRunner(RemoteTaskRunnerConfig config)
   {
     NoopProvisioningStrategy<WorkerTaskRunner> resourceManagement = new NoopProvisioningStrategy<>();
     return makeRemoteTaskRunner(config, resourceManagement);

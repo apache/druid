@@ -96,7 +96,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
           new HandleCallback<List<Map<String, Object>>>()
           {
             @Override
-            public List<Map<String, Object>> withHandle(Handle handle) throws Exception
+            public List<Map<String, Object>> withHandle(Handle handle)
             {
               return handle.createQuery(
                   StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
@@ -116,7 +116,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               handle.createStatement(statement)
                     .bind("id", identifier)

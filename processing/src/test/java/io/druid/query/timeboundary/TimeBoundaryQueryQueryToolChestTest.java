@@ -85,7 +85,7 @@ public class TimeBoundaryQueryQueryToolChestTest
   }
 
   @Test
-  public void testFilterSegments() throws Exception
+  public void testFilterSegments()
   {
     List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
         TIME_BOUNDARY_QUERY,
@@ -117,7 +117,7 @@ public class TimeBoundaryQueryQueryToolChestTest
   }
 
   @Test
-  public void testMaxTimeFilterSegments() throws Exception
+  public void testMaxTimeFilterSegments()
   {
     List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
         MAXTIME_BOUNDARY_QUERY,
@@ -146,7 +146,7 @@ public class TimeBoundaryQueryQueryToolChestTest
   }
 
   @Test
-  public void testMinTimeFilterSegments() throws Exception
+  public void testMinTimeFilterSegments()
   {
     List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
         MINTIME_BOUNDARY_QUERY,
@@ -175,7 +175,7 @@ public class TimeBoundaryQueryQueryToolChestTest
   }
 
   @Test
-  public void testFilteredFilterSegments() throws Exception
+  public void testFilteredFilterSegments()
   {
     List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
         FILTERED_BOUNDARY_QUERY,

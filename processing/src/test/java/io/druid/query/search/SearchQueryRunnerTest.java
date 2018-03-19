@@ -63,7 +63,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +81,7 @@ public class SearchQueryRunnerTest
   private static final SearchStrategySelector selector = new SearchStrategySelector(Suppliers.ofInstance(config));
 
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
@@ -757,7 +756,7 @@ public class SearchQueryRunnerTest
   }
 
   @Test
-  public void testSearchWithNotExistedDimension() throws Exception
+  public void testSearchWithNotExistedDimension()
   {
     SearchQuery searchQuery = Druids.newSearchQueryBuilder()
                                     .dimensions(

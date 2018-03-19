@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.druid.indexing.common.task.Task;
 
-import java.io.IOException;
-
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "lockAcquire", value = LockAcquireAction.class),
@@ -45,6 +43,6 @@ import java.io.IOException;
 public interface TaskAction<RetType>
 {
   TypeReference<RetType> getReturnTypeReference(); // T_T
-  RetType perform(Task task, TaskActionToolbox toolbox) throws IOException;
+  RetType perform(Task task, TaskActionToolbox toolbox);
   boolean isAudited();
 }

@@ -19,13 +19,9 @@
 
 package io.druid.storage.azure;
 
-import com.google.common.collect.ImmutableMap;
 import com.microsoft.azure.storage.StorageException;
 import io.druid.java.util.common.FileUtils;
-import io.druid.java.util.common.Intervals;
 import io.druid.segment.loading.SegmentLoadingException;
-import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMockSupport;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,17 +44,6 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   private static final String SEGMENT_FILE_NAME = "segment";
   private static final String containerName = "container";
   private static final String blobPath = "/path/to/storage/index.zip";
-  private static final DataSegment dataSegment = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
   private AzureStorage azureStorage;
 
   @Before
@@ -128,45 +113,5 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       org.apache.commons.io.FileUtils.deleteDirectory(outDir);
     }
 
-  }
-
-  @Test
-  public void getSegmentFilesTest() throws SegmentLoadingException
-  {
-    final File outDir = new File("");
-    try {
-      final FileUtils.FileCopyResult result = createMock(FileUtils.FileCopyResult.class);
-      final AzureDataSegmentPuller puller = createMockBuilder(AzureDataSegmentPuller.class).withConstructor(
-          azureStorage
-      ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class).createMock();
-
-      expect(puller.getSegmentFiles(containerName, blobPath, outDir)).andReturn(result);
-
-      replayAll();
-
-      puller.getSegmentFiles(dataSegment, outDir);
-
-      verifyAll();
-    }
-    finally {
-      outDir.delete();
-    }
-
-  }
-
-  @Test
-  public void prepareOutDirTest() throws IOException
-  {
-    File outDir = Files.createTempDirectory("druid").toFile();
-
-    try {
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(azureStorage);
-      puller.prepareOutDir(outDir);
-
-      assertTrue(outDir.exists());
-    }
-    finally {
-      outDir.delete();
-    }
   }
 }

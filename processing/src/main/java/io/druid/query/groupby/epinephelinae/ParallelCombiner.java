@@ -388,7 +388,7 @@ public class ParallelCombiner<KeyType>
         new AbstractPrioritizedCallable<Void>(priority)
         {
           @Override
-          public Void call() throws Exception
+          public Void call()
           {
             try (
                 CloseableIterator<Entry<KeyType>> mergedIterator = CloseableIterators.mergeSorted(

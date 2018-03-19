@@ -22,8 +22,8 @@ package io.druid.curator.inventory;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
+import io.druid.java.util.common.concurrent.Execs;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
@@ -53,7 +53,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     tearDownServerAndCurator();
   }
@@ -116,7 +116,7 @@ public class CuratorInventoryManagerTest extends CuratorTestBase
     curator.getCuratorListenable().addListener(
         new CuratorListener() {
           @Override
-          public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
+          public void eventReceived(CuratorFramework client, CuratorEvent event)
           {
             if (event.getType() == CuratorEventType.WATCHED
                 && event.getWatchedEvent().getState() == Watcher.Event.KeeperState.Disconnected) {

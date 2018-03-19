@@ -74,7 +74,7 @@ public class JavaScriptExtractionFnTest
   }
 
   @Test
-  public void testTimeExample() throws Exception
+  public void testTimeExample()
   {
     String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
     final long millis = DateTimes.of("2015-01-02T13:00:59.999Z").getMillis();
@@ -82,14 +82,14 @@ public class JavaScriptExtractionFnTest
   }
 
   @Test
-  public void testLongs() throws Exception
+  public void testLongs()
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
     Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234L));
   }
 
   @Test
-  public void testFloats() throws Exception
+  public void testFloats()
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
     Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false, JavaScriptConfig.getEnabledInstance()).apply(1234.0));

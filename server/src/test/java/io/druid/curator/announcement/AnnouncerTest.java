@@ -103,7 +103,7 @@ public class AnnouncerTest extends CuratorTestBase
           new CuratorListener()
           {
             @Override
-            public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
+            public void eventReceived(CuratorFramework client, CuratorEvent event)
             {
               if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(testPath1)) {
                 latch.countDown();
@@ -171,7 +171,7 @@ public class AnnouncerTest extends CuratorTestBase
           new CuratorListener()
           {
             @Override
-            public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
+            public void eventReceived(CuratorFramework client, CuratorEvent event)
             {
               if (event.getType() == CuratorEventType.CREATE) {
                 paths.remove(event.getPath());
@@ -296,7 +296,7 @@ public class AnnouncerTest extends CuratorTestBase
         new CuratorListener()
         {
           @Override
-          public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
+          public void eventReceived(CuratorFramework client, CuratorEvent event)
           {
             if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(path)) {
               latch.countDown();

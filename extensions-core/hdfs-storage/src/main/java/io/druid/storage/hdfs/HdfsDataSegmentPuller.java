@@ -31,10 +31,8 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.io.NativeIO;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
-import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,7 +51,7 @@ import java.net.URI;
 
 /**
  */
-public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
+public class HdfsDataSegmentPuller implements URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
@@ -115,19 +113,19 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
       }
 
       @Override
-      public Reader openReader(boolean ignoreEncodingErrors) throws IOException
+      public Reader openReader(boolean ignoreEncodingErrors)
       {
         throw new UOE("HDFS Reader not supported");
       }
 
       @Override
-      public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException
+      public CharSequence getCharContent(boolean ignoreEncodingErrors)
       {
         throw new UOE("HDFS CharSequence not supported");
       }
 
       @Override
-      public Writer openWriter() throws IOException
+      public Writer openWriter()
       {
         throw new UOE("HDFS Writer not supported");
       }
@@ -167,15 +165,14 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
     this.config = config;
   }
 
-
-  @Override
-  public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException
+  FileUtils.FileCopyResult getSegmentFiles(final Path path, final File outDir) throws SegmentLoadingException
   {
-    getSegmentFiles(getPath(segment), dir);
-  }
-
-  public FileUtils.FileCopyResult getSegmentFiles(final Path path, final File outDir) throws SegmentLoadingException
-  {
+    try {
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "");
+    }
     try {
       final FileSystem fs = path.getFileSystem(config);
       if (fs.isDirectory(path)) {
@@ -277,14 +274,6 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
     }
   }
 
-  public FileUtils.FileCopyResult getSegmentFiles(URI uri, File outDir) throws SegmentLoadingException
-  {
-    if (!uri.getScheme().equalsIgnoreCase(HdfsStorageDruidModule.SCHEME)) {
-      throw new SegmentLoadingException("Don't know how to load SCHEME for URI [%s]", uri.toString());
-    }
-    return getSegmentFiles(new Path(uri), outDir);
-  }
-
   public InputStream getInputStream(Path path) throws IOException
   {
     return buildFileObject(path.toUri(), config).openInputStream();
@@ -339,10 +328,5 @@ public class HdfsDataSegmentPuller implements DataSegmentPuller, URIDataPuller
         return apply(input.getCause());
       }
     };
-  }
-
-  private Path getPath(DataSegment segment)
-  {
-    return new Path(String.valueOf(segment.getLoadSpec().get("path")));
   }
 }

@@ -419,7 +419,7 @@ public class IndexGeneratorJobTest
       AggregatorFactory[] aggs,
       String datasourceName,
       boolean forceExtendableShardSpecs
-  ) throws IOException
+  )
   {
     this.useCombiner = useCombiner;
     this.partitionType = partitionType;

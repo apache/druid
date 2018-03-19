@@ -35,7 +35,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -84,7 +83,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
     closerRule.closeLater(new Closeable()
     {
       @Override
-      public void close() throws IOException
+      public void close()
       {
         announcer.stop();
       }
@@ -108,7 +107,7 @@ public class ListenerResourceAnnouncerTest extends CuratorTestBase
   }
 
   @Test
-  public void testStartCorrect() throws Exception
+  public void testStartCorrect()
   {
     final Announcer announcer = EasyMock.createStrictMock(Announcer.class);
     final HostAndPortWithScheme node = HostAndPortWithScheme.fromString("some_host");

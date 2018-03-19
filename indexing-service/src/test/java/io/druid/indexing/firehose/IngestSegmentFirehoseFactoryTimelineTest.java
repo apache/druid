@@ -284,7 +284,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final TaskActionClient taskActionClient = new TaskActionClient()
       {
         @Override
-        public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+        public <RetType> RetType submit(TaskAction<RetType> taskAction)
         {
           if (taskAction instanceof SegmentListUsedAction) {
             // Expect the interval we asked for

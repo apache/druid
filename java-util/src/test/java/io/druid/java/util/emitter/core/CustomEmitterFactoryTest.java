@@ -28,7 +28,6 @@ import org.asynchttpclient.AsyncHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Properties;
 
 public class CustomEmitterFactoryTest
@@ -76,10 +75,10 @@ public class CustomEmitterFactoryTest
     public void emit(Event event) {}
 
     @Override
-    public void flush() throws IOException {}
+    public void flush() {}
 
     @Override
-    public void close() throws IOException {}
+    public void close() {}
   }
 
   @Test

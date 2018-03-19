@@ -39,7 +39,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.nio.file.Files;
 import java.util.regex.Pattern;
 
@@ -48,7 +47,6 @@ public class HdfsFileTimestampVersionFinderTest
 
   private static MiniDFSCluster miniCluster;
   private static File hdfsTmpDir;
-  private static URI uriBase;
   private static Path filePath = new Path("/tmp/foo");
   private static Path perTestPath = new Path("/tmp/tmp2");
   private static String pathContents = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum";
@@ -56,7 +54,7 @@ public class HdfsFileTimestampVersionFinderTest
   private static Configuration conf;
 
   @BeforeClass
-  public static void setupStatic() throws IOException, ClassNotFoundException
+  public static void setupStatic() throws IOException
   {
     hdfsTmpDir = File.createTempFile("hdfsHandlerTest", "dir");
     if (!hdfsTmpDir.delete()) {
@@ -65,7 +63,6 @@ public class HdfsFileTimestampVersionFinderTest
     conf = new Configuration(true);
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, hdfsTmpDir.getAbsolutePath());
     miniCluster = new MiniDFSCluster.Builder(conf).build();
-    uriBase = miniCluster.getURI(0);
 
     final File tmpFile = File.createTempFile("hdfsHandlerTest", ".data");
     tmpFile.delete();
@@ -150,7 +147,7 @@ public class HdfsFileTimestampVersionFinderTest
   }
 
   @Test
-  public void testNoLatestVersion() throws IOException, InterruptedException
+  public void testNoLatestVersion() throws IOException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
     Assert.assertFalse(miniCluster.getFileSystem().exists(oldPath));

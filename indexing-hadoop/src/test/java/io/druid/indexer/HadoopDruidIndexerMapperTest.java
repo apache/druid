@@ -36,9 +36,9 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.transform.ExpressionTransform;
 import io.druid.segment.transform.TransformSpec;
-import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -47,7 +47,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -199,7 +198,7 @@ public class HadoopDruidIndexerMapperTest
         final InputRow inputRow,
         final Context context,
         final boolean reportParseExceptions
-    ) throws IOException, InterruptedException
+    )
     {
       rows.add(inputRow);
     }

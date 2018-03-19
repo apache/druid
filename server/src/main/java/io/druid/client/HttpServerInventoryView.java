@@ -52,7 +52,6 @@ import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -208,7 +207,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   }
 
   @LifecycleStop
-  public void stop() throws IOException
+  public void stop()
   {
     synchronized (lifecycleLock) {
       if (!lifecycleLock.canStop()) {

@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -109,7 +110,21 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   @Override
   public QueryRunner<T> getRunner(QuerySegmentWalker walker)
   {
-    return querySegmentSpec.lookup(this, walker);
+    return getQuerySegmentSpecForLookUp(this).lookup(this, walker);
+  }
+
+  @VisibleForTesting
+  public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery query)
+  {
+    if (query.getDataSource() instanceof QueryDataSource) {
+      QueryDataSource ds = (QueryDataSource) query.getDataSource();
+      Query subquery = ds.getQuery();
+      if (subquery instanceof BaseQuery) {
+        return getQuerySegmentSpecForLookUp((BaseQuery) subquery);
+      }
+      throw new IllegalStateException("Invalid subquery type " + subquery.getClass());
+    }
+    return query.getQuerySegmentSpec();
   }
 
   @Override

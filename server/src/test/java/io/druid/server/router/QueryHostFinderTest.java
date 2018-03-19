@@ -43,7 +43,7 @@ public class QueryHostFinderTest
   private Server server;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     brokerSelector = EasyMock.createMock(TieredBrokerHostSelector.class);
 
@@ -81,13 +81,13 @@ public class QueryHostFinderTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     EasyMock.verify(brokerSelector);
   }
 
   @Test
-  public void testFindServer() throws Exception
+  public void testFindServer()
   {
     QueryHostFinder queryRunner = new QueryHostFinder(
         brokerSelector,

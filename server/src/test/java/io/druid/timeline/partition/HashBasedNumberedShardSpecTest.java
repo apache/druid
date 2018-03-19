@@ -141,7 +141,7 @@ public class HashBasedNumberedShardSpecTest
   }
 
   @Test
-  public void testGetGroupKey() throws Exception
+  public void testGetGroupKey()
   {
     final HashBasedNumberedShardSpec shardSpec1 = new HashBasedNumberedShardSpec(
         1,

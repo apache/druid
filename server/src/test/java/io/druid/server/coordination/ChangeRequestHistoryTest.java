@@ -119,7 +119,7 @@ public class ChangeRequestHistoryTest
   }
 
   @Test
-  public void testCancel() throws Exception
+  public void testCancel()
   {
     final ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
 
@@ -171,7 +171,7 @@ public class ChangeRequestHistoryTest
   }
 
   @Test
-  public void testCircularBuffer() throws Exception
+  public void testCircularBuffer()
   {
     ChangeRequestHistory.CircularBuffer<Integer> circularBuffer = new ChangeRequestHistory.CircularBuffer<>(
         3);

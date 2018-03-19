@@ -25,7 +25,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.factory.EmitterFactory;
 import org.asynchttpclient.AsyncHttpClient;
 
@@ -35,7 +34,6 @@ import java.util.Properties;
 
 public class Emitters
 {
-  private static final Logger log = new Logger(Emitters.class);
 
   private static final String LOG_EMITTER_PROP = "io.druid.java.util.emitter.logging";
   private static final String HTTP_EMITTER_PROP = "io.druid.java.util.emitter.http";
@@ -156,7 +154,6 @@ public class Emitters
       if (key.startsWith(prefix)) {
         String combinedKey = key.substring(prefix.length());
         Map<String, Object> currentLevelJson = factoryMap;
-        String currentKey = null;
         String[] keyPath = combinedKey.split("\\.");
 
         for (int i = 0; i < keyPath.length - 1; i++) {

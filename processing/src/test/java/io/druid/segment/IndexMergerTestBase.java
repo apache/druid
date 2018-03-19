@@ -2316,7 +2316,7 @@ public class IndexMergerTestBase
   }
 
   @Test
-  public void testDictIdSeeker() throws Exception
+  public void testDictIdSeeker()
   {
     IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Integer.BYTES).asIntBuffer();
     dimConversions.put(0);

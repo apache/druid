@@ -62,7 +62,7 @@ public class CaffeineCacheTest
   };
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     cache = CaffeineCache.create(cacheConfig);
   }
@@ -117,7 +117,7 @@ public class CaffeineCacheTest
   }
 
   @Test
-  public void testBaseOps() throws Exception
+  public void testBaseOps()
   {
     final Cache.NamedKey aKey = new Cache.NamedKey("a", HI);
     Assert.assertNull(cache.get(aKey));
@@ -146,7 +146,7 @@ public class CaffeineCacheTest
   }
 
   @Test
-  public void testGetBulk() throws Exception
+  public void testGetBulk()
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 

@@ -92,7 +92,6 @@ public class DruidKerberosUtil
   }
 
   public static void authenticateIfRequired(String internalClientPrincipal, String internalClientKeytab)
-      throws IOException
   {
     if (!Strings.isNullOrEmpty(internalClientPrincipal) && !Strings.isNullOrEmpty(internalClientKeytab)) {
       Configuration conf = new Configuration();

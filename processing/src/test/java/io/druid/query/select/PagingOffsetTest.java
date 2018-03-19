@@ -29,7 +29,7 @@ import java.util.List;
 public class PagingOffsetTest
 {
   @Test
-  public void testZeroThreshold() throws Exception
+  public void testZeroThreshold()
   {
     PagingOffset offset = PagingOffset.of(PagingOffset.toOffset(3, false), 0);
     Assert.assertEquals(3, offset.startOffset());
@@ -43,7 +43,7 @@ public class PagingOffsetTest
   }
 
   @Test
-  public void testAscending() throws Exception
+  public void testAscending()
   {
     PagingOffset offset = PagingOffset.of(PagingOffset.toOffset(3, false), 3);
     Assert.assertEquals(3, offset.startOffset());
@@ -52,7 +52,7 @@ public class PagingOffsetTest
   }
 
   @Test
-  public void testDescending() throws Exception
+  public void testDescending()
   {
     PagingOffset offset = PagingOffset.of(PagingOffset.toOffset(3, true), 3);
     Assert.assertEquals(-4, offset.startOffset());

@@ -39,7 +39,7 @@ public class HyperUniqueFinalizingPostAggregatorTest
   private final HashFunction fn = Hashing.murmur3_128();
 
   @Test
-  public void testCompute() throws Exception
+  public void testCompute()
   {
     Random random = new Random(0L);
     HyperUniqueFinalizingPostAggregator postAggregator = new HyperUniqueFinalizingPostAggregator(
@@ -58,7 +58,7 @@ public class HyperUniqueFinalizingPostAggregatorTest
   }
 
   @Test
-  public void testComputeRounded() throws Exception
+  public void testComputeRounded()
   {
     Random random = new Random(0L);
     HyperUniqueFinalizingPostAggregator postAggregator = new HyperUniqueFinalizingPostAggregator(

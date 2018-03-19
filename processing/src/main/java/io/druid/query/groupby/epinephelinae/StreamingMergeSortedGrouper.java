@@ -30,7 +30,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -487,7 +486,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         // do nothing
       }

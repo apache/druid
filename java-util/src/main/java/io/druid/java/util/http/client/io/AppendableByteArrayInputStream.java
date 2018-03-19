@@ -179,7 +179,7 @@ public class AppendableByteArrayInputStream extends InputStream
   }
 
   @Override
-  public int available() throws IOException
+  public int available()
   {
     return available;
   }

@@ -54,7 +54,7 @@ public class ByteBufferUtilsTest
   }
 
   @Test
-  public void testFreeDoesntCrashJVM() throws Exception
+  public void testFreeDoesntCrashJVM()
   {
     final ByteBuffer directBuffer = ByteBuffer.allocateDirect(4096);
     ByteBufferUtils.free(directBuffer);

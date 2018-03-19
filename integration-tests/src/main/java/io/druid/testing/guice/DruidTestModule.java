@@ -24,6 +24,11 @@ import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import io.druid.curator.CuratorConfig;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.EscalatedClient;
+import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.emitter.core.LoggingEmitter;
 import io.druid.java.util.emitter.core.LoggingEmitterConfig;
@@ -31,11 +36,6 @@ import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.http.client.CredentialedHttpClient;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.auth.BasicCredentials;
-import io.druid.curator.CuratorConfig;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.ManageLifecycle;
-import io.druid.guice.annotations.EscalatedClient;
-import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.IntegrationTestingConfigProvider;
@@ -67,7 +67,7 @@ public class DruidTestModule implements Module
       IntegrationTestingConfig config,
       Lifecycle lifecycle,
       @EscalatedClient HttpClient delegate
-  ) throws Exception
+  )
   {
     if (config.getUsername() != null) {
       return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);

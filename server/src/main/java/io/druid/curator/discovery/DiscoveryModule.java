@@ -63,7 +63,6 @@ import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.curator.x.discovery.ServiceProviderBuilder;
 import org.apache.curator.x.discovery.details.ServiceCacheListener;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.Collections;
@@ -219,7 +218,7 @@ public class DiscoveryModule implements Module
           private volatile List<DruidNode> nodes = null;
 
           @Override
-          public void start() throws Exception
+          public void start()
           {
             if (nodes == null) {
               nodes = Lists.newArrayList();
@@ -304,25 +303,25 @@ public class DiscoveryModule implements Module
   private static class NoopServiceDiscovery<T> implements ServiceDiscovery<T>
   {
     @Override
-    public void start() throws Exception
+    public void start()
     {
 
     }
 
     @Override
-    public void registerService(ServiceInstance<T> service) throws Exception
+    public void registerService(ServiceInstance<T> service)
     {
 
     }
 
     @Override
-    public void updateService(ServiceInstance<T> service) throws Exception
+    public void updateService(ServiceInstance<T> service)
     {
 
     }
 
     @Override
-    public void unregisterService(ServiceInstance<T> service) throws Exception
+    public void unregisterService(ServiceInstance<T> service)
     {
 
     }
@@ -334,19 +333,19 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public Collection<String> queryForNames() throws Exception
+    public Collection<String> queryForNames()
     {
       return ImmutableList.of();
     }
 
     @Override
-    public Collection<ServiceInstance<T>> queryForInstances(String name) throws Exception
+    public Collection<ServiceInstance<T>> queryForInstances(String name)
     {
       return ImmutableList.of();
     }
 
     @Override
-    public ServiceInstance<T> queryForInstance(String name, String id) throws Exception
+    public ServiceInstance<T> queryForInstance(String name, String id)
     {
       return null;
     }
@@ -358,7 +357,7 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
 
     }
@@ -405,13 +404,13 @@ public class DiscoveryModule implements Module
       }
 
       @Override
-      public void start() throws Exception
+      public void start()
       {
         // nothing
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         // nothing
       }
@@ -478,19 +477,19 @@ public class DiscoveryModule implements Module
   private static class NoopServiceProvider<T> implements ServiceProvider<T>
   {
     @Override
-    public void start() throws Exception
+    public void start()
     {
       // nothing
     }
 
     @Override
-    public ServiceInstance<T> getInstance() throws Exception
+    public ServiceInstance<T> getInstance()
     {
       return null;
     }
 
     @Override
-    public Collection<ServiceInstance<T>> getAllInstances() throws Exception
+    public Collection<ServiceInstance<T>> getAllInstances()
     {
       return Collections.emptyList();
     }
@@ -502,7 +501,7 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       // nothing
     }

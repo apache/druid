@@ -35,7 +35,7 @@ import java.util.Random;
 public class LinearGutmanSplitStrategyTest
 {
   @Test
-  public void testPickSeeds() throws Exception
+  public void testPickSeeds()
   {
     BitmapFactory bf = new ConciseBitmapFactory();
     LinearGutmanSplitStrategy strategy = new LinearGutmanSplitStrategy(0, 50, bf);
@@ -56,7 +56,7 @@ public class LinearGutmanSplitStrategyTest
   }
 
   @Test
-  public void testPickSeedsRoaring() throws Exception
+  public void testPickSeedsRoaring()
   {
     BitmapFactory bf = new RoaringBitmapFactory();
     LinearGutmanSplitStrategy strategy = new LinearGutmanSplitStrategy(0, 50, bf);

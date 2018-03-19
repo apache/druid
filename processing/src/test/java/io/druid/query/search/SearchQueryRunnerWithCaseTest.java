@@ -40,7 +40,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +64,7 @@ import static io.druid.query.QueryRunnerTestHelper.transformToConstructionFeeder
 public class SearchQueryRunnerWithCaseTest
 {
   @Parameterized.Parameters
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     final SearchQueryConfig[] configs = new SearchQueryConfig[3];
     configs[0] = new SearchQueryConfig();

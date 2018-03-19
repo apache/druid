@@ -63,7 +63,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         new Lifecycle.Handler()
         {
           @Override
-          public void start() throws Exception
+          public void start()
           {
           }
 

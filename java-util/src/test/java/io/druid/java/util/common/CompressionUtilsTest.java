@@ -353,7 +353,7 @@ public class CompressionUtilsTest
     final ByteSource inputStreamFactory = new ByteSource()
     {
       @Override
-      public InputStream openStream() throws IOException
+      public InputStream openStream()
       {
         return new ZeroRemainingInputStream(new ByteArrayInputStream(tripleGzByteStream.toByteArray()));
       }
@@ -602,7 +602,7 @@ public class CompressionUtilsTest
     }
 
     @Override
-    public int available() throws IOException
+    public int available()
     {
       return 0;
     }

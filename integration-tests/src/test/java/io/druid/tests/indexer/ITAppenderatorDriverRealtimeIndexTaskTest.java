@@ -50,7 +50,7 @@ public class ITAppenderatorDriverRealtimeIndexTaskTest extends AbstractITRealtim
   private static final String REALTIME_QUERIES_RESOURCE = "/indexer/wikipedia_realtime_appenderator_index_queries.json";
 
   @Test
-  public void testRealtimeIndexTask() throws Exception
+  public void testRealtimeIndexTask()
   {
     doTest();
   }

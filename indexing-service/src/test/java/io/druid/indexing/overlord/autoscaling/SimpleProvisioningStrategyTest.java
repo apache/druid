@@ -24,9 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import io.druid.common.guava.DSuppliers;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -44,6 +41,9 @@ import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -70,7 +70,7 @@ public class SimpleProvisioningStrategyTest
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     autoScaler = EasyMock.createMock(AutoScaler.class);
     testTask = TestTasks.immediateSuccess("task1");
@@ -113,7 +113,7 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
-  public void testSuccessfulProvision() throws Exception
+  public void testSuccessfulProvision()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
@@ -151,7 +151,7 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
-  public void testSomethingProvisioning() throws Exception
+  public void testSomethingProvisioning()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(2);
@@ -262,7 +262,7 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
-  public void testDoSuccessfulTerminate() throws Exception
+  public void testDoSuccessfulTerminate()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(1);
@@ -302,7 +302,7 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
-  public void testSomethingTerminating() throws Exception
+  public void testSomethingTerminating()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(1).times(2);
@@ -352,7 +352,7 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
-  public void testNoActionNeeded() throws Exception
+  public void testNoActionNeeded()
   {
     EasyMock.reset(autoScaler);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
@@ -400,7 +400,7 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
-  public void testMinCountIncrease() throws Exception
+  public void testMinCountIncrease()
   {
     // Don't terminate anything
     EasyMock.reset(autoScaler);
@@ -460,7 +460,7 @@ public class SimpleProvisioningStrategyTest
   }
 
   @Test
-  public void testNullWorkerConfig() throws Exception
+  public void testNullWorkerConfig()
   {
     workerConfig.set(null);
     EasyMock.replay(autoScaler);

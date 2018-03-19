@@ -19,7 +19,6 @@
 
 package io.druid.query;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.List;
@@ -59,7 +58,7 @@ public class DruidMetrics
       final QueryToolChest<T, Query<T>> toolChest,
       final Query<T> query,
       final String remoteAddr
-  ) throws JsonProcessingException
+  )
   {
     QueryMetrics<? super Query<T>> queryMetrics;
     if (toolChest != null) {

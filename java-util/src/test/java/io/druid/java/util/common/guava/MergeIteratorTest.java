@@ -31,7 +31,7 @@ import java.util.Arrays;
 public class MergeIteratorTest
 {
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     MergeIterator<Integer> iter = new MergeIterator<>(
         Ordering.<Integer>natural(),
@@ -46,7 +46,7 @@ public class MergeIteratorTest
   }
 
   @Test
-  public void testScrewsUpOnOutOfOrder() throws Exception
+  public void testScrewsUpOnOutOfOrder()
   {
     MergeIterator<Integer> iter = new MergeIterator<>(
         Ordering.<Integer>natural(),

@@ -23,8 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.common.guava.nary.BinaryFn;
-import io.druid.java.util.common.guava.nary.BinaryTransformIterable;
 import io.druid.java.util.common.guava.nary.TrinaryFn;
 import io.druid.java.util.common.guava.nary.TrinaryTransformIterable;
 
@@ -39,16 +37,6 @@ public class FunctionalIterable<T> implements Iterable<T>
   public static <T> FunctionalIterable<T> create(Iterable<T> delegate)
   {
     return new FunctionalIterable<>(delegate);
-  }
-
-  public static <T> FunctionalIterable<T> fromConcatenation(Iterable<T>... delegates)
-  {
-    return new FunctionalIterable<>(Iterables.concat(delegates));
-  }
-
-  public static <T> FunctionalIterable<T> fromConcatenation(Iterable<Iterable<T>> delegates)
-  {
-    return new FunctionalIterable<>(Iterables.concat(delegates));
   }
 
   public FunctionalIterable(
@@ -92,26 +80,6 @@ public class FunctionalIterable<T> implements Iterable<T>
   public FunctionalIterable<T> limit(int limit)
   {
     return new FunctionalIterable<>(Iterables.limit(delegate, limit));
-  }
-
-  public FunctionalIterable<T> concat(Iterable<T>... toConcat)
-  {
-    if (toConcat.length == 1) {
-      return new FunctionalIterable<>(Iterables.concat(delegate, toConcat[0]));
-    }
-    return new FunctionalIterable<>(Iterables.concat(delegate, Iterables.concat(toConcat)));
-  }
-
-  public FunctionalIterable<T> concat(Iterable<Iterable<T>> toConcat)
-  {
-    return new FunctionalIterable<>(Iterables.concat(delegate, Iterables.concat(toConcat)));
-  }
-
-  public <InType, RetType> FunctionalIterable<RetType> binaryTransform(
-      final Iterable<InType> otherIterable, final BinaryFn<T, InType, RetType> binaryFn
-  )
-  {
-    return new FunctionalIterable<>(BinaryTransformIterable.create(delegate, otherIterable, binaryFn));
   }
 
   public <InType1, InType2, RetType> FunctionalIterable<RetType> trinaryTransform(
