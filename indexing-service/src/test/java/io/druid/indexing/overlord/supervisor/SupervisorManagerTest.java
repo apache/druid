@@ -35,6 +35,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -288,7 +289,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     @Override
     public List<String> getDataSources()
     {
-      return null;
+      return new ArrayList<>();
     }
 
   }
