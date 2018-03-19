@@ -32,7 +32,7 @@ import java.util.Comparator;
 public class ComparatorsTest
 {
   @Test
-  public void testInverse() throws Exception
+  public void testInverse()
   {
     Comparator<Integer> normal = Comparators.comparable();
     Comparator<Integer> inverted = Comparators.inverse(normal);
@@ -60,7 +60,7 @@ public class ComparatorsTest
   }
 
   @Test
-  public void testIntervalsByStartThenEnd() throws Exception
+  public void testIntervalsByStartThenEnd()
   {
     Comparator<Interval> comp = Comparators.intervalsByStartThenEnd();
 
@@ -96,7 +96,7 @@ public class ComparatorsTest
   }
 
   @Test
-  public void testIntervalsByEndThenStart() throws Exception
+  public void testIntervalsByEndThenStart()
   {
     Comparator<Interval> comp = Comparators.intervalsByEndThenStart();
 

@@ -77,7 +77,7 @@ public class ServerHolderTest
   );
 
   @Test
-  public void testCompareTo() throws Exception
+  public void testCompareTo()
   {
     // available size of 100
     final ServerHolder h1 = new ServerHolder(
@@ -153,7 +153,7 @@ public class ServerHolderTest
   }
 
   @Test
-  public void testEquals() throws Exception
+  public void testEquals()
   {
     final ServerHolder h1 = new ServerHolder(
         new ImmutableDruidServer(

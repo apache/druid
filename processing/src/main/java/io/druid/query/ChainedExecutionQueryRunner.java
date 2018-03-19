@@ -118,7 +118,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                 new AbstractPrioritizedCallable<Iterable<T>>(priority)
                                 {
                                   @Override
-                                  public Iterable<T> call() throws Exception
+                                  public Iterable<T> call()
                                   {
                                     try {
                                       Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);

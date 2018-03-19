@@ -23,11 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import io.druid.common.guava.DSuppliers;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestTasks;
@@ -38,13 +34,17 @@ import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
+import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -72,7 +72,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   private static final String INVALID_VERSION = "0";
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     autoScaler = EasyMock.createMock(AutoScaler.class);
 
@@ -108,7 +108,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSuccessfulInitialMinWorkersProvision() throws Exception
+  public void testSuccessfulInitialMinWorkersProvision()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -140,7 +140,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSuccessfulMinWorkersProvision() throws Exception
+  public void testSuccessfulMinWorkersProvision()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -174,7 +174,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSuccessfulMinWorkersProvisionWithOldVersionNodeRunning() throws Exception
+  public void testSuccessfulMinWorkersProvisionWithOldVersionNodeRunning()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -209,7 +209,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSomethingProvisioning() throws Exception
+  public void testSomethingProvisioning()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
@@ -323,7 +323,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testDoSuccessfulTerminate() throws Exception
+  public void testDoSuccessfulTerminate()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
@@ -339,7 +339,8 @@ public class PendingTaskBasedProvisioningStrategyTest
                 testTask.getId(),
                 testTask.getType(),
                 null,
-                TaskLocation.unknown()
+                TaskLocation.unknown(),
+                testTask.getDataSource()
             ).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
@@ -366,7 +367,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSomethingTerminating() throws Exception
+  public void testSomethingTerminating()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
@@ -409,7 +410,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testNoActionNeeded() throws Exception
+  public void testNoActionNeeded()
   {
     EasyMock.reset(autoScaler);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
@@ -457,7 +458,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testMinCountIncrease() throws Exception
+  public void testMinCountIncrease()
   {
     // Don't terminate anything
     EasyMock.reset(autoScaler);
@@ -518,7 +519,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testNullWorkerConfig() throws Exception
+  public void testNullWorkerConfig()
   {
     workerConfig.set(null);
     EasyMock.replay(autoScaler);

@@ -20,22 +20,17 @@
 package io.druid.storage.cloudfiles;
 
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
-import io.druid.timeline.DataSegment;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 
-public class CloudFilesDataSegmentPuller implements DataSegmentPuller
+public class CloudFilesDataSegmentPuller
 {
 
   private static final Logger log = new Logger(CloudFilesDataSegmentPuller.class);
@@ -47,20 +42,7 @@ public class CloudFilesDataSegmentPuller implements DataSegmentPuller
     this.cloudFilesApi = cloudFilesApi;
   }
 
-  @Override
-  public void getSegmentFiles(final DataSegment segment, final File outDir) throws SegmentLoadingException
-  {
-    final Map<String, Object> loadSpec = segment.getLoadSpec();
-    final String region = MapUtils.getString(loadSpec, "region");
-    final String container = MapUtils.getString(loadSpec, "container");
-    final String path = MapUtils.getString(loadSpec, "path");
-
-    log.info("Pulling index at path[%s] to outDir[%s]", path, outDir);
-    prepareOutDir(outDir);
-    getSegmentFiles(region, container, path, outDir);
-  }
-
-  public FileUtils.FileCopyResult getSegmentFiles(String region, String container, String path, File outDir)
+  FileUtils.FileCopyResult getSegmentFiles(String region, String container, String path, File outDir)
       throws SegmentLoadingException
   {
     CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
@@ -68,8 +50,10 @@ public class CloudFilesDataSegmentPuller implements DataSegmentPuller
 
     try {
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
-          byteSource, outDir,
-          CloudFilesUtils.CLOUDFILESRETRY, false
+          byteSource,
+          outDir,
+          CloudFilesUtils.CLOUDFILESRETRY,
+          false
       );
       log.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
       return result;

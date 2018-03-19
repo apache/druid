@@ -21,9 +21,9 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.curator.CuratorTestBase;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.SegmentManager;
@@ -76,7 +76,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     tearDownServerAndCurator();
   }

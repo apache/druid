@@ -26,7 +26,6 @@ import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.List;
 
 public class JvmMonitorTest
@@ -134,13 +133,13 @@ public class JvmMonitorTest
     }
 
     @Override
-    public void flush() throws IOException
+    public void flush()
     {
 
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
 
     }

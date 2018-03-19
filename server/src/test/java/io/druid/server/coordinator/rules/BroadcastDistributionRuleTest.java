@@ -59,7 +59,7 @@ public class BroadcastDistributionRuleTest
   private DataSegment smallSegment;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     smallSegment = new DataSegment(
         "small_source",

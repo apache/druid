@@ -24,13 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
 import io.druid.java.util.http.client.response.StatusResponseHandler;
 import io.druid.java.util.http.client.response.StatusResponseHolder;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.RE;
-import io.druid.java.util.common.StringUtils;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -81,7 +81,7 @@ public class CoordinatorResourceTestClient
   }
 
   // return a list of the segment dates for the specified datasource
-  public List<String> getSegmentIntervals(final String dataSource) throws Exception
+  public List<String> getSegmentIntervals(final String dataSource)
   {
     ArrayList<String> segments = null;
     try {

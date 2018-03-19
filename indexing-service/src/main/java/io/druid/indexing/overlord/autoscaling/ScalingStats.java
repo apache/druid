@@ -68,6 +68,11 @@ public class ScalingStats
     }
   }
 
+  /**
+   * This method is unused, but ScalingStats is {@link PublicApi}, so we cannot remove it.
+   * TODO test this method (it will "count" as usage)
+   */
+  @SuppressWarnings("unused")
   public void addAll(ScalingStats stats)
   {
     synchronized (lock) {

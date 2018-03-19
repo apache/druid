@@ -45,7 +45,7 @@ public class SelectBinaryFnTest
   private static final String segmentId2 = "testSegment";
 
   @Test
-  public void testApply() throws Exception
+  public void testApply()
   {
     SelectBinaryFn binaryFn = new SelectBinaryFn(Granularities.ALL, new PagingSpec(null, 5), false);
 
@@ -211,7 +211,7 @@ public class SelectBinaryFnTest
   }
 
   @Test
-  public void testColumnMerge() throws Exception
+  public void testColumnMerge()
   {
     SelectBinaryFn binaryFn = new SelectBinaryFn(Granularities.ALL, new PagingSpec(null, 5), false);
 

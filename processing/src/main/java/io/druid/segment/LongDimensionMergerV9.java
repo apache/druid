@@ -63,7 +63,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   }
 
   @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
+  public void writeMergedValueMetadata(List<IndexableAdapter> adapters)
   {
     // longs have no additional metadata
   }
@@ -81,7 +81,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   }
 
   @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
+  public void writeIndexes(List<IntBuffer> segmentRowNumConversions)
   {
     // longs have no indices to write
   }
@@ -93,7 +93,7 @@ public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
   }
 
   @Override
-  public ColumnDescriptor makeColumnDescriptor() throws IOException
+  public ColumnDescriptor makeColumnDescriptor()
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.LONG);

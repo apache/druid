@@ -51,8 +51,6 @@ public interface SubjectAndIdConverter<SUBJECT, ID>
 
   Pair<SUBJECT, ID> getSubjectAndId(ByteBuffer payload);
 
-  void putSubjectAndId(SUBJECT subject, ID id, ByteBuffer payload);
-
   Converter<SUBJECT> getSubjectConverter();
 
   Converter<ID> getIdConverter();

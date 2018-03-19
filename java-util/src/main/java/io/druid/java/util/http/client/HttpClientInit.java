@@ -73,7 +73,7 @@ public class HttpClientInit
           new Lifecycle.Handler()
           {
             @Override
-            public void start() throws Exception
+            public void start()
             {
               timer.start();
             }
@@ -210,7 +210,7 @@ public class HttpClientInit
           new Lifecycle.Handler()
           {
             @Override
-            public void start() throws Exception
+            public void start()
             {
             }
 

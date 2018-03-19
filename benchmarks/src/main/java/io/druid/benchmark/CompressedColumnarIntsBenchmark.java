@@ -106,7 +106,7 @@ public class CompressedColumnarIntsBenchmark
     WritableByteChannel channel = new WritableByteChannel()
     {
       @Override
-      public int write(ByteBuffer src) throws IOException
+      public int write(ByteBuffer src)
       {
         int size = src.remaining();
         buffer.put(src);
@@ -120,7 +120,7 @@ public class CompressedColumnarIntsBenchmark
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
       }
     };

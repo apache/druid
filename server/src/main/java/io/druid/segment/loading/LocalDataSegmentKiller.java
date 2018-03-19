@@ -82,7 +82,7 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
     FileUtils.deleteDirectory(storageDirectory);
   }
 
-  private File getPath(DataSegment segment) throws SegmentLoadingException
+  private File getPath(DataSegment segment)
   {
     return new File(MapUtils.getString(segment.getLoadSpec(), PATH_KEY));
   }

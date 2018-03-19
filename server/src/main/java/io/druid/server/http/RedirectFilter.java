@@ -20,7 +20,6 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.logger.Logger;
 
 import javax.servlet.Filter;
@@ -51,7 +50,7 @@ public class RedirectFilter implements Filter
   }
 
   @Override
-  public void init(FilterConfig filterConfig) throws ServletException {}
+  public void init(FilterConfig filterConfig) {}
 
   @Override
   public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)

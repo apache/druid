@@ -22,6 +22,7 @@
 
 package io.druid.data.input.protobuf;
 
+@SuppressWarnings("ALL")
 public final class ProtoTestEventWrapper
 {
   private ProtoTestEventWrapper() {}

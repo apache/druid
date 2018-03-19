@@ -24,12 +24,9 @@ import com.google.inject.Inject;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
-import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,7 +36,7 @@ import java.io.OutputStream;
 /**
  * Cassandra Segment Puller
  */
-public class CassandraDataSegmentPuller extends CassandraStorage implements DataSegmentPuller
+public class CassandraDataSegmentPuller extends CassandraStorage
 {
   private static final Logger log = new Logger(CassandraDataSegmentPuller.class);
   private static final int CONCURRENCY = 10;
@@ -51,22 +48,14 @@ public class CassandraDataSegmentPuller extends CassandraStorage implements Data
     super(config);
   }
 
-  @Override
-  public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
-  {
-    String key = (String) segment.getLoadSpec().get("key");
-    getSegmentFiles(key, outDir);
-  }
-  public FileUtils.FileCopyResult getSegmentFiles(final String key, final File outDir)
-      throws SegmentLoadingException
+  FileUtils.FileCopyResult getSegmentFiles(final String key, final File outDir) throws SegmentLoadingException
   {
     log.info("Pulling index from C* at path[%s] to outDir[%s]", key, outDir);
-    if (!outDir.exists()) {
-      outDir.mkdirs();
+    try {
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
     }
-
-    if (!outDir.isDirectory()) {
-      throw new ISE("outDir[%s] must be a directory.", outDir);
+    catch (IOException e) {
+      throw new SegmentLoadingException(e, "");
     }
 
     long startTime = System.currentTimeMillis();

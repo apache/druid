@@ -119,7 +119,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testGetFullQueryableDataSources() throws Exception
+  public void testGetFullQueryableDataSources()
   {
     // first request
     EasyMock.expect(server.getDataSources()).andReturn(
@@ -176,7 +176,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testSecuredGetFullQueryableDataSources() throws Exception
+  public void testSecuredGetFullQueryableDataSources()
   {
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
     // first request
@@ -262,7 +262,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testGetSimpleQueryableDataSources() throws Exception
+  public void testGetSimpleQueryableDataSources()
   {
     EasyMock.expect(server.getDataSources()).andReturn(
         listDataSources
@@ -307,7 +307,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testFullGetTheDataSource() throws Exception
+  public void testFullGetTheDataSource()
   {
     DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap());
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(
@@ -327,7 +327,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testNullGetTheDataSource() throws Exception
+  public void testNullGetTheDataSource()
   {
     EasyMock.expect(server.getDataSource("none")).andReturn(null).atLeastOnce();
     EasyMock.expect(inventoryView.getInventory()).andReturn(
@@ -341,7 +341,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testSimpleGetTheDataSource() throws Exception
+  public void testSimpleGetTheDataSource()
   {
     DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
     dataSource1.addSegment(
@@ -371,7 +371,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testSimpleGetTheDataSourceManyTiers() throws Exception
+  public void testSimpleGetTheDataSourceManyTiers()
   {
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(
         listDataSources.get(0)
@@ -530,7 +530,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testDeleteDataSourceSpecificInterval() throws Exception
+  public void testDeleteDataSourceSpecificInterval()
   {
     String interval = "2010-01-01_P1D";
     Interval theInterval = Intervals.of(interval.replace("_", "/"));

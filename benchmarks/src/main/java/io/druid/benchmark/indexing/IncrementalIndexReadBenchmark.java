@@ -135,7 +135,7 @@ public class IncrementalIndexReadBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void read(Blackhole blackhole) throws Exception
+  public void read(Blackhole blackhole)
   {
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
     Sequence<Cursor> cursors = makeCursors(sa, null);
@@ -160,7 +160,7 @@ public class IncrementalIndexReadBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void readWithFilters(Blackhole blackhole) throws Exception
+  public void readWithFilters(Blackhole blackhole)
   {
     DimFilter filter = new OrDimFilter(
         Arrays.asList(

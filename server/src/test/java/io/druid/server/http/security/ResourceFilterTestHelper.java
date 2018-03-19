@@ -61,7 +61,7 @@ public class ResourceFilterTestHelper
   public AuthorizerMapper authorizerMapper;
   public ContainerRequest request;
 
-  public void setUp(ResourceFilter resourceFilter) throws Exception
+  public void setUp(ResourceFilter resourceFilter)
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     request = EasyMock.createStrictMock(ContainerRequest.class);

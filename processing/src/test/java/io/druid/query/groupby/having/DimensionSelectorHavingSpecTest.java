@@ -47,7 +47,7 @@ public class DimensionSelectorHavingSpecTest
   }
 
   @Test
-  public void testDimSelectorHavingClauseSerde() throws Exception
+  public void testDimSelectorHavingClauseSerde()
   {
     HavingSpec dimHavingSpec = new DimensionSelectorHavingSpec("dim", "v", null);
 
@@ -62,7 +62,7 @@ public class DimensionSelectorHavingSpecTest
   }
 
   @Test
-  public void testEquals() throws Exception
+  public void testEquals()
   {
     ExtractionFn extractionFn1 = new RegexDimExtractionFn("^([^,]*),", false, "");
     ExtractionFn extractionFn2 = new RegexDimExtractionFn(",(.*)", false, "");

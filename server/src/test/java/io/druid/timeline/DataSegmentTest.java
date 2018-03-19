@@ -177,7 +177,7 @@ public class DataSegmentTest
   }
 
   @Test
-  public void testBucketMonthComparator() throws Exception
+  public void testBucketMonthComparator()
   {
     DataSegment[] sortedOrder = {
         makeDataSegment("test1", "2011-01-01/2011-01-02", "a"),

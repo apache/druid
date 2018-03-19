@@ -31,7 +31,7 @@ public class PostgreSQLConnectorTest
 {
 
   @Test
-  public void testIsTransientException() throws Exception
+  public void testIsTransientException()
   {
     PostgreSQLConnector connector = new PostgreSQLConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),

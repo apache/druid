@@ -28,7 +28,6 @@ import java.util.List;
 
 public class CacheConfig
 {
-  public static final String USE_CACHE = "useCache";
   public static final String POPULATE_CACHE = "populateCache";
   // The defaults defined here for cache related parameters are different from the QueryContext defaults due to legacy reasons.
   // They should be made the same at some point in the future.

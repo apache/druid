@@ -173,7 +173,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               if (!tableExists(handle, tableName)) {
                 log.info("Creating table[%s]", tableName);
@@ -389,13 +389,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final String valueColumn,
       final String key,
       final byte[] value
-  ) throws Exception
+  )
   {
     return getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
           {
             int count = handle
                 .createQuery(
@@ -434,13 +434,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   @Override
   public boolean compareAndSwap(
       List<MetadataCASUpdate> updates
-  ) throws Exception
+  )
   {
     return getDBI().inTransaction(
         new TransactionCallback<Boolean>()
         {
           @Override
-          public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
+          public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus)
           {
             List<byte[]> currentValues = new ArrayList<byte[]>();
 
@@ -577,7 +577,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         new HandleCallback<byte[]>()
         {
           @Override
-          public byte[] withHandle(Handle handle) throws Exception
+          public byte[] withHandle(Handle handle)
           {
             return lookupWithHandle(handle, tableName, keyColumn, valueColumn, key);
           }
@@ -706,7 +706,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               if (tableExists(handle, tableName)) {
                 log.info("Deleting all records from table[%s]", tableName);

@@ -42,7 +42,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -65,7 +64,7 @@ public class SegmentMetadataUnionQueryTest
   }
 
   @Parameterized.Parameters
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
         new Object[]{

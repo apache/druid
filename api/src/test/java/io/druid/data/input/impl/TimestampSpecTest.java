@@ -29,7 +29,7 @@ import org.junit.Test;
 public class TimestampSpecTest
 {
   @Test
-  public void testExtractTimestamp() throws Exception
+  public void testExtractTimestamp()
   {
     TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd", null);
     Assert.assertEquals(
@@ -39,7 +39,7 @@ public class TimestampSpecTest
   }
 
   @Test
-  public void testExtractTimestampWithMissingTimestampColumn() throws Exception
+  public void testExtractTimestampWithMissingTimestampColumn()
   {
     TimestampSpec spec = new TimestampSpec(null, null, DateTimes.EPOCH);
     Assert.assertEquals(
@@ -49,7 +49,7 @@ public class TimestampSpecTest
   }
 
   @Test
-  public void testContextualTimestampList() throws Exception
+  public void testContextualTimestampList()
   {
     String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     String[] dates = new String[]{

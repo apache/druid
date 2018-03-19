@@ -17,13 +17,25 @@
  * under the License.
  */
 
-package io.druid.java.util.emitter.service;
+package io.druid.server.security;
 
-import io.druid.java.util.emitter.core.Event;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.segment.TestHelper;
+import org.junit.Assert;
+import org.junit.Test;
 
-public interface ServiceEvent extends Event
+public class EscalatorTest
 {
-  String getService();
-
-  String getHost();
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Assert.assertEquals(
+        NoopEscalator.getInstance(),
+        objectMapper.readValue(
+            objectMapper.writeValueAsString(NoopEscalator.getInstance()),
+            Escalator.class
+        )
+    );
+  }
 }

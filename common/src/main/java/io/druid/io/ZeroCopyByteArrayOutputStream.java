@@ -30,16 +30,6 @@ public class ZeroCopyByteArrayOutputStream extends ByteArrayOutputStream
   {
   }
 
-  public ZeroCopyByteArrayOutputStream(int capacity)
-  {
-    super(capacity);
-  }
-
-  public void writeTo(ByteBuffer outputBuffer)
-  {
-    outputBuffer.put(buf, 0, count);
-  }
-
   public void writeTo(WritableByteChannel channel) throws IOException
   {
     channel.write(ByteBuffer.wrap(buf, 0, count));

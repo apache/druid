@@ -25,11 +25,11 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.HttpServerInventoryView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
@@ -144,12 +144,12 @@ public class SegmentListerResource
         new AsyncListener()
         {
           @Override
-          public void onComplete(AsyncEvent event) throws IOException
+          public void onComplete(AsyncEvent event)
           {
           }
 
           @Override
-          public void onTimeout(AsyncEvent event) throws IOException
+          public void onTimeout(AsyncEvent event)
           {
 
             // HTTP 204 NO_CONTENT is sent to the client.
@@ -158,12 +158,12 @@ public class SegmentListerResource
           }
 
           @Override
-          public void onError(AsyncEvent event) throws IOException
+          public void onError(AsyncEvent event)
           {
           }
 
           @Override
-          public void onStartAsync(AsyncEvent event) throws IOException
+          public void onStartAsync(AsyncEvent event)
           {
           }
         }
@@ -255,12 +255,12 @@ public class SegmentListerResource
         new AsyncListener()
         {
           @Override
-          public void onComplete(AsyncEvent event) throws IOException
+          public void onComplete(AsyncEvent event)
           {
           }
 
           @Override
-          public void onTimeout(AsyncEvent event) throws IOException
+          public void onTimeout(AsyncEvent event)
           {
 
             // HTTP 204 NO_CONTENT is sent to the client.
@@ -269,12 +269,12 @@ public class SegmentListerResource
           }
 
           @Override
-          public void onError(AsyncEvent event) throws IOException
+          public void onError(AsyncEvent event)
           {
           }
 
           @Override
-          public void onStartAsync(AsyncEvent event) throws IOException
+          public void onStartAsync(AsyncEvent event)
           {
           }
         }

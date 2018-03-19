@@ -42,7 +42,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 @RunWith(Parameterized.class)
@@ -51,7 +50,7 @@ public class TimeseriesQueryQueryToolChestTest
   private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
 
   @Parameterized.Parameters(name = "descending={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(Arrays.asList(false, true));
   }
@@ -123,7 +122,7 @@ public class TimeseriesQueryQueryToolChestTest
   }
 
   @Test
-  public void testCacheKey() throws Exception
+  public void testCacheKey()
   {
     final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                          .dataSource("dummy")

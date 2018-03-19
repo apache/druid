@@ -17,25 +17,20 @@
  * under the License.
  */
 
-package io.druid.java.util.metrics.cgroups;
+package io.druid.annotations;
 
-import io.druid.java.util.metrics.PidDiscoverer;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-public class ProcPidCgroupDiscoverer implements CgroupDiscoverer
+/**
+ * Annotating test methods, which names have "parametersFor" prefix, and used by {@code JUnitParamsRunner}, see
+ * https://github.com/Pragmatists/junitparams/wiki/Quickstart. IntelliJ's inspection "Unused declarations" knows about
+ * this annotation.
+ */
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+public @interface UsedByJUnitParamsRunner
 {
-  private final ProcCgroupDiscoverer delegate;
-
-  public ProcPidCgroupDiscoverer(PidDiscoverer pidDiscoverer)
-  {
-    delegate = new ProcCgroupDiscoverer(Paths.get("/proc", Long.toString(pidDiscoverer.getPid())));
-  }
-
-  @Override
-  public Path discover(String cgroup)
-  {
-    return delegate.discover(cgroup);
-  }
 }

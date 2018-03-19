@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.guava.Comparators;
@@ -98,12 +97,6 @@ public class JodaUtils
       throw new IllegalArgumentException("Empty list of intervals");
     }
     return new Interval(minStart, maxEnd);
-  }
-
-  public static boolean overlaps(final Interval i, Iterable<Interval> intervals)
-  {
-    return Iterables.any(intervals, input -> input.overlaps(i));
-
   }
 
   public static DateTime minDateTime(DateTime... times)

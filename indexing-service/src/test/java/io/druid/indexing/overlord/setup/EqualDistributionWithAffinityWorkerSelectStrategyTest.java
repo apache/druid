@@ -35,7 +35,7 @@ import org.junit.Test;
 public class EqualDistributionWithAffinityWorkerSelectStrategyTest
 {
   @Test
-  public void testFindWorkerForTask() throws Exception
+  public void testFindWorkerForTask()
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
         new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost1", "localhost2", "localhost3")), false)
@@ -87,7 +87,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   }
 
   @Test
-  public void testFindWorkerForTaskWithNulls() throws Exception
+  public void testFindWorkerForTaskWithNulls()
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
             new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
@@ -117,7 +117,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
   }
 
   @Test
-  public void testIsolation() throws Exception
+  public void testIsolation()
   {
     EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWithAffinityWorkerSelectStrategy(
             new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)

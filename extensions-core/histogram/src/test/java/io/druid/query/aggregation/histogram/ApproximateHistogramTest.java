@@ -74,7 +74,7 @@ public class ApproximateHistogramTest
   }
 
   @Test
-  public void testOffer() throws Exception
+  public void testOffer()
   {
     ApproximateHistogram h = buildHistogram(5, VALUES);
 
@@ -185,7 +185,7 @@ public class ApproximateHistogramTest
   }
 
   @Test
-  public void testFoldNothing() throws Exception
+  public void testFoldNothing()
   {
     ApproximateHistogram h1 = new ApproximateHistogram(10);
     ApproximateHistogram h2 = new ApproximateHistogram(10);
@@ -195,7 +195,7 @@ public class ApproximateHistogramTest
   }
 
   @Test
-  public void testFoldNothing2() throws Exception
+  public void testFoldNothing2()
   {
     ApproximateHistogram h1 = new ApproximateHistogram(10);
     ApproximateHistogram h1Fast = new ApproximateHistogram(10);
@@ -221,6 +221,7 @@ public class ApproximateHistogramTest
   }
 
     //@Test
+  @SuppressWarnings("unused") //TODO rewrite using JMH and move to the benchmarks module
   public void testFoldSpeed()
   {
     final int combinedHistSize = 200;
@@ -251,6 +252,7 @@ public class ApproximateHistogramTest
 
     float[] mergeBufferP = new float[combinedHistSize * 2];
     long[] mergeBufferB = new long[combinedHistSize * 2];
+    @SuppressWarnings("unused") // make two different benchmarks - for fold, and foldFast (see commented line below)
     float[] mergeBufferD = new float[combinedHistSize * 2];
 
     for (int i = 0; i < count; ++i) {

@@ -19,7 +19,6 @@
 
 package io.druid.query.extraction;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -47,7 +46,7 @@ public class MapLookupExtractionFnSerDeTest
   );
 
   @BeforeClass
-  public static void setup() throws JsonProcessingException
+  public static void setup()
   {
     Injector defaultInjector = GuiceInjectors.makeStartupInjector();
     mapper = defaultInjector.getInstance(Key.get(ObjectMapper.class, Json.class));

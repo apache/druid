@@ -101,7 +101,7 @@ public class CommittedTest
   }
 
   @Test
-  public void testWithout() throws Exception
+  public void testWithout()
   {
     Assert.assertEquals(0, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER1));
     Assert.assertEquals(2, fixedInstance().without(IDENTIFIER1).getCommittedHydrants(IDENTIFIER2));

@@ -38,7 +38,7 @@ import java.util.List;
 public class QueriesTest
 {
   @Test
-  public void testVerifyAggregations() throws Exception
+  public void testVerifyAggregations()
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
@@ -70,7 +70,7 @@ public class QueriesTest
   }
 
   @Test
-  public void testVerifyAggregationsMissingVal() throws Exception
+  public void testVerifyAggregationsMissingVal()
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
@@ -102,7 +102,7 @@ public class QueriesTest
   }
 
   @Test
-  public void testVerifyAggregationsMultiLevel() throws Exception
+  public void testVerifyAggregationsMultiLevel()
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
@@ -156,7 +156,7 @@ public class QueriesTest
   }
 
   @Test
-  public void testVerifyAggregationsMultiLevelMissingVal() throws Exception
+  public void testVerifyAggregationsMultiLevelMissingVal()
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
