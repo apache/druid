@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -53,11 +54,11 @@ import java.util.stream.Collectors;
 
 /**
  * This class is specialized for streaming ingestion. In streaming ingestion, the segment lifecycle is like:
- * <p>
+ *
  * <pre>
  * APPENDING -> APPEND_FINISHED -> PUBLISHED
  * </pre>
- * <p>
+ *
  * <ul>
  * <li>APPENDING: Segment is available for appending.</li>
  * <li>APPEND_FINISHED: Segment cannot be updated (data cannot be added anymore) and is waiting for being published.</li>
@@ -209,7 +210,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Blocks until complete.
-   * <p>
+   *
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -235,7 +236,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Returns a future of persisted commitMetadata.
-   * <p>
+   *
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -275,14 +276,15 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             publisher
         )
     );
-    return ListenableFutures.transformAsync(publishFuture, sam -> {
-      synchronized (segments) {
-        sequenceNames.forEach(segments::remove);
-      }
-      final SettableFuture<SegmentsAndMetadata> future = SettableFuture.create();
-      future.set(sam);
-      return future;
-    });
+    return Futures.transform(
+        publishFuture,
+        (Function<? super SegmentsAndMetadata, ? extends SegmentsAndMetadata>) sam -> {
+          synchronized (segments) {
+            sequenceNames.forEach(segments::remove);
+          }
+          return sam;
+        }
+    );
   }
 
   /**

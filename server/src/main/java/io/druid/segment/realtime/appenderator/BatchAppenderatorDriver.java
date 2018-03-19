@@ -132,11 +132,10 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
-    final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures
-        .transformAsync(
-            pushInBackground(null, segmentIdentifierList),
-            this::dropInBackground
-        );
+    final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
+        pushInBackground(null, segmentIdentifierList),
+        this::dropInBackground
+    );
 
     final SegmentsAndMetadata segmentsAndMetadata = pushAndClearTimeoutMs == 0L ?
                                                     future.get() :
