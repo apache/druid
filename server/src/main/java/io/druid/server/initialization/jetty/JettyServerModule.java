@@ -317,7 +317,7 @@ public class JettyServerModule extends JerseyServletModule
       @Override
       public void lifeCycleFailure(LifeCycle event, Throwable cause)
       {
-        log.warn(cause, "Jetty lifecycle event failed [%s]", event.getClass());
+        log.error(cause, "Jetty lifecycle event failed [%s]", event.getClass());
       }
 
       @Override
