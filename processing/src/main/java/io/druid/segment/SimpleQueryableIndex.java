@@ -30,7 +30,6 @@ import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -117,7 +116,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     fileMapper.close();
   }

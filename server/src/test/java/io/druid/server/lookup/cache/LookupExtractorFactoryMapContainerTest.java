@@ -73,7 +73,7 @@ public class LookupExtractorFactoryMapContainerTest
   }
 
   @Test
-  public void testReplaces() throws Exception
+  public void testReplaces()
   {
     LookupExtractorFactoryMapContainer l0 = new LookupExtractorFactoryMapContainer(null, ImmutableMap.of());
     LookupExtractorFactoryMapContainer l1 = new LookupExtractorFactoryMapContainer(null, ImmutableMap.of());

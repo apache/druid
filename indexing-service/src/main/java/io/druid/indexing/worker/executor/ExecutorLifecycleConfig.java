@@ -53,12 +53,6 @@ public class ExecutorLifecycleConfig
     return parentStreamDefined;
   }
 
-  public ExecutorLifecycleConfig setParentStreamDefined(boolean parentStreamDefined)
-  {
-    this.parentStreamDefined = parentStreamDefined;
-    return this;
-  }
-
   public File getTaskFile()
   {
     return taskFile;
@@ -78,17 +72,6 @@ public class ExecutorLifecycleConfig
   public ExecutorLifecycleConfig setStatusFile(File statusFile)
   {
     this.statusFile = statusFile;
-    return this;
-  }
-
-  public String getParentStreamName()
-  {
-    return parentStreamName;
-  }
-
-  public ExecutorLifecycleConfig setParentStreamName(String parentStreamName)
-  {
-    this.parentStreamName = parentStreamName;
     return this;
   }
 

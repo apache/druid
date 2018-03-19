@@ -36,7 +36,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -218,18 +217,11 @@ public class CombiningSequenceTest
   {
     // Test that closing works too
     final CountDownLatch closed = new CountDownLatch(1);
-    final Closeable closeable = new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        closed.countDown();
-      }
-    };
+    final Closeable closeable = closed::countDown;
 
     Sequence<Pair<Integer, Integer>> seq = CombiningSequence.create(
         Sequences.simple(pairs).withBaggage(closeable),
-        Ordering.natural().onResultOf(Pair.lhsFn()),
+        Ordering.natural().onResultOf(p -> p.lhs),
         (lhs, rhs) -> {
           if (lhs == null) {
             return rhs;

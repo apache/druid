@@ -93,6 +93,7 @@ public abstract class TaskRunnerWorkItem
    */
   @Nullable
   public abstract String getTaskType();
+  public abstract String getDataSource();
 
   @Override
   public String toString()

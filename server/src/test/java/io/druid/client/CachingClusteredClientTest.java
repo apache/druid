@@ -151,7 +151,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -313,7 +312,7 @@ public class CachingClusteredClientTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return Lists.transform(
         Lists.newArrayList(new RangeIterable(RANDOMNESS)),
@@ -329,7 +328,7 @@ public class CachingClusteredClientTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
@@ -346,7 +345,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testOutOfOrderBackgroundCachePopulation() throws Exception
+  public void testOutOfOrderBackgroundCachePopulation()
   {
     // This test is a bit whacky, but I couldn't find a better way to do it in the current framework.
 
@@ -490,7 +489,7 @@ public class CachingClusteredClientTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTimeseriesCaching() throws Exception
+  public void testTimeseriesCaching()
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
@@ -562,7 +561,7 @@ public class CachingClusteredClientTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testCachingOverBulkLimitEnforcesLimit() throws Exception
+  public void testCachingOverBulkLimitEnforcesLimit()
   {
     final int limit = 10;
     final Interval interval = Intervals.of("2011-01-01/2011-01-02");
@@ -617,7 +616,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testTimeseriesMergingOutOfOrderPartitions() throws Exception
+  public void testTimeseriesMergingOutOfOrderPartitions()
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
@@ -679,7 +678,7 @@ public class CachingClusteredClientTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTimeseriesCachingTimeZone() throws Exception
+  public void testTimeseriesCachingTimeZone()
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
@@ -725,7 +724,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testDisableUseCache() throws Exception
+  public void testDisableUseCache()
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
@@ -796,7 +795,7 @@ public class CachingClusteredClientTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTopNCaching() throws Exception
+  public void testTopNCaching()
   {
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
@@ -873,7 +872,7 @@ public class CachingClusteredClientTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTopNCachingTimeZone() throws Exception
+  public void testTopNCachingTimeZone()
   {
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
@@ -925,7 +924,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testOutOfOrderSequenceMerging() throws Exception
+  public void testOutOfOrderSequenceMerging()
   {
     List<Sequence<Result<TopNResultValue>>> sequences =
         ImmutableList.of(
@@ -978,7 +977,7 @@ public class CachingClusteredClientTest
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testTopNCachingEmptyResults() throws Exception
+  public void testTopNCachingEmptyResults()
   {
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
@@ -1124,7 +1123,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testSearchCaching() throws Exception
+  public void testSearchCaching()
   {
     final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
                                                     .dataSource(DATA_SOURCE)
@@ -1194,7 +1193,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testSearchCachingRenamedOutput() throws Exception
+  public void testSearchCachingRenamedOutput()
   {
     final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
                                                     .dataSource(DATA_SOURCE)
@@ -1286,7 +1285,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testSelectCaching() throws Exception
+  public void testSelectCaching()
   {
     final Set<String> dimensions = Sets.<String>newHashSet("a");
     final Set<String> metrics = Sets.<String>newHashSet("rows");
@@ -1355,7 +1354,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testSelectCachingRenamedOutputName() throws Exception
+  public void testSelectCachingRenamedOutputName()
   {
     final Set<String> dimensions = Sets.<String>newHashSet("a");
     final Set<String> metrics = Sets.<String>newHashSet("rows");
@@ -1453,7 +1452,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testGroupByCaching() throws Exception
+  public void testGroupByCaching()
   {
     List<AggregatorFactory> aggsWithUniques = ImmutableList.<AggregatorFactory>builder()
         .addAll(AGGS)
@@ -1554,7 +1553,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testTimeBoundaryCaching() throws Exception
+  public void testTimeBoundaryCaching()
   {
     testQueryCaching(
         getDefaultQueryRunner(),
@@ -1620,7 +1619,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testTimeSeriesWithFilter() throws Exception
+  public void testTimeSeriesWithFilter()
   {
     DimFilter filter = new AndDimFilter(
         new OrDimFilter(
@@ -1686,7 +1685,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testSingleDimensionPruning() throws Exception
+  public void testSingleDimensionPruning()
   {
     DimFilter filter = new AndDimFilter(
         new OrDimFilter(
@@ -1893,7 +1892,7 @@ public class CachingClusteredClientTest
                   .andAnswer(new IAnswer<Sequence>()
                   {
                     @Override
-                    public Sequence answer() throws Throwable
+                    public Sequence answer()
                     {
                       return toFilteredQueryableTimeseriesResults(
                           (TimeseriesQuery) capture.getValue().getQuery(),
@@ -2488,36 +2487,6 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<BySegmentResultValueClass<TimeseriesResultValue>> makeBySegmentTimeResults(Object... objects)
-  {
-    if (objects.length % 5 != 0) {
-      throw new ISE("makeTimeResults must be passed arguments in groups of 5, got[%d]", objects.length);
-    }
-
-    List<BySegmentResultValueClass<TimeseriesResultValue>> retVal = Lists.newArrayListWithCapacity(objects.length / 5);
-    for (int i = 0; i < objects.length; i += 5) {
-      retVal.add(
-          new BySegmentResultValueClass<TimeseriesResultValue>(
-              Lists.newArrayList(
-                  new TimeseriesResultValue(
-                      ImmutableMap.of(
-                          "rows", objects[i + 1],
-                          "imps", objects[i + 2],
-                          "impers", objects[i + 2],
-                          "avg_imps_per_row",
-                          ((Number) objects[i + 2]).doubleValue() / ((Number) objects[i + 1]).doubleValue()
-                      )
-                  )
-              ),
-              (String) objects[i + 3],
-              (Interval) objects[i + 4]
-
-          )
-      );
-    }
-    return retVal;
-  }
-
   private Iterable<Result<TimeseriesResultValue>> makeRenamedTimeResults(Object... objects)
   {
     if (objects.length % 3 != 0) {
@@ -2933,19 +2902,9 @@ public class CachingClusteredClientTest
       this.queryRunner = queryRunner;
     }
 
-    public DruidServer getServer()
-    {
-      return server;
-    }
-
     public QueryRunner getQueryRunner()
     {
       return queryRunner;
-    }
-
-    public List<ServerExpectation> getExpectations()
-    {
-      return expectations;
     }
 
     public void addExpectation(
@@ -2963,7 +2922,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testTimeBoundaryCachingWhenTimeIsInteger() throws Exception
+  public void testTimeBoundaryCachingWhenTimeIsInteger()
   {
     testQueryCaching(
         getDefaultQueryRunner(),
@@ -3029,7 +2988,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testGroupByCachingRenamedAggs() throws Exception
+  public void testGroupByCachingRenamedAggs()
   {
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
         .setDataSource(DATA_SOURCE)
@@ -3120,7 +3079,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testIfNoneMatch() throws Exception
+  public void testIfNoneMatch()
   {
     Interval interval = Intervals.of("2016/2017");
     final DataSegment dataSegment = new DataSegment(

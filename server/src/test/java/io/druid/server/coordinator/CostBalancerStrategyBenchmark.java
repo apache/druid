@@ -79,7 +79,7 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
 
   @Test
   @BenchmarkOptions(warmupRounds = 10, benchmarkRounds = 1000)
-  public void testBenchmark() throws InterruptedException
+  public void testBenchmark()
   {
     DataSegment segment = CostBalancerStrategyTest.getSegment(1000, "testds", interval1);
     selected = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);

@@ -19,8 +19,6 @@
 
 package io.druid.java.util.emitter.core;
 
-import org.joda.time.DateTime;
-
 import java.util.Map;
 
 /**
@@ -30,8 +28,4 @@ public interface Event
   Map<String, Object> toMap();
 
   String getFeed();
-
-  DateTime getCreatedTime();
-
-  boolean isSafeToBuffer();
 }

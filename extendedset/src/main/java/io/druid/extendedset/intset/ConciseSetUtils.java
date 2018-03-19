@@ -192,20 +192,6 @@ public class ConciseSetUtils
   }
 
   /**
-   * Clears the (un)set bit in a sequence
-   *
-   * @param word word to check
-   *
-   * @return the sequence corresponding to the given sequence and with no
-   *         (un)set bits
-   */
-  public static int getSequenceWithNoBits(int word)
-  {
-    // clear 29 to 25 LSB bits
-    return (word & 0xC1FFFFFF);
-  }
-
-  /**
    * Gets the literal word that represents the first 31 bits of the given the
    * word (i.e. the first block of a sequence word, or the bits of a literal word).
    * <p/>

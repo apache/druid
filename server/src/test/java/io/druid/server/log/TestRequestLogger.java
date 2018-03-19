@@ -22,7 +22,6 @@ package io.druid.server.log;
 import com.google.common.collect.ImmutableList;
 import io.druid.server.RequestLogLine;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +35,7 @@ public class TestRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(final RequestLogLine requestLogLine) throws IOException
+  public void log(final RequestLogLine requestLogLine)
   {
     synchronized (logs) {
       logs.add(requestLogLine);

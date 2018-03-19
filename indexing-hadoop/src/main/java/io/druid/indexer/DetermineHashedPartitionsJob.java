@@ -244,7 +244,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         InputRow inputRow,
         Context context,
         boolean reportParseExceptions
-    ) throws IOException, InterruptedException
+    ) throws IOException
     {
 
       final List<Object> groupKey = Rows.toGroupKey(
@@ -303,7 +303,6 @@ public class DetermineHashedPartitionsJob implements Jobby
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
       determineIntervals = !config.getSegmentGranularIntervals().isPresent();
@@ -314,7 +313,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         LongWritable key,
         Iterable<BytesWritable> values,
         Context context
-    ) throws IOException, InterruptedException
+    ) throws IOException
     {
       HyperLogLogCollector aggregate = HyperLogLogCollector.makeLatestCollector();
       for (BytesWritable value : values) {

@@ -19,24 +19,22 @@
 
 package io.druid.collections.bitmap;
 
-import java.util.Arrays;
-import java.util.Set;
-
-import org.junit.Test;
-
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import io.druid.extendedset.intset.ConciseSet;
 import io.druid.extendedset.intset.ImmutableConciseSet;
 import junit.framework.Assert;
+import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.Set;
 
 public class ConciseBitmapFactoryTest
 {
   @Test
-  public void testUnwrapWithNull() throws Exception
+  public void testUnwrapWithNull()
   {
     ConciseBitmapFactory factory = new ConciseBitmapFactory();
 
@@ -58,7 +56,7 @@ public class ConciseBitmapFactoryTest
   }
 
   @Test
-  public void testUnwrapMerge() throws Exception
+  public void testUnwrapMerge()
   {
     ConciseBitmapFactory factory = new ConciseBitmapFactory();
 

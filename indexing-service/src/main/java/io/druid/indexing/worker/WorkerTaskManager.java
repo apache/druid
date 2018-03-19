@@ -557,7 +557,7 @@ public abstract class WorkerTaskManager
   {
     String getTaskId();
 
-    void handle() throws Exception;
+    void handle();
   }
 
   private class RunNotice implements Notice
@@ -576,7 +576,7 @@ public abstract class WorkerTaskManager
     }
 
     @Override
-    public void handle() throws Exception
+    public void handle()
     {
       TaskAnnouncement announcement = null;
       synchronized (lock) {
@@ -628,7 +628,7 @@ public abstract class WorkerTaskManager
     }
 
     @Override
-    public void handle() throws Exception
+    public void handle()
     {
       synchronized (lock) {
         final TaskDetails details = runningTasks.get(task.getId());
@@ -687,7 +687,7 @@ public abstract class WorkerTaskManager
     }
 
     @Override
-    public void handle() throws InterruptedException
+    public void handle()
     {
       synchronized (lock) {
         final TaskDetails details = runningTasks.get(taskId);

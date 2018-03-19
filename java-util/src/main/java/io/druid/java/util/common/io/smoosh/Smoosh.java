@@ -19,72 +19,13 @@
 
 package io.druid.java.util.common.io.smoosh;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import io.druid.java.util.common.collect.Utils;
-
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 /**
  */
 public class Smoosh
 {
-  public static Map<String, File> smoosh(File inDir, File outDir) throws IOException
-  {
-    final List<File> files = Arrays.asList(inDir.listFiles());
-    return smoosh(
-        inDir,
-        outDir,
-        Utils.zipMap(
-            Iterables.transform(
-                files,
-                new Function<File, String>()
-                {
-                  @Override
-                  public String apply(File input)
-                  {
-                    return input.getName();
-                  }
-                }
-            ),
-            files
-        )
-    );
-  }
-
-  public static Map<String, File> smoosh(File inDir, File outDir, Map<String, File> filesToSmoosh) throws IOException
-  {
-    FileSmoosher smoosher = new FileSmoosher(outDir);
-    try {
-      for (Map.Entry<String, File> entry : filesToSmoosh.entrySet()) {
-        smoosher.add(entry.getKey(), entry.getValue());
-      }
-    }
-    finally {
-      smoosher.close();
-    }
-
-    return filesToSmoosh;
-  }
-
-  public static void smoosh(File outDir, Map<String, ByteBuffer> bufferstoSmoosh)
-      throws IOException
-  {
-    FileSmoosher smoosher = new FileSmoosher(outDir);
-    try {
-      for (Map.Entry<String, ByteBuffer> entry : bufferstoSmoosh.entrySet()) {
-        smoosher.add(entry.getKey(), entry.getValue());
-      }
-    }
-    finally {
-      smoosher.close();
-    }
-  }
 
   public static SmooshedFileMapper map(File inDir) throws IOException
   {

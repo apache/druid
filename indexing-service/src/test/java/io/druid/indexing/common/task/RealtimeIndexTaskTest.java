@@ -135,7 +135,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -212,7 +211,7 @@ public class RealtimeIndexTaskTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       synchronized (this) {
         closed = true;
@@ -229,7 +228,7 @@ public class RealtimeIndexTaskTest
 
     @Override
     @SuppressWarnings("unchecked")
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException, ParseException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws ParseException
     {
       return new TestFirehose(parser);
     }
@@ -261,7 +260,7 @@ public class RealtimeIndexTaskTest
   }
 
   @Test
-  public void testMakeTaskId() throws Exception
+  public void testMakeTaskId()
   {
     Assert.assertEquals(
         "index_realtime_test_0_2015-01-02T00:00:00.000Z_abcdefgh",
@@ -270,7 +269,7 @@ public class RealtimeIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
-  public void testDefaultResource() throws Exception
+  public void testDefaultResource()
   {
     final RealtimeIndexTask task = makeRealtimeTask(null);
     Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
@@ -1049,10 +1048,6 @@ public class RealtimeIndexTaskTest
             //Noop
           }
 
-          Map<SegmentDescriptor, Pair<Executor, Runnable>> getHandOffCallbacks()
-          {
-            return handOffCallbacks;
-          }
         };
       }
     };
@@ -1096,7 +1091,7 @@ public class RealtimeIndexTaskTest
     return toolboxFactory.build(task);
   }
 
-  public long sumMetric(final Task task, final DimFilter filter, final String metric) throws Exception
+  public long sumMetric(final Task task, final DimFilter filter, final String metric)
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

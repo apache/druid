@@ -71,7 +71,7 @@ public class CachingClusteredClientFunctionalityTest
   protected Cache cache;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
@@ -80,7 +80,7 @@ public class CachingClusteredClientFunctionalityTest
   }
 
   @Test
-  public void testUncoveredInterval() throws Exception
+  public void testUncoveredInterval()
   {
     addToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1");
     addToTimeline(Intervals.of("2015-01-04/2015-01-05"), "1");

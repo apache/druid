@@ -146,19 +146,19 @@ public class ForkingTaskRunnerConfigTest
   }
 
   @Test(expected = ProvisionException.class)
-  public void testExceptionalJavaOptArray() throws JsonProcessingException
+  public void testExceptionalJavaOptArray()
   {
     buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY, "not an array");
   }
 
   @Test(expected = ProvisionException.class)
-  public void testExceptionalJavaOpt() throws JsonProcessingException
+  public void testExceptionalJavaOpt()
   {
     buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "[\"not a string\"]");
   }
 
   @Test(expected = ProvisionException.class)
-  public void testExceptionalJavaOpt2() throws JsonProcessingException
+  public void testExceptionalJavaOpt2()
   {
     buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "{\"not a string\":\"someVal\"}");
   }

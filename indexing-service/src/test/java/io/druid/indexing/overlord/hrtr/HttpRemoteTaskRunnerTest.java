@@ -1091,7 +1091,7 @@ public class HttpRemoteTaskRunnerTest
    * This could happen when TaskRunner starts and workers reports running/completed tasks on them.
    */
   @Test
-  public void testTaskAddedOrUpdated3() throws Exception
+  public void testTaskAddedOrUpdated3()
   {
     Task task1 = NoopTask.create("task1");
     Task task2 = NoopTask.create("task2");
@@ -1290,7 +1290,7 @@ public class HttpRemoteTaskRunnerTest
       }
 
       @Override
-      public void waitForInitialization() throws InterruptedException
+      public void waitForInitialization()
       {
       }
 

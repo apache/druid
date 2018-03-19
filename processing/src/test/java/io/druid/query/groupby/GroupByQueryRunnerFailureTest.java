@@ -56,7 +56,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
@@ -167,7 +166,7 @@ public class GroupByQueryRunnerFailureTest
   private QueryRunner<Row> runner;
 
   @Parameters(name = "{0}")
-  public static Collection<Object[]> constructorFeeder() throws IOException
+  public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = Lists.newArrayList();
     for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
@@ -182,7 +181,7 @@ public class GroupByQueryRunnerFailureTest
   }
 
   @Test(timeout = 10000)
-  public void testNotEnoughMergeBuffersOnQueryable() throws IOException
+  public void testNotEnoughMergeBuffersOnQueryable()
   {
     expectedException.expect(QueryInterruptedException.class);
     expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(TimeoutException.class));
@@ -255,7 +254,7 @@ public class GroupByQueryRunnerFailureTest
   }
 
   @Test(timeout = 10000, expected = InsufficientResourcesException.class)
-  public void testInsufficientResourcesOnBroker() throws IOException
+  public void testInsufficientResourcesOnBroker()
   {
     final GroupByQuery query = GroupByQuery
         .builder()

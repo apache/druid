@@ -29,22 +29,22 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.FullResponseHandler;
-import io.druid.java.util.http.client.response.FullResponseHolder;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHandler;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -351,7 +351,7 @@ public class KafkaIndexTaskClient
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return stop(id, publish);
           }
@@ -365,7 +365,7 @@ public class KafkaIndexTaskClient
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return resume(id);
           }
@@ -384,7 +384,7 @@ public class KafkaIndexTaskClient
         new Callable<Map<Integer, Long>>()
         {
           @Override
-          public Map<Integer, Long> call() throws Exception
+          public Map<Integer, Long> call()
           {
             return pause(id, timeout);
           }
@@ -398,7 +398,7 @@ public class KafkaIndexTaskClient
         new Callable<KafkaIndexTask.Status>()
         {
           @Override
-          public KafkaIndexTask.Status call() throws Exception
+          public KafkaIndexTask.Status call()
           {
             return getStatus(id);
           }
@@ -412,7 +412,7 @@ public class KafkaIndexTaskClient
         new Callable<DateTime>()
         {
           @Override
-          public DateTime call() throws Exception
+          public DateTime call()
           {
             return getStartTime(id);
           }
@@ -426,7 +426,7 @@ public class KafkaIndexTaskClient
         new Callable<Map<Integer, Long>>()
         {
           @Override
-          public Map<Integer, Long> call() throws Exception
+          public Map<Integer, Long> call()
           {
             return getCurrentOffsets(id, retry);
           }
@@ -440,7 +440,7 @@ public class KafkaIndexTaskClient
         new Callable<Map<Integer, Long>>()
         {
           @Override
-          public Map<Integer, Long> call() throws Exception
+          public Map<Integer, Long> call()
           {
             return getEndOffsets(id);
           }
@@ -456,7 +456,7 @@ public class KafkaIndexTaskClient
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return setEndOffsets(id, endOffsets, resume, finalize);
           }

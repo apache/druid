@@ -112,7 +112,7 @@ public class RealtimeManager implements QuerySegmentWalker
   }
 
   @LifecycleStart
-  public void start() throws IOException
+  public void start()
   {
     serverAnnouncer.announce();
 
@@ -248,15 +248,10 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    private FirehoseV2 initFirehoseV2(Object metaData)
+    private FirehoseV2 initFirehoseV2(Object metaData) throws IOException
     {
-      try {
-        log.info("Calling the FireDepartment and getting a FirehoseV2.");
-        return fireDepartment.connect(metaData);
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+      log.info("Calling the FireDepartment and getting a FirehoseV2.");
+      return fireDepartment.connect(metaData);
     }
 
     private void initPlumber()
@@ -304,10 +299,6 @@ public class RealtimeManager implements QuerySegmentWalker
             closer.register(() -> plumber.finishJob());
           }
         }
-        catch (InterruptedException e) {
-          log.warn("Interrupted while running a firehose");
-          throw closer.rethrow(e);
-        }
         catch (Exception e) {
           log.makeAlert(
               e,
@@ -331,7 +322,7 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    private boolean runFirehoseV2(FirehoseV2 firehose) throws Exception
+    private boolean runFirehoseV2(FirehoseV2 firehose)
     {
       firehose.start();
 

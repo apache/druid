@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -1720,7 +1719,7 @@ public class KafkaIndexTaskTest
         new Callable<TaskStatus>()
         {
           @Override
-          public TaskStatus call() throws Exception
+          public TaskStatus call()
           {
             try {
               if (task.isReady(toolbox.getTaskActionClient())) {
@@ -2045,23 +2044,14 @@ public class KafkaIndexTaskTest
     metadataStorageCoordinator = null;
   }
 
-  private Set<SegmentDescriptor> publishedDescriptors() throws IOException
+  private Set<SegmentDescriptor> publishedDescriptors()
   {
     return FluentIterable.from(
         metadataStorageCoordinator.getUsedSegmentsForInterval(
             DATA_SCHEMA.getDataSource(),
             Intervals.of("0000/3000")
         )
-    ).transform(
-        new Function<DataSegment, SegmentDescriptor>()
-        {
-          @Override
-          public SegmentDescriptor apply(DataSegment input)
-          {
-            return input.toDescriptor();
-          }
-        }
-    ).toSet();
+    ).transform(DataSegment::toDescriptor).toSet();
   }
 
   private void unlockAppenderatorBasePersistDirForTask(KafkaIndexTask task)
@@ -2121,7 +2111,7 @@ public class KafkaIndexTaskTest
     return values;
   }
 
-  public long countEvents(final Task task) throws Exception
+  public long countEvents(final Task task)
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

@@ -56,7 +56,7 @@ public final class MetaSerdeHelper<T>
         new FieldWriter<T>()
         {
           @Override
-          public void writeTo(ByteBuffer buffer, T x) throws IOException
+          public void writeTo(ByteBuffer buffer, T x)
           {
             if (condition.test(x)) {
               buffer.put(fieldWriter.getField(x));
@@ -78,7 +78,7 @@ public final class MetaSerdeHelper<T>
         new FieldWriter<T>()
         {
           @Override
-          public void writeTo(ByteBuffer buffer, T x) throws IOException
+          public void writeTo(ByteBuffer buffer, T x)
           {
             buffer.put(getByteArray.apply(x));
           }
@@ -141,10 +141,10 @@ public final class MetaSerdeHelper<T>
   @FunctionalInterface
   public interface ByteFieldWriter<T> extends FieldWriter<T>
   {
-    byte getField(T x) throws IOException;
+    byte getField(T x);
 
     @Override
-    default void writeTo(ByteBuffer buffer, T x) throws IOException
+    default void writeTo(ByteBuffer buffer, T x)
     {
       buffer.put(getField(x));
     }

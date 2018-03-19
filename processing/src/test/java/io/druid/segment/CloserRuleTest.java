@@ -49,7 +49,7 @@ public class CloserRuleTest
         new Closeable()
         {
           @Override
-          public void close() throws IOException
+          public void close()
           {
             closed.set(true);
           }
@@ -68,7 +68,7 @@ public class CloserRuleTest
         new Closeable()
         {
           @Override
-          public void close() throws IOException
+          public void close()
           {
             closed.set(true);
           }
@@ -100,7 +100,7 @@ public class CloserRuleTest
 
 
   @Test
-  public void testSuppressed() throws Throwable
+  public void testSuppressed()
   {
     final CloserRule closer = new CloserRule(true);
     final AtomicBoolean closed = new AtomicBoolean(false);
@@ -120,7 +120,7 @@ public class CloserRuleTest
         new Closeable()
         {
           @Override
-          public void close() throws IOException
+          public void close()
           {
             closed.set(true);
           }
@@ -282,7 +282,7 @@ public class CloserRuleTest
         new Statement()
         {
           @Override
-          public void evaluate() throws Throwable
+          public void evaluate()
           {
             runnable.run();
           }

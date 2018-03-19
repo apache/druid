@@ -43,7 +43,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,13 +57,13 @@ public class SegmentManagerTest
   private static final SegmentLoader segmentLoader = new SegmentLoader()
   {
     @Override
-    public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+    public boolean isSegmentLoaded(DataSegment segment)
     {
       return false;
     }
 
     @Override
-    public Segment getSegment(final DataSegment segment) throws SegmentLoadingException
+    public Segment getSegment(final DataSegment segment)
     {
       return new SegmentForTesting(
           MapUtils.getString(segment.getLoadSpec(), "version"),
@@ -73,13 +72,13 @@ public class SegmentManagerTest
     }
 
     @Override
-    public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+    public File getSegmentFiles(DataSegment segment)
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void cleanup(DataSegment segment) throws SegmentLoadingException
+    public void cleanup(DataSegment segment)
     {
 
     }
@@ -89,7 +88,6 @@ public class SegmentManagerTest
   {
     private final String version;
     private final Interval interval;
-    private volatile boolean closed = false;
 
     SegmentForTesting(
         String version,
@@ -116,11 +114,6 @@ public class SegmentManagerTest
       return version;
     }
 
-    public boolean isClosed()
-    {
-      return closed;
-    }
-
     @Override
     public Interval getDataInterval()
     {
@@ -140,9 +133,8 @@ public class SegmentManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
-      closed = true;
     }
   }
 
@@ -391,20 +383,15 @@ public class SegmentManagerTest
     Assert.assertNull(segmentManager.getTimeline("nonExisting"));
   }
 
+  @SuppressWarnings("RedundantThrows") // TODO remove when the bug in intelliJ is fixed.
   private void assertResult(List<DataSegment> expectedExistingSegments) throws SegmentLoadingException
   {
-    final Map<String, Long> expectedDataSourceSizes = expectedExistingSegments.stream()
-                                                                              .collect(Collectors.toMap(
-                                                                                  DataSegment::getDataSource,
-                                                                                  DataSegment::getSize,
-                                                                                  Long::sum
-                                                                              ));
-    final Map<String, Long> expectedDataSourceCounts = expectedExistingSegments.stream()
-                                                                               .collect(Collectors.toMap(
-                                                                                   DataSegment::getDataSource,
-                                                                                   segment -> 1L,
-                                                                                   Long::sum
-                                                                               ));
+    final Map<String, Long> expectedDataSourceSizes = expectedExistingSegments
+        .stream()
+        .collect(Collectors.toMap(DataSegment::getDataSource, DataSegment::getSize, Long::sum));
+    final Map<String, Long> expectedDataSourceCounts = expectedExistingSegments
+        .stream()
+        .collect(Collectors.toMap(DataSegment::getDataSource, segment -> 1L, Long::sum));
     final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> expectedDataSources
         = new HashMap<>();
     for (DataSegment segment : expectedExistingSegments) {

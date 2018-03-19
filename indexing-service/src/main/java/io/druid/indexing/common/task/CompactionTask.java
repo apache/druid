@@ -278,7 +278,7 @@ public class CompactionTask extends AbstractTask
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
       Map<DataSegment, File> segmentFileMap
   )
-      throws IOException, SegmentLoadingException
+      throws IOException
   {
     // find metadata for interval
     final List<QueryableIndex> queryableIndices = loadSegments(timelineSegments, segmentFileMap, indexIO);

@@ -25,9 +25,9 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.segment.writeout.WriteOutBytes;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -241,7 +241,7 @@ public class CompressionFactory
      * Output the header values of the associating encoding format to the given outputStream. The header also include
      * bytes for compression strategy and encoding format(optional) as described above in Compression Storage Format.
      */
-    void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException;
+    void putMeta(ByteBuffer metaOut, CompressionStrategy strategy);
 
     int metaSize();
 
@@ -264,7 +264,7 @@ public class CompressionFactory
     return new MetaSerdeHelper.FieldWriter<T>()
     {
       @Override
-      public void writeTo(ByteBuffer buffer, T x) throws IOException
+      public void writeTo(ByteBuffer buffer, T x)
       {
         getWriter.apply(x).putMeta(buffer, getCompressionStrategy.apply(x));
       }

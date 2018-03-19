@@ -78,37 +78,11 @@ public class StringUtils
     }
   }
 
-  @Nullable
-  public static String fromUtf8Nullable(@Nullable final byte[] bytes)
-  {
-    if (bytes == null) {
-      return null;
-    }
-    return fromUtf8(bytes);
-  }
-
   public static String fromUtf8(final ByteBuffer buffer, final int numBytes)
   {
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
     return fromUtf8(bytes);
-  }
-
-  /**
-   * Reads numBytes bytes from buffer and converts that to a utf-8 string
-   * @param buffer buffer to read bytes from
-   * @param numBytes number of bytes to read
-   * @return returns null if numBytes is -1 otherwise utf-8 string represetation of bytes read
-   */
-  @Nullable
-  public static String fromUtf8Nullable(final ByteBuffer buffer, final int numBytes)
-  {
-    if (numBytes < 0) {
-      return null;
-    }
-    final byte[] bytes = new byte[numBytes];
-    buffer.get(bytes);
-    return fromUtf8Nullable(bytes);
   }
 
   public static String fromUtf8(final ByteBuffer buffer)

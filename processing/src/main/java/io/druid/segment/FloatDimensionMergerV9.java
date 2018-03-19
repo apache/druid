@@ -62,7 +62,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   }
 
   @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
+  public void writeMergedValueMetadata(List<IndexableAdapter> adapters)
   {
     // floats have no additional metadata
   }
@@ -80,7 +80,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   }
 
   @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions) throws IOException
+  public void writeIndexes(List<IntBuffer> segmentRowNumConversions)
   {
     // floats have no indices to write
   }
@@ -93,7 +93,7 @@ public class FloatDimensionMergerV9 implements DimensionMergerV9<Float>
   }
 
   @Override
-  public ColumnDescriptor makeColumnDescriptor() throws IOException
+  public ColumnDescriptor makeColumnDescriptor()
   {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.FLOAT);

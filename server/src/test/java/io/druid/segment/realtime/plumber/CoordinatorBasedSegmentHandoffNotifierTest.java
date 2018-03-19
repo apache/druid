@@ -36,7 +36,6 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CoordinatorBasedSegmentHandoffNotifierTest
@@ -52,7 +51,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   };
 
   @Test
-  public void testHandoffCallbackNotCalled() throws IOException, InterruptedException
+  public void testHandoffCallbackNotCalled()
   {
     Interval interval = Intervals.of(
         "2011-04-01/2011-04-02"
@@ -109,7 +108,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   }
 
   @Test
-  public void testHandoffCallbackCalled() throws IOException, InterruptedException
+  public void testHandoffCallbackCalled()
   {
     Interval interval = Intervals.of(
         "2011-04-01/2011-04-02"

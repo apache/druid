@@ -51,7 +51,7 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   }
 
   @Override
-  public long getLength() throws IOException, InterruptedException
+  public long getLength()
   {
     long size = 0;
     for (WindowedDataSegment segment : segments) {
@@ -61,7 +61,7 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   }
 
   @Override
-  public String[] getLocations() throws IOException, InterruptedException
+  public String[] getLocations()
   {
     return locations;
   }

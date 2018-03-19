@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 import io.druid.java.util.common.MapUtils;
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -59,7 +58,7 @@ public class OmniDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killAll() throws IOException
+  public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
   }

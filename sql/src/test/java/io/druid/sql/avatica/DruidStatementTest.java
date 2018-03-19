@@ -24,9 +24,7 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
-import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -74,9 +72,7 @@ public class DruidStatementTest extends CalciteTestBase
         operatorTable,
         macroTable,
         plannerConfig,
-        new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopEscalator(),
         CalciteTests.getJsonMapper()
     );
   }
@@ -89,7 +85,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSignature() throws Exception
+  public void testSignature()
   {
     final String sql = "SELECT * FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {
@@ -129,7 +125,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSelectAllInFirstFrame() throws Exception
+  public void testSelectAllInFirstFrame()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {
@@ -156,7 +152,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSelectSplitOverTwoFrames() throws Exception
+  public void testSelectSplitOverTwoFrames()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {

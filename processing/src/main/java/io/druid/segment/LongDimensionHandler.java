@@ -26,7 +26,6 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
 {
@@ -55,7 +54,7 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
-  ) throws IOException
+  )
   {
     return new LongDimensionMergerV9(
         dimensionName,

@@ -87,7 +87,7 @@ public class IncrementalIndexStorageAdapterTest
   }
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return Arrays.asList(
         new Object[][]{

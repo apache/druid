@@ -117,7 +117,7 @@ public class WorkerCuratorCoordinator
   }
 
   @LifecycleStop
-  public void stop() throws Exception
+  public void stop()
   {
     log.info("Stopping WorkerCuratorCoordinator for worker[%s]", worker.getHost());
     synchronized (lock) {

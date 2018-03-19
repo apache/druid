@@ -151,11 +151,6 @@ public class IndexGeneratorJob implements Jobby
     job.setReducerClass(IndexGeneratorReducer.class);
   }
 
-  public IndexGeneratorStats getJobStats()
-  {
-    return jobStats;
-  }
-
   @Override
   public boolean run()
   {
@@ -351,7 +346,6 @@ public class IndexGeneratorJob implements Jobby
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
@@ -556,7 +550,6 @@ public class IndexGeneratorJob implements Jobby
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 

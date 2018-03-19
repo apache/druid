@@ -62,7 +62,6 @@ import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -254,7 +253,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                   new AbstractPrioritizedCallable<AggregateResult>(priority)
                                   {
                                     @Override
-                                    public AggregateResult call() throws Exception
+                                    public AggregateResult call()
                                     {
                                       try (
                                           Releaser bufferReleaser = mergeBufferHolder.increment();
@@ -306,7 +305,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   new Closeable()
                   {
                     @Override
-                    public void close() throws IOException
+                    public void close()
                     {
                       for (Closeable closeable : Lists.reverse(resources)) {
                         CloseQuietly.close(closeable);

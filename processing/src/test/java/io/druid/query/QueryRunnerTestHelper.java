@@ -67,7 +67,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -341,7 +340,6 @@ public class QueryRunnerTestHelper
   public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
       QueryRunnerFactory<T, QueryType> factory
   )
-      throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final IncrementalIndex noRollupRtIndex = TestIndex.getNoRollupIncrementalTestIndex();
@@ -365,7 +363,6 @@ public class QueryRunnerTestHelper
   public static Collection<?> makeUnionQueryRunners(
       QueryRunnerFactory factory
   )
-      throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();

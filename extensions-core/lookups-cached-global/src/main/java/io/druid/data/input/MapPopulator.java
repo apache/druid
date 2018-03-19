@@ -86,7 +86,7 @@ public class MapPopulator<K, V>
           private int entries = 0;
 
           @Override
-          public boolean processLine(String line) throws IOException
+          public boolean processLine(String line)
           {
             if (lines == Integer.MAX_VALUE) {
               throw new ISE("Cannot read more than %,d lines", Integer.MAX_VALUE);

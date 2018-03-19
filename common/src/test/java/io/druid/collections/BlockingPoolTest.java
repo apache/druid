@@ -112,7 +112,7 @@ public class BlockingPoolTest
         new Callable<ReferenceCountingResourceHolder<List<Integer>>>()
         {
           @Override
-          public ReferenceCountingResourceHolder<List<Integer>> call() throws Exception
+          public ReferenceCountingResourceHolder<List<Integer>> call()
           {
             return POOL.takeBatch(8, 100);
           }
@@ -147,7 +147,7 @@ public class BlockingPoolTest
         new Callable<List<ReferenceCountingResourceHolder<Integer>>>()
         {
           @Override
-          public List<ReferenceCountingResourceHolder<Integer>> call() throws Exception
+          public List<ReferenceCountingResourceHolder<Integer>> call()
           {
             List<ReferenceCountingResourceHolder<Integer>> result = Lists.newArrayList();
             for (int i = 0; i < limit1; i++) {
@@ -161,7 +161,7 @@ public class BlockingPoolTest
         new Callable<List<ReferenceCountingResourceHolder<Integer>>>()
         {
           @Override
-          public List<ReferenceCountingResourceHolder<Integer>> call() throws Exception
+          public List<ReferenceCountingResourceHolder<Integer>> call()
           {
             List<ReferenceCountingResourceHolder<Integer>> result = Lists.newArrayList();
             for (int i = 0; i < limit2; i++) {
@@ -231,7 +231,7 @@ public class BlockingPoolTest
         new Callable<ReferenceCountingResourceHolder<List<Integer>>>()
         {
           @Override
-          public ReferenceCountingResourceHolder<List<Integer>> call() throws Exception
+          public ReferenceCountingResourceHolder<List<Integer>> call()
           {
             return POOL.takeBatch(batch1, 10);
           }
@@ -242,7 +242,7 @@ public class BlockingPoolTest
         new Callable<ReferenceCountingResourceHolder<List<Integer>>>()
         {
           @Override
-          public ReferenceCountingResourceHolder<List<Integer>> call() throws Exception
+          public ReferenceCountingResourceHolder<List<Integer>> call()
           {
             return POOL.takeBatch(batch2, 10);
           }
@@ -277,7 +277,7 @@ public class BlockingPoolTest
         new Callable<ReferenceCountingResourceHolder<List<Integer>>>()
         {
           @Override
-          public ReferenceCountingResourceHolder<List<Integer>> call() throws Exception
+          public ReferenceCountingResourceHolder<List<Integer>> call()
           {
             return POOL.takeBatch(batch1, 10);
           }
@@ -288,7 +288,7 @@ public class BlockingPoolTest
         new Callable<ReferenceCountingResourceHolder<List<Integer>>>()
         {
           @Override
-          public ReferenceCountingResourceHolder<List<Integer>> call() throws Exception
+          public ReferenceCountingResourceHolder<List<Integer>> call()
           {
             return POOL.takeBatch(batch2, 10);
           }
@@ -338,7 +338,7 @@ public class BlockingPoolTest
         new Callable<ReferenceCountingResourceHolder<List<Integer>>>()
         {
           @Override
-          public ReferenceCountingResourceHolder<List<Integer>> call() throws Exception
+          public ReferenceCountingResourceHolder<List<Integer>> call()
           {
             return POOL.takeBatch(10, 100);
           }

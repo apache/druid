@@ -31,7 +31,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -60,7 +59,7 @@ public class StupidPoolConcurrencyBenchmark
   @Benchmark
   @BenchmarkMode(Mode.Throughput)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void hammerQueue(BenchmarkPool pool, Blackhole blackhole) throws IOException
+  public void hammerQueue(BenchmarkPool pool, Blackhole blackhole)
   {
     try (ResourceHolder<Object> holder = pool.pool.take()) {
       blackhole.consume(holder);

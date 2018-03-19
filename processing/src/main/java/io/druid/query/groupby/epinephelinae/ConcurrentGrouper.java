@@ -343,7 +343,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                              new AbstractPrioritizedCallable<CloseableIterator<Entry<KeyType>>>(priority)
                              {
                                @Override
-                               public CloseableIterator<Entry<KeyType>> call() throws Exception
+                               public CloseableIterator<Entry<KeyType>> call()
                                {
                                  return grouper.iterator(true);
                                }

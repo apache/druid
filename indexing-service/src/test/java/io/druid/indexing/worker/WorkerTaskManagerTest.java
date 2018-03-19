@@ -149,7 +149,7 @@ public class WorkerTaskManagerTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     workerTaskManager = createWorkerTaskManager();
   }

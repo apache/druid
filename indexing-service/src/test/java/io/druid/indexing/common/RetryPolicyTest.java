@@ -29,7 +29,7 @@ import org.junit.Test;
 public class RetryPolicyTest
 {
   @Test
-  public void testGetAndIncrementRetryDelay() throws Exception
+  public void testGetAndIncrementRetryDelay()
   {
     RetryPolicy retryPolicy = new RetryPolicy(
         new RetryPolicyConfig()

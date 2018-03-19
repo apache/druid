@@ -43,7 +43,7 @@ public class HybridCacheTest
   private static final byte[] HI = StringUtils.toUtf8("hi");
 
   @Test
-  public void testInjection() throws Exception
+  public void testInjection()
   {
     final String prefix = "testInjectHybridCache";
     System.setProperty(prefix + ".type", "hybrid");
@@ -82,7 +82,7 @@ public class HybridCacheTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     final MapCache l1 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
     final MapCache l2 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
