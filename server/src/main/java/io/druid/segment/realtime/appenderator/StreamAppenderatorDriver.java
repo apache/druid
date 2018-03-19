@@ -375,11 +375,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    return ListenableFutures
-        .transformAsync(
-            publish(publisher, committer, sequenceNames),
-            this::registerHandoff
-        );
+    return ListenableFutures.transformAsync(
+        publish(publisher, committer, sequenceNames),
+        this::registerHandoff
+    );
   }
 
   @Override

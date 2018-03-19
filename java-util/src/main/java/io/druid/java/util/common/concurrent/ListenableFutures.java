@@ -33,6 +33,8 @@ public class ListenableFutures
    * Guava 19 changes the Futures.transform signature so that the async form is different. This is here as a
    * compatability layer until such a time as druid only supports Guava 19 or later, in which case
    * Futures.transformAsync should be used
+   *
+   * This is NOT copied from guava.
    */
   public static <I, O> ListenableFuture<O> transformAsync(
       final ListenableFuture<I> inFuture,
