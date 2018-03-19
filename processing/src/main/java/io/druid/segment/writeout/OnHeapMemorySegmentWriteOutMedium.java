@@ -30,7 +30,7 @@ public final class OnHeapMemorySegmentWriteOutMedium implements SegmentWriteOutM
   private final Closer closer = Closer.create();
 
   @Override
-  public WriteOutBytes makeWriteOutBytes() throws IOException
+  public WriteOutBytes makeWriteOutBytes()
   {
     return new HeapByteBufferWriteOutBytes();
   }

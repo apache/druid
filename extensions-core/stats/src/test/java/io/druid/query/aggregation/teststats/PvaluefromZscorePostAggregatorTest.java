@@ -31,7 +31,7 @@ public class PvaluefromZscorePostAggregatorTest
   ConstantPostAggregator zscore;
 
   @Test
-  public void testPvaluefromZscorePostAggregator() throws Exception
+  public void testPvaluefromZscorePostAggregator()
   {
     zscore = new ConstantPostAggregator("zscore", -1783.8762354220219);
 

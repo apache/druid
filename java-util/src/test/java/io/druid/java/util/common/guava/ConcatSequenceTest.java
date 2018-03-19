@@ -165,7 +165,7 @@ public class ConcatSequenceTest
   }
 
   @Test
-  public void testClosingOfSequenceSequenceWhenExceptionThrown() throws Exception
+  public void testClosingOfSequenceSequenceWhenExceptionThrown()
   {
     final AtomicInteger closedCount = new AtomicInteger(0);
     final Sequence<Integer> seq = Sequences.concat(

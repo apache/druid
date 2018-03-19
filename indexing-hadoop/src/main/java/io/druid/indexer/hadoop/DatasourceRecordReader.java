@@ -63,7 +63,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   private int numRows;
 
   @Override
-  public void initialize(InputSplit split, final TaskAttemptContext context) throws IOException, InterruptedException
+  public void initialize(InputSplit split, final TaskAttemptContext context)
   {
     spec = readAndVerifyDatasourceIngestionSpec(context.getConfiguration(), HadoopDruidIndexerConfig.JSON_MAPPER);
 
@@ -115,7 +115,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   }
 
   @Override
-  public boolean nextKeyValue() throws IOException, InterruptedException
+  public boolean nextKeyValue()
   {
     if (firehose.hasMore()) {
       currRow = firehose.nextRow();
@@ -127,19 +127,19 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   }
 
   @Override
-  public NullWritable getCurrentKey() throws IOException, InterruptedException
+  public NullWritable getCurrentKey()
   {
     return NullWritable.get();
   }
 
   @Override
-  public InputRow getCurrentValue() throws IOException, InterruptedException
+  public InputRow getCurrentValue()
   {
     return currRow == null ? null : new SegmentInputRow(currRow, spec.getDimensions());
   }
 
   @Override
-  public float getProgress() throws IOException, InterruptedException
+  public float getProgress()
   {
     if (numRows > 0) {
       return (rowNum * 1.0f) / numRows;

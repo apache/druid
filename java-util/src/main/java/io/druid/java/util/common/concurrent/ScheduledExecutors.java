@@ -34,15 +34,6 @@ public class ScheduledExecutors
   private static final Logger log = new Logger(ScheduledExecutors.class);
 
   /**
-   * Run runnable repeatedly with the given delay between calls. Exceptions are
-   * caught and logged as errors.
-   */
-  public static void scheduleWithFixedDelay(ScheduledExecutorService exec, Duration delay, Runnable runnable)
-  {
-    scheduleWithFixedDelay(exec, delay, delay, runnable);
-  }
-
-  /**
    * Run runnable repeatedly with the given delay between calls, after the given
    * initial delay. Exceptions are caught and logged as errors.
    */
@@ -117,14 +108,6 @@ public class ScheduledExecutors
   }
 
   /**
-   * Run runnable once every period. Exceptions are caught and logged as errors.
-   */
-  public static void scheduleAtFixedRate(ScheduledExecutorService exec, Duration rate, Runnable runnable)
-  {
-    scheduleAtFixedRate(exec, rate, rate, runnable);
-  }
-
-  /**
    * Run runnable once every period, after the given initial delay. Exceptions
    * are caught and logged as errors.
    */
@@ -138,7 +121,7 @@ public class ScheduledExecutors
     scheduleAtFixedRate(exec, initialDelay, period, new Callable<Signal>()
     {
       @Override
-      public Signal call() throws Exception
+      public Signal call()
       {
         runnable.run();
         return Signal.REPEAT;

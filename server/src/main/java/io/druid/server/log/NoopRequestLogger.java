@@ -21,14 +21,12 @@ package io.druid.server.log;
 
 import io.druid.server.RequestLogLine;
 
-import java.io.IOException;
-
 /**
  */
 public class NoopRequestLogger implements RequestLogger
 {
   @Override
-  public void log(RequestLogLine requestLogLine) throws IOException
+  public void log(RequestLogLine requestLogLine)
   {
     // This is a no op!
   }

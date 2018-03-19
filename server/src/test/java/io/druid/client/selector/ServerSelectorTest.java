@@ -39,14 +39,14 @@ public class ServerSelectorTest
   TierSelectorStrategy tierSelectorStrategy;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
     EasyMock.expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
   }
 
   @Test
-  public void testSegmentUpdate() throws Exception
+  public void testSegmentUpdate()
   {
     final ServerSelector selector = new ServerSelector(
         DataSegment.builder()

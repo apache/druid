@@ -19,7 +19,6 @@
 
 package io.druid.java.util.emitter.core;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Ints;
 import org.asynchttpclient.ListenableFuture;
@@ -38,7 +37,7 @@ public class HttpEmitterTest
   private static final ObjectMapper objectMapper = new ObjectMapper()
   {
     @Override
-    public byte[] writeValueAsBytes(Object value) throws JsonProcessingException
+    public byte[] writeValueAsBytes(Object value)
     {
       return Ints.toByteArray(((IntEvent) value).index);
     }

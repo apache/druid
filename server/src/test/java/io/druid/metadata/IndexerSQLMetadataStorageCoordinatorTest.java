@@ -215,7 +215,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               new HandleCallback<Integer>()
               {
                 @Override
-                public Integer withHandle(Handle handle) throws Exception
+                public Integer withHandle(Handle handle)
                 {
                   return handle.createStatement(
                       StringUtils.format(
@@ -237,7 +237,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new HandleCallback<List<String>>()
         {
           @Override
-          public List<String> withHandle(Handle handle) throws Exception
+          public List<String> withHandle(Handle handle)
           {
             return handle.createQuery("SELECT id FROM " + table + " WHERE used = true ORDER BY id")
                          .map(StringMapper.FIRST)
@@ -837,7 +837,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testAllocatePendingSegment() throws IOException
+  public void testAllocatePendingSegment()
   {
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
@@ -899,7 +899,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testDeletePendingSegment() throws IOException, InterruptedException
+  public void testDeletePendingSegment() throws InterruptedException
   {
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");

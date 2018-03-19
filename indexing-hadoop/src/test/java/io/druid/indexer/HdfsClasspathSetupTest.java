@@ -70,7 +70,7 @@ public class HdfsClasspathSetupTest
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   @BeforeClass
-  public static void setupStatic() throws IOException, ClassNotFoundException
+  public static void setupStatic() throws IOException
   {
     hdfsTmpDir = File.createTempFile("hdfsClasspathSetupTest", "dir");
     if (!hdfsTmpDir.delete()) {

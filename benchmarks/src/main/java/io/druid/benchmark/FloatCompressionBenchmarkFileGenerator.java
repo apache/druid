@@ -23,17 +23,16 @@ import com.google.common.collect.ImmutableList;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.ColumnarFloatsSerializer;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.data.ColumnarFloatsSerializer;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
-import java.net.URISyntaxException;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -55,7 +54,7 @@ public class FloatCompressionBenchmarkFileGenerator
 
   private static String dirPath = "floatCompress/";
 
-  public static void main(String[] args) throws IOException, URISyntaxException
+  public static void main(String[] args) throws IOException
   {
     if (args.length >= 1) {
       dirPath = args[0];

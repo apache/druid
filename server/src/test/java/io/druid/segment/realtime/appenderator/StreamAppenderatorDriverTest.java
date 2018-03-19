@@ -365,7 +365,7 @@ public class StreamAppenderatorDriverTest
     return new TransactionalSegmentPublisher()
     {
       @Override
-      public boolean publishSegments(Set<DataSegment> segments, Object commitMetadata) throws IOException
+      public boolean publishSegments(Set<DataSegment> segments, Object commitMetadata)
       {
         return true;
       }
@@ -420,7 +420,7 @@ public class StreamAppenderatorDriverTest
         final String sequenceName,
         final String previousSegmentId,
         final boolean skipSegmentLineageCheck
-    ) throws IOException
+    )
     {
       synchronized (counters) {
         DateTime dateTimeTruncated = granularity.bucketStart(row.getTimestamp());

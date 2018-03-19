@@ -68,7 +68,7 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   }
 
   @Override
-  public void open() throws IOException
+  public void open()
   {
     tempOut = new LongArrayList();
   }
@@ -80,7 +80,7 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   }
 
   @Override
-  public void add(long value) throws IOException
+  public void add(long value)
   {
     //noinspection VariableNotUsedInsideIf
     if (delegate != null) {

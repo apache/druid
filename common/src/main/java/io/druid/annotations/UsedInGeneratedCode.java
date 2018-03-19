@@ -23,8 +23,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Annotation for members, which are used in generated code (e. g. by Antlr), but not in regular code. IntelliJ
- * inspection "unused declarations" knows about this annotation.
+ * Annotation for members, which are used in generated code (e. g. by Antlr), but not in regular code. IntelliJ's
+ * inspection "Unused declarations" knows about this annotation.
  */
 @Retention(RetentionPolicy.SOURCE)
 public @interface UsedInGeneratedCode

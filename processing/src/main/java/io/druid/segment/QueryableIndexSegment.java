@@ -21,8 +21,6 @@ package io.druid.segment;
 
 import org.joda.time.Interval;
 
-import java.io.IOException;
-
 /**
 */
 public class QueryableIndexSegment extends AbstractSegment
@@ -61,7 +59,7 @@ public class QueryableIndexSegment extends AbstractSegment
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // this is kinda nasty
     index.close();

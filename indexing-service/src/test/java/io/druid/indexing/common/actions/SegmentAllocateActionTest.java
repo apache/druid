@@ -25,8 +25,6 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
@@ -35,6 +33,8 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -69,7 +69,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testGranularitiesFinerThanDay() throws Exception
+  public void testGranularitiesFinerThanDay()
   {
     Assert.assertEquals(
         ImmutableList.of(
@@ -88,7 +88,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testGranularitiesFinerThanHour() throws Exception
+  public void testGranularitiesFinerThanHour()
   {
     Assert.assertEquals(
         ImmutableList.of(
@@ -105,7 +105,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testManySegmentsSameInterval() throws Exception
+  public void testManySegmentsSameInterval()
   {
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
 
@@ -171,7 +171,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testResumeSequence() throws Exception
+  public void testResumeSequence()
   {
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
 
@@ -295,7 +295,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testMultipleSequences() throws Exception
+  public void testMultipleSequences()
   {
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
 
@@ -633,7 +633,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testCannotDoAnythingWithSillyQueryGranularity() throws Exception
+  public void testCannotDoAnythingWithSillyQueryGranularity()
   {
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     taskActionTestKit.getTaskLockbox().add(task);
@@ -706,7 +706,7 @@ public class SegmentAllocateActionTest
       final Granularity preferredSegmentGranularity,
       final String sequenceName,
       final String sequencePreviousId
-  ) throws Exception
+  )
   {
     final SegmentAllocateAction action = new SegmentAllocateAction(
         DATA_SOURCE,

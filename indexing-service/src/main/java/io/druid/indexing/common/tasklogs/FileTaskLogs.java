@@ -62,7 +62,7 @@ public class FileTaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
   {
     final File file = fileForTask(taskid);
     if (file.exists()) {

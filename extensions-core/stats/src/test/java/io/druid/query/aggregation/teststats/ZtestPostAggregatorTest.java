@@ -35,7 +35,7 @@ public class ZtestPostAggregatorTest
   ZtestPostAggregator ztestPostAggregator;
 
   @Test
-  public void testZtestPostAggregator() throws Exception
+  public void testZtestPostAggregator()
   {
     ConstantPostAggregator successCount1, sample1Size, successCount2, sample2Size;
 

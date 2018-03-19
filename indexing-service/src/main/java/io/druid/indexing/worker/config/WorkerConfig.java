@@ -55,10 +55,4 @@ public class WorkerConfig
   {
     return capacity;
   }
-
-  public WorkerConfig setCapacity(int capacity)
-  {
-    this.capacity = capacity;
-    return this;
-  }
 }

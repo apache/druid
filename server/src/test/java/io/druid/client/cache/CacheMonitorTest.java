@@ -35,7 +35,7 @@ import org.junit.Test;
 public class CacheMonitorTest
 {
   @Test
-  public void testOptionalInject() throws Exception
+  public void testOptionalInject()
   {
     Injector injector = Initialization.makeInjectorWithModules(GuiceInjectors.makeStartupInjector(), ImmutableList.of(
         new Module() {
@@ -54,7 +54,7 @@ public class CacheMonitorTest
   }
 
   @Test
-  public void testInject() throws Exception
+  public void testInject()
   {
     Injector injector = Initialization.makeInjectorWithModules(GuiceInjectors.makeStartupInjector(), ImmutableList.of(
         new Module() {

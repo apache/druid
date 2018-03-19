@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -49,16 +48,6 @@ public class ImmutableDruidDataSource
   public String getName()
   {
     return name;
-  }
-
-  public Map<String, String> getProperties()
-  {
-    return properties;
-  }
-
-  public boolean isEmpty()
-  {
-    return idToSegments.isEmpty();
   }
 
   public Collection<DataSegment> getSegments()

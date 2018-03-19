@@ -26,7 +26,6 @@ import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 
-import java.io.IOException;
 import java.util.Set;
 
 public class TestUsedSegmentChecker implements UsedSegmentChecker
@@ -39,7 +38,7 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers) throws IOException
+  public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers)
   {
     final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     for (DataSegment dataSegment : appenderatorTester.getPushedSegments()) {

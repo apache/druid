@@ -101,7 +101,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
 
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     closer = Closer.create();
     CloseQuietly.close(columnarInts);
@@ -172,7 +172,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     setupSimple(2);
     Assert.assertEquals(8, supplier.getBaseBuffers().size());
@@ -227,7 +227,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   }
 
   @Test
-  public void testmaxIntsInBuffer() throws Exception
+  public void testmaxIntsInBuffer()
   {
     Assert.assertEquals(CompressedPools.BUFFER_SIZE, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(1));
     Assert.assertEquals(CompressedPools.BUFFER_SIZE / 2, CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForBytes(2));
@@ -282,7 +282,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
 
         try {
           for (int i = 0; i < numRuns; ++i) {
-            for (int j = 0; j < columnarInts.size(); ++j) {
+            for (int j = 0, size = columnarInts.size(); j < size; ++j) {
               final long val = vals[j];
               final long indexedVal = columnarInts.get(j);
               if (Longs.compare(val, indexedVal) != 0) {
@@ -362,7 +362,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
 
     // sequential access of every element
     int[] indices = new int[vals.length];
-    for (int i = 0; i < columnarInts.size(); ++i) {
+    for (int i = 0, size = columnarInts.size(); i < size; ++i) {
       final int expected = vals[i];
       final int actual = columnarInts.get(i);
       Assert.assertEquals(expected, actual);

@@ -89,11 +89,6 @@ public class Sequences
     return new FilteredSequence<>(sequence, pred);
   }
 
-  public static <T> Sequence<T> limit(final Sequence<T> sequence, final int limit)
-  {
-    return new LimitedSequence<>(sequence, limit);
-  }
-
   public static <T> Sequence<T> withBaggage(final Sequence<T> seq, final Closeable baggage)
   {
     Preconditions.checkNotNull(baggage, "baggage");

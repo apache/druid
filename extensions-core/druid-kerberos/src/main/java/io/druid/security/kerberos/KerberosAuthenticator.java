@@ -73,15 +73,19 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -156,7 +160,7 @@ public class KerberosAuthenticator implements Authenticator
           SignerSecretProvider signerSecretProvider = new SignerSecretProvider()
           {
             @Override
-            public void init(Properties config, ServletContext servletContext, long tokenValidity) throws Exception
+            public void init(Properties config, ServletContext servletContext, long tokenValidity)
             {
 
             }
@@ -182,7 +186,7 @@ public class KerberosAuthenticator implements Authenticator
 
       // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling in doFilterSuper
       @Override
-      protected AuthenticationToken getToken(HttpServletRequest request) throws IOException, AuthenticationException
+      protected AuthenticationToken getToken(HttpServletRequest request) throws AuthenticationException
       {
         AuthenticationToken token = null;
         String tokenStr = null;
@@ -330,8 +334,13 @@ public class KerberosAuthenticator implements Authenticator
               };
               if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
                 String signedToken = mySigner.sign(token.toString());
-                createAuthCookie(httpResponse, signedToken, getCookieDomain(),
-                                 getCookiePath(), token.getExpires(), isHttps
+                tokenToAuthCookie(httpResponse,
+                                 signedToken,
+                                 getCookieDomain(),
+                                 getCookiePath(),
+                                 token.getExpires(),
+                                 !token.isExpired() && token.getExpires() > 0,
+                                 isHttps
                 );
               }
               doFilter(filterChain, httpRequest, httpResponse);
@@ -352,8 +361,8 @@ public class KerberosAuthenticator implements Authenticator
         }
         if (unauthorizedResponse) {
           if (!httpResponse.isCommitted()) {
-            createAuthCookie(httpResponse, "", getCookieDomain(),
-                             getCookiePath(), 0, isHttps
+            tokenToAuthCookie(httpResponse, "", getCookieDomain(),
+                             getCookiePath(), 0, false, isHttps
             );
             // If response code is 401. Then WWW-Authenticate Header should be
             // present.. reset to 403 if not found..
@@ -604,5 +613,62 @@ public class KerberosAuthenticator implements Authenticator
     catch (Exception ex) {
       throw new ServletException(ex);
     }
+  }
+
+
+  /**
+   * Creates the Hadoop authentication HTTP cookie.
+   *
+   * @param resp the response object.
+   * @param token authentication token for the cookie.
+   * @param domain the cookie domain.
+   * @param path the cookie path.
+   * @param expires UNIX timestamp that indicates the expire date of the
+   *                cookie. It has no effect if its value &lt; 0.
+   * @param isSecure is the cookie secure?
+   * @param isCookiePersistent whether the cookie is persistent or not.
+   *the following code copy/past from Hadoop 3.0.0 copied to avoid compilation issue due to new signature,
+   *                           org.apache.hadoop.security.authentication.server.AuthenticationFilter#createAuthCookie
+   *                           (
+   *                           javax.servlet.http.HttpServletResponse,
+   *                           java.lang.String,
+   *                           java.lang.String,
+   *                           java.lang.String,
+   *                           long, boolean, boolean)
+   */
+  private static void tokenToAuthCookie(
+      HttpServletResponse resp, String token,
+      String domain, String path, long expires,
+      boolean isCookiePersistent,
+      boolean isSecure
+  )
+  {
+    StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE)
+        .append("=");
+    if (token != null && token.length() > 0) {
+      sb.append("\"").append(token).append("\"");
+    }
+
+    if (path != null) {
+      sb.append("; Path=").append(path);
+    }
+
+    if (domain != null) {
+      sb.append("; Domain=").append(domain);
+    }
+
+    if (expires >= 0 && isCookiePersistent) {
+      Date date = new Date(expires);
+      SimpleDateFormat df = new SimpleDateFormat("EEE, dd-MMM-yyyy HH:mm:ss zzz", Locale.ENGLISH);
+      df.setTimeZone(TimeZone.getTimeZone("GMT"));
+      sb.append("; Expires=").append(df.format(date));
+    }
+
+    if (isSecure) {
+      sb.append("; Secure");
+    }
+
+    sb.append("; HttpOnly");
+    resp.addHeader("Set-Cookie", sb.toString());
   }
 }

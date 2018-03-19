@@ -18,22 +18,20 @@
  */
 package io.druid.metadata.storage.sqlserver;
 
-import java.sql.SQLException;
-
+import com.google.common.base.Suppliers;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.MetadataStorageTablesConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.base.Suppliers;
-
-import io.druid.metadata.MetadataStorageConnectorConfig;
-import io.druid.metadata.MetadataStorageTablesConfig;
+import java.sql.SQLException;
 
 @SuppressWarnings("nls")
 public class SQLServerConnectorTest
 {
 
   @Test
-  public void testIsTransientException() throws Exception
+  public void testIsTransientException()
   {
     SQLServerConnector connector = new SQLServerConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),

@@ -303,7 +303,7 @@ public class OverlordTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     tearDownServerAndCurator();
   }
@@ -393,6 +393,12 @@ public class OverlordTest
         public String getTaskType()
         {
           return task.getType();
+        }
+
+        @Override
+        public String getDataSource()
+        {
+          return task.getDataSource();
         }
       };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);

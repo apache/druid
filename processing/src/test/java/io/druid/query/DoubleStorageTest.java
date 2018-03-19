@@ -139,14 +139,14 @@ public class DoubleStorageTest
   public DoubleStorageTest(
       String storeDoubleAs,
       SegmentAnalysis expectedSegmentAnalysis
-  ) throws IOException
+  )
   {
     this.storeDoubleAs = storeDoubleAs;
     this.expectedSegmentAnalysis = expectedSegmentAnalysis;
   }
 
   @Parameterized.Parameters
-  public static Collection<?> dataFeeder() throws IOException
+  public static Collection<?> dataFeeder()
   {
     SegmentAnalysis expectedSegmentAnalysisDouble = new SegmentAnalysis(
         "segmentId",
@@ -245,7 +245,7 @@ public class DoubleStorageTest
   }
 
   @Test
-  public void testMetaDataAnalysis() throws IndexSizeExceededException
+  public void testMetaDataAnalysis()
   {
     QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         METADATA_QR_FACTORY,
@@ -345,7 +345,7 @@ public class DoubleStorageTest
   }
 
   @After
-  public void cleanUp() throws IOException
+  public void cleanUp()
   {
     index.close();
   }

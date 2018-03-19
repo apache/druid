@@ -29,7 +29,7 @@ import static io.druid.timeline.partition.StringPartitionChunk.make;
 public class StringPartitionChunkTest
 {
   @Test
-  public void testAbuts() throws Exception
+  public void testAbuts()
   {
     StringPartitionChunk<Integer> lhs = make(null, "10", 0, 1);
 
@@ -41,7 +41,7 @@ public class StringPartitionChunkTest
   }
 
   @Test
-  public void testIsStart() throws Exception
+  public void testIsStart()
   {
     Assert.assertTrue(make(null, "10", 0, 1).isStart());
     Assert.assertFalse(make("10", null, 0, 1).isStart());
@@ -50,7 +50,7 @@ public class StringPartitionChunkTest
   }
 
   @Test
-  public void testIsEnd() throws Exception
+  public void testIsEnd()
   {
     Assert.assertFalse(make(null, "10", 0, 1).isEnd());
     Assert.assertTrue(make("10", null, 0, 1).isEnd());
@@ -59,7 +59,7 @@ public class StringPartitionChunkTest
   }
 
   @Test
-  public void testCompareTo() throws Exception
+  public void testCompareTo()
   {
     Assert.assertEquals(0, make(null, null, 0, 1).compareTo(make(null, null, 0, 2)));
     Assert.assertEquals(0, make("10", null, 0, 1).compareTo(make("10", null, 0, 2)));
@@ -72,7 +72,7 @@ public class StringPartitionChunkTest
   }
 
   @Test
-  public void testEquals() throws Exception
+  public void testEquals()
   {
     Assert.assertEquals(make(null, null, 0, 1), make(null, null, 0, 1));
     Assert.assertEquals(make(null, "10", 0, 1), make(null, "10", 0, 1));

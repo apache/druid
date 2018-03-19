@@ -20,7 +20,6 @@
 package io.druid.java.util.common.guava;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Iterator;
 
 /**
@@ -95,7 +94,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
           new Closeable()
           {
             @Override
-            public void close() throws IOException
+            public void close()
             {
               maker.cleanup(iter);
             }
@@ -137,7 +136,7 @@ public class BaseSequence<T, IterType extends Iterator<T>> implements Sequence<T
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         maker.cleanup(iter);
       }

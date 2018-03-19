@@ -87,7 +87,7 @@ public class CachingCostBalancerStrategyBenchmark
   }
 
   @Benchmark
-  public double measureCostStrategy() throws InterruptedException
+  public double measureCostStrategy()
   {
     double cost = 0.0;
     for (DataSegment segment : segmentQueries) {
@@ -97,7 +97,7 @@ public class CachingCostBalancerStrategyBenchmark
   }
 
   @Benchmark
-  public double measureCachingCostStrategy() throws InterruptedException
+  public double measureCachingCostStrategy()
   {
     double cost = 0.0;
     for (DataSegment segment : segmentQueries) {

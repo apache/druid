@@ -90,7 +90,7 @@ public class TimestampAggregationSelectTest
   }
 
   @Before
-  public void setup() throws Exception
+  public void setup()
   {
     helper = AggregationTestHelper.createSelectQueryAggregationTestHelper(
         new TimestampMinMaxModule().getJacksonModules(),

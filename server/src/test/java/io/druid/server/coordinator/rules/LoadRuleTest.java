@@ -26,16 +26,14 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-//CHECKSTYLE.OFF: Regexp
-import io.druid.java.util.common.logger.Logger;
-//CHECKSTYLE.ON: Regexp
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.core.LoggingEmitter;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.core.LoggingEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -66,6 +64,9 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+//CHECKSTYLE.OFF: Regexp
+//CHECKSTYLE.ON: Regexp
+
 /**
  */
 public class LoadRuleTest
@@ -91,7 +92,7 @@ public class LoadRuleTest
   private BalancerStrategy mockBalancerStrategy;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     EmittingLogger.registerEmitter(emitter);
     emitter.start();
@@ -111,7 +112,7 @@ public class LoadRuleTest
   }
 
   @Test
-  public void testLoad() throws Exception
+  public void testLoad()
   {
     EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
 
@@ -190,7 +191,7 @@ public class LoadRuleTest
   }
 
   @Test
-  public void testLoadPriority() throws Exception
+  public void testLoadPriority()
   {
     EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(false).anyTimes();
 
@@ -366,7 +367,7 @@ public class LoadRuleTest
   }
 
   @Test
-  public void testLoadWithNonExistentTier() throws Exception
+  public void testLoadWithNonExistentTier()
   {
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -424,7 +425,7 @@ public class LoadRuleTest
   }
 
   @Test
-  public void testDropWithNonExistentTier() throws Exception
+  public void testDropWithNonExistentTier()
   {
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -495,7 +496,7 @@ public class LoadRuleTest
   }
 
   @Test
-  public void testMaxLoadingQueueSize() throws Exception
+  public void testMaxLoadingQueueSize()
   {
     EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)

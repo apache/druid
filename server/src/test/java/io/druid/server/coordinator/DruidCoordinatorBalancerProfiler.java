@@ -24,11 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -61,7 +61,7 @@ public class DruidCoordinatorBalancerProfiler
   List<Rule> rules = ImmutableList.<Rule>of(loadRule);
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     coordinator = EasyMock.createMock(DruidCoordinator.class);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);

@@ -86,7 +86,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   private ObjectMapper objectMapper;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     objectMapper = new ObjectMapper(new SmileFactory());
     connector = derbyConnectorRule.getConnector();
@@ -118,7 +118,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
   // user tests
   @Test
-  public void testCreateDeleteUser() throws Exception
+  public void testCreateDeleteUser()
   {
     updater.createUser(AUTHORIZER_NAME, "druid");
     Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(BASE_USER_MAP);
@@ -139,7 +139,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testDeleteNonExistentUser() throws Exception
+  public void testDeleteNonExistentUser()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("User [druid] does not exist.");
@@ -147,7 +147,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testCreateDuplicateUser() throws Exception
+  public void testCreateDuplicateUser()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("User [druid] already exists.");
@@ -157,7 +157,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
   // role tests
   @Test
-  public void testCreateDeleteRole() throws Exception
+  public void testCreateDeleteRole()
   {
     updater.createRole(AUTHORIZER_NAME, "druid");
     Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
@@ -178,7 +178,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testDeleteNonExistentRole() throws Exception
+  public void testDeleteNonExistentRole()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("Role [druid] does not exist.");
@@ -186,7 +186,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testCreateDuplicateRole() throws Exception
+  public void testCreateDuplicateRole()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("Role [druid] already exists.");
@@ -196,7 +196,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
   // role and user tests
   @Test
-  public void testAddAndRemoveRole() throws Exception
+  public void testAddAndRemoveRole()
   {
     updater.createUser(AUTHORIZER_NAME, "druid");
     updater.createRole(AUTHORIZER_NAME, "druidRole");
@@ -233,7 +233,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testAddRoleToNonExistentUser() throws Exception
+  public void testAddRoleToNonExistentUser()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("User [nonUser] does not exist.");
@@ -242,7 +242,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testAddNonexistentRoleToUser() throws Exception
+  public void testAddNonexistentRoleToUser()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("Role [nonRole] does not exist.");
@@ -251,7 +251,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testAddExistingRoleToUserFails() throws Exception
+  public void testAddExistingRoleToUserFails()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("User [druid] already has role [druidRole].");
@@ -262,7 +262,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testUnassignInvalidRoleAssignmentFails() throws Exception
+  public void testUnassignInvalidRoleAssignmentFails()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("User [druid] does not have role [druidRole].");
@@ -294,7 +294,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
   // role and permission tests
   @Test
-  public void testSetRolePermissions() throws Exception
+  public void testSetRolePermissions()
   {
     updater.createUser(AUTHORIZER_NAME, "druid");
     updater.createRole(AUTHORIZER_NAME, "druidRole");
@@ -343,7 +343,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testAddPermissionToNonExistentRole() throws Exception
+  public void testAddPermissionToNonExistentRole()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("Role [druidRole] does not exist.");
@@ -359,7 +359,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   }
 
   @Test
-  public void testAddBadPermission() throws Exception
+  public void testAddBadPermission()
   {
     expectedException.expect(BasicSecurityDBResourceException.class);
     expectedException.expectMessage("Invalid permission, resource name regex[??????????] does not compile.");

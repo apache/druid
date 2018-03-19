@@ -104,7 +104,7 @@ public abstract class ServerRunnable extends GuiceRunnable
           new Lifecycle.Handler()
           {
             @Override
-            public void start() throws Exception
+            public void start()
             {
               announcer.announce(discoveryDruidNode);
             }

@@ -25,7 +25,6 @@ import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-
 import io.druid.initialization.Initialization;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -47,6 +46,13 @@ public abstract class GuiceRunnable implements Runnable
   {
     this.log = log;
   }
+
+  /**
+   * This method overrides {@link Runnable} just in order to be able to define it as "entry point" for
+   * "Unused declarations" inspection in IntelliJ.
+   */
+  @Override
+  public abstract void run();
 
   @Inject
   public void configure(Injector injector)

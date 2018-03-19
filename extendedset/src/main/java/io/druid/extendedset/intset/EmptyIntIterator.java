@@ -45,12 +45,6 @@ public final class EmptyIntIterator implements IntSet.IntIterator
   }
 
   @Override
-  public void remove()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public void skipAllBefore(int element)
   {
     // nothing to skip

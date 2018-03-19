@@ -47,17 +47,16 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.filtration.Filtration;
-import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -72,7 +71,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
 
-public class QuantileSqlAggregatorTest
+public class QuantileSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
 
@@ -88,8 +87,6 @@ public class QuantileSqlAggregatorTest
   @Before
   public void setUp() throws Exception
   {
-    Calcites.setSystemProperties();
-
     // Note: this is needed in order to properly register the serde for Histogram.
     new ApproximateHistogramDruidModule().configure(null);
 
@@ -139,9 +136,7 @@ public class QuantileSqlAggregatorTest
         operatorTable,
         CalciteTests.createExprMacroTable(),
         plannerConfig,
-        new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopEscalator(),
         CalciteTests.getJsonMapper()
     );
   }
@@ -169,7 +164,10 @@ public class QuantileSqlAggregatorTest
                          + "APPROX_QUANTILE(cnt, 0.5)\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan(
+          sql,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();
@@ -251,7 +249,10 @@ public class QuantileSqlAggregatorTest
                          + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan(
+          sql,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();
@@ -304,7 +305,10 @@ public class QuantileSqlAggregatorTest
       final String sql = "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
                          + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan(
+          sql,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();

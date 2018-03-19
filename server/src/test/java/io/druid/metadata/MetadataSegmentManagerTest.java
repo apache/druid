@@ -25,9 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.TestHelper;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
@@ -156,7 +156,7 @@ public class MetadataSegmentManagerTest
   }
 
   @Test
-  public void testGetUnusedSegmentsForInterval() throws Exception
+  public void testGetUnusedSegmentsForInterval()
   {
     manager.start();
     manager.poll();

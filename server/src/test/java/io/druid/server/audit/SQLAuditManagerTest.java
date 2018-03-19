@@ -51,7 +51,7 @@ public class SQLAuditManagerTest
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     connector = derbyConnectorRule.getConnector();
     connector.createAuditTable();
@@ -110,7 +110,7 @@ public class SQLAuditManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testFetchAuditHistory() throws IOException
+  public void testFetchAuditHistory()
   {
     AuditEntry entry = new AuditEntry(
         "testKey",
@@ -136,7 +136,7 @@ public class SQLAuditManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testFetchAuditHistoryByKeyAndTypeWithLimit() throws IOException
+  public void testFetchAuditHistoryByKeyAndTypeWithLimit()
   {
     AuditEntry entry1 = new AuditEntry(
         "testKey1",
@@ -172,7 +172,7 @@ public class SQLAuditManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testFetchAuditHistoryByTypeWithLimit() throws IOException
+  public void testFetchAuditHistoryByTypeWithLimit()
   {
     AuditEntry entry1 = new AuditEntry(
         "testKey",
@@ -220,13 +220,13 @@ public class SQLAuditManagerTest
   }
 
   @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
-  public void testFetchAuditHistoryLimitBelowZero() throws IOException
+  public void testFetchAuditHistoryLimitBelowZero()
   {
     auditManager.fetchAuditHistory("testType", -1);
   }
 
   @Test(expected = IllegalArgumentException.class, timeout = 10_000L)
-  public void testFetchAuditHistoryLimitZero() throws IOException
+  public void testFetchAuditHistoryLimitZero()
   {
     auditManager.fetchAuditHistory("testType", 0);
   }
@@ -243,7 +243,7 @@ public class SQLAuditManagerTest
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();

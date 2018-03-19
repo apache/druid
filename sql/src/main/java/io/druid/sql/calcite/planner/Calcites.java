@@ -32,10 +32,13 @@ import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ConversionUtil;
@@ -161,6 +164,46 @@ public class Calcites
     } else {
       throw new ISE("Unrecognized valueType[%s]", valueType);
     }
+  }
+
+  /**
+   * Like RelDataTypeFactory.createSqlType, but creates types that align best with how Druid represents them.
+   */
+  public static RelDataType createSqlType(final RelDataTypeFactory typeFactory, final SqlTypeName typeName)
+  {
+    return createSqlTypeWithNullability(typeFactory, typeName, false);
+  }
+
+  /**
+   * Like RelDataTypeFactory.createSqlTypeWithNullability, but creates types that align best with how Druid
+   * represents them.
+   */
+  public static RelDataType createSqlTypeWithNullability(
+      final RelDataTypeFactory typeFactory,
+      final SqlTypeName typeName,
+      final boolean nullable
+  )
+  {
+    final RelDataType dataType;
+
+    switch (typeName) {
+      case TIMESTAMP:
+        // Our timestamps are down to the millisecond (precision = 3).
+        dataType = typeFactory.createSqlType(typeName, 3);
+        break;
+      case CHAR:
+      case VARCHAR:
+        dataType = typeFactory.createTypeWithCharsetAndCollation(
+            typeFactory.createSqlType(typeName),
+            Calcites.defaultCharset(),
+            SqlCollation.IMPLICIT
+        );
+        break;
+      default:
+        dataType = typeFactory.createSqlType(typeName);
+    }
+
+    return typeFactory.createTypeWithNullability(dataType, nullable);
   }
 
   /**

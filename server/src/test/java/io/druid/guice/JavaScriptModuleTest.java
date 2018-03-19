@@ -35,14 +35,14 @@ import java.util.Properties;
 public class JavaScriptModuleTest
 {
   @Test
-  public void testInjectionDefault() throws Exception
+  public void testInjectionDefault()
   {
     JavaScriptConfig config = makeInjectorWithProperties(new Properties()).getInstance(JavaScriptConfig.class);
     Assert.assertFalse(config.isEnabled());
   }
 
   @Test
-  public void testInjectionEnabled() throws Exception
+  public void testInjectionEnabled()
   {
     final Properties props = new Properties();
     props.setProperty("druid.javascript.enabled", "true");

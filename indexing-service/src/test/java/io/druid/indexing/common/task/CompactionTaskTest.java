@@ -69,8 +69,8 @@ import io.druid.segment.SimpleQueryableIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -109,13 +109,13 @@ public class CompactionTaskTest
   private static final Interval COMPACTION_INTERVAL = Intervals.of("2017-01-01/2017-06-01");
   private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = ImmutableMap.of(
       Intervals.of("2017-01-01/2017-02-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-02-01/2017-03-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-03-01/2017-04-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-04-01/2017-05-01"),
-      new StringDimensionSchema(MIXED_TYPE_COLUMN, null),
+      new StringDimensionSchema(MIXED_TYPE_COLUMN),
       Intervals.of("2017-05-01/2017-06-01"),
       new DoubleDimensionSchema(MIXED_TYPE_COLUMN)
   );
@@ -138,6 +138,7 @@ public class CompactionTaskTest
     for (int i = 0; i < 5; i++) {
       final StringDimensionSchema schema = new StringDimensionSchema(
           "string_dim_" + i,
+          null,
           null
       );
       DIMENSIONS.put(schema.getName(), schema);
@@ -513,7 +514,6 @@ public class CompactionTaskTest
 
     @Override
     public Map<DataSegment, File> fetchSegments(List<DataSegment> segments)
-        throws SegmentLoadingException
     {
       final Map<DataSegment, File> submap = new HashMap<>(segments.size());
       for (DataSegment segment : segments) {
@@ -534,7 +534,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+    public <RetType> RetType submit(TaskAction<RetType> taskAction)
     {
       if (!(taskAction instanceof SegmentListUsedAction)) {
         throw new ISE("action[%s] is not supported", taskAction);
@@ -594,7 +594,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public QueryableIndex loadIndex(File file) throws IOException
+    public QueryableIndex loadIndex(File file)
     {
       return queryableIndexMap.get(file);
     }

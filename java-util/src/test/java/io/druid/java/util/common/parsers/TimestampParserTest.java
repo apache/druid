@@ -36,14 +36,14 @@ public class TimestampParserTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void testStripQuotes() throws Exception
+  public void testStripQuotes()
   {
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("\"hello world\""));
     Assert.assertEquals("hello world", ParserUtils.stripQuotes("    \"    hello world   \"    "));
   }
 
   @Test
-  public void testExtractTimeZone() throws Exception
+  public void testExtractTimeZone()
   {
     Assert.assertEquals(DateTimeZone.UTC, ParserUtils.getDateTimeZone("UTC"));
     Assert.assertEquals(DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST")), ParserUtils.getDateTimeZone("PST"));
@@ -56,7 +56,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testAuto() throws Exception
+  public void testAuto()
   {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
     Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30Z"), parser.apply("1234567890000"));
@@ -76,7 +76,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testAutoNull() throws Exception
+  public void testAutoNull()
   {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
 
@@ -85,7 +85,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testAutoInvalid() throws Exception
+  public void testAutoInvalid()
   {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
 
@@ -94,7 +94,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testRuby() throws Exception
+  public void testRuby()
   {
     final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("ruby");
     Assert.assertEquals(DateTimes.of("2013-01-16T15:41:47+01:00"), parser.apply("1358347307.435447"));
@@ -102,7 +102,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testNano() throws Exception
+  public void testNano()
   {
     String timeNsStr = "1427504794977098494";
     DateTime expectedDt = DateTimes.of("2015-3-28T01:06:34.977Z");
@@ -119,7 +119,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testTimeStampParserWithQuotes() throws Exception
+  public void testTimeStampParserWithQuotes()
   {
     DateTime d = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8));
     Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy");
@@ -127,7 +127,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testTimeStampParserWithShortTimeZone() throws Exception
+  public void testTimeStampParserWithShortTimeZone()
   {
     DateTime d = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8));
     Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy");
@@ -135,7 +135,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testTimeStampParserWithLongTimeZone() throws Exception
+  public void testTimeStampParserWithLongTimeZone()
   {
 
     long millis1 = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8)).getMillis();
@@ -155,7 +155,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testTimeZoneAtExtremeLocations() throws Exception
+  public void testTimeZoneAtExtremeLocations()
   {
     Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd yy HH:mm:ss zZ z");
     Assert.assertEquals(new DateTime(2005, 1, 22, 13, 0, DateTimeZone.forOffsetHours(-6)).getMillis(),
@@ -167,7 +167,7 @@ public class TimestampParserTest
   }
 
   @Test
-  public void testJodaSymbolInsideLiteral() throws Exception
+  public void testJodaSymbolInsideLiteral()
   {
     DateTime d = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8));
     Assert.assertEquals(d.getMillis(),

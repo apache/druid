@@ -51,13 +51,6 @@ public class Logger
     }
   }
 
-  public void trace(Throwable t, String message, Object... formatArgs)
-  {
-    if (log.isTraceEnabled()) {
-      log.trace(StringUtils.nonStrictFormat(message, formatArgs), t);
-    }
-  }
-
   public void debug(String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {

@@ -75,7 +75,7 @@ public class TestRealtimeTask extends RealtimeIndexTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox)
   {
     return status;
   }

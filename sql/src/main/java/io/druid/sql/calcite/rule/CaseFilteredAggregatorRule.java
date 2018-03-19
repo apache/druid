@@ -111,7 +111,7 @@ public class CaseFilteredAggregatorRule extends RelOptRule
 
           // Operand 1: Filter
           final RexNode filter;
-          final RelDataType booleanType = typeFactory.createSqlType(SqlTypeName.BOOLEAN);
+          final RelDataType booleanType = Calcites.createSqlType(typeFactory, SqlTypeName.BOOLEAN);
           final RexNode filterFromCase = rexBuilder.makeCall(
               booleanType,
               flip ? SqlStdOperatorTable.IS_FALSE : SqlStdOperatorTable.IS_TRUE,
@@ -177,7 +177,7 @@ public class CaseFilteredAggregatorRule extends RelOptRule
                   false,
                   ImmutableList.of(),
                   newProjects.size() - 1,
-                  typeFactory.createSqlType(SqlTypeName.BIGINT),
+                  Calcites.createSqlType(typeFactory, SqlTypeName.BIGINT),
                   aggregateCall.getName()
               );
             } else if (RexLiteral.isNullLiteral(arg2) /* Case A1 */

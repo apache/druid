@@ -52,7 +52,7 @@ public class SQLMetadataStorageActionHandlerTest
   private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>> handler;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
 

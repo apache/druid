@@ -51,7 +51,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
   final LoopingDoubleColumnSelector selector = new LoopingDoubleColumnSelector(new double[]{42.12d, 9d});
 
   @Override
-  protected void setUp() throws Exception
+  protected void setUp()
   {
     Map<String, String> script = scriptDoubleSum;
 
@@ -87,7 +87,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     return val;
   }
 
-  public static void main(String[] args) throws Exception
+  public static void main(String[] args)
   {
     Runner.main(JavaScriptAggregatorBenchmark.class, args);
   }

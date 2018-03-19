@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
@@ -33,11 +32,11 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.hrtr.WorkerHolder;
 import io.druid.indexing.worker.WorkerHistoryItem;
 import io.druid.indexing.worker.WorkerTaskMonitor;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.http.SegmentListerResource;
 import io.druid.server.http.security.StateResourceFilter;
-import io.druid.server.security.AuthConfig;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
@@ -66,20 +65,17 @@ public class TaskManagementResource
 
   protected final ObjectMapper jsonMapper;
   protected final ObjectMapper smileMapper;
-  protected final AuthConfig authConfig;
   private final WorkerTaskMonitor workerTaskMonitor;
 
   @Inject
   public TaskManagementResource(
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      AuthConfig authConfig,
       WorkerTaskMonitor workerTaskMonitor
   )
   {
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
-    this.authConfig = authConfig;
     this.workerTaskMonitor = workerTaskMonitor;
   }
 
@@ -135,12 +131,12 @@ public class TaskManagementResource
         new AsyncListener()
         {
           @Override
-          public void onComplete(AsyncEvent event) throws IOException
+          public void onComplete(AsyncEvent event)
           {
           }
 
           @Override
-          public void onTimeout(AsyncEvent event) throws IOException
+          public void onTimeout(AsyncEvent event)
           {
 
             // HTTP 204 NO_CONTENT is sent to the client.
@@ -149,12 +145,12 @@ public class TaskManagementResource
           }
 
           @Override
-          public void onError(AsyncEvent event) throws IOException
+          public void onError(AsyncEvent event)
           {
           }
 
           @Override
-          public void onStartAsync(AsyncEvent event) throws IOException
+          public void onStartAsync(AsyncEvent event)
           {
           }
         }

@@ -72,7 +72,7 @@ public class CompressionUtils
    * @throws IOException on propogated IO exception, IAE if it cannot determine the proper new name for `pulledFile`
    */
   @Deprecated // See description for alternative
-  public static void gunzip(File pulledFile, File outDir) throws IOException
+  public static void gunzip(File pulledFile, File outDir)
   {
     final File outFile = new File(outDir, io.druid.java.util.common.CompressionUtils.getGzBaseName(pulledFile.getName()));
     io.druid.java.util.common.CompressionUtils.gunzip(pulledFile, outFile);

@@ -102,7 +102,7 @@ public class StringDimensionHandlerTest
     return new Pair<>(adapter1, adapter2);
   }
 
-  private static void validate(IncrementalIndexAdapter adapter1, IncrementalIndexAdapter adapter2) throws Exception
+  private static void validate(IncrementalIndexAdapter adapter1, IncrementalIndexAdapter adapter2)
   {
     Map<String, DimensionHandler> handlers = adapter1.getDimensionHandlers();
     Indexed<String> dimNames1 = adapter1.getDimensionNames();

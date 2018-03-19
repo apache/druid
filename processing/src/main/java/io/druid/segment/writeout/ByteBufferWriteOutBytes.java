@@ -116,13 +116,13 @@ public abstract class ByteBufferWriteOutBytes extends WriteOutBytes
   }
 
   @Override
-  public void write(byte[] b) throws IOException
+  public void write(byte[] b)
   {
     write0(b, 0, b.length);
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException
+  public void write(byte[] b, int off, int len)
   {
     Preconditions.checkPositionIndexes(off, off + len, b.length);
     write0(b, off, len);

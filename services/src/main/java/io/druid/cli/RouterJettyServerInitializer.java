@@ -37,6 +37,7 @@ import io.druid.server.router.Router;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
+import io.druid.sql.avatica.DruidAvaticaHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -50,7 +51,11 @@ import java.util.List;
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/status/health"
+      "/status/health",
+      // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
+      // The router will keep the connection context in the forwarded message, and the broker is responsible for
+      // performing the auth checks.
+      DruidAvaticaHandler.AVATICA_PATH
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;
