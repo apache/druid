@@ -111,7 +111,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
             new HandleCallback<Map<String, List<VersionedSupervisorSpec>>>()
             {
               @Override
-              public Map<String, List<VersionedSupervisorSpec>> withHandle(Handle handle) throws Exception
+              public Map<String, List<VersionedSupervisorSpec>> withHandle(Handle handle)
               {
                 return handle.createQuery(
                     StringUtils.format(
@@ -152,7 +152,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           Pair<String, VersionedSupervisorSpec> pair,
                           FoldController foldController,
                           StatementContext statementContext
-                      ) throws SQLException
+                      )
                       {
                         try {
                           String specId = pair.lhs;
@@ -183,7 +183,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
             new HandleCallback<Map<String, SupervisorSpec>>()
             {
               @Override
-              public Map<String, SupervisorSpec> withHandle(Handle handle) throws Exception
+              public Map<String, SupervisorSpec> withHandle(Handle handle)
               {
                 return handle.createQuery(
                     StringUtils.format(
@@ -225,7 +225,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           Pair<String, SupervisorSpec> stringObjectMap,
                           FoldController foldController,
                           StatementContext statementContext
-                      ) throws SQLException
+                      )
                       {
                         try {
                           retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);

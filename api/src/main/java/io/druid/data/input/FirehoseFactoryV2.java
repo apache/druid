@@ -25,6 +25,7 @@ import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
+
 /**
  * Initialization method that connects up the FirehoseV2.  If this method returns successfully it should be safe to
  * call start() on the returned FirehoseV2 (which might subsequently block).
@@ -41,5 +42,10 @@ import java.io.IOException;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface FirehoseFactoryV2<T extends InputRowParser>
 {
+  /**
+   * This method is declared to throw {@link IOException}, although it's not thrown in the implementations in Druid
+   * code, for compatibility with third-party extensions.
+   */
+  @SuppressWarnings("RedundantThrows")
   FirehoseV2 connect(T parser, Object lastCommit) throws IOException, ParseException;
 }

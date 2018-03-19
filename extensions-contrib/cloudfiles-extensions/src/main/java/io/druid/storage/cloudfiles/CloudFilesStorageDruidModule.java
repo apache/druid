@@ -25,13 +25,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
-
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
 import io.druid.java.util.common.logger.Logger;
-
 import org.jclouds.ContextBuilder;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
 import org.jclouds.openstack.v2_0.config.InternalUrlModule;
@@ -86,8 +84,6 @@ public class CloudFilesStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.storage", CloudFilesDataSegmentPusherConfig.class);
     JsonConfigProvider.bind(binder, "druid.cloudfiles", CloudFilesAccountConfig.class);
 
-    Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(CloudFilesDataSegmentPuller.class)
-           .in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(CloudFilesDataSegmentPusher.class)
            .in(LazySingleton.class);
 

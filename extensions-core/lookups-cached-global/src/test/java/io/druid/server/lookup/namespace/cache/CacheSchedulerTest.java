@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
@@ -181,7 +181,7 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000)
-  public void testSimpleSubmission() throws ExecutionException, InterruptedException
+  public void testSimpleSubmission() throws InterruptedException
   {
     UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -200,7 +200,7 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000)
-  public void testPeriodicUpdatesScheduled() throws ExecutionException, InterruptedException
+  public void testPeriodicUpdatesScheduled() throws InterruptedException
   {
     final int repeatCount = 5;
     final long delay = 5;
@@ -234,7 +234,7 @@ public class CacheSchedulerTest
 
 
   @Test(timeout = 10_000) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
-  public void testConcurrentAddDelete() throws ExecutionException, InterruptedException, TimeoutException
+  public void testConcurrentAddDelete() throws InterruptedException
   {
     final int threads = 10;
     final int deletesPerThread = 5;
@@ -307,12 +307,12 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testSimpleDelete() throws InterruptedException, TimeoutException, ExecutionException
+  public void testSimpleDelete() throws InterruptedException
   {
     testDelete();
   }
 
-  public void testDelete() throws InterruptedException, TimeoutException, ExecutionException
+  public void testDelete() throws InterruptedException
   {
     final long period = 1_000L; // Give it some time between attempts to update
     final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
@@ -357,7 +357,7 @@ public class CacheSchedulerTest
 
   @Test(timeout = 10_000)
   public void testShutdown()
-      throws NoSuchFieldException, IllegalAccessException, InterruptedException, ExecutionException
+      throws InterruptedException
   {
     final long period = 5L;
     try {
@@ -390,7 +390,7 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000)
-  public void testRunCount() throws InterruptedException, ExecutionException
+  public void testRunCount() throws InterruptedException
   {
     final int numWaits = 5;
     try {

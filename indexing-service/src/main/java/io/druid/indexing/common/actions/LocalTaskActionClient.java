@@ -19,12 +19,10 @@
 
 package io.druid.indexing.common.actions;
 
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.java.util.common.ISE;
-
-import java.io.IOException;
+import io.druid.java.util.emitter.EmittingLogger;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
@@ -42,7 +40,7 @@ public class LocalTaskActionClient implements TaskActionClient
   }
 
   @Override
-  public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+  public <RetType> RetType submit(TaskAction<RetType> taskAction)
   {
     log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
 

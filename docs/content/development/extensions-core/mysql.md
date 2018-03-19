@@ -29,8 +29,8 @@ Make sure to [include](../../operations/including-extensions.html) `mysql-metada
   Paste the following snippet into the mysql prompt:
 
   ```sql
-  -- create a druid database, make sure to use utf8 as encoding
-  CREATE DATABASE druid DEFAULT CHARACTER SET utf8;
+  -- create a druid database, make sure to use utf8mb4 as encoding
+  CREATE DATABASE druid DEFAULT CHARACTER SET utf8mb4;
 
   -- create a druid user, and grant it all permission on the database we just created
   GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';

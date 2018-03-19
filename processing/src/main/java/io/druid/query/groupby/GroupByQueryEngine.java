@@ -55,7 +55,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -139,7 +138,7 @@ public class GroupByQueryEngine
             new Closeable()
             {
               @Override
-              public void close() throws IOException
+              public void close()
               {
                 CloseQuietly.close(bufferHolder);
               }
@@ -190,12 +189,13 @@ public class GroupByQueryEngine
 
         final DimensionSelector dimSelector = dims.get(0);
         final IndexedInts row = dimSelector.getRow();
-        if (row == null || row.size() == 0) {
+        final int rowSize = row.size();
+        if (rowSize == 0) {
           ByteBuffer newKey = key.duplicate();
           newKey.putInt(MISSING_VALUE);
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
         } else {
-          for (int i = 0; i < row.size(); i++) {
+          for (int i = 0; i < rowSize; i++) {
             ByteBuffer newKey = key.duplicate();
             int dimValue = row.get(i);
             newKey.putInt(dimValue);

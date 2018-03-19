@@ -94,7 +94,7 @@ public class ParallelCombinerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       if (!closed) {
         closed = true;

@@ -164,7 +164,7 @@ public class MultiSegmentScanQueryTest
   }
 
   @Parameterized.Parameters(name = "limit={0},batchSize={1}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(0, 1, 3, 7, 10, 20, 1000), Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000));
   }

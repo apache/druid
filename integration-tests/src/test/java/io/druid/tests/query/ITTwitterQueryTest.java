@@ -48,7 +48,7 @@ public class ITTwitterQueryTest
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return coordinatorClient.areSegmentsLoaded(TWITTER_DATA_SOURCE);
           }

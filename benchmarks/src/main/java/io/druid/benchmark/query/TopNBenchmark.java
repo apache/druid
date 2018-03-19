@@ -315,7 +315,7 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole) throws Exception
+  public void querySingleIncrementalIndex(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -332,7 +332,7 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndex(Blackhole blackhole)
   {
     final QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -349,7 +349,7 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole) throws Exception
+  public void queryMultiQueryableIndex(Blackhole blackhole)
   {
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = Lists.newArrayList();
     QueryToolChest toolChest = factory.getToolchest();

@@ -35,16 +35,6 @@ public class JvmThreadsMonitor extends FeedDefiningMonitor
   private int lastLiveThreads = 0;
   private long lastStartedThreads = 0;
 
-  public JvmThreadsMonitor()
-  {
-    this(ImmutableMap.<String, String[]>of());
-  }
-
-  public JvmThreadsMonitor(Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
-  }
-
   public JvmThreadsMonitor(Map<String, String[]> dimensions, String feed)
   {
     super(feed);

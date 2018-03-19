@@ -42,7 +42,6 @@ import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -83,11 +82,6 @@ public class HadoopDruidConverterConfig
   public static HadoopDruidConverterConfig fromString(final String string) throws IOException
   {
     return fromMap(jsonMapper.readValue(string, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));
-  }
-
-  public static HadoopDruidConverterConfig fromFile(final File file) throws IOException
-  {
-    return fromMap(jsonMapper.readValue(file, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT));
   }
 
   public static HadoopDruidConverterConfig fromMap(final Map<String, Object> map)

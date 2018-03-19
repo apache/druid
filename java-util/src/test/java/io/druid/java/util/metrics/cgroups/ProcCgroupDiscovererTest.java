@@ -50,7 +50,7 @@ public class ProcCgroupDiscovererTest
   }
 
   @Test
-  public void testSimpleProc() throws Exception
+  public void testSimpleProc()
   {
     Assert.assertEquals(
         new File(
@@ -62,7 +62,7 @@ public class ProcCgroupDiscovererTest
   }
 
   @Test
-  public void testParse() throws Exception
+  public void testParse()
   {
     final ProcCgroupDiscoverer.ProcMountsEntry entry = ProcCgroupDiscoverer.ProcMountsEntry.parse(
         "/dev/md126 /ebs xfs rw,seclabel,noatime,attr2,inode64,sunit=1024,swidth=16384,noquota 0 0"

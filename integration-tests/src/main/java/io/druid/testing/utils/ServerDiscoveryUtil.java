@@ -53,7 +53,7 @@ public class ServerDiscoveryUtil
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return isInstanceReady(serviceProvider);
           }

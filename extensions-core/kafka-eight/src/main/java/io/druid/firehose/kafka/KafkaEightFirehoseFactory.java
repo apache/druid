@@ -39,7 +39,6 @@ import kafka.message.InvalidMessageException;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -71,7 +70,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
   }
 
   @Override
-  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory)
   {
     Set<String> newDimExclus = Sets.union(
         firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
@@ -165,7 +164,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         connector.shutdown();
       }

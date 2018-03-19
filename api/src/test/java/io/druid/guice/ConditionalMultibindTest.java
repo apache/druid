@@ -51,7 +51,7 @@ public class ConditionalMultibindTest
   private Properties props;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     props = new Properties();
   }

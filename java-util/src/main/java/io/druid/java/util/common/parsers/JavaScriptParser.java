@@ -68,11 +68,6 @@ public class JavaScriptParser implements Parser<String, Object>
     this.fn = compile(function);
   }
 
-  public Function<Object, Object> getFn()
-  {
-    return fn;
-  }
-
   @Override
   public Map<String, Object> parseToMap(String input)
   {

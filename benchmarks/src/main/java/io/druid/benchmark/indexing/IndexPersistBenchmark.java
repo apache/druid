@@ -28,7 +28,6 @@ import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -37,6 +36,7 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -103,7 +103,7 @@ public class IndexPersistBenchmark
   }
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
@@ -143,7 +143,7 @@ public class IndexPersistBenchmark
   }
 
   @TearDown(Level.Iteration)
-  public void teardown() throws IOException
+  public void teardown()
   {
     incIndex.close();
     incIndex = null;

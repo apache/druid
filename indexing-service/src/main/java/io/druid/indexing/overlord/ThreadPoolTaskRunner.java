@@ -417,6 +417,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     {
       return task.getType();
     }
+    
+    @Override
+    public String getDataSource()
+    {
+      return task.getDataSource();
+    }
   }
 
   private class ThreadPoolTaskRunnerCallable implements Callable<TaskStatus>

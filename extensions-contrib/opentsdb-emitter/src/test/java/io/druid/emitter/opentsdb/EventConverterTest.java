@@ -20,8 +20,8 @@
 package io.druid.emitter.opentsdb;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,7 +50,7 @@ public class EventConverterTest
   }
 
   @Test
-  public void testConvert() throws Exception
+  public void testConvert()
   {
     DateTime dateTime = DateTimes.nowUtc();
     ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()

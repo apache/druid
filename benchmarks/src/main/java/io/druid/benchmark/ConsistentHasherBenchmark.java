@@ -20,7 +20,6 @@
 package io.druid.benchmark;
 
 import com.google.common.collect.Sets;
-
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.router.ConsistentHasher;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -36,7 +35,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -57,7 +55,7 @@ public class ConsistentHasherBenchmark
   Set<String> servers;
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     hasher = new ConsistentHasher(null);
     uuids = new ArrayList<>();
@@ -85,7 +83,7 @@ public class ConsistentHasherBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void hash(Blackhole blackhole) throws Exception
+  public void hash(Blackhole blackhole)
   {
     for (String uuid : uuids) {
       String server = hasher.findKey(StringUtils.toUtf8(uuid));

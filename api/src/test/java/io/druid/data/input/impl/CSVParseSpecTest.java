@@ -28,7 +28,7 @@ import java.util.Collections;
 public class CSVParseSpecTest
 {
   @Test(expected = IllegalArgumentException.class)
-  public void testColumnMissing() throws Exception
+  public void testColumnMissing()
   {
     @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new CSVParseSpec(
@@ -50,7 +50,7 @@ public class CSVParseSpecTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testComma() throws Exception
+  public void testComma()
   {
     @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new CSVParseSpec(

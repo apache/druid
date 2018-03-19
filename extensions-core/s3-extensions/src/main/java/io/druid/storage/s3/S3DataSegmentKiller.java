@@ -28,7 +28,6 @@ import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -71,7 +70,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killAll() throws IOException
+  public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
   }

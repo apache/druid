@@ -20,9 +20,10 @@
 package io.druid.emitter.graphite;
 
 import com.google.common.collect.Maps;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.annotations.UsedByJUnitParamsRunner;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.commons.io.IOUtils;
@@ -145,6 +146,7 @@ public class WhiteListBasedConverterTest
     Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", graphiteEvent.getEventPath());
   }
 
+  @UsedByJUnitParamsRunner
   private Object[] parametersForTestGetPath()
   {
     return new Object[]{

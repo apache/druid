@@ -72,12 +72,12 @@ public class LongsLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
   }
 
   @Override
-  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException
+  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy)
   {
     metaOut.put(strategy.getId());
   }

@@ -34,7 +34,7 @@ import java.util.Iterator;
 public class FunctionalIteratorTest
 {
   @Test
-  public void testTransform() throws Exception
+  public void testTransform()
   {
     Assert.assertEquals(
         Lists.<Integer>newArrayList(
@@ -55,7 +55,7 @@ public class FunctionalIteratorTest
   }
 
   @Test
-  public void testTransformCat() throws Exception
+  public void testTransformCat()
   {
     Assert.assertEquals(
         Lists.<String>newArrayList(
@@ -76,7 +76,7 @@ public class FunctionalIteratorTest
   }
 
   @Test
-  public void testKeep() throws Exception
+  public void testKeep()
   {
     Assert.assertEquals(
         Lists.<Integer>newArrayList(
@@ -100,7 +100,7 @@ public class FunctionalIteratorTest
   }
 
   @Test
-  public void testFilter() throws Exception
+  public void testFilter()
   {
     Assert.assertEquals(
         Lists.<String>newArrayList(
@@ -121,7 +121,7 @@ public class FunctionalIteratorTest
   }
 
   @Test
-  public void testDrop() throws Exception
+  public void testDrop()
   {
     Assert.assertEquals(
         Lists.<String>newArrayList(

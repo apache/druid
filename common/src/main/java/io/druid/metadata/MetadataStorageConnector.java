@@ -34,7 +34,7 @@ public interface MetadataStorageConnector
       String valueColumn,
       String key,
       byte[] value
-  ) throws Exception;
+  );
 
   byte[] lookup(
       String tableName,
@@ -53,7 +53,7 @@ public interface MetadataStorageConnector
    */
   default boolean compareAndSwap(
       List<MetadataCASUpdate> updates
-  ) throws Exception
+  )
   {
     throw new UnsupportedOperationException("compareAndSwap is not implemented.");
   }

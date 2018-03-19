@@ -57,7 +57,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   int[] sizes = new int[count];
 
   @Override
-  protected void setUp() throws Exception
+  protected void setUp()
   {
     boolean random = false;
     Random rand = new Random(0);
@@ -145,7 +145,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
   }
 
   @SuppressWarnings("unused") // Supposedly called by Caliper
-  public double timeFold(int reps) throws Exception
+  public double timeFold(int reps)
   {
     final ByteBuffer buf = allocateEmptyHLLBuffer(targetIsDirect, alignTarget, 0);
 
@@ -168,7 +168,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
     return HyperLogLogCollector.makeCollector(buf.duplicate()).estimateCardinality();
   }
 
-  public static void main(String[] args) throws Exception
+  public static void main(String[] args)
   {
     Runner.main(HyperLogLogCollectorBenchmark.class, args);
   }

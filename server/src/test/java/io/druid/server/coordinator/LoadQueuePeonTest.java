@@ -307,7 +307,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
           @Override
           public void childEvent(
               CuratorFramework client, PathChildrenCacheEvent event
-          ) throws Exception
+          )
           {
             if (event.getType() == PathChildrenCacheEvent.Type.CHILD_ADDED) {
               loadRequestSignal.countDown();

@@ -25,16 +25,16 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.StatusResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.indexer.TaskState;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
 import io.druid.testing.utils.RetryUtil;
@@ -182,7 +182,7 @@ public class OverlordResourceTestClient
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             TaskState status = getTaskStatus(taskID);
             if (status == TaskState.FAILED) {

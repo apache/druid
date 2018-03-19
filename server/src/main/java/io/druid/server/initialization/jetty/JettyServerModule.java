@@ -74,7 +74,6 @@ import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
-import javax.servlet.ServletException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -135,7 +134,7 @@ public class JettyServerModule extends JerseyServletModule
     @Override
     protected ResourceConfig getDefaultResourceConfig(
         Map<String, Object> props, WebConfig webConfig
-    ) throws ServletException
+    )
     {
       return new DefaultResourceConfig(resources);
     }

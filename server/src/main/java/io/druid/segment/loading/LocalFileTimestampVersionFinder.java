@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
@@ -40,7 +39,7 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
     implements SearchableVersionedDataFinder<URI>
 {
   public static final String URI_SCHEME = "file";
-  private URI mostRecentInDir(final Path dir, final Pattern pattern) throws IOException
+  private URI mostRecentInDir(final Path dir, final Pattern pattern)
   {
     long latestModified = Long.MIN_VALUE;
     URI latest = null;

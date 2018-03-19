@@ -211,7 +211,7 @@ public class JSONPathParserTest
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(nestedJson);
+    jsonParser.parseToMap(nestedJson);
   }
 
   @Test
@@ -225,7 +225,7 @@ public class JSONPathParserTest
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(nestedJson);
+    jsonParser.parseToMap(nestedJson);
   }
 
   @Test
@@ -237,6 +237,6 @@ public class JSONPathParserTest
     thrown.expectMessage("Unable to parse row [" + notJson + "]");
 
     final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
-    final Map<String, Object> jsonMap = jsonParser.parseToMap(notJson);
+    jsonParser.parseToMap(notJson);
   }
 }

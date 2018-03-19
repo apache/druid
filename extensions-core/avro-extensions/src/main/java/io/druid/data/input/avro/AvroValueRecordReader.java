@@ -23,8 +23,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.mapreduce.AvroRecordReaderBase;
 import org.apache.hadoop.io.NullWritable;
 
-import java.io.IOException;
-
 public class AvroValueRecordReader extends AvroRecordReaderBase<NullWritable, GenericRecord, GenericRecord>
 {
   public AvroValueRecordReader(Schema readerSchema)
@@ -36,7 +34,7 @@ public class AvroValueRecordReader extends AvroRecordReaderBase<NullWritable, Ge
    * {@inheritDoc}
    */
   @Override
-  public NullWritable getCurrentKey() throws IOException, InterruptedException
+  public NullWritable getCurrentKey()
   {
     return NullWritable.get();
   }
@@ -45,7 +43,7 @@ public class AvroValueRecordReader extends AvroRecordReaderBase<NullWritable, Ge
    * {@inheritDoc}
    */
   @Override
-  public GenericRecord getCurrentValue() throws IOException, InterruptedException
+  public GenericRecord getCurrentValue()
   {
     return getCurrentRecord();
   }

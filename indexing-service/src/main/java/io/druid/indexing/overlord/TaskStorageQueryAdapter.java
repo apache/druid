@@ -97,4 +97,10 @@ public class TaskStorageQueryAdapter
     }
     return segments;
   }
+  
+  public Pair<DateTime, String> getCreatedDateAndDataSource(String taskId)
+  {
+    return storage.getCreatedDateTimeAndDataSource(taskId);
+  }
+  
 }

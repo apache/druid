@@ -118,7 +118,7 @@ public class MonitorScheduler
           new Callable<ScheduledExecutors.Signal>()
           {
             @Override
-            public ScheduledExecutors.Signal call() throws Exception
+            public ScheduledExecutors.Signal call()
             {
               // Run one more time even if the monitor was removed, in case there's some extra data to flush
               if (monitor.monitor(emitter) && hasMonitor(monitor)) {

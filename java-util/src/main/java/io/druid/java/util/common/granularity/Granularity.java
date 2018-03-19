@@ -109,8 +109,6 @@ public abstract class Granularity implements Cacheable
 
   public abstract DateTime increment(DateTime time);
 
-  public abstract DateTime decrement(DateTime time);
-
   public abstract DateTime bucketStart(DateTime time);
 
   public abstract DateTime toDate(String filePath, Formatter formatter);

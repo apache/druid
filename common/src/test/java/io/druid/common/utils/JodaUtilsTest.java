@@ -36,7 +36,7 @@ import java.util.List;
 public class JodaUtilsTest
 {
   @Test
-  public void testUmbrellaIntervalsSimple() throws Exception
+  public void testUmbrellaIntervalsSimple()
   {
     List<Interval> intervals = Arrays.asList(
         Intervals.of("2011-03-03/2011-03-04"),
@@ -56,13 +56,13 @@ public class JodaUtilsTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testUmbrellaIntervalsNull() throws Exception
+  public void testUmbrellaIntervalsNull()
   {
     JodaUtils.umbrellaInterval(Collections.emptyList());
   }
 
   @Test
-  public void testCondenseIntervalsSimple() throws Exception
+  public void testCondenseIntervalsSimple()
   {
     List<Interval> intervals = Arrays.asList(
         Intervals.of("2011-01-01/2011-01-02"),
@@ -88,7 +88,7 @@ public class JodaUtilsTest
   }
 
   @Test
-  public void testCondenseIntervalsMixedUp() throws Exception
+  public void testCondenseIntervalsMixedUp()
   {
     List<Interval> intervals = Arrays.asList(
         Intervals.of("2011-01-01/2011-01-02"),

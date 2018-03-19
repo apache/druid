@@ -47,7 +47,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.filtration.Filtration;
@@ -137,9 +136,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
         operatorTable,
         CalciteTests.createExprMacroTable(),
         plannerConfig,
-        new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopEscalator(),
         CalciteTests.getJsonMapper()
     );
   }
@@ -167,7 +164,10 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                          + "APPROX_QUANTILE(cnt, 0.5)\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan(
+          sql,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();
@@ -249,7 +249,10 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                          + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan(
+          sql,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();
@@ -302,7 +305,10 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
       final String sql = "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
                          + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
-      final PlannerResult plannerResult = planner.plan(sql);
+      final PlannerResult plannerResult = planner.plan(
+          sql,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
 
       // Verify results
       final List<Object[]> results = plannerResult.run().toList();

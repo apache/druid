@@ -30,7 +30,7 @@ import org.junit.Test;
 public class MessageTimeRejectionPolicyFactoryTest
 {
   @Test
-  public void testAccept() throws Exception
+  public void testAccept()
   {
     Period period = new Period("PT10M");
     RejectionPolicy rejectionPolicy = new MessageTimeRejectionPolicyFactory().create(period);

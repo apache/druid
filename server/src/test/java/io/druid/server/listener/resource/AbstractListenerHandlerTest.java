@@ -22,9 +22,7 @@ package io.druid.server.listener.resource;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.jackson.DefaultObjectMapper;
-
 import io.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -185,7 +183,7 @@ public class AbstractListenerHandlerTest
   }
 
   @Test
-  public void testBadInput() throws Exception
+  public void testBadInput()
   {
     final ByteArrayInputStream bais = new ByteArrayInputStream(new byte[]{0, 0, 0});
     final Response response = abstractListenerHandler.handlePOST(bais, mapper, good_id);
@@ -207,7 +205,7 @@ public class AbstractListenerHandlerTest
 
 
   @Test
-  public void testHandleSimpleDELETE() throws Exception
+  public void testHandleSimpleDELETE()
   {
     final Response response = abstractListenerHandler.handleDELETE(valid_id);
     Assert.assertEquals(202, response.getStatus());
@@ -215,14 +213,14 @@ public class AbstractListenerHandlerTest
   }
 
   @Test
-  public void testMissingDELETE() throws Exception
+  public void testMissingDELETE()
   {
     final Response response = abstractListenerHandler.handleDELETE("not going to find it");
     Assert.assertEquals(404, response.getStatus());
   }
 
   @Test
-  public void testErrorDELETE() throws Exception
+  public void testErrorDELETE()
   {
     final Response response = abstractListenerHandler.handleDELETE(error_id);
     Assert.assertEquals(500, response.getStatus());
@@ -230,7 +228,7 @@ public class AbstractListenerHandlerTest
   }
 
   @Test
-  public void testHandle() throws Exception
+  public void testHandle()
   {
     final Response response = abstractListenerHandler.handleGET(good_id);
     Assert.assertEquals(200, response.getStatus());
@@ -238,14 +236,14 @@ public class AbstractListenerHandlerTest
   }
 
   @Test
-  public void testMissingHandle() throws Exception
+  public void testMissingHandle()
   {
     final Response response = abstractListenerHandler.handleGET("neva gonna get it");
     Assert.assertEquals(404, response.getStatus());
   }
 
   @Test
-  public void testExceptionalHandle() throws Exception
+  public void testExceptionalHandle()
   {
     final Response response = abstractListenerHandler.handleGET(error_id);
     Assert.assertEquals(500, response.getStatus());
@@ -253,7 +251,7 @@ public class AbstractListenerHandlerTest
   }
 
   @Test
-  public void testHandleAll() throws Exception
+  public void testHandleAll()
   {
     final Response response = abstractListenerHandler.handleGETAll();
     Assert.assertEquals(200, response.getStatus());
@@ -261,7 +259,7 @@ public class AbstractListenerHandlerTest
   }
 
   @Test
-  public void testExceptionalHandleAll() throws Exception
+  public void testExceptionalHandleAll()
   {
     shouldFail.set(true);
     final Response response = abstractListenerHandler.handleGETAll();
@@ -270,7 +268,7 @@ public class AbstractListenerHandlerTest
   }
 
   @Test
-  public void testMissingHandleAll() throws Exception
+  public void testMissingHandleAll()
   {
     returnEmpty.set(true);
     final Response response = abstractListenerHandler.handleGETAll();

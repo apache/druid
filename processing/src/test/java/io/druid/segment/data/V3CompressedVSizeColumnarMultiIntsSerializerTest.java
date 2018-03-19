@@ -42,7 +42,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
@@ -97,7 +96,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
     );
   }
 
-  private void generateVals(final int totalSize, final int maxValue) throws IOException
+  private void generateVals(final int totalSize, final int maxValue)
   {
     vals = new ArrayList<>(totalSize);
     for (int i = 0; i < totalSize; ++i) {
@@ -155,7 +154,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
         for (int i = 0; i < vals.size(); ++i) {
           IndexedInts subVals = columnarMultiInts.get(i);
           assertEquals(subVals.size(), vals.get(i).length);
-          for (int j = 0; j < subVals.size(); ++j) {
+          for (int j = 0, size = subVals.size(); j < size; ++j) {
             assertEquals(subVals.get(j), vals.get(i)[j]);
           }
         }
@@ -181,7 +180,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     vals = null;
   }
@@ -278,7 +277,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
       for (int i = 0; i < vals.size(); ++i) {
         IndexedInts subVals = columnarMultiInts.get(i);
         assertEquals(subVals.size(), vals.get(i).length);
-        for (int j = 0; j < subVals.size(); ++j) {
+        for (int j = 0, size = subVals.size(); j < size; ++j) {
           assertEquals(subVals.get(j), vals.get(i)[j]);
         }
       }
