@@ -314,7 +314,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
     }
 
     @Override
-    public void handleCancel(String consumerTag) throws IOException
+    public void handleCancel(String consumerTag)
     {
       _queue.clear();
     }
@@ -326,7 +326,6 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
         AMQP.BasicProperties properties,
         byte[] body
     )
-        throws IOException
     {
       this._queue.add(new Delivery(envelope, properties, body));
     }

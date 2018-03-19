@@ -23,12 +23,12 @@ import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.HttpClientConfig;
-import io.druid.java.util.http.client.HttpClientInit;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.LifecycleUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClientConfig;
+import io.druid.java.util.http.client.HttpClientInit;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -225,7 +225,7 @@ public abstract class BaseJettyTest
     public static final String SECRET_USER = "bob";
 
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException
+    public void init(FilterConfig filterConfig)
     {
     }
 

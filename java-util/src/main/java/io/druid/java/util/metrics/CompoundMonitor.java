@@ -19,7 +19,6 @@
 
 package io.druid.java.util.metrics;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 
@@ -59,16 +58,7 @@ public abstract class CompoundMonitor implements Monitor
   @Override
   public boolean monitor(final ServiceEmitter emitter)
   {
-    return shouldReschedule(Lists.transform(monitors,
-        new Function<Monitor, Boolean>()
-        {
-          @Override
-          public Boolean apply(Monitor monitor)
-          {
-            return monitor.monitor(emitter);
-          }
-        }
-    ));
+    return shouldReschedule(Lists.transform(monitors, monitor -> monitor.monitor(emitter)));
   }
 
   public abstract boolean shouldReschedule(List<Boolean> reschedules);

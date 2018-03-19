@@ -91,7 +91,7 @@ public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSuppl
     while (objects.hasNext()) {
       IndexedInts next = objects.next();
       offsetList.add(offset);
-      for (int i = 0; i < next.size(); i++) {
+      for (int i = 0, size = next.size(); i < size; i++) {
         values.add(next.get(i));
       }
       offset += next.size();
@@ -116,7 +116,7 @@ public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSuppl
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return 1 + offsetSupplier.getSerializedSize() + valueSupplier.getSerializedSize();
   }

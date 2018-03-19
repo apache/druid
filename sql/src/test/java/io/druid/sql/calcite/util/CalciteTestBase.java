@@ -17,25 +17,16 @@
  * under the License.
  */
 
-package io.druid.java.util.metrics.cgroups;
+package io.druid.sql.calcite.util;
 
-import io.druid.java.util.metrics.PidDiscoverer;
+import io.druid.sql.calcite.planner.Calcites;
+import org.junit.BeforeClass;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-public class ProcPidCgroupDiscoverer implements CgroupDiscoverer
+public abstract class CalciteTestBase
 {
-  private final ProcCgroupDiscoverer delegate;
-
-  public ProcPidCgroupDiscoverer(PidDiscoverer pidDiscoverer)
+  @BeforeClass
+  public static void setupCalciteProperties()
   {
-    delegate = new ProcCgroupDiscoverer(Paths.get("/proc", Long.toString(pidDiscoverer.getPid())));
-  }
-
-  @Override
-  public Path discover(String cgroup)
-  {
-    return delegate.discover(cgroup);
+    Calcites.setSystemProperties();
   }
 }

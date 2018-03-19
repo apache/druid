@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -107,7 +106,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return archivedSegment;
       }
@@ -121,7 +120,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return SOURCE_SEGMENT;
       }
@@ -144,7 +143,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return archivedSegment;
       }
@@ -158,7 +157,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return SOURCE_SEGMENT;
       }

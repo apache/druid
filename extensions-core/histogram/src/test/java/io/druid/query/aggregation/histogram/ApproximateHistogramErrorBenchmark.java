@@ -26,6 +26,9 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Random;
 
+/**
+ * TODO retwrite using JMH and move to the benchmarks module
+ */
 public class ApproximateHistogramErrorBenchmark
 {
   private boolean debug = true;
@@ -40,18 +43,6 @@ public class ApproximateHistogramErrorBenchmark
   public ApproximateHistogramErrorBenchmark setDebug(boolean debug)
   {
     this.debug = debug;
-    return this;
-  }
-
-  public ApproximateHistogramErrorBenchmark setNumBuckets(int numBuckets)
-  {
-    this.numBuckets = numBuckets;
-    return this;
-  }
-
-  public ApproximateHistogramErrorBenchmark setNumBreaks(int numBreaks)
-  {
-    this.numBreaks = numBreaks;
     return this;
   }
 

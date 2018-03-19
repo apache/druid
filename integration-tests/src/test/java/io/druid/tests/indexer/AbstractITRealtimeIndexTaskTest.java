@@ -77,7 +77,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   @Inject
   IntegrationTestingConfig config;
 
-  void doTest() throws Exception
+  void doTest()
   {
     LOG.info("Starting test: ITRealtimeIndexTaskTest");
     try {
@@ -136,7 +136,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
           new Callable<Boolean>()
           {
             @Override
-            public Boolean call() throws Exception
+            public Boolean call()
             {
               return coordinator.areSegmentsLoaded(INDEX_DATASOURCE);
             }

@@ -147,7 +147,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
   }
 
   @Override
-  public FirehoseV2 connect(final ByteBufferInputRowParser firehoseParser, Object lastCommit) throws IOException
+  public FirehoseV2 connect(final ByteBufferInputRowParser firehoseParser, Object lastCommit)
   {
     final Map<Integer, Long> lastOffsets = loadOffsetFromPreviousMetaData(lastCommit);
 
@@ -185,7 +185,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       }
 
       @Override
-      public void start() throws Exception
+      public void start()
       {
       }
 
@@ -336,7 +336,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
     }
 
     @Override
-    public synchronized void close() throws IOException
+    public synchronized void close()
     {
       if (stopped.compareAndSet(false, true)) {
         thread.interrupt();

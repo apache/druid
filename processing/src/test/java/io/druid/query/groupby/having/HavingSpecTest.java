@@ -47,7 +47,7 @@ public class HavingSpecTest
   );
 
   @Test
-  public void testHavingClauseSerde() throws Exception
+  public void testHavingClauseSerde()
   {
     List<HavingSpec> havings = Arrays.<HavingSpec>asList(
         new GreaterThanHavingSpec("agg", Double.valueOf(1.3)),

@@ -41,7 +41,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -108,7 +107,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
   public Firehose connect(
       final InputRowParser<Pair<DateTime, ChannelPrivMsg>> firehoseParser,
       final File temporaryDirectory
-  ) throws IOException
+  )
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -246,7 +245,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         try {
           log.info("disconnecting from irc server [%s]", host);

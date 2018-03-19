@@ -221,7 +221,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       }
     }
 
-    public void handleChildEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
+    public void handleChildEvent(CuratorFramework client, PathChildrenCacheEvent event)
     {
       synchronized (lock) {
         try {

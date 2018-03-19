@@ -57,11 +57,6 @@ public class ResourcePoolConfig
     return maxPerKey;
   }
 
-  public boolean isCleanIdle()
-  {
-    return false;
-  }
-
   public long getUnusedConnectionTimeoutMillis()
   {
     return unusedConnectionTimeoutMillis;

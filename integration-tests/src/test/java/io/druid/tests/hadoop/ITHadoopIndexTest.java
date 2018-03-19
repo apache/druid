@@ -80,7 +80,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
           new Callable<Boolean>()
           {
             @Override
-            public Boolean call() throws Exception
+            public Boolean call()
             {
               return coordinator.areSegmentsLoaded(BATCH_DATASOURCE);
 

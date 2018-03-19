@@ -26,11 +26,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.StatusResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -42,6 +37,11 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.server.coordination.ChangeRequestHttpSyncer;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -153,11 +153,6 @@ public class WorkerHolder
       retVal.add(taskAnnouncement.getTaskResource().getAvailabilityGroup());
     }
     return retVal;
-  }
-
-  public DateTime getLastCompletedTaskTime()
-  {
-    return lastCompletedTaskTime.get();
   }
 
   public DateTime getBlacklistedUntil()

@@ -47,7 +47,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -181,32 +180,14 @@ public class MetadataResource
       List<Interval> intervals
   )
   {
-    List<DataSegment> segments;
-    try {
-      segments = metadataStorageCoordinator.getUsedSegmentsForIntervals(dataSourceName, intervals);
-    }
-    catch (IOException ex) {
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
-    }
+    List<DataSegment> segments = metadataStorageCoordinator.getUsedSegmentsForIntervals(dataSourceName, intervals);
 
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     if (full != null) {
       return builder.entity(segments).build();
     }
 
-    return builder.entity(
-        Iterables.transform(
-            segments,
-            new Function<DataSegment, String>()
-            {
-              @Override
-              public String apply(DataSegment segment)
-              {
-                return segment.getIdentifier();
-              }
-            }
-        )
-    ).build();
+    return builder.entity(Iterables.transform(segments, DataSegment::getIdentifier)).build();
   }
 
   @GET

@@ -17,23 +17,25 @@
  * under the License.
  */
 
-package io.druid.java.util.common.collect;
+package io.druid.server.security;
 
-import java.util.HashMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.segment.TestHelper;
+import org.junit.Assert;
+import org.junit.Test;
 
-// Can't find a good way to abstract over which aggregator representation is used,
-// so I just pick Double/MutableDouble.
-public class AggregatingMap<K> extends HashMap<K, Double>
+public class EscalatorTest
 {
-  public void add(K k, double n)
+  @Test
+  public void testSerde() throws Exception
   {
-    final Double value = get(k);
-
-    if (value == null) {
-      put(k, n);
-      return;
-    }
-
-    put(k, value + n);
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Assert.assertEquals(
+        NoopEscalator.getInstance(),
+        objectMapper.readValue(
+            objectMapper.writeValueAsString(NoopEscalator.getInstance()),
+            Escalator.class
+        )
+    );
   }
 }

@@ -42,8 +42,8 @@ import io.druid.query.TableDataSource;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.server.http.security.DatasourceResourceFilter;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ResourceAction;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
@@ -61,7 +61,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -296,7 +295,7 @@ public class ClientInfoResource
       @QueryParam("intervals") String intervals,
       @QueryParam("numCandidates") @DefaultValue("-1") int numCandidates,
       @Context final HttpServletRequest req
-  ) throws IOException
+  )
   {
     List<Interval> intervalList = Lists.newArrayList();
     for (String interval : intervals.split(",")) {

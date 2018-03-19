@@ -83,7 +83,7 @@ public class CostBalancerStrategyBenchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Fork(1)
-  public double measureCostStrategySingle() throws InterruptedException
+  public double measureCostStrategySingle()
   {
     double totalCost = 0;
     for (DataSegment s : segments) {
@@ -96,7 +96,7 @@ public class CostBalancerStrategyBenchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Fork(1)
-  public double measureIntervalPenalty() throws InterruptedException
+  public double measureIntervalPenalty()
   {
     return CostBalancerStrategy.intervalCost(x1, y0, y1);
   }

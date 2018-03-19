@@ -27,10 +27,10 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -248,7 +248,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         new HandleCallback<List<Pair<EntryType, StatusType>>>()
         {
           @Override
-          public List<Pair<EntryType, StatusType>> withHandle(Handle handle) throws Exception
+          public List<Pair<EntryType, StatusType>> withHandle(Handle handle)
           {
             return handle
                 .createQuery(
@@ -401,7 +401,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             removeLock(handle, lockId);
 
@@ -448,7 +448,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         new HandleCallback<List<LogType>>()
         {
           @Override
-          public List<LogType> withHandle(Handle handle) throws Exception
+          public List<LogType> withHandle(Handle handle)
           {
             return handle
                 .createQuery(
@@ -498,7 +498,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         new HandleCallback<Map<Long, LockType>>()
         {
           @Override
-          public Map<Long, LockType> withHandle(Handle handle) throws Exception
+          public Map<Long, LockType> withHandle(Handle handle)
           {
             return handle.createQuery(
                 StringUtils.format(
@@ -545,7 +545,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                                    Pair<Long, LockType> lock,
                                    FoldController control,
                                    StatementContext ctx
-                               ) throws SQLException
+                               )
                                {
                                  accumulator.put(lock.lhs, lock.rhs);
                                  return accumulator;

@@ -22,9 +22,7 @@ package io.druid.server.lookup.cache.loading;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-
 import io.druid.java.util.common.ISE;
-
 import org.mapdb.Bind;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -33,7 +31,6 @@ import org.mapdb.HTreeMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -134,7 +131,7 @@ public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
   }
 
   @Override
-  public V get(K key, final Callable<? extends V> valueLoader) throws ExecutionException
+  public V get(K key, final Callable<? extends V> valueLoader)
   {
     synchronized (key) {
       V value = cache.get(key);

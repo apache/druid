@@ -20,24 +20,12 @@
 package io.druid.java.util.common.concurrent;
 
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class ExecutorServices
 {
-  public static ExecutorService create(Lifecycle lifecycle, ExecutorServiceConfig config)
-  {
-    return manageLifecycle(
-        lifecycle,
-        Executors.newFixedThreadPool(
-            config.getNumThreads(),
-            new ThreadFactoryBuilder().setDaemon(true).setNameFormat(config.getFormatString()).build()
-        )
-    );
-  }
 
   public static <T extends ExecutorService> T manageLifecycle(Lifecycle lifecycle, final T service)
   {
@@ -46,7 +34,7 @@ public class ExecutorServices
           new Lifecycle.Handler()
           {
             @Override
-            public void start() throws Exception
+            public void start()
             {
             }
 

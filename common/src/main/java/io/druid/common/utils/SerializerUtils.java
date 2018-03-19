@@ -29,30 +29,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
-import java.util.Arrays;
-import java.util.List;
 
 public class SerializerUtils
 {
-
-  /**
-   * Writes the given int value into the given OutputStream in big-endian byte order, using the helperBuffer. Faster
-   * alternative to out.write(Ints.toByteArray(value)), more convenient (sometimes) than wrapping the OutputStream into
-   * {@link java.io.DataOutputStream}.
-   *
-   * @param helperBuffer a big-endian heap ByteBuffer with capacity of at least 4
-   */
-  public static void writeBigEndianIntToOutputStream(OutputStream out, int value, ByteBuffer helperBuffer)
-      throws IOException
-  {
-    if (helperBuffer.order() != ByteOrder.BIG_ENDIAN || !helperBuffer.hasArray()) {
-      throw new IllegalArgumentException("Expected writable, big-endian, heap byteBuffer");
-    }
-    helperBuffer.putInt(0, value);
-    out.write(helperBuffer.array(), helperBuffer.arrayOffset(), Integer.BYTES);
-  }
 
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
@@ -76,31 +56,17 @@ public class SerializerUtils
     return StringUtils.fromUtf8(stringBytes);
   }
 
-  public String readString(ByteBuffer in) throws IOException
+  public String readString(ByteBuffer in)
   {
     final int length = in.getInt();
     return StringUtils.fromUtf8(readBytes(in, length));
   }
 
-  public byte[] readBytes(ByteBuffer in, int length) throws IOException
+  public byte[] readBytes(ByteBuffer in, int length)
   {
     byte[] bytes = new byte[length];
     in.get(bytes);
     return bytes;
-  }
-
-  void writeStrings(OutputStream out, String[] names) throws IOException
-  {
-    writeStrings(out, Arrays.asList(names));
-  }
-
-  private void writeStrings(OutputStream out, List<String> names) throws IOException
-  {
-    writeInt(out, names.size());
-
-    for (String name : names) {
-      writeString(out, name);
-    }
   }
 
   String[] readStrings(InputStream in) throws IOException
@@ -116,7 +82,7 @@ public class SerializerUtils
     return retVal;
   }
 
-  String[] readStrings(ByteBuffer in) throws IOException
+  String[] readStrings(ByteBuffer in)
   {
     int length = in.getInt();
 

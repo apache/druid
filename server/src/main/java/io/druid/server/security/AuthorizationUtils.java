@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -281,6 +282,65 @@ public class AuthorizationUtils
     return filteredResources;
   }
 
+  /**
+   * Given a map of resource lists, filter each resources list by applying the resource action generator to each
+   * item in each resource list.
+   *
+   * The resourceActionGenerator returns an Iterable<ResourceAction> for each resource.
+   *
+   * If a resource list is null or has no authorized items after filtering, it will not be included in the returned
+   * map.
+   *
+   * This function will set the DRUID_AUTHORIZATION_CHECKED attribute in the request.
+   *
+   * If this attribute is already set when this function is called, an exception is thrown.
+   *
+   * @param request                 HTTP request to be authorized
+   * @param unfilteredResources     Map of resource lists to be filtered
+   * @param resourceActionGenerator Function that creates an iterable of resource-actions from a resource
+   * @param authorizerMapper        authorizer mapper
+   *
+   * @return Map containing lists of resources that were authorized
+   */
+  public static <KeyType, ResType> Map<KeyType, List<ResType>> filterAuthorizedResources(
+      final HttpServletRequest request,
+      final Map<KeyType, List<ResType>> unfilteredResources,
+      final Function<? super ResType, Iterable<ResourceAction>> resourceActionGenerator,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
+      throw new ISE("Request already had authorization check.");
+    }
+
+    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
+
+    Map<KeyType, List<ResType>> filteredResources = Maps.newHashMap();
+    for (Map.Entry<KeyType, List<ResType>> entry : unfilteredResources.entrySet()) {
+      if (entry.getValue() == null) {
+        continue;
+      }
+
+      final List<ResType> filteredList = Lists.newArrayList(
+          AuthorizationUtils.filterAuthorizedResources(
+              authenticationResult,
+              entry.getValue(),
+              resourceActionGenerator,
+              authorizerMapper
+          )
+      );
+
+      if (filteredList.size() > 0) {
+        filteredResources.put(
+            entry.getKey(),
+            filteredList
+        );
+      }
+    }
+
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    return filteredResources;
+  }
 
   /**
    * Function for the common pattern of generating a resource-action for reading from a datasource, using the

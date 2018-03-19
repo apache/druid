@@ -34,7 +34,7 @@ public class StringFormatExtractionFnTest
 {
 
   @Test
-  public void testApply() throws Exception
+  public void testApply()
   {
     StringFormatExtractionFn fn = new StringFormatExtractionFn("[%s]");
     long test = 1000L;
@@ -42,7 +42,7 @@ public class StringFormatExtractionFnTest
   }
 
   @Test
-  public void testApplyNull1() throws Exception
+  public void testApplyNull1()
   {
     String test = null;
     Assert.assertEquals("[null]", format("[%s]", "nullString").apply(test));
@@ -51,7 +51,7 @@ public class StringFormatExtractionFnTest
   }
 
   @Test
-  public void testApplyNull2() throws Exception
+  public void testApplyNull2()
   {
     String test = null;
     Assert.assertEquals("null", format("%s", "nullString").apply(test));
@@ -60,7 +60,7 @@ public class StringFormatExtractionFnTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testInvalidOption1() throws Exception
+  public void testInvalidOption1()
   {
     new StringFormatExtractionFn("");
   }

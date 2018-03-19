@@ -24,7 +24,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
@@ -41,11 +40,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.file.StandardOpenOption;
@@ -53,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * A class that concatenates files together into configurable sized chunks,
@@ -117,11 +113,6 @@ public class FileSmoosher implements Closeable
   static File makeChunkFile(File baseDir, int i)
   {
     return new File(baseDir, StringUtils.format("%05d.%s", i, FILE_EXTENSION));
-  }
-
-  public Set<String> getInternalFilenames()
-  {
-    return internalFiles.keySet();
   }
 
   public void add(File fileToAdd) throws IOException
@@ -193,12 +184,6 @@ public class FileSmoosher implements Closeable
       private long bytesWritten = 0;
 
       @Override
-      public int write(InputStream in) throws IOException
-      {
-        return verifySize(currOut.write(in));
-      }
-
-      @Override
       public int write(ByteBuffer in) throws IOException
       {
         return verifySize(currOut.write(in));
@@ -216,7 +201,7 @@ public class FileSmoosher implements Closeable
         return verifySize(currOut.write(srcs));
       }
 
-      private int verifySize(long bytesWrittenInChunk) throws IOException
+      private int verifySize(long bytesWrittenInChunk)
       {
         bytesWritten += bytesWrittenInChunk;
 
@@ -324,12 +309,6 @@ public class FileSmoosher implements Closeable
       public int write(ByteBuffer buffer) throws IOException
       {
         return addToOffset(channel.write(buffer));
-      }
-
-      @Override
-      public int write(InputStream in) throws IOException
-      {
-        return addToOffset(ByteStreams.copy(Channels.newChannel(in), channel));
       }
 
       @Override
@@ -457,12 +436,6 @@ public class FileSmoosher implements Closeable
     public int write(ByteBuffer buffer) throws IOException
     {
       return addToOffset(channel.write(buffer));
-    }
-
-    @Override
-    public int write(InputStream in) throws IOException
-    {
-      return addToOffset(ByteStreams.copy(Channels.newChannel(in), channel));
     }
 
     @Override

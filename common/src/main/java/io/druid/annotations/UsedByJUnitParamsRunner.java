@@ -17,13 +17,20 @@
  * under the License.
  */
 
-package io.druid.java.util.emitter.service;
+package io.druid.annotations;
 
-import io.druid.java.util.emitter.core.Event;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public interface ServiceEvent extends Event
+/**
+ * Annotating test methods, which names have "parametersFor" prefix, and used by {@code JUnitParamsRunner}, see
+ * https://github.com/Pragmatists/junitparams/wiki/Quickstart. IntelliJ's inspection "Unused declarations" knows about
+ * this annotation.
+ */
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+public @interface UsedByJUnitParamsRunner
 {
-  String getService();
-
-  String getHost();
 }

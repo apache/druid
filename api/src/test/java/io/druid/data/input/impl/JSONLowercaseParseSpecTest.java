@@ -30,7 +30,7 @@ import java.util.Map;
 public class JSONLowercaseParseSpecTest
 {
   @Test
-  public void testLowercasing() throws Exception
+  public void testLowercasing()
   {
     JSONLowercaseParseSpec spec = new JSONLowercaseParseSpec(
         new TimestampSpec(

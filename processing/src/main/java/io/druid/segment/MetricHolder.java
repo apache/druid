@@ -29,7 +29,6 @@ import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -40,13 +39,12 @@ public class MetricHolder
   private static final byte[] version = new byte[]{0x0};
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
-  public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper) throws IOException
+  public static MetricHolder fromByteBuffer(ByteBuffer buf, SmooshedFileMapper mapper)
   {
     return fromByteBuffer(buf, null, mapper);
   }
 
   public static MetricHolder fromByteBuffer(ByteBuffer buf, ObjectStrategy strategy, SmooshedFileMapper mapper)
-      throws IOException
   {
     final byte ver = buf.get();
     if (version[0] != ver) {

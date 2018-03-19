@@ -895,10 +895,13 @@ public class SegmentMetadataQueryTest
 
     // test serialize and deserialize
     Assert.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
+
+    // test copy
+    Assert.assertEquals(query, Druids.SegmentMetadataQueryBuilder.copy((SegmentMetadataQuery) query).build());
   }
 
   @Test
-  public void testDefaultIntervalAndFiltering() throws Exception
+  public void testDefaultIntervalAndFiltering()
   {
     SegmentMetadataQuery testQuery = Druids.newSegmentMetadataQueryBuilder()
                                            .dataSource("testing")

@@ -21,7 +21,6 @@ package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
@@ -49,6 +48,7 @@ import io.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -139,12 +139,13 @@ public class IngestSegmentFirehose implements Firehose
                                           final DimensionSelector selector = dimSelector.getValue();
                                           final IndexedInts vals = selector.getRow();
 
-                                          if (vals.size() == 1) {
+                                          int valsSize = vals.size();
+                                          if (valsSize == 1) {
                                             final String dimVal = selector.lookupName(vals.get(0));
                                             theEvent.put(dim, dimVal);
-                                          } else {
-                                            List<String> dimVals = Lists.newArrayList();
-                                            for (int i = 0; i < vals.size(); ++i) {
+                                          } else if (valsSize > 1) {
+                                            List<String> dimVals = new ArrayList<>(valsSize);
+                                            for (int i = 0; i < valsSize; ++i) {
                                               dimVals.add(selector.lookupName(vals.get(i)));
                                             }
                                             theEvent.put(dim, dimVals);

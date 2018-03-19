@@ -21,15 +21,14 @@ package io.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
-import io.druid.segment.writeout.WriteOutBytes;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
@@ -44,7 +43,7 @@ public class VSizeColumnarIntsSerializerTest
   private int[] vals;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     vals = null;
   }
@@ -55,7 +54,7 @@ public class VSizeColumnarIntsSerializerTest
     segmentWriteOutMedium.close();
   }
 
-  private void generateVals(final int totalSize, final int maxValue) throws IOException
+  private void generateVals(final int totalSize, final int maxValue)
   {
     vals = new int[totalSize];
     for (int i = 0; i < vals.length; ++i) {

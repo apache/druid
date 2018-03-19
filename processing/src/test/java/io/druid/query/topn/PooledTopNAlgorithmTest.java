@@ -24,7 +24,6 @@ import io.druid.segment.Capabilities;
 import org.easymock.EasyMock;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class PooledTopNAlgorithmTest
@@ -37,7 +36,7 @@ public class PooledTopNAlgorithmTest
   }
 
   @Test
-  public void cleanup() throws IOException
+  public void cleanup()
   {
     PooledTopNAlgorithm pooledTopNAlgorithm = new PooledTopNAlgorithm(Capabilities.builder().build(), null, null);
     PooledTopNAlgorithm.PooledTopNParams params = EasyMock.createMock(PooledTopNAlgorithm.PooledTopNParams.class);

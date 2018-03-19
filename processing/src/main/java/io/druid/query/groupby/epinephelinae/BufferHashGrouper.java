@@ -26,7 +26,6 @@ import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
@@ -250,7 +249,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
           // do nothing
         }
@@ -288,7 +287,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
           // do nothing
         }

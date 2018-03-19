@@ -63,7 +63,7 @@ public class RedisCacheTest
   };
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     JedisPoolConfig poolConfig = new JedisPoolConfig();
     poolConfig.setMaxTotal(cacheConfig.getMaxTotalConnections());
@@ -135,7 +135,7 @@ public class RedisCacheTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
     put(cache, "a", HI, 0);
@@ -158,7 +158,7 @@ public class RedisCacheTest
   }
 
   @Test
-  public void testGetBulk() throws Exception
+  public void testGetBulk()
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 

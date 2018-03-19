@@ -24,15 +24,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.CriticalAction;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -65,7 +64,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   }
 
   @Override
-  public Void perform(Task task, TaskActionToolbox toolbox) throws IOException
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 

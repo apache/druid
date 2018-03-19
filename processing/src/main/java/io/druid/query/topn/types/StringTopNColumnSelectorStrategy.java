@@ -132,7 +132,7 @@ public class StringTopNColumnSelectorStrategy
     long processedRows = 0;
     while (!cursor.isDone()) {
       final IndexedInts dimValues = selector.getRow();
-      for (int i = 0; i < dimValues.size(); ++i) {
+      for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
         Aggregator[] theAggregators = rowSelector[dimIndex];
         if (theAggregators == null) {
@@ -165,7 +165,7 @@ public class StringTopNColumnSelectorStrategy
     long processedRows = 0;
     while (!cursor.isDone()) {
       final IndexedInts dimValues = selector.getRow();
-      for (int i = 0; i < dimValues.size(); ++i) {
+      for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
         final String key = selector.lookupName(dimIndex);
 

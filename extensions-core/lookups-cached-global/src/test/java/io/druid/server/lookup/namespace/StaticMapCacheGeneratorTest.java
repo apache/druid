@@ -62,7 +62,7 @@ public class StaticMapCacheGeneratorTest
   }
 
   @Test
-  public void testSimpleGenerator() throws Exception
+  public void testSimpleGenerator()
   {
     final StaticMapCacheGenerator factory = new StaticMapCacheGenerator();
     final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);

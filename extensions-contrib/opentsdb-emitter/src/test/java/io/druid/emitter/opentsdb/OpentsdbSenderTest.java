@@ -25,7 +25,7 @@ import org.junit.Test;
 public class OpentsdbSenderTest
 {
   @Test
-  public void testUrl() throws Exception
+  public void testUrl()
   {
     OpentsdbSender sender = new OpentsdbSender("localhost", 9999, 2000, 2000, 100, 1000);
     String expectedUrl = "http://localhost:9999/api/put";

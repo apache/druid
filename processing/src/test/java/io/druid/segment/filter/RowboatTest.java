@@ -34,7 +34,7 @@ public class RowboatTest
   {
     DimensionHandler[] handlers = new DimensionHandler[size];
     for (int i = 0; i < size; i++) {
-      handlers[i] = new StringDimensionHandler(String.valueOf(i), null);
+      handlers[i] = new StringDimensionHandler(String.valueOf(i), null, true);
     }
     return handlers;
   }

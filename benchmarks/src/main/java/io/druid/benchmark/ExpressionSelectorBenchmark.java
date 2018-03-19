@@ -76,7 +76,7 @@ public class ExpressionSelectorBenchmark
   private QueryableIndex index;
 
   @Setup(Level.Trial)
-  public void setup() throws Exception
+  public void setup()
   {
     final BenchmarkSchemaInfo schemaInfo = new BenchmarkSchemaInfo(
         ImmutableList.of(
@@ -123,7 +123,7 @@ public class ExpressionSelectorBenchmark
   }
 
   @Benchmark
-  public void timeFloorUsingExpression(Blackhole blackhole) throws Exception
+  public void timeFloorUsingExpression(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
         null,
@@ -158,7 +158,7 @@ public class ExpressionSelectorBenchmark
   }
 
   @Benchmark
-  public void timeFloorUsingExtractionFn(Blackhole blackhole) throws Exception
+  public void timeFloorUsingExtractionFn(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
         null,
@@ -189,7 +189,7 @@ public class ExpressionSelectorBenchmark
   }
 
   @Benchmark
-  public void timeFloorUsingCursor(Blackhole blackhole) throws Exception
+  public void timeFloorUsingCursor(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
         null,
@@ -220,7 +220,7 @@ public class ExpressionSelectorBenchmark
   }
 
   @Benchmark
-  public void strlenUsingExpressionAsLong(Blackhole blackhole) throws Exception
+  public void strlenUsingExpressionAsLong(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
         null,
@@ -252,7 +252,7 @@ public class ExpressionSelectorBenchmark
   }
 
   @Benchmark
-  public void strlenUsingExpressionAsString(Blackhole blackhole) throws Exception
+  public void strlenUsingExpressionAsString(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
         null,
@@ -287,7 +287,7 @@ public class ExpressionSelectorBenchmark
   }
 
   @Benchmark
-  public void strlenUsingExtractionFn(Blackhole blackhole) throws Exception
+  public void strlenUsingExtractionFn(Blackhole blackhole)
   {
     final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).makeCursors(
         null,

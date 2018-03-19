@@ -33,7 +33,7 @@ import java.util.Arrays;
 public class StorageLocationTest
 {
   @Test
-  public void testStorageLocation() throws Exception
+  public void testStorageLocation()
   {
     long expectedAvail = 1000L;
     StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, null);

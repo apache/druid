@@ -35,13 +35,13 @@ public class ByteCountingLRUMapTest
   private ByteCountingLRUMap map;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     map = new ByteCountingLRUMap(100);
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     final ByteBuffer tenKey = ByteBuffer.allocate(10);
     final byte[] eightyEightVal = ByteBuffer.allocate(88).array();
@@ -87,7 +87,7 @@ public class ByteCountingLRUMapTest
   }
 
   @Test
-  public void testSameKeyUpdate() throws Exception
+  public void testSameKeyUpdate()
   {
     final ByteBuffer k = ByteBuffer.allocate(1);
 

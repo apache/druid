@@ -31,18 +31,17 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 
 public class DruidAvaticaHandler extends AvaticaJsonHandler
 {
-  static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
+  public static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
 
   @Inject
   public DruidAvaticaHandler(
       final DruidMeta druidMeta,
       @Self final DruidNode druidNode,
       final AvaticaMonitor avaticaMonitor
-  ) throws InstantiationException, IllegalAccessException, InvocationTargetException
+  )
   {
     super(new LocalService(druidMeta), avaticaMonitor);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
