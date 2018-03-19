@@ -36,7 +36,6 @@ public final class DateTimes
 
   public static final UtcFormatter ISO_DATE_TIME = wrapFormatter(ISODateTimeFormat.dateTime());
   public static final UtcFormatter ISO_DATE_OPTIONAL_TIME = wrapFormatter(ISODateTimeFormat.dateOptionalTimeParser());
-  public static final UtcFormatter ISO_DATE_OR_TIME = wrapFormatter(ISODateTimeFormat.dateTimeParser());
   public static final UtcFormatter ISO_DATE_OR_TIME_WITH_OFFSET = wrapFormatter(
       ISODateTimeFormat.dateTimeParser().withOffsetParsed()
   );

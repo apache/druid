@@ -96,7 +96,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return metaSerdeHelper.size(this) + baseIntBuffers.getSerializedSize();
   }

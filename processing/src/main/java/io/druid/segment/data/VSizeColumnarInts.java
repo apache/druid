@@ -156,7 +156,7 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return metaSerdeHelper.size(this) + buffer.remaining();
   }
@@ -195,7 +195,7 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // Do nothing
   }

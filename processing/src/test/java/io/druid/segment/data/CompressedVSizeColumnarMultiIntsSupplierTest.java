@@ -73,7 +73,7 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     assertSame(vals, columnarMultiIntsSupplier.get());
   }

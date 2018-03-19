@@ -64,11 +64,6 @@ public class DurationGranularity extends Granularity
     return DateTimes.utc(origin);
   }
 
-  public long getOriginMillis()
-  {
-    return origin;
-  }
-
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
@@ -79,12 +74,6 @@ public class DurationGranularity extends Granularity
   public DateTime increment(DateTime time)
   {
     return time.plus(getDuration());
-  }
-
-  @Override
-  public DateTime decrement(DateTime time)
-  {
-    return time.minus(getDuration());
   }
 
   @Override

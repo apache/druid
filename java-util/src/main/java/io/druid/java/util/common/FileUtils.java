@@ -212,12 +212,12 @@ public class FileUtils
     }
   }
 
-  private static OutputStream uncloseable(final OutputStream out) throws IOException
+  private static OutputStream uncloseable(final OutputStream out)
   {
     return new FilterOutputStream(out)
     {
       @Override
-      public void close() throws IOException
+      public void close()
       {
         // Do nothing.
       }

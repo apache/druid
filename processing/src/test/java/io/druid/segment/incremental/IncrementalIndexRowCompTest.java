@@ -35,7 +35,7 @@ import java.util.Map;
 public class IncrementalIndexRowCompTest
 {
   @Test
-  public void testBasic() throws IndexSizeExceededException
+  public void testBasic()
   {
     IncrementalIndex<?> index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))

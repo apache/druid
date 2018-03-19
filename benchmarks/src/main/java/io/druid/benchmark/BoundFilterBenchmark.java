@@ -50,7 +50,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -152,7 +151,7 @@ public class BoundFilterBenchmark
   BitmapIndexSelector selector;
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     step = (END_INT - START_INT) / cardinality;
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();

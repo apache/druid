@@ -122,7 +122,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return metaSerdeHelper.size(this) + baseBuffers.getSerializedSize();
   }

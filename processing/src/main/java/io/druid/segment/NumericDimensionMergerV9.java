@@ -56,7 +56,7 @@ public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
     }
   }
 
-  abstract GenericColumnSerializer setupEncodedValueWriter() throws IOException;
+  abstract GenericColumnSerializer setupEncodedValueWriter();
 
   @Override
   public final void writeMergedValueMetadata(List<IndexableAdapter> adapters)

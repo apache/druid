@@ -19,9 +19,6 @@
 
 package io.druid.java.util.common;
 
-import com.google.common.base.Function;
-
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,35 +45,6 @@ public class MapUtils
     return retVal.toString();
   }
 
-  public static Function<Map<String, Object>, String> stringFromMapFn(final String key)
-  {
-    return new Function<Map<String, Object>, String>()
-    {
-      @Override
-      public String apply(Map<String, Object> map)
-      {
-        return MapUtils.getString(map, key);
-      }
-    };
-  }
-
-  public static <RetVal> RetVal lookupStringValInMap(Map<String, Object> map, String key, Map<String, RetVal> lookupMap)
-  {
-    String lookupKey = getString(map, key);
-    RetVal retVal = lookupMap.get(lookupKey);
-
-    if (retVal == null) {
-      throw new IAE("Unknown %s[%s], known values are%s", key, lookupKey, lookupMap.keySet());
-    }
-
-    return retVal;
-  }
-
-  public static int getInt(Map<String, Object> in, String key)
-  {
-    return getInt(in, key, null);
-  }
-
   public static int getInt(Map<String, Object> in, String key, Integer defaultValue)
   {
     Object retVal = in.get(key);
@@ -95,11 +63,6 @@ public class MapUtils
     catch (NumberFormatException e) {
       throw new IAE(e, "Key[%s] should be an int, was[%s]", key, retVal);
     }
-  }
-
-  public static long getLong(Map<String, Object> in, String key)
-  {
-    return getLong(in, key, null);
   }
 
   public static long getLong(Map<String, Object> in, String key, Long defaultValue)
@@ -122,78 +85,4 @@ public class MapUtils
     }
   }
 
-  public static double getDouble(Map<String, Object> in, String key)
-  {
-    return getDouble(in, key, null);
-  }
-
-  public static double getDouble(Map<String, Object> in, String key, Double defaultValue)
-  {
-    Object retVal = in.get(key);
-
-    if (retVal == null) {
-      if (defaultValue == null) {
-        throw new IAE("Key[%s] is required in map[%s]", key, in);
-      }
-
-      return defaultValue;
-    }
-
-    try {
-      return Double.parseDouble(retVal.toString());
-    }
-    catch (NumberFormatException e) {
-      throw new IAE(e, "Key[%s] should be a double, was[%s]", key, retVal);
-    }
-  }
-
-  public static List<Object> getList(Map<String, Object> in, String key)
-  {
-    return getList(in, key, null);
-  }
-
-  public static List<Object> getList(Map<String, Object> in, String key, List<Object> defaultValue)
-  {
-    Object retVal = in.get(key);
-
-    if (retVal == null) {
-      if (defaultValue == null) {
-        throw new IAE("Key[%s] is required in map[%s]", key, in);
-      }
-
-      return defaultValue;
-    }
-
-    try {
-      return (List<Object>) retVal;
-    }
-    catch (ClassCastException e) {
-      throw new IAE("Key[%s] should be a list, was [%s]", key, retVal);
-    }
-  }
-
-  public static Map<String, Object> getMap(Map<String, Object> in, String key)
-  {
-    return getMap(in, key, null);
-  }
-
-  public static Map<String, Object> getMap(Map<String, Object> in, String key, Map<String, Object> defaultValue)
-  {
-    Object retVal = in.get(key);
-
-    if (retVal == null) {
-      if (defaultValue == null) {
-        throw new IAE("Key[%s] is required in map[%s]", key, in);
-      }
-
-      return defaultValue;
-    }
-
-    try {
-      return (Map<String, Object>) retVal;
-    }
-    catch (ClassCastException e) {
-      throw new IAE("Key[%s] should be a map, was [%s]", key, retVal);
-    }
-  }
 }

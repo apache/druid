@@ -26,7 +26,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.query.BaseQuery;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -38,6 +40,8 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
 import io.druid.query.ordering.StringComparators;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.ValueType;
 import org.junit.Assert;
@@ -45,6 +49,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 public class GroupByQueryTest
 {
@@ -102,5 +107,29 @@ public class GroupByQueryTest
         new MapBasedRow(0L, ImmutableMap.of("foo", 1L, "bar", 1d, "baz", "b"))
     );
     Assert.assertEquals(-1, compare);
+  }
+
+  @Test
+  public void testSegmentLookUpForNestedQueries()
+  {
+    QuerySegmentSpec innerQuerySegmentSpec = new MultipleIntervalSegmentSpec(Lists.newArrayList(Intervals.of(
+        "2011-11-07/2011-11-08")));
+    QuerySegmentSpec outerQuerySegmentSpec = new MultipleIntervalSegmentSpec(Lists.newArrayList((Intervals.of(
+        "2011-11-04/2011-11-08"))));
+    List<AggregatorFactory> aggs = Lists.newArrayList(QueryRunnerTestHelper.rowsCount);
+    final GroupByQuery innerQuery = GroupByQuery.builder()
+                                                .setDataSource("blah")
+                                                .setInterval(innerQuerySegmentSpec)
+                                                .setGranularity(Granularities.DAY)
+                                                .setAggregatorSpecs(aggs)
+                                                .build();
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(innerQuery)
+        .setInterval(outerQuerySegmentSpec)
+        .setAggregatorSpecs(aggs)
+        .setGranularity(Granularities.DAY)
+        .build();
+    Assert.assertEquals(innerQuerySegmentSpec, BaseQuery.getQuerySegmentSpecForLookUp(query));
   }
 }

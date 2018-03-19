@@ -21,8 +21,6 @@ package io.druid.segment;
 
 import io.druid.segment.column.ColumnDescriptor;
 
-import java.io.IOException;
-
 /**
  * Processing related interface
  *
@@ -36,5 +34,5 @@ public interface DimensionMergerV9 extends DimensionMerger
    *
    * @return ColumnDescriptor that IndexMergerV9 will use to build a column.
    */
-  ColumnDescriptor makeColumnDescriptor() throws IOException;
+  ColumnDescriptor makeColumnDescriptor();
 }

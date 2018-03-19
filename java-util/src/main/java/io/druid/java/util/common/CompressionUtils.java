@@ -285,7 +285,7 @@ public class CompressionUtils
    *
    * @throws IOException
    */
-  public static FileUtils.FileCopyResult gunzip(final File pulledFile, File outFile) throws IOException
+  public static FileUtils.FileCopyResult gunzip(final File pulledFile, File outFile)
   {
     return gunzip(Files.asByteSource(pulledFile), outFile);
   }
@@ -431,14 +431,12 @@ public class CompressionUtils
    * @throws IOException
    */
   public static FileUtils.FileCopyResult gzip(final File inFile, final File outFile, Predicate<Throwable> shouldRetry)
-      throws IOException
   {
     gzip(Files.asByteSource(inFile), Files.asByteSink(outFile), shouldRetry);
     return new FileUtils.FileCopyResult(outFile);
   }
 
   public static long gzip(final ByteSource in, final ByteSink out, Predicate<Throwable> shouldRetry)
-      throws IOException
   {
     return StreamUtils.retryCopy(
         in,
@@ -466,7 +464,7 @@ public class CompressionUtils
    *
    * @throws IOException
    */
-  public static FileUtils.FileCopyResult gzip(final File inFile, final File outFile) throws IOException
+  public static FileUtils.FileCopyResult gzip(final File inFile, final File outFile)
   {
     return gzip(inFile, outFile, FileUtils.IS_EXCEPTION);
   }

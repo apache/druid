@@ -113,7 +113,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void testComparatorsWithFinalizing() throws Exception
+  public void testComparatorsWithFinalizing()
   {
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
@@ -150,7 +150,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void testComparatorsWithFinalizingAndComparatorNull() throws Exception
+  public void testComparatorsWithFinalizingAndComparatorNull()
   {
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);

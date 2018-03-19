@@ -84,7 +84,6 @@ import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.ForbiddenException;
 import io.druid.sql.calcite.filtration.Filtration;
@@ -1723,7 +1722,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testUnplannableQueries() throws Exception
+  public void testUnplannableQueries()
   {
     // All of these queries are unplannable because they rely on features Druid doesn't support.
     // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
@@ -1741,7 +1740,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testUnplannableExactCountDistinctQueries() throws Exception
+  public void testUnplannableExactCountDistinctQueries()
   {
     // All of these queries are unplannable in exact COUNT DISTINCT mode.
 
@@ -6253,7 +6252,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testUsingSubqueryAsFilterForbiddenByConfig() throws Exception
+  public void testUsingSubqueryAsFilterForbiddenByConfig()
   {
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_SUBQUERIES,
@@ -6484,7 +6483,7 @@ public class CalciteQueryTest extends CalciteTestBase
       final AuthenticationResult authenticationResult
   ) throws Exception
   {
-    final InProcessViewManager viewManager = new InProcessViewManager();
+    final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
     final DruidSchema druidSchema = CalciteTests.createMockSchema(walker, plannerConfig, viewManager);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
@@ -6495,9 +6494,7 @@ public class CalciteQueryTest extends CalciteTestBase
         operatorTable,
         macroTable,
         plannerConfig,
-        new AuthConfig(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,
         CalciteTests.getJsonMapper()
     );
 
@@ -6515,7 +6512,7 @@ public class CalciteQueryTest extends CalciteTestBase
     );
 
     try (DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
-      final PlannerResult plan = planner.plan(sql, null, authenticationResult);
+      final PlannerResult plan = planner.plan(sql, authenticationResult);
       return plan.run().toList();
     }
   }

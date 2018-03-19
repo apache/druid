@@ -38,11 +38,6 @@ public class SegmentLoadInfo
     this.servers = Sets.newConcurrentHashSet();
   }
 
-  public DataSegment getSegment()
-  {
-    return segment;
-  }
-
   public boolean addServer(DruidServerMetadata server)
   {
     return servers.add(server);

@@ -25,5 +25,4 @@ public class CgroupUtil
 {
   public static final String SPACE_MATCH = Pattern.quote(" ");
   public static final String COMMA_MATCH = Pattern.quote(",");
-  public static final String COLON_MATCH = Pattern.quote(":");
 }

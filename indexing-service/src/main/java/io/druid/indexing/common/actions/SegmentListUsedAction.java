@@ -25,12 +25,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.common.JodaUtils;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.List;
 
 public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
@@ -83,7 +82,7 @@ public class SegmentListUsedAction implements TaskAction<List<DataSegment>>
   }
 
   @Override
-  public List<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
+  public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals);
   }

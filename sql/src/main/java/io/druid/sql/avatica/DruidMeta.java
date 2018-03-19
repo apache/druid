@@ -34,7 +34,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -67,7 +66,6 @@ public class DruidMeta extends MetaImpl
   private final PlannerFactory plannerFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
-  private final AuthConfig authConfig;
   private final List<Authenticator> authenticators;
 
   // Used to track logical connections.
@@ -81,14 +79,12 @@ public class DruidMeta extends MetaImpl
   public DruidMeta(
       final PlannerFactory plannerFactory,
       final AvaticaServerConfig config,
-      final AuthConfig authConfig,
       final Injector injector
   )
   {
     super(null);
     this.plannerFactory = Preconditions.checkNotNull(plannerFactory, "plannerFactory");
     this.config = config;
-    this.authConfig = authConfig;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
             .setNameFormat(StringUtils.format("DruidMeta@%s-ScheduledExecutor", Integer.toHexString(hashCode())))
@@ -144,7 +140,13 @@ public class DruidMeta extends MetaImpl
   )
   {
     final StatementHandle statement = createStatement(ch);
-    final DruidStatement druidStatement = getDruidStatement(statement);
+    final DruidStatement druidStatement;
+    try {
+      druidStatement = getDruidStatement(statement);
+    }
+    catch (NoSuchStatementException e) {
+      throw new IllegalStateException(e);
+    }
     final DruidConnection druidConnection = getDruidConnection(statement.connectionId);
     AuthenticationResult authenticationResult = authenticateConnection(druidConnection);
     if (authenticationResult == null) {
@@ -161,7 +163,7 @@ public class DruidMeta extends MetaImpl
       final String sql,
       final long maxRowCount,
       final PrepareCallback callback
-  ) throws NoSuchStatementException
+  )
   {
     // Avatica doesn't call this.
     throw new UnsupportedOperationException("Deprecated");
@@ -183,7 +185,8 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult == null) {
       throw new ForbiddenException("Authentication failed.");
     }
-    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
+    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult)
+                                              .getSignature();
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
@@ -207,7 +210,7 @@ public class DruidMeta extends MetaImpl
   public ExecuteBatchResult prepareAndExecuteBatch(
       final StatementHandle statement,
       final List<String> sqlCommands
-  ) throws NoSuchStatementException
+  )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
     throw new UnsupportedOperationException("Batch statements not supported");
@@ -217,7 +220,7 @@ public class DruidMeta extends MetaImpl
   public ExecuteBatchResult executeBatch(
       final StatementHandle statement,
       final List<List<TypedValue>> parameterValues
-  ) throws NoSuchStatementException
+  )
   {
     // Batch statements are used for bulk updates, but we don't support updates.
     throw new UnsupportedOperationException("Batch statements not supported");
@@ -239,7 +242,7 @@ public class DruidMeta extends MetaImpl
       final StatementHandle statement,
       final List<TypedValue> parameterValues,
       final long maxRowCount
-  ) throws NoSuchStatementException
+  )
   {
     // Avatica doesn't call this.
     throw new UnsupportedOperationException("Deprecated");
@@ -594,11 +597,13 @@ public class DruidMeta extends MetaImpl
   }
 
   @Nonnull
-  private DruidStatement getDruidStatement(final StatementHandle statement)
+  private DruidStatement getDruidStatement(final StatementHandle statement) throws NoSuchStatementException
   {
     final DruidConnection connection = getDruidConnection(statement.connectionId);
     final DruidStatement druidStatement = connection.getStatement(statement.id);
-    Preconditions.checkState(druidStatement != null, "Statement[%s] does not exist", statement.id);
+    if (druidStatement == null) {
+      throw new NoSuchStatementException(statement);
+    }
     return druidStatement;
   }
 

@@ -49,12 +49,6 @@ public class AllGranularity extends Granularity
   }
 
   @Override
-  public DateTime decrement(DateTime time)
-  {
-    throw new UnsupportedOperationException("This method should not be invoked for this granularity type");
-  }
-
-  @Override
   public DateTime bucketStart(DateTime time)
   {
     return DateTimes.MIN;

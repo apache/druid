@@ -19,8 +19,6 @@
 
 package io.druid.java.util.emitter.core;
 
-import org.joda.time.DateTime;
-
 import java.util.Map;
 
 class IntEvent implements Event
@@ -43,15 +41,4 @@ class IntEvent implements Event
     return null;
   }
 
-  @Override
-  public DateTime getCreatedTime()
-  {
-    return null;
-  }
-
-  @Override
-  public boolean isSafeToBuffer()
-  {
-    return false;
-  }
 }

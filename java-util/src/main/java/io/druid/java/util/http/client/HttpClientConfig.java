@@ -44,6 +44,7 @@ public class HttpClientConfig
         return "gzip";
       }
     },
+    @SuppressWarnings("unused") //TODO test this CompressionCodec (it counts as usage)
     DEFLATE {
       @Override
       public String getEncodingString()
@@ -230,12 +231,6 @@ public class HttpClientConfig
       return this;
     }
 
-    public Builder withSslContext(String keyStorePath, String keyStorePassword)
-    {
-      this.sslContext = HttpClientInit.sslContextWithTrustedKeyStore(keyStorePath, keyStorePassword);
-      return this;
-    }
-
     public Builder withReadTimeout(Duration readTimeout)
     {
       this.readTimeout = readTimeout;
@@ -245,12 +240,6 @@ public class HttpClientConfig
     public Builder withSslHandshakeTimeout(Duration sslHandshakeTimeout)
     {
       this.sslHandshakeTimeout = sslHandshakeTimeout;
-      return this;
-    }
-
-    public Builder withBossCount(int bossCount)
-    {
-      this.bossCount = bossCount;
       return this;
     }
 

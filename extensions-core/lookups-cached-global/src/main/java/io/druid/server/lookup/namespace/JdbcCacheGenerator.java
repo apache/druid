@@ -19,6 +19,7 @@
 
 package io.druid.server.lookup.namespace;
 
+import com.google.common.base.Strings;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -32,8 +33,6 @@ import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.TimestampMapper;
-
-import com.google.common.base.Strings;
 
 import javax.annotation.Nullable;
 import java.sql.ResultSet;
@@ -79,7 +78,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         new HandleCallback<List<Pair<String, String>>>()
         {
           @Override
-          public List<Pair<String, String>> withHandle(Handle handle) throws Exception
+          public List<Pair<String, String>> withHandle(Handle handle)
           {
             return handle
                 .createQuery(
@@ -181,7 +180,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         {
 
           @Override
-          public Timestamp withHandle(Handle handle) throws Exception
+          public Timestamp withHandle(Handle handle)
           {
             final String query = StringUtils.format(
                 "SELECT MAX(%s) FROM %s",

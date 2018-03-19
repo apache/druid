@@ -33,7 +33,7 @@ import org.junit.Test;
 public class FillCapacityWithAffinityWorkerSelectStrategyTest
 {
   @Test
-  public void testFindWorkerForTask() throws Exception
+  public void testFindWorkerForTask()
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
         new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
@@ -70,7 +70,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   }
 
   @Test
-  public void testFindWorkerForTaskWithNulls() throws Exception
+  public void testFindWorkerForTaskWithNulls()
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
         new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)
@@ -100,7 +100,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
   }
 
   @Test
-  public void testIsolation() throws Exception
+  public void testIsolation()
   {
     FillCapacityWorkerSelectStrategy strategy = new FillCapacityWithAffinityWorkerSelectStrategy(
         new AffinityConfig(ImmutableMap.of("foo", ImmutableSet.of("localhost")), false)

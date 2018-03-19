@@ -84,7 +84,7 @@ public class SegmentLoadDropHandlerTest
   private List<Runnable> scheduledRunnable;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     try {
       infoDir = new File(File.createTempFile("blah", "blah2").getParent(), "ZkCoordinatorTest");
@@ -117,21 +117,21 @@ public class SegmentLoadDropHandlerTest
     announcer = new DataSegmentAnnouncer()
     {
       @Override
-      public void announceSegment(DataSegment segment) throws IOException
+      public void announceSegment(DataSegment segment)
       {
         segmentsAnnouncedByMe.add(segment);
         announceCount.incrementAndGet();
       }
 
       @Override
-      public void unannounceSegment(DataSegment segment) throws IOException
+      public void unannounceSegment(DataSegment segment)
       {
         segmentsAnnouncedByMe.remove(segment);
         announceCount.decrementAndGet();
       }
 
       @Override
-      public void announceSegments(Iterable<DataSegment> segments) throws IOException
+      public void announceSegments(Iterable<DataSegment> segments)
       {
         for (DataSegment segment : segments) {
           segmentsAnnouncedByMe.add(segment);
@@ -140,7 +140,7 @@ public class SegmentLoadDropHandlerTest
       }
 
       @Override
-      public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+      public void unannounceSegments(Iterable<DataSegment> segments)
       {
         for (DataSegment segment : segments) {
           segmentsAnnouncedByMe.remove(segment);
@@ -339,7 +339,7 @@ public class SegmentLoadDropHandlerTest
     );
   }
 
-  private void writeSegmentToCache(final DataSegment segment) throws IOException
+  private void writeSegmentToCache(final DataSegment segment)
   {
     if (!infoDir.exists()) {
       infoDir.mkdir();
@@ -359,7 +359,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertTrue(segmentInfoCacheFile.exists());
   }
 
-  private void deleteSegmentFromCache(final DataSegment segment) throws IOException
+  private void deleteSegmentFromCache(final DataSegment segment)
   {
     File segmentInfoCacheFile = new File(
         infoDir,

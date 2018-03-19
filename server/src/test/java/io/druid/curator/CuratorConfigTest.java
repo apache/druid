@@ -23,12 +23,10 @@ import io.druid.guice.JsonConfigTesterBase;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.InvocationTargetException;
-
 public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
 {
   @Test
-  public void testSerde() throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
+  public void testSerde()
   {
     propertyValues.put(getPropertyKey("host"), "fooHost");
     propertyValues.put(getPropertyKey("acl"), "true");

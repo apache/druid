@@ -59,7 +59,7 @@ public class LoadingCacheTest
   }
 
   @Before
-  public void setUp() throws InterruptedException
+  public void setUp()
   {
     Assert.assertFalse(loadingCache.isClosed());
     loadingCache.putAll(IMMUTABLE_MAP);
@@ -85,12 +85,12 @@ public class LoadingCacheTest
   }
 
   @Test
-  public void testPut() throws InterruptedException, ExecutionException
+  public void testPut() throws ExecutionException
   {
     loadingCache.get("key2", new Callable()
     {
       @Override
-      public Object call() throws Exception
+      public Object call()
       {
         return "value2";
       }
@@ -104,7 +104,7 @@ public class LoadingCacheTest
     loadingCache.get("key2", new Callable()
     {
       @Override
-      public Object call() throws Exception
+      public Object call()
       {
         return "value2";
       }
@@ -120,7 +120,7 @@ public class LoadingCacheTest
     loadingCache.get("key2", new Callable()
     {
       @Override
-      public Object call() throws Exception
+      public Object call()
       {
         return "value2";
       }
@@ -137,7 +137,7 @@ public class LoadingCacheTest
     loadingCache.get("key2", new Callable()
     {
       @Override
-      public Object call() throws Exception
+      public Object call()
       {
         return "value2";
       }

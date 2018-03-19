@@ -321,7 +321,7 @@ public class DatasourceInputFormatTest
   }
 
   @Test
-  public void testGetRecordReader() throws Exception
+  public void testGetRecordReader()
   {
     Assert.assertTrue(new DatasourceInputFormat().createRecordReader(null, null) instanceof DatasourceRecordReader);
   }

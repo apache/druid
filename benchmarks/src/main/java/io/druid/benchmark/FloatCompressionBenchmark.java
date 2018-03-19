@@ -37,7 +37,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
@@ -77,7 +76,7 @@ public class FloatCompressionBenchmark
   }
 
   @Benchmark
-  public void readContinuous(Blackhole bh) throws IOException
+  public void readContinuous(Blackhole bh)
   {
     ColumnarFloats columnarFloats = supplier.get();
     int count = columnarFloats.size();
@@ -90,7 +89,7 @@ public class FloatCompressionBenchmark
   }
 
   @Benchmark
-  public void readSkipping(Blackhole bh) throws IOException
+  public void readSkipping(Blackhole bh)
   {
     ColumnarFloats columnarFloats = supplier.get();
     int count = columnarFloats.size();

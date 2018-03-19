@@ -20,13 +20,10 @@
 package io.druid.java.util.common.io.smoosh;
 
 import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.channels.GatheringByteChannel;
 
 /**
  */
 public interface SmooshedWriter extends Closeable, GatheringByteChannel
 {
-  int write(InputStream in) throws IOException;
 }

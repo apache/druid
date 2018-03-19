@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.autoscaling.ec2;
 
 import com.amazonaws.services.ec2.model.IamInstanceProfileSpecification;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class EC2IamProfileData
@@ -27,6 +28,7 @@ public class EC2IamProfileData
   private final String name;
   private final String arn;
 
+  @JsonCreator
   public EC2IamProfileData(
       @JsonProperty("name") String name,
       @JsonProperty("arn") String arn

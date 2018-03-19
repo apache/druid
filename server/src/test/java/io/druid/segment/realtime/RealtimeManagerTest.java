@@ -88,7 +88,6 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -136,7 +135,7 @@ public class RealtimeManagerTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
 
@@ -160,7 +159,7 @@ public class RealtimeManagerTest
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory)
           {
             return new TestFirehose(rows.iterator());
           }
@@ -192,7 +191,7 @@ public class RealtimeManagerTest
         new FirehoseFactoryV2()
         {
           @Override
-          public FirehoseV2 connect(InputRowParser parser, Object arg1) throws IOException, ParseException
+          public FirehoseV2 connect(InputRowParser parser, Object arg1) throws ParseException
           {
             return new TestFirehoseV2(rows.iterator());
           }
@@ -316,7 +315,7 @@ public class RealtimeManagerTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     realtimeManager.stop();
     realtimeManager2.stop();
@@ -366,7 +365,7 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 5000L)
-  public void testNormalStop() throws IOException, InterruptedException
+  public void testNormalStop() throws InterruptedException
   {
     final TestFirehose firehose = new TestFirehose(rows.iterator());
     final TestFirehoseV2 firehoseV2 = new TestFirehoseV2(rows.iterator());
@@ -374,7 +373,7 @@ public class RealtimeManagerTest
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory)
           {
             return firehose;
           }
@@ -411,14 +410,14 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 5000L)
-  public void testStopByInterruption() throws IOException
+  public void testStopByInterruption()
   {
     final SleepingFirehose firehose = new SleepingFirehose();
     final RealtimeIOConfig ioConfig = new RealtimeIOConfig(
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory)
           {
             return firehose;
           }
@@ -444,7 +443,7 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testQueryWithInterval() throws IOException, InterruptedException
+  public void testQueryWithInterval() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 270L),
@@ -522,7 +521,7 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testQueryWithSegmentSpec() throws IOException, InterruptedException
+  public void testQueryWithSegmentSpec() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -601,7 +600,7 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testQueryWithMultipleSegmentSpec() throws IOException, InterruptedException
+  public void testQueryWithMultipleSegmentSpec() throws InterruptedException
   {
 
     List<Row> expectedResults_both_partitions = Arrays.asList(
@@ -868,7 +867,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }
@@ -896,7 +895,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }
@@ -943,7 +942,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void start() throws Exception
+    public void start()
     {
       nextMessage();
     }
@@ -984,7 +983,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }

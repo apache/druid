@@ -37,7 +37,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.jets3t.service.S3ServiceException;
 import org.jets3t.service.ServiceException;
 import org.jets3t.service.StorageObjectsChunk;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
@@ -393,7 +392,7 @@ public class S3DataSegmentFinderTest
     }
 
     @Override
-    public S3Object getObject(String bucketName, String objectKey) throws S3ServiceException
+    public S3Object getObject(String bucketName, String objectKey)
     {
       final File objectPath = new File(baseDir, objectKey);
       S3Object s3Object = new S3Object();
@@ -406,7 +405,7 @@ public class S3DataSegmentFinderTest
     }
 
     @Override
-    public S3Object putObject(final String bucketName, final S3Object object) throws S3ServiceException
+    public S3Object putObject(final String bucketName, final S3Object object)
     {
       if (!storage.containsKey(bucketName)) {
         storage.put(bucketName, Sets.<String>newHashSet());
@@ -434,7 +433,7 @@ public class S3DataSegmentFinderTest
     }
 
     @Override
-    public void deleteObject(String bucketName, String objectKey) throws ServiceException
+    public void deleteObject(String bucketName, String objectKey)
     {
       storage.get(bucketName).remove(objectKey);
       final File objectPath = new File(baseDir, objectKey);

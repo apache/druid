@@ -353,7 +353,7 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void shouldNotHaveColonsInHdfsStorageDir() throws Exception
+  public void shouldNotHaveColonsInHdfsStorageDir()
   {
 
     Interval interval = Intervals.of("2011-10-01/2011-10-02");

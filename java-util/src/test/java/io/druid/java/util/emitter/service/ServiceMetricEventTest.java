@@ -32,7 +32,7 @@ import java.util.Arrays;
 public class ServiceMetricEventTest
 {
   @Test
-  public void testStupidTest() throws Exception
+  public void testStupidTest()
   {
     ServiceMetricEvent builderEvent = new ServiceMetricEvent.Builder()
         .setDimension("user1", "a")
@@ -266,26 +266,26 @@ public class ServiceMetricEventTest
   }
 
   @Test(expected = IllegalStateException.class)
-  public void testInfinite() throws Exception
+  public void testInfinite()
   {
     ServiceMetricEvent.builder().build("foo", 1 / 0d);
   }
 
   @Test(expected = IllegalStateException.class)
-  public void testInfinite2() throws Exception
+  public void testInfinite2()
   {
     ServiceMetricEvent.builder().build("foo", 1 / 0f);
   }
 
 
   @Test(expected = IllegalStateException.class)
-  public void testNaN() throws Exception
+  public void testNaN()
   {
     ServiceMetricEvent.builder().build("foo", 0 / 0d);
   }
 
   @Test(expected = IllegalStateException.class)
-  public void testNaN2() throws Exception
+  public void testNaN2()
   {
     ServiceMetricEvent.builder().build("foo", 0 / 0f);
   }

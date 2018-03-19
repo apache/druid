@@ -61,7 +61,7 @@ public class GroupByQueryRunnerFactoryTest
   public CloserRule closerRule = new CloserRule(true);
 
   @Test
-  public void testMergeRunnersEnsureGroupMerging() throws Exception
+  public void testMergeRunnersEnsureGroupMerging()
   {
     GroupByQuery query = GroupByQuery
         .builder()

@@ -31,7 +31,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 
 public class DruidAvaticaHandler extends AvaticaJsonHandler
 {
@@ -42,7 +41,7 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
       final DruidMeta druidMeta,
       @Self final DruidNode druidNode,
       final AvaticaMonitor avaticaMonitor
-  ) throws InstantiationException, IllegalAccessException, InvocationTargetException
+  )
   {
     super(new LocalService(druidMeta), avaticaMonitor);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));

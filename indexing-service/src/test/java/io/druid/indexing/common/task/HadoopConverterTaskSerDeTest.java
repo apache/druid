@@ -262,6 +262,7 @@ public class HadoopConverterTaskSerDeTest
   @Test(expected = NullPointerException.class)
   public void testNull1()
   {
+    @SuppressWarnings("unused")
     HadoopConverterTask parent = new HadoopConverterTask(
         null,
         null,
@@ -282,6 +283,7 @@ public class HadoopConverterTaskSerDeTest
   @Test(expected = NullPointerException.class)
   public void testNull2()
   {
+    @SuppressWarnings("unused")
     HadoopConverterTask parent = new HadoopConverterTask(
         null,
         DATA_SOURCE,
@@ -302,6 +304,7 @@ public class HadoopConverterTaskSerDeTest
   @Test(expected = NullPointerException.class)
   public void testNull3()
   {
+    @SuppressWarnings("unused")
     HadoopConverterTask parent = new HadoopConverterTask(
         null,
         DATA_SOURCE,
@@ -322,6 +325,7 @@ public class HadoopConverterTaskSerDeTest
   @Test(expected = NullPointerException.class)
   public void testNull4()
   {
+    @SuppressWarnings("unused")
     HadoopConverterTask parent = new HadoopConverterTask(
         null,
         DATA_SOURCE,

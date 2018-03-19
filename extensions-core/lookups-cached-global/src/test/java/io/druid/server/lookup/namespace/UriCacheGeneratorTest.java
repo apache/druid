@@ -35,8 +35,8 @@ import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.cache.CacheScheduler;
-import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.CacheSchedulerTest;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -69,7 +69,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
@@ -121,7 +120,7 @@ public class UriCacheGeneratorTest
   );
 
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> getParameters() throws NoSuchMethodException
+  public static Iterable<Object[]> getParameters()
   {
     final List<Object[]> compressionParams = ImmutableList.of(
         new Object[]{
@@ -245,7 +244,7 @@ public class UriCacheGeneratorTest
       String suffix,
       Function<File, OutputStream> outStreamSupplier,
       Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator
-  ) throws Exception
+  )
   {
     final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceFunctionFactoryMap = new HashMap<>();
     this.suffix = suffix;
@@ -316,7 +315,7 @@ public class UriCacheGeneratorTest
   }
 
   @Test
-  public void simpleTest() throws IOException, ExecutionException, InterruptedException
+  public void simpleTest() throws InterruptedException
   {
     Assert.assertEquals(0, scheduler.getActiveEntries());
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
@@ -327,7 +326,7 @@ public class UriCacheGeneratorTest
   }
 
   @Test
-  public void simpleTestRegex() throws IOException, ExecutionException, InterruptedException
+  public void simpleTestRegex() throws InterruptedException
   {
     final UriExtractionNamespace namespace = new UriExtractionNamespace(
         null,

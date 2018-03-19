@@ -34,7 +34,7 @@ import java.util.NoSuchElementException;
 public class OrderedMergeIteratorTest
 {
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
     iterators.add(Arrays.asList(1, 3, 5, 7, 9).iterator());
@@ -50,7 +50,7 @@ public class OrderedMergeIteratorTest
   }
 
   @Test
-  public void testScrewsUpOnOutOfOrderBeginningOfList() throws Exception
+  public void testScrewsUpOnOutOfOrderBeginningOfList()
   {
     final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
     iterators.add(Arrays.asList(1, 3, 5, 7, 9).iterator());
@@ -66,7 +66,7 @@ public class OrderedMergeIteratorTest
   }
 
   @Test
-  public void testScrewsUpOnOutOfOrderInList() throws Exception
+  public void testScrewsUpOnOutOfOrderInList()
   {
     final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
     iterators.add(Arrays.asList(1, 3, 5, 4, 7, 9).iterator());
@@ -82,7 +82,7 @@ public class OrderedMergeIteratorTest
   }
 
   @Test
-  public void testLaziness() throws Exception
+  public void testLaziness()
   {
     final boolean[] done = new boolean[]{false, false};
 

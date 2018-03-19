@@ -80,11 +80,6 @@ public class BasicAuthUtils
       {
       };
 
-  public static String getEncodedCredentials(final String unencodedCreds)
-  {
-    return Base64.getEncoder().encodeToString(StringUtils.toUtf8(unencodedCreds));
-  }
-
   public static byte[] hashPassword(final char[] password, final byte[] salt, final int iterations)
   {
     try {

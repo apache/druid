@@ -35,7 +35,7 @@ public class AlphaNumericTopNMetricSpecTest
 {
   // Test derived from sample code listed on Apache 2.0 licensed https://github.com/amjjd/java-alphanum
   @Test
-  public void testComparator() throws Exception
+  public void testComparator()
   {
     final Comparator<String> comparator = AlphaNumericTopNMetricSpec.comparator;
 

@@ -26,10 +26,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteSource;
-
 import io.druid.jackson.DefaultObjectMapper;
-
 import io.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -43,12 +40,12 @@ import javax.validation.constraints.NotNull;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 
 public class ListenerResourceTest
@@ -56,17 +53,10 @@ public class ListenerResourceTest
   static final String ANN_ID = "announce_id";
   HttpServletRequest req;
   final ObjectMapper mapper = new DefaultObjectMapper();
-  private static final ByteSource EMPTY_JSON_MAP = new ByteSource()
-  {
-    @Override
-    public InputStream openStream() throws IOException
-    {
-      return new ByteArrayInputStream(StringUtils.toUtf8("{}"));
-    }
-  };
+  private static final Supplier<InputStream> EMPTY_JSON_MAP = () -> new ByteArrayInputStream(StringUtils.toUtf8("{}"));
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     mapper.registerSubtypes(SomeBeanClass.class);
     req = EasyMock.createNiceMock(HttpServletRequest.class);
@@ -75,13 +65,13 @@ public class ListenerResourceTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
 
   }
 
   @Test
-  public void testServiceAnnouncementPOSTExceptionInHandler() throws Exception
+  public void testServiceAnnouncementPOSTExceptionInHandler()
   {
     final ListenerHandler handler = EasyMock.createStrictMock(ListenerHandler.class);
     EasyMock.expect(handler.handlePOST(
@@ -99,13 +89,13 @@ public class ListenerResourceTest
     EasyMock.replay(handler);
     Assert.assertEquals(
         Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-        resource.serviceAnnouncementPOST("id", EMPTY_JSON_MAP.openStream(), req).getStatus()
+        resource.serviceAnnouncementPOST("id", EMPTY_JSON_MAP.get(), req).getStatus()
     );
     EasyMock.verify(req, handler);
   }
 
   @Test
-  public void testServiceAnnouncementPOSTAllExceptionInHandler() throws Exception
+  public void testServiceAnnouncementPOSTAllExceptionInHandler()
   {
     final ListenerHandler handler = EasyMock.createStrictMock(ListenerHandler.class);
     EasyMock.expect(handler.handlePOSTAll(EasyMock.<InputStream>anyObject(), EasyMock.<ObjectMapper>anyObject()))
@@ -120,13 +110,13 @@ public class ListenerResourceTest
     EasyMock.replay(handler);
     Assert.assertEquals(
         Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-        resource.serviceAnnouncementPOSTAll(EMPTY_JSON_MAP.openStream(), req).getStatus()
+        resource.serviceAnnouncementPOSTAll(EMPTY_JSON_MAP.get(), req).getStatus()
     );
     EasyMock.verify(req, handler);
   }
 
   @Test
-  public void testServiceAnnouncementPOST() throws Exception
+  public void testServiceAnnouncementPOST()
   {
     final AtomicInteger c = new AtomicInteger(0);
     final ListenerResource resource = new ListenerResource(
@@ -146,14 +136,14 @@ public class ListenerResourceTest
     };
     Assert.assertEquals(
         202,
-        resource.serviceAnnouncementPOSTAll(EMPTY_JSON_MAP.openStream(), req).getStatus()
+        resource.serviceAnnouncementPOSTAll(EMPTY_JSON_MAP.get(), req).getStatus()
     );
     Assert.assertEquals(1, c.get());
     EasyMock.verify(req);
   }
 
   @Test
-  public void testServiceAnnouncementGET() throws Exception
+  public void testServiceAnnouncementGET()
   {
     final AtomicInteger c = new AtomicInteger(0);
     final AbstractListenerHandler handler = new ExceptionalAbstractListenerHandler()
@@ -182,7 +172,7 @@ public class ListenerResourceTest
 
 
   @Test
-  public void testServiceAnnouncementGETNull() throws Exception
+  public void testServiceAnnouncementGETNull()
   {
     final AbstractListenerHandler handler = new ExceptionalAbstractListenerHandler();
     final ListenerResource resource = new ListenerResource(
@@ -204,7 +194,7 @@ public class ListenerResourceTest
   }
 
   @Test
-  public void testServiceAnnouncementGETExceptionInHandler() throws Exception
+  public void testServiceAnnouncementGETExceptionInHandler()
   {
     final ListenerHandler handler = EasyMock.createStrictMock(ListenerHandler.class);
     EasyMock.expect(handler.handleGET(EasyMock.anyString())).andThrow(new RuntimeException("test"));
@@ -224,7 +214,7 @@ public class ListenerResourceTest
   }
 
   @Test
-  public void testServiceAnnouncementGETAllExceptionInHandler() throws Exception
+  public void testServiceAnnouncementGETAllExceptionInHandler()
   {
     final ListenerHandler handler = EasyMock.createStrictMock(ListenerHandler.class);
     EasyMock.expect(handler.handleGETAll()).andThrow(new RuntimeException("test"));
@@ -244,7 +234,7 @@ public class ListenerResourceTest
   }
 
   @Test
-  public void testServiceAnnouncementDELETENullID() throws Exception
+  public void testServiceAnnouncementDELETENullID()
   {
     final AbstractListenerHandler handler = new ExceptionalAbstractListenerHandler();
     final ListenerResource resource = new ListenerResource(
@@ -262,7 +252,7 @@ public class ListenerResourceTest
   }
 
   @Test
-  public void testServiceAnnouncementDELETEExceptionInHandler() throws Exception
+  public void testServiceAnnouncementDELETEExceptionInHandler()
   {
 
     final ListenerHandler handler = EasyMock.createStrictMock(ListenerHandler.class);
@@ -283,7 +273,7 @@ public class ListenerResourceTest
   }
 
   @Test
-  public void testServiceAnnouncementDELETE() throws Exception
+  public void testServiceAnnouncementDELETE()
   {
     final AtomicInteger c = new AtomicInteger(0);
     final AbstractListenerHandler handler = new ExceptionalAbstractListenerHandler()
@@ -349,7 +339,7 @@ public class ListenerResourceTest
 
 
   @Test
-  public void testAbstractPostHandlerEmptyList() throws Exception
+  public void testAbstractPostHandlerEmptyList()
   {
     final AbstractListenerHandler handler = new ExceptionalAbstractListenerHandler()
     {
@@ -366,10 +356,7 @@ public class ListenerResourceTest
     )
     {
     };
-    final Response response = resource.serviceAnnouncementPOSTAll(
-        EMPTY_JSON_MAP.openStream(),
-        req
-    );
+    final Response response = resource.serviceAnnouncementPOSTAll(EMPTY_JSON_MAP.get(), req);
     Assert.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
     Assert.assertEquals("{}", response.getEntity());
   }
@@ -381,7 +368,7 @@ public class ListenerResourceTest
     final AbstractListenerHandler handler = new ExceptionalAbstractListenerHandler()
     {
       @Override
-      public String post(Map<String, SomeBeanClass> inputObject) throws Exception
+      public String post(Map<String, SomeBeanClass> inputObject)
       {
         throw new UnsupportedOperationException("nope!");
       }

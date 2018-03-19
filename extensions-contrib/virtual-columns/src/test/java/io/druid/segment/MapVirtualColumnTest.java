@@ -141,7 +141,7 @@ public class MapVirtualColumnTest
   }
 
   @Test
-  public void testBasic() throws Exception
+  public void testBasic()
   {
     Druids.SelectQueryBuilder builder = testBuilder();
 
@@ -185,7 +185,7 @@ public class MapVirtualColumnTest
     return map;
   }
 
-  private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected) throws Exception
+  private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected)
   {
     List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
     Assert.assertEquals(1, results.size());

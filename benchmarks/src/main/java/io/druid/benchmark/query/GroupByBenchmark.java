@@ -582,7 +582,7 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole) throws Exception
+  public void querySingleIncrementalIndex(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -600,7 +600,7 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndex(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -618,7 +618,7 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole) throws Exception
+  public void queryMultiQueryableIndex(Blackhole blackhole)
   {
     QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
@@ -639,7 +639,7 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexWithSpilling(Blackhole blackhole) throws Exception
+  public void queryMultiQueryableIndexWithSpilling(Blackhole blackhole)
   {
     QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
@@ -663,7 +663,7 @@ public class GroupByBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexWithSerde(Blackhole blackhole) throws Exception
+  public void queryMultiQueryableIndexWithSerde(Blackhole blackhole)
   {
     QueryToolChest<Row, GroupByQuery> toolChest = factory.getToolchest();
     QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(

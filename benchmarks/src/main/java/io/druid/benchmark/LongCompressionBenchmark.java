@@ -37,7 +37,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
@@ -80,7 +79,7 @@ public class LongCompressionBenchmark
   }
 
   @Benchmark
-  public void readContinuous(Blackhole bh) throws IOException
+  public void readContinuous(Blackhole bh)
   {
     ColumnarLongs columnarLongs = supplier.get();
     int count = columnarLongs.size();
@@ -93,7 +92,7 @@ public class LongCompressionBenchmark
   }
 
   @Benchmark
-  public void readSkipping(Blackhole bh) throws IOException
+  public void readSkipping(Blackhole bh)
   {
     ColumnarLongs columnarLongs = supplier.get();
     int count = columnarLongs.size();

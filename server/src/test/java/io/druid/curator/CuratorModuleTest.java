@@ -25,7 +25,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
-
+import io.druid.guice.GuiceInjectors;
+import io.druid.guice.LifecycleModule;
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
@@ -35,9 +36,6 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Properties;
-
-import io.druid.guice.GuiceInjectors;
-import io.druid.guice.LifecycleModule;
 
 /**
  */
@@ -49,7 +47,7 @@ public final class CuratorModuleTest
   private static final String exhibitorHostsKey = CuratorModule.EXHIBITOR_CONFIG_PREFIX + ".hosts";
 
   @Test
-  public void defaultEnsembleProvider() throws NoSuchFieldException, IllegalAccessException
+  public void defaultEnsembleProvider()
   {
     Injector injector = newInjector(new Properties());
     injector.getInstance(CuratorFramework.class); // initialize related components

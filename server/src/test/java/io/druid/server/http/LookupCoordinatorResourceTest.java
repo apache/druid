@@ -863,7 +863,7 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
-  public void testGetAllLookupsStatus() throws Exception
+  public void testGetAllLookupsStatus()
   {
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class
@@ -896,7 +896,7 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
-  public void testGetLookupStatusForTier() throws Exception
+  public void testGetLookupStatusForTier()
   {
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class
@@ -926,7 +926,7 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
-  public void testGetSpecificLookupStatus() throws Exception
+  public void testGetSpecificLookupStatus()
   {
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class
@@ -997,7 +997,7 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
-  public void testGetAllNodesStatus() throws Exception
+  public void testGetAllNodesStatus()
   {
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class
@@ -1030,7 +1030,7 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
-  public void testGetNodesStatusInTier() throws Exception
+  public void testGetNodesStatusInTier()
   {
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class
@@ -1059,7 +1059,7 @@ public class LookupCoordinatorResourceTest
   }
 
   @Test
-  public void testGetSpecificNodeStatus() throws Exception
+  public void testGetSpecificNodeStatus()
   {
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(
         LookupCoordinatorManager.class

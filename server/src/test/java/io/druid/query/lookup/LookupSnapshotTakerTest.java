@@ -65,7 +65,7 @@ public class LookupSnapshotTakerTest
   }
 
   @Test
-  public void testTakeSnapshotAndPullExisting() throws IOException
+  public void testTakeSnapshotAndPullExisting()
   {
     LookupBean lookupBean1 = new LookupBean(
         "name1",

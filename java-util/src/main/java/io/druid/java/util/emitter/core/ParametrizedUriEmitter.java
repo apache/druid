@@ -31,7 +31,6 @@ import org.asynchttpclient.AsyncHttpClient;
 import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.Flushable;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Set;
@@ -152,7 +151,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
 
   @Override
   @LifecycleStop
-  public void close() throws IOException
+  public void close()
   {
     // Use full synchronized instead of atomic flag, because otherwise some thread may think that the emitter is already
     // closed while it's in the process of closing by another thread.
@@ -166,7 +165,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
     Exception thrown = null;
     for (HttpPostEmitter httpPostEmitter : emitters.values()) {

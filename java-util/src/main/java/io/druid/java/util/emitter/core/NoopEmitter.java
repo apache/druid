@@ -19,8 +19,6 @@
 
 package io.druid.java.util.emitter.core;
 
-import java.io.IOException;
-
 /**
  */
 public class NoopEmitter implements Emitter
@@ -38,13 +36,13 @@ public class NoopEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
     // Do nothing
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // Do nothing
   }

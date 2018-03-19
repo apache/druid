@@ -61,7 +61,7 @@ public class DataSchemaTest
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Test
-  public void testDefaultExclusions() throws Exception
+  public void testDefaultExclusions()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -94,7 +94,7 @@ public class DataSchemaTest
   }
 
   @Test
-  public void testExplicitInclude() throws Exception
+  public void testExplicitInclude()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -131,7 +131,7 @@ public class DataSchemaTest
   }
 
   @Test
-  public void testTransformSpec() throws Exception
+  public void testTransformSpec()
   {
     Map<String, Object> parserMap = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -188,7 +188,7 @@ public class DataSchemaTest
   }
 
   @Test(expected = IAE.class)
-  public void testOverlapMetricNameAndDim() throws Exception
+  public void testOverlapMetricNameAndDim()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -222,7 +222,7 @@ public class DataSchemaTest
   }
 
   @Test(expected = IAE.class)
-  public void testDuplicateAggregators() throws Exception
+  public void testDuplicateAggregators()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(

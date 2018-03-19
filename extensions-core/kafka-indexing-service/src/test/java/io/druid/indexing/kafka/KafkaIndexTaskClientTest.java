@@ -27,17 +27,17 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.FullResponseHandler;
-import io.druid.java.util.http.client.response.FullResponseHolder;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHandler;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMockSupport;
@@ -54,7 +54,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +98,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     httpClient = createMock(HttpClient.class);
     taskInfoProvider = createMock(TaskInfoProvider.class);
@@ -123,13 +122,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     client.close();
   }
 
   @Test
-  public void testNoTaskLocation() throws Exception
+  public void testNoTaskLocation()
   {
     reset(taskInfoProvider);
     expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(TaskLocation.unknown()).anyTimes();
@@ -151,7 +150,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test(expected = KafkaIndexTaskClient.TaskNotRunnableException.class)
-  public void testTaskNotRunnableException() throws Exception
+  public void testTaskNotRunnableException()
   {
     reset(taskInfoProvider);
     expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
@@ -164,7 +163,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test(expected = RuntimeException.class)
-  public void testInternalServerError() throws Exception
+  public void testInternalServerError()
   {
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).times(2);
     expect(
@@ -183,7 +182,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test(expected = IAE.class)
-  public void testBadRequest() throws Exception
+  public void testBadRequest()
   {
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).times(2);
     expect(responseHolder.getContent()).andReturn("");
@@ -203,7 +202,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testTaskLocationMismatch() throws Exception
+  public void testTaskLocationMismatch()
   {
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
                                       .andReturn(HttpResponseStatus.OK);
@@ -295,7 +294,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test(expected = RuntimeException.class)
-  public void testGetCurrentOffsetsWithExhaustedRetries() throws Exception
+  public void testGetCurrentOffsetsWithExhaustedRetries()
   {
     client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
 
@@ -993,7 +992,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     @Override
-    void checkConnection(String host, int port) throws IOException
+    void checkConnection(String host, int port)
     {
     }
   }
