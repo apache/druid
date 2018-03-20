@@ -26,7 +26,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -513,7 +512,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
               {
                 try {
                   if (cachedResult.length == 0) {
-                    return Iterators.emptyIterator();
+                    return Collections.emptyIterator();
                   }
 
                   return objectMapper.readValues(
