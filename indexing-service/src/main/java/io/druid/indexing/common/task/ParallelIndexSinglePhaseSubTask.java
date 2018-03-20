@@ -37,6 +37,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SurrogateLockListAction;
 import io.druid.indexing.common.actions.SurrogateLockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
@@ -69,6 +70,7 @@ import io.druid.timeline.partition.ShardSpec;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -99,6 +101,8 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
 
   @JsonCreator
   public ParallelIndexSinglePhaseSubTask(
+      // id shouldn't be null except when this task is created by ParallelIndexSinglePhaseSupervisorTask
+      @JsonProperty("id") @Nullable final String id,
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
@@ -108,7 +112,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
   )
   {
     super(
-        getOrMakeId(null, TYPE, ingestionSchema.getDataSchema().getDataSource()),
+        getOrMakeId(id, TYPE, ingestionSchema.getDataSchema().getDataSource()),
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
@@ -119,7 +123,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
 
-    if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
+    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
       throw new UnsupportedOperationException("Guaranteed rollup is not supported");
     }
   }
@@ -149,7 +153,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
   private boolean checkLockAcquired(TaskActionClient actionClient, SortedSet<Interval> intervals)
   {
     try {
-      Tasks.tryAcquireExclusiveLocks(actionClient, intervals);
+      tryAcquireExclusiveSurrogateLocks(actionClient, intervals);
       return true;
     }
     catch (Exception e) {
@@ -216,7 +220,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
                          )
       );
     } else {
-      versions = getTaskLocks(toolbox.getTaskActionClient())
+      versions = toolbox.getTaskActionClient().submit(new SurrogateLockListAction(supervisorTaskId))
           .stream()
           .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
       dataSchema = ingestionSchema.getDataSchema();
@@ -249,16 +253,6 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
       lockMap.put(interval, lock);
     }
     return lockMap;
-  }
-
-  private static boolean isGuaranteedRollup(IndexTask.IndexIOConfig ioConfig, IndexTask.IndexTuningConfig tuningConfig)
-  {
-    Preconditions.checkState(
-        !(tuningConfig.isForceGuaranteedRollup() &&
-          (tuningConfig.isForceExtendableShardSpecs() || ioConfig.isAppendToExisting())),
-        "Perfect rollup cannot be guaranteed with extendable shardSpecs"
-    );
-    return tuningConfig.isForceGuaranteedRollup();
   }
 
   /**

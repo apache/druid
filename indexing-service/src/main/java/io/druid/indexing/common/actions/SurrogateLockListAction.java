@@ -24,67 +24,41 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.LockResult;
 import io.druid.java.util.common.ISE;
-import org.joda.time.Interval;
 
-public class SurrogateLockTryAcquireAction implements TaskAction<TaskLock>
+import java.util.List;
+
+public class SurrogateLockListAction implements TaskAction<List<TaskLock>>
 {
-  private final TaskLockType type;
-
-  private final Interval interval;
-
   private final String surrogateId;
 
   @JsonCreator
-  public SurrogateLockTryAcquireAction(
-      @JsonProperty("lockType") TaskLockType type,
-      @JsonProperty("interval") Interval interval,
+  public SurrogateLockListAction(
       @JsonProperty("surrogateId") String surrogateId
   )
   {
-    this.type = type;
-    this.interval = interval;
     this.surrogateId = surrogateId;
   }
 
-  @JsonProperty("lockType")
-  public TaskLockType getType()
-  {
-    return type;
-  }
-
-  @JsonProperty("interval")
-  public Interval getInterval()
-  {
-    return interval;
-  }
-
-  @JsonProperty("surrogateId")
+  @JsonProperty
   public String getSurrogateId()
   {
     return surrogateId;
   }
 
   @Override
-  public TypeReference<TaskLock> getReturnTypeReference()
+  public TypeReference<List<TaskLock>> getReturnTypeReference()
   {
-    return new TypeReference<TaskLock>()
-    {
-    };
+    return new TypeReference<List<TaskLock>>() {};
   }
 
   @Override
-  public TaskLock perform(
-      Task task, TaskActionToolbox toolbox
-  )
+  public List<TaskLock> perform(Task task, TaskActionToolbox toolbox)
   {
     final Optional<Task> maybeSurrogateTask = toolbox.getTaskStorage().getTask(surrogateId);
     if (maybeSurrogateTask.isPresent()) {
-      final LockResult result = toolbox.getTaskLockbox().tryLock(type, maybeSurrogateTask.get(), interval);
-      return result.isOk() ? result.getTaskLock() : null;
+      return toolbox.getTaskLockbox().findLocksForTask(maybeSurrogateTask.get());
     } else {
       throw new ISE("Can't find surrogate task[%s]", surrogateId);
     }
@@ -99,10 +73,6 @@ public class SurrogateLockTryAcquireAction implements TaskAction<TaskLock>
   @Override
   public String toString()
   {
-    return "SurrogateLockTryAcquireAction{" +
-           "lockType=" + type +
-           ", interval=" + interval +
-           ", surrogateId=" + surrogateId +
-           '}';
+    return "LockListAction{}";
   }
 }

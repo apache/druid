@@ -90,31 +90,36 @@ public class TaskMonitor<T extends Task>
                   case SUCCESS:
                     numRunningTasks.decrementAndGet();
                     iterator.remove();
+
                     monitorEntry.setLastStatus(taskStatus);
                     break;
                   case FAILED:
                     numRunningTasks.decrementAndGet();
+                    iterator.remove();
+
                     log.warn("task[%s] failed!", taskId);
                     if (monitorEntry.numTries() < maxRetry) {
                       log.info(
-                          "We still have chnaces[%d/%d] to complete. Retrying task[%s]",
+                          "We still have chnaces[%d/%d] to complete. Retrying spec[%s]",
                           monitorEntry.numTries(),
                           maxRetry,
-                          taskId
+                          monitorEntry.spec.getId()
                       );
                       retry(monitorEntry, taskStatus);
                     } else {
                       log.error(
-                          "task[%s] failed after [%d] tries",
-                          taskId,
+                          "spec[%s] failed after [%d] tries",
+                          monitorEntry.spec.getId(),
                           monitorEntry.numTries()
                       );
-                      iterator.remove();
                       monitorEntry.setLastStatus(taskStatus);
                     }
                     break;
-                  default:
+                  case RUNNING:
                     // do nothing
+                    break;
+                  default:
+                    throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getStatusCode(), taskId);
                 }
               }
             }
@@ -160,7 +165,10 @@ public class TaskMonitor<T extends Task>
       indexingServiceClient.runTask(task);
       numRunningTasks.incrementAndGet();
 
-      runningTasks.put(task.getId(), monitorEntry.withNewRunningTask(task, lastFailedTaskStatus));
+      runningTasks.put(
+          task.getId(),
+          monitorEntry.withNewRunningTask(task, lastFailedTaskStatus)
+      );
     }
   }
 

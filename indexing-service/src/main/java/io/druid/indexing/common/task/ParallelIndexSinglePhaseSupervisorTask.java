@@ -82,9 +82,9 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
   private static final String TYPE = "parallelIndexSinglePhase";
 
   private final ParallelIndexSinglePhaseIngestionSpec ingestionSchema;
-  private final FiniteFirehoseFactory baseFirehoseFactory;
+  private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
   private final int maxNumTasks;
-  private final TaskMonitor taskMonitor;
+  private final TaskMonitor<ParallelIndexSinglePhaseSubTask> taskMonitor;
 
   private final BlockingQueue<SubTaskCompleteEvent<ParallelIndexSinglePhaseSubTask>> taskCompleteEvents = new LinkedBlockingDeque<>();
   private final List<DataSegment> segments = new ArrayList<>();
@@ -118,7 +118,7 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
 
     this.baseFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
     this.maxNumTasks = ingestionSchema.getTuningConfig().getMaxNumBatchTasks();
-    this.taskMonitor = new TaskMonitor(indexingServiceClient, ingestionSchema.getTuningConfig().getMaxRetry());
+    this.taskMonitor = new TaskMonitor<>(indexingServiceClient, ingestionSchema.getTuningConfig().getMaxRetry());
   }
 
   @Override
@@ -180,9 +180,9 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
 
   private io.druid.indexing.common.TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
-    final Iterator<ParallelIndexSinglePhaseSubTaskSpec> subTaskIterator = subTaskSpecIterator();
+    final Iterator<ParallelIndexSinglePhaseSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator();
     final int numTotalTasks = baseFirehoseFactory.getNumSplits();
-    final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckingPeriodMs();
+    final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckPeriodMs();
     TaskState state = TaskState.FAILED;
 
     log.info("Total number of tasks is [%d]", numTotalTasks);
@@ -193,10 +193,11 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
     try {
       log.info("Submitting initial tasks");
       // Submit initial tasks
-      while (subTaskIterator.hasNext() && taskMonitor.getNumRunningTasks() < maxNumTasks) {
-        submitNewTask(subTaskIterator.next());
+      while (subTaskSpecIterator.hasNext() && taskMonitor.getNumRunningTasks() < maxNumTasks) {
+        submitNewTask(subTaskSpecIterator.next());
       }
 
+      log.info("Waiting for subTasks to be completed");
       while (!stopped && !Thread.currentThread().isInterrupted()) {
         final SubTaskCompleteEvent<ParallelIndexSinglePhaseSubTask> taskCompleteEvent = taskCompleteEvents.poll(
             taskStatusCheckingPeriod,
@@ -210,7 +211,7 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
               numCompleteTasks++;
               segments.addAll((Collection<DataSegment>) taskCompleteEvent.getLastStatus().getReport().getPayload());
               log.info("[%d/%d] tasks succeeded", numCompleteTasks, numTotalTasks);
-              if (!subTaskIterator.hasNext()) {
+              if (!subTaskSpecIterator.hasNext()) {
                 if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
                   stopped = true;
                   if (numCompleteTasks == numTotalTasks) {
@@ -229,7 +230,7 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
                   }
                 }
               } else if (taskMonitor.getNumRunningTasks() < maxNumTasks) {
-                submitNewTask(subTaskIterator.next());
+                submitNewTask(subTaskSpecIterator.next());
               }
               break;
             case FAILED:
@@ -255,11 +256,17 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
       }
     }
     finally {
+      log.info("Cleaning up resources");
       // Cleanup resources
       taskCompleteEvents.clear();
       taskMonitor.stop();
 
       if (state != TaskState.SUCCESS) {
+        log.info(
+            "This task is finished with [%s] state. Killing [%d] remaining subtasks.",
+            state,
+            taskMonitor.getNumRunningTasks()
+        );
         // if this fails, kill all sub tasks
         // Note: this doesn't work when this task is killed by users. We need a way for gracefully shutting down tasks
         // for resource cleanup.
@@ -298,7 +305,7 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
         tuningConfig.getMaxPendingPersists(),
         true,
         tuningConfig.isForceExtendableShardSpecs(),
-        tuningConfig.isForceGuaranteedRollup(),
+        false,
         tuningConfig.isReportParseExceptions(),
         null,
         tuningConfig.getPushTimeout(),
@@ -370,11 +377,11 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
   @VisibleForTesting
   Iterator<ParallelIndexSinglePhaseSubTaskSpec> subTaskSpecIterator() throws IOException
   {
-    return Iterators.transform(baseFirehoseFactory.getSplits(), split -> newTaskSpec((InputSplit<?>) split));
+    return Iterators.transform(baseFirehoseFactory.getSplits(), this::newTaskSpec);
   }
 
   @VisibleForTesting
-  ParallelIndexSinglePhaseSubTaskSpec newTaskSpec(InputSplit<?> split)
+  ParallelIndexSinglePhaseSubTaskSpec newTaskSpec(InputSplit split)
   {
     return new ParallelIndexSinglePhaseSubTaskSpec(
         getId() + "_" + nextSpecId++,
@@ -395,7 +402,7 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
   private static List<InputSplit> getSplitsIfSplittable(FirehoseFactory firehoseFactory) throws IOException
   {
     if (firehoseFactory instanceof FiniteFirehoseFactory) {
-      final FiniteFirehoseFactory finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
+      final FiniteFirehoseFactory<?, ?> finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
       return Lists.newArrayList(finiteFirehoseFactory.getSplits());
     } else {
       throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());

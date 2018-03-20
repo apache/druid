@@ -152,6 +152,7 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
     while (subTaskSpecIterator.hasNext()) {
       final ParallelIndexSinglePhaseSubTaskSpec spec = subTaskSpecIterator.next();
       final ParallelIndexSinglePhaseSubTask subTask = new ParallelIndexSinglePhaseSubTask(
+          null,
           spec.getGroupId(),
           null,
           spec.getSupervisorTaskId(),
@@ -254,7 +255,21 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
             getObjectMapper()
         ),
         ioConfig,
-        null
+        new ParallelIndexSinglePhaseTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            null,
+            null
+        )
     );
 
     // set up test tools

@@ -48,6 +48,7 @@ final class ParallelIndexSinglePhaseSubTaskSpec extends SubTaskSpec<ParallelInde
   public ParallelIndexSinglePhaseSubTask newSubTask(int numAttempts)
   {
     return new ParallelIndexSinglePhaseSubTask(
+        null,
         getGroupId(),
         null,
         getSupervisorTaskId(),

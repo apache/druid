@@ -30,6 +30,7 @@ import io.druid.indexing.common.task.Task;
     @JsonSubTypes.Type(name = "lockTryAcquire", value = LockTryAcquireAction.class),
     @JsonSubTypes.Type(name = "surrogateLockTryAcquire", value = SurrogateLockTryAcquireAction.class),
     @JsonSubTypes.Type(name = "lockList", value = LockListAction.class),
+    @JsonSubTypes.Type(name = "surrogateLockList", value = SurrogateLockListAction.class),
     @JsonSubTypes.Type(name = "lockRelease", value = LockReleaseAction.class),
     @JsonSubTypes.Type(name = "segmentInsertion", value = SegmentInsertAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalInsert", value = SegmentTransactionalInsertAction.class),
