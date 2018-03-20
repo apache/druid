@@ -19,20 +19,46 @@
 
 package io.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Used as a tombstone marker in the supervisors metadata table to indicate that the supervisor has been removed.
  */
 public class NoopSupervisorSpec implements SupervisorSpec
 {
+  // NoopSupervisorSpec is used as a tombstone, added when a previously running supervisor is stopped.
+  // Inherit the datasources of the previous running spec, so that we can determine whether a user is authorized to see
+  // this tombstone (users can only see tombstones for datasources that they have access to).
+  @Nullable
+  @JsonProperty("dataSources")
+  private List<String> datasources;
+
+  @Nullable
+  @JsonProperty("id")
+  private String id;
+
+  @JsonCreator
+  public NoopSupervisorSpec(
+      @Nullable @JsonProperty("id") String id,
+      @Nullable @JsonProperty("dataSources") List<String> datasources
+  )
+  {
+    this.id = id;
+    this.datasources = datasources == null ? new ArrayList<>() : datasources;
+  }
+
   @Override
+  @JsonProperty
   public String getId()
   {
-    return null;
+    return id;
   }
 
   @Override
@@ -68,8 +94,30 @@ public class NoopSupervisorSpec implements SupervisorSpec
   }
 
   @Override
+  @Nullable
+  @JsonProperty("dataSources")
   public List<String> getDataSources()
   {
-    return null;
+    return datasources;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NoopSupervisorSpec spec = (NoopSupervisorSpec) o;
+    return Objects.equals(datasources, spec.datasources) &&
+           Objects.equals(getId(), spec.getId());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(datasources, getId());
   }
 }
