@@ -191,7 +191,7 @@ public class S3Utils
     return filename;
   }
 
-  static AccessControlList grantFullControlToBucketOwver(AmazonS3 s3Client, String bucket)
+  static AccessControlList grantFullControlToBucketOwner(AmazonS3 s3Client, String bucket)
   {
     final AccessControlList acl = s3Client.getBucketAcl(bucket);
     acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
@@ -232,8 +232,8 @@ public class S3Utils
   }
 
   /**
-   * Gets a single {@link S3ObjectSummary} from s3. Since this method might throw an exception if there are multiple
-   * objets that match the given key, this method should be used only when it's guaranteed that the given key is unique
+   * Gets a single {@link S3ObjectSummary} from s3. Since this method might return a wrong object if there are multiple
+   * objects that match the given key, this method should be used only when it's guaranteed that the given key is unique
    * in the given bucket.
    *
    * @param s3Client s3 client

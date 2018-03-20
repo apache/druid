@@ -96,21 +96,20 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
+    final DataSegment outSegment = inSegment.withSize(indexSize)
+                                            .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+                                            .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+
+    final File descriptorFile = File.createTempFile("druid", "descriptor.json");
+    // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+    // runtime, and because Guava deletes methods over time, that causes incompatibilities.
+    Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
+
     try {
       return S3Utils.retryS3Operation(
           () -> {
-            uploadFileIfPossibleAndClear(s3Client, config.getBucket(), s3Path, zipOutFile, replaceExisting);
-
-            final DataSegment outSegment = inSegment.withSize(indexSize)
-                                                    .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                                                    .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
-
-            File descriptorFile = File.createTempFile("druid", "descriptor.json");
-            // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
-            // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-            Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
-
-            uploadFileIfPossibleAndClear(
+            uploadFileIfPossible(s3Client, config.getBucket(), s3Path, zipOutFile, replaceExisting);
+            uploadFileIfPossible(
                 s3Client,
                 config.getBucket(),
                 S3Utils.descriptorPathForSegmentPath(s3Path),
@@ -127,6 +126,12 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+    finally {
+      log.info("Deleting temporary cached index.zip");
+      zipOutFile.delete();
+      log.info("Deleting temporary cached descriptor.json");
+      descriptorFile.delete();
     }
   }
 
@@ -155,7 +160,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  private void uploadFileIfPossibleAndClear(
+  private void uploadFileIfPossible(
       AmazonS3 s3Client,
       String bucket,
       String key,
@@ -170,14 +175,11 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
       if (!config.getDisableAcl()) {
         indexFilePutRequest.setAccessControlList(
-            S3Utils.grantFullControlToBucketOwver(s3Client, bucket)
+            S3Utils.grantFullControlToBucketOwner(s3Client, bucket)
         );
       }
       log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
       s3Client.putObject(indexFilePutRequest);
     }
-
-    log.info("Deleting temporary cached file [%s]", file.getAbsolutePath());
-    file.delete();
   }
 }

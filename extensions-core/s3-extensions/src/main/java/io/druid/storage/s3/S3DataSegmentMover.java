@@ -189,7 +189,7 @@ public class S3DataSegmentMover implements DataSegmentMover
         log.info("Moving file %s", copyMsg);
         final CopyObjectRequest copyRequest = new CopyObjectRequest(s3Bucket, s3Path, targetS3Bucket, targetS3Path);
         if (!config.getDisableAcl()) {
-          copyRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwver(s3Client, targetS3Bucket));
+          copyRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(s3Client, targetS3Bucket));
         }
         s3Client.copyObject(copyRequest);
         if (!s3Client.doesObjectExist(targetS3Bucket, targetS3Path)) {
