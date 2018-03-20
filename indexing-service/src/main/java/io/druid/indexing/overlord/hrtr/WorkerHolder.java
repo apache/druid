@@ -387,7 +387,8 @@ public class WorkerHolder
                 announcement.getTaskType(),
                 announcement.getTaskResource(),
                 TaskStatus.failure(announcement.getTaskId()),
-                announcement.getTaskLocation()
+                announcement.getTaskLocation(),
+                announcement.getTaskDataSource()
             ));
           }
         }
@@ -423,7 +424,8 @@ public class WorkerHolder
                   announcement.getTaskType(),
                   announcement.getTaskResource(),
                   TaskStatus.failure(announcement.getTaskId()),
-                  announcement.getTaskLocation()
+                  announcement.getTaskLocation(),
+                  announcement.getTaskDataSource()
               ));
             }
           } else if (change instanceof WorkerHistoryItem.Metadata) {
