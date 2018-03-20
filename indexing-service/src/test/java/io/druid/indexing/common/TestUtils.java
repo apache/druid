@@ -103,7 +103,7 @@ public class TestUtils
 
   public static boolean conditionValid(IndexingServiceCondition condition)
   {
-    return conditionValid(condition, 10000);
+    return conditionValid(condition, 1000);
   }
 
   public static boolean conditionValid(IndexingServiceCondition condition, long timeout)
