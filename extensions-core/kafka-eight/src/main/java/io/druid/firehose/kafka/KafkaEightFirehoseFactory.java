@@ -23,7 +23,6 @@ package io.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -39,8 +38,8 @@ import kafka.message.InvalidMessageException;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +70,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
   }
 
   @Override
-  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory)
   {
     Set<String> newDimExclus = Sets.union(
         firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
@@ -108,7 +107,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
 
     return new Firehose()
     {
-      Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
@@ -165,7 +164,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         connector.shutdown();
       }

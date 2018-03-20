@@ -27,9 +27,6 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressionFactory;
@@ -37,6 +34,9 @@ import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -61,7 +61,7 @@ import java.util.Map;
 public class IndexMergerV9CompatibilityTest
 {
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return ImmutableList.of(
         new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
@@ -156,7 +156,7 @@ public class IndexMergerV9CompatibilityTest
       new ByteSource()
       {
         @Override
-        public InputStream openStream() throws IOException
+        public InputStream openStream()
         {
           return IndexMergerV9CompatibilityTest.class.getResourceAsStream("/v8SegmentPersistDir/" + file);
         }

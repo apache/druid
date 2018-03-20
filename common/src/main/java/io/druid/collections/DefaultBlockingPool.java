@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import io.druid.java.util.common.ISE;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -106,7 +105,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
         new Closeable()
         {
           @Override
-          public void close() throws IOException
+          public void close()
           {
             offer(theObject);
           }
@@ -192,7 +191,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
         new Closeable()
         {
           @Override
-          public void close() throws IOException
+          public void close()
           {
             offerBatch(theObjects);
           }

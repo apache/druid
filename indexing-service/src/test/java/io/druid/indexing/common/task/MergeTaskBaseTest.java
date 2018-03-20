@@ -47,7 +47,7 @@ public class MergeTaskBaseTest
   final MergeTaskBase testMergeTaskBase = new MergeTaskBase(null, "foo", segments, null, null)
   {
     @Override
-    protected File merge(TaskToolbox toolbox, Map<DataSegment, File> segments, File outDir) throws Exception
+    protected File merge(TaskToolbox toolbox, Map<DataSegment, File> segments, File outDir)
     {
       return null;
     }

@@ -28,8 +28,6 @@ import io.druid.java.util.common.MapUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 import org.jets3t.service.model.StorageObject;
@@ -163,7 +161,7 @@ public class S3DataSegmentMoverTest
     boolean copied = false;
     boolean deletedOld = false;
 
-    private MockStorageService() throws S3ServiceException
+    private MockStorageService()
     {
       super(null);
     }
@@ -174,7 +172,7 @@ public class S3DataSegmentMoverTest
     }
 
     @Override
-    public boolean isObjectInBucket(String bucketName, String objectKey) throws ServiceException
+    public boolean isObjectInBucket(String bucketName, String objectKey)
     {
       Set<String> objects = storage.get(bucketName);
       return (objects != null && objects.contains(objectKey));
@@ -183,15 +181,10 @@ public class S3DataSegmentMoverTest
     @Override
     public S3Object[] listObjects(String bucketName, String objectKey, String separator)
     {
-      try {
-        if (isObjectInBucket(bucketName, objectKey)) {
-          final S3Object object = new S3Object(objectKey);
-          object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
-          return new S3Object[]{object};
-        }
-      }
-      catch (ServiceException e) {
-        // return empty list
+      if (isObjectInBucket(bucketName, objectKey)) {
+        final S3Object object = new S3Object(objectKey);
+        object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
+        return new S3Object[]{object};
       }
       return new S3Object[]{};
     }
@@ -203,7 +196,7 @@ public class S3DataSegmentMoverTest
         String destinationBucketName,
         StorageObject destinationObject,
         boolean replaceMetadata
-    ) throws ServiceException
+    )
     {
       copied = true;
       if (isObjectInBucket(sourceBucketName, sourceObjectKey)) {
@@ -213,14 +206,14 @@ public class S3DataSegmentMoverTest
     }
 
     @Override
-    public void deleteObject(String bucket, String objectKey) throws S3ServiceException
+    public void deleteObject(String bucket, String objectKey)
     {
       deletedOld = true;
       storage.get(bucket).remove(objectKey);
     }
 
     @Override
-    public S3Object putObject(String bucketName, S3Object object) throws S3ServiceException
+    public S3Object putObject(String bucketName, S3Object object)
     {
       if (!storage.containsKey(bucketName)) {
         storage.put(bucketName, Sets.newHashSet());

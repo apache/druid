@@ -65,7 +65,6 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +112,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
       final String dataSource, final List<Interval> intervals
-  ) throws IOException
+  )
   {
     return connector.retryWithHandle(
         new HandleCallback<List<DataSegment>>()
@@ -839,7 +838,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new HandleCallback<Boolean>()
         {
           @Override
-          public Boolean withHandle(Handle handle) throws Exception
+          public Boolean withHandle(Handle handle)
           {
             int rows = handle.createStatement(
                 StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
@@ -867,7 +866,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new HandleCallback<Boolean>()
         {
           @Override
-          public Boolean withHandle(Handle handle) throws Exception
+          public Boolean withHandle(Handle handle)
           {
             final int numRows = handle.createStatement(
                 StringUtils.format(
@@ -889,7 +888,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
+  public void updateSegmentMetadata(final Set<DataSegment> segments)
   {
     connector.getDBI().inTransaction(
         new TransactionCallback<Void>()
@@ -908,13 +907,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public void deleteSegments(final Set<DataSegment> segments) throws IOException
+  public void deleteSegments(final Set<DataSegment> segments)
   {
     connector.getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
           {
             for (final DataSegment segment : segments) {
               deleteSegment(handle, segment);
@@ -958,7 +957,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new TransactionCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
+          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status)
           {
             // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
             // Some databases can only use an index on one of the columns. An additional condition provides
@@ -986,7 +985,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                           byte[] payload,
                           FoldController foldController,
                           StatementContext statementContext
-                      ) throws SQLException
+                      )
                       {
                         try {
                           accumulator.add(jsonMapper.readValue(payload, DataSegment.class));

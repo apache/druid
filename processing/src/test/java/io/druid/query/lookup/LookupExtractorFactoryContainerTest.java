@@ -61,7 +61,7 @@ public class LookupExtractorFactoryContainerTest
   }
 
   @Test
-  public void testReplaces() throws Exception
+  public void testReplaces()
   {
     LookupExtractorFactoryContainer l0 = new LookupExtractorFactoryContainer(null, new TestLookupExtractorFactory());
     LookupExtractorFactoryContainer l1 = new LookupExtractorFactoryContainer(null, new TestLookupExtractorFactory());

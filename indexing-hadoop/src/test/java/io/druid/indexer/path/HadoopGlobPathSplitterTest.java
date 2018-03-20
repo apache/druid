@@ -31,7 +31,7 @@ import java.util.List;
 public class HadoopGlobPathSplitterTest
 {
   @Test
-  public void testGlobSplitting() throws Exception
+  public void testGlobSplitting()
   {
     String path = "/a/b/c";
     List<String> expected = ImmutableList.of(

@@ -28,7 +28,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -37,7 +36,7 @@ import java.util.Arrays;
 public class ResultGranularTimestampComparatorTest
 {
   @Parameterized.Parameters(name = "descending={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(Arrays.asList(false, true));
   }

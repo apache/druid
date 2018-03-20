@@ -48,7 +48,7 @@ public class HyperLogLogCollectorTest
   private final HashFunction fn = Hashing.murmur3_128();
 
   @Test
-  public void testFolding() throws Exception
+  public void testFolding()
   {
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
@@ -130,7 +130,7 @@ public class HyperLogLogCollectorTest
 
   @Ignore
   @Test
-  public void testHighCardinalityRollingFold2() throws Exception
+  public void testHighCardinalityRollingFold2()
   {
     final HyperLogLogCollector rolling = HyperLogLogCollector.makeLatestCollector();
     int count;
@@ -153,7 +153,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldingByteBuffers() throws Exception
+  public void testFoldingByteBuffers()
   {
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
@@ -186,7 +186,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldingReadOnlyByteBuffers() throws Exception
+  public void testFoldingReadOnlyByteBuffers()
   {
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
@@ -222,7 +222,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldingReadOnlyByteBuffersWithArbitraryPosition() throws Exception
+  public void testFoldingReadOnlyByteBuffersWithArbitraryPosition()
   {
     final Random random = new Random(0);
     final int[] numValsToCheck = {10, 20, 50, 100, 1000, 2000};
@@ -261,7 +261,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldWithDifferentOffsets1() throws Exception
+  public void testFoldWithDifferentOffsets1()
   {
     ByteBuffer biggerOffset = makeCollectorBuffer(1, (byte) 0x00, 0x11);
     ByteBuffer smallerOffset = makeCollectorBuffer(0, (byte) 0x20, 0x00);
@@ -300,7 +300,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testBufferSwap() throws Exception
+  public void testBufferSwap()
   {
     ByteBuffer biggerOffset = makeCollectorBuffer(1, (byte) 0x00, 0x11);
     ByteBuffer smallerOffset = makeCollectorBuffer(0, (byte) 0x20, 0x00);
@@ -318,7 +318,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldWithArbitraryInitialPositions() throws Exception
+  public void testFoldWithArbitraryInitialPositions()
   {
     ByteBuffer biggerOffset = shiftedBuffer(makeCollectorBuffer(1, (byte) 0x00, 0x11), 10);
     ByteBuffer smallerOffset = shiftedBuffer(makeCollectorBuffer(0, (byte) 0x20, 0x00), 15);
@@ -366,7 +366,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldWithDifferentOffsets2() throws Exception
+  public void testFoldWithDifferentOffsets2()
   {
     ByteBuffer biggerOffset = makeCollectorBuffer(1, (byte) 0x01, 0x11);
     ByteBuffer smallerOffset = makeCollectorBuffer(0, (byte) 0x20, 0x00);
@@ -399,7 +399,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldWithUpperNibbleTriggersOffsetChange() throws Exception
+  public void testFoldWithUpperNibbleTriggersOffsetChange()
   {
     byte[] arr1 = new byte[HyperLogLogCollector.getLatestNumBytesForDenseStorage()];
     Arrays.fill(arr1, (byte) 0x11);
@@ -430,7 +430,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testSparseFoldWithDifferentOffsets1() throws Exception
+  public void testSparseFoldWithDifferentOffsets1()
   {
     ByteBuffer biggerOffset = makeCollectorBuffer(1, new byte[]{0x11, 0x10}, 0x11);
     ByteBuffer sparse = HyperLogLogCollector.makeCollector(makeCollectorBuffer(0, new byte[]{0x00, 0x02}, 0x00))
@@ -505,7 +505,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Ignore @Test // This test can help when finding potential combinations that are weird, but it's non-deterministic
-  public void testFoldingwithDifferentOffsets() throws Exception
+  public void testFoldingwithDifferentOffsets()
   {
     // final Random random = new Random(37); // this seed will cause this test to fail because of slightly larger errors
     final Random random = new Random(0);
@@ -569,7 +569,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testEstimation() throws Exception
+  public void testEstimation()
   {
     Random random = new Random(0L);
 
@@ -595,7 +595,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testEstimationReadOnlyByteBuffers() throws Exception
+  public void testEstimationReadOnlyByteBuffers()
   {
     Random random = new Random(0L);
 
@@ -625,7 +625,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testEstimationLimitDifferentFromCapacity() throws Exception
+  public void testEstimationLimitDifferentFromCapacity()
   {
     Random random = new Random(0L);
 
@@ -655,7 +655,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testSparseEstimation() throws Exception
+  public void testSparseEstimation()
   {
     final Random random = new Random(0);
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
@@ -670,7 +670,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testHighBits() throws Exception
+  public void testHighBits()
   {
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
@@ -752,7 +752,7 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
-  public void testFoldOrder() throws Exception
+  public void testFoldOrder()
   {
     final List<String> objects = Lists.newArrayList(
         "AQcH/xYEMXOjRTVSQ1NXVENEM1RTUlVTRDI1aEVnhkOjNUaCI2MkU2VVhVNkNyVTa4NEYkS0kjZYU1RDdEYzUjglNTUzVFM0NkU3ZFUjOVJCdlU0N2QjRDRUV1MyZjNmVDOUM2RVVFRzhnUzVXY1R1RHUnNziURUdmREM0VjVEQmU0aEInZYNzNZNVRFgzVFNolSJHNIQ3QklEZlNSNoNTJXpDk1dFWjJGNYNiQzQkZFNEYzc1NVhSczM2NmJDZlc3JJRCpVNiRlNEI3dmU1ZGI0Q1RCMhNFZEJDZDYyNFOCM3U0VmRlVlNIRVQ4VVw1djNDVURHVSaFU0VEY0U1JFNIVCYlVEJWM2NWU0eURDOjQ6YyNTYkZjNUVjR1ZDdnVkMzVHZFpjMzlmNEFHM0dHJlRYTHSEQjVZVVZkVVIzIjg2SUU0NSM0VFNDNCdGVlQkhBNENCVTZGZEVlxFQyQ0NYWkUmVUJUYzRlNqg4NVVTNThEJkRGNDNUNFSEYmgkR0dDR1JldCNhVEZGRENGc1NDRUNER3WJRTRHQ4JlOYZoJDVVVVMzZSREZ1Q1UjSHNkdUMlU0ODIzZThSNmNDNjQ1o2I0YiRGYyZkNUJYVEMyN2QpQyMkc2VTE4U2VCNHZFRDNTh0IzI2VFNTMlUkNGMlKTRCIyR3QiQzFUNkRTdDM6RDRFI3VyVlcyWCUlQ0YjNjU2Q2dEVFNTRyRlI7VElHVTVVNGk0JHJTQzQkQyVlV0NCVlRkhWYkQ0RVaDNYdFZHWEWFJEYpM0QjNjNVUzNCVzVkgzZGFzQkRZUzN2U1dUFGVWZTUzVUREZDciZEVVYVNjeCU0ZDdEhzIpU2RTOFRUQkWlk1OFRUVTN1MkZSM3ZFc1VDNnUmc2NKNUaUIzd3M0RWxEZTsiNENLVHU0NFUmQ2RWRFdCNUVENFkxZCEnRLQkNEU0RVNmVDQjl9ZmNkM1QVM0MzQkUjJlVHRkNEVWlENDVUIlUvRkM0RVY1UzY6OGVHVCRDIzRUUlUjM2RDWSVkVIU1U1ZiVFNlNDhTN1VWNTVEZ2RzNzVDQlY0ZUNENUM5NUdkRDJGYzRCUzIjRGR4UmJFI4GDRTUiQ0ZUhVY1ZEYoZSRoVDYnREYkQ1SUU0RWUycjp2RZIySVZkUmZDREZVJGQyVEc1JElBZENEU2VEQlVUUnNDQziLRTNidmNjVCtjRFU2Q0SGYzVHVpGTNoVDxFVSMlWTJFQyRJdV1EI3RDloYyNFQ0c1NVY0ZHVEY0dkM2QkQyVDVUVTNFUyamMUdSNrNz0mlFlERzZTSGhFRjVGM3NWU2NINDI2U1RERUhjY4FHNWNTVTV1U0U2I0VXNEZERWNDNUSjI1WmMmQ4U=",
@@ -794,7 +794,7 @@ public class HyperLogLogCollectorTest
   // Provides a nice printout of error rates as a function of cardinality
   @Ignore
   @Test
-  public void showErrorRate() throws Exception
+  public void showErrorRate()
   {
     HashFunction fn = Hashing.murmur3_128();
     Random random = new Random();

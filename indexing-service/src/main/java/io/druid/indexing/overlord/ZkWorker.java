@@ -27,6 +27,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.annotations.UsedInGeneratedCode;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.DateTimes;
@@ -147,6 +148,7 @@ public class ZkWorker implements Closeable
     return getRunningTasks().containsKey(taskId);
   }
 
+  @UsedInGeneratedCode // See JavaScriptWorkerSelectStrategyTest
   public boolean isValidVersion(String minVersion)
   {
     return worker.get().getVersion().compareTo(minVersion) >= 0;

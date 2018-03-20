@@ -572,7 +572,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
     }
 
     @Override
-    protected InputStream wrapObjectStream(File object, InputStream stream) throws IOException
+    protected InputStream wrapObjectStream(File object, InputStream stream)
     {
       return stream;
     }

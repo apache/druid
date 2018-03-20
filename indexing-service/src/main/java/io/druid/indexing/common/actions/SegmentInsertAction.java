@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.task.Task;
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
 import java.util.Set;
 
 /**
@@ -69,7 +68,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
    * with startMetadata and endMetadata both null.
    */
   @Override
-  public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
+  public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return new SegmentTransactionalInsertAction(segments, null, null).perform(task, toolbox).getSegments();
   }

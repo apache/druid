@@ -125,7 +125,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
         {
 
           @Override
-          public GSSManager run() throws Exception
+          public GSSManager run()
           {
             return GSSManager.getInstance();
           }

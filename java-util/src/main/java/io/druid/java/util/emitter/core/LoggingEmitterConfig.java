@@ -40,19 +40,9 @@ public class LoggingEmitterConfig
     return loggerClass;
   }
 
-  public void setLoggerClass(String loggerClass)
-  {
-    this.loggerClass = loggerClass;
-  }
-
   public String getLogLevel()
   {
     return logLevel;
-  }
-
-  public void setLogLevel(String logLevel)
-  {
-    this.logLevel = logLevel;
   }
 
   @Override

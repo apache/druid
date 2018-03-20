@@ -24,12 +24,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import io.druid.client.DruidServer;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.coordination.ServerType;
@@ -101,7 +101,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     EasyMock.verify(coordinator);
     EasyMock.verify(databaseRuleManager);
@@ -116,7 +116,7 @@ public class DruidCoordinatorRuleRunnerTest
    * @throws Exception
    */
   @Test
-  public void testRunThreeTiersOneReplicant() throws Exception
+  public void testRunThreeTiersOneReplicant()
   {
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -228,7 +228,7 @@ public class DruidCoordinatorRuleRunnerTest
    * @throws Exception
    */
   @Test
-  public void testRunTwoTiersTwoReplicants() throws Exception
+  public void testRunTwoTiersTwoReplicants()
   {
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -332,7 +332,7 @@ public class DruidCoordinatorRuleRunnerTest
    * @throws Exception
    */
   @Test
-  public void testRunTwoTiersWithExistingSegments() throws Exception
+  public void testRunTwoTiersWithExistingSegments()
   {
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -424,7 +424,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testRunTwoTiersTierDoesNotExist() throws Exception
+  public void testRunTwoTiersTierDoesNotExist()
   {
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -494,7 +494,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testRunRuleDoesNotExist() throws Exception
+  public void testRunRuleDoesNotExist()
   {
     mockCoordinator();
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
@@ -549,7 +549,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testDropRemove() throws Exception
+  public void testDropRemove()
   {
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
@@ -626,7 +626,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testDropTooManyInSameTier() throws Exception
+  public void testDropTooManyInSameTier()
   {
     mockCoordinator();
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -713,7 +713,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testDropTooManyInDifferentTiers() throws Exception
+  public void testDropTooManyInDifferentTiers()
   {
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -804,7 +804,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testDontDropInDifferentTiers() throws Exception
+  public void testDontDropInDifferentTiers()
   {
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -891,7 +891,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testDropServerActuallyServesSegment() throws Exception
+  public void testDropServerActuallyServesSegment()
   {
     mockCoordinator();
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
@@ -999,7 +999,7 @@ public class DruidCoordinatorRuleRunnerTest
    * @throws Exception
    */
   @Test
-  public void testReplicantThrottle() throws Exception
+  public void testReplicantThrottle()
   {
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -1112,7 +1112,7 @@ public class DruidCoordinatorRuleRunnerTest
    * @throws Exception
    */
   @Test
-  public void testReplicantThrottleAcrossTiers() throws Exception
+  public void testReplicantThrottleAcrossTiers()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
         CoordinatorDynamicConfig.builder()
@@ -1207,7 +1207,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testDropReplicantThrottle() throws Exception
+  public void testDropReplicantThrottle()
   {
     mockCoordinator();
     mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
@@ -1307,7 +1307,7 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
-  public void testRulesRunOnNonOvershadowedSegmentsOnly() throws Exception
+  public void testRulesRunOnNonOvershadowedSegmentsOnly()
   {
     Set<DataSegment> availableSegments = new HashSet<>();
     DataSegment v1 = new DataSegment(

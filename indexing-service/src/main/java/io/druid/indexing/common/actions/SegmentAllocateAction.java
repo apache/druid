@@ -38,7 +38,6 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -144,7 +143,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   public SegmentIdentifier perform(
       final Task task,
       final TaskActionToolbox toolbox
-  ) throws IOException
+  )
   {
     int attempt = 0;
     while (true) {
@@ -212,7 +211,6 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   }
 
   private SegmentIdentifier tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
-      throws IOException
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
     // segment granularity. Try that first, and then progressively smaller ones if it fails.
@@ -236,7 +234,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       Task task,
       Interval rowInterval,
       DataSegment usedSegment
-  ) throws IOException
+  )
   {
     // Existing segment(s) exist for this row; use the interval of the first one.
     if (!usedSegment.getInterval().contains(rowInterval)) {
@@ -255,7 +253,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       Interval tryInterval,
       Interval rowInterval,
       boolean logOnFail
-  ) throws IOException
+  )
   {
     log.debug(
         "Trying to allocate pending segment for rowInterval[%s], segmentInterval[%s].",

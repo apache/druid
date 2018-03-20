@@ -104,7 +104,6 @@ import io.druid.segment.loading.LocalDataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentTest;
@@ -251,7 +250,7 @@ public class TaskLifecycleTest
   private static class MockExceptionalFirehoseFactory implements FirehoseFactory
   {
     @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
       return new Firehose()
       {
@@ -282,7 +281,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
 
         }
@@ -302,7 +301,7 @@ public class TaskLifecycleTest
     }
 
     @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
       final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
                                                   ? realtimeIdxTaskInputRows.iterator()
@@ -337,7 +336,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
 
         }
@@ -459,10 +458,6 @@ public class TaskLifecycleTest
             //Noop
           }
 
-          Map<SegmentDescriptor, Pair<Executor, Runnable>> getHandOffCallbacks()
-          {
-            return handOffCallbacks;
-          }
         };
       }
     };
@@ -486,7 +481,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+      public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
       {
         pushedSegments++;
         return segment;
@@ -560,7 +555,6 @@ public class TaskLifecycleTest
         {
           @Override
           public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec)
-              throws SegmentLoadingException
           {
             return dataSegment;
           }
@@ -568,13 +562,13 @@ public class TaskLifecycleTest
         new DataSegmentArchiver()
         {
           @Override
-          public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+          public DataSegment archive(DataSegment segment)
           {
             return segment;
           }
 
           @Override
-          public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+          public DataSegment restore(DataSegment segment)
           {
             return segment;
           }
@@ -582,25 +576,25 @@ public class TaskLifecycleTest
         new DataSegmentAnnouncer()
         {
           @Override
-          public void announceSegment(DataSegment segment) throws IOException
+          public void announceSegment(DataSegment segment)
           {
             announcedSinks++;
           }
 
           @Override
-          public void unannounceSegment(DataSegment segment) throws IOException
+          public void unannounceSegment(DataSegment segment)
           {
 
           }
 
           @Override
-          public void announceSegments(Iterable<DataSegment> segments) throws IOException
+          public void announceSegments(Iterable<DataSegment> segments)
           {
 
           }
 
           @Override
-          public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+          public void unannounceSegments(Iterable<DataSegment> segments)
           {
 
           }
@@ -1044,7 +1038,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting) throws IOException
+      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting)
       {
         throw new RuntimeException("FAILURE");
       }

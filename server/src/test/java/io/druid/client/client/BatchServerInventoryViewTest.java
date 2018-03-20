@@ -326,7 +326,7 @@ public class BatchServerInventoryViewTest
             new IAnswer<ServerView.CallbackAction>()
             {
               @Override
-              public ServerView.CallbackAction answer() throws Throwable
+              public ServerView.CallbackAction answer()
               {
                 removeCallbackLatch.countDown();
                 return ServerView.CallbackAction.CONTINUE;

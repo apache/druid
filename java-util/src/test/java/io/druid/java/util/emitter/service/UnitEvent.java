@@ -22,9 +22,7 @@ package io.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
-import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.emitter.core.Event;
-import org.joda.time.DateTime;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,11 +35,10 @@ public class UnitEvent implements Event
   private final String feed;
   private final Number value;
   private final Map<String, String> dimensions;
-  private final DateTime createdTime;
 
   public UnitEvent(String feed, Number value)
   {
-    this(feed, value, Collections.<String, String>emptyMap());
+    this(feed, value, Collections.emptyMap());
   }
 
   public UnitEvent(String feed, Number value, Map<String, String> dimensions)
@@ -49,25 +46,16 @@ public class UnitEvent implements Event
     this.feed = feed;
     this.value = value;
     this.dimensions = dimensions;
-
-    createdTime = DateTimes.nowUtc();
   }
 
   @Override
   @JsonValue
   public Map<String, Object> toMap()
   {
-    Map<String, Object> result = new HashMap<>();
-    result.putAll(dimensions);
+    Map<String, Object> result = new HashMap<>(dimensions);
     result.put("feed", feed);
     result.put("metrics", ImmutableMap.of("value", value));
     return ImmutableMap.copyOf(result);
-  }
-
-  @Override
-  public DateTime getCreatedTime()
-  {
-    return createdTime;
   }
 
   @Override
@@ -76,9 +64,4 @@ public class UnitEvent implements Event
     return feed;
   }
 
-  @Override
-  public boolean isSafeToBuffer()
-  {
-    return true;
-  }
 }

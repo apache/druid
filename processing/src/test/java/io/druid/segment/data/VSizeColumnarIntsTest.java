@@ -31,7 +31,7 @@ import java.nio.channels.Channels;
 public class VSizeColumnarIntsTest
 {
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     final int[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     VSizeColumnarInts ints = VSizeColumnarInts.fromArray(array);

@@ -34,11 +34,6 @@ public class MockHttpClient extends DefaultAsyncHttpClient
   {
   }
 
-  public GoHandler getGoHandler()
-  {
-    return goHandler;
-  }
-
   public void setGoHandler(GoHandler goHandler)
   {
     this.goHandler = goHandler;

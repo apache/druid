@@ -107,7 +107,7 @@ public class TopNQueryQueryToolChestTest
   }
 
   @Test
-  public void testComputeCacheKeyWithDifferentPostAgg() throws Exception
+  public void testComputeCacheKeyWithDifferentPostAgg()
   {
     final TopNQuery query1 = new TopNQuery(
         new TableDataSource("dummy"),
@@ -166,7 +166,7 @@ public class TopNQueryQueryToolChestTest
   }
 
   @Test
-  public void testMinTopNThreshold() throws Exception
+  public void testMinTopNThreshold()
   {
     TopNQueryConfig config = new TopNQueryConfig();
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(

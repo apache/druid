@@ -21,30 +21,18 @@ package io.druid.security.authentication;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import io.druid.guice.GuiceInjectors;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.annotations.Self;
-import io.druid.initialization.Initialization;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.security.basic.BasicAuthCommonCacheConfig;
 import io.druid.security.basic.BasicAuthUtils;
 import io.druid.security.basic.BasicSecurityDBResourceException;
 import io.druid.security.basic.authentication.BasicHTTPAuthenticator;
-import io.druid.security.basic.authentication.BasicHTTPEscalator;
 import io.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
-import io.druid.server.DruidNode;
 import io.druid.server.security.AuthenticatorMapper;
-import io.druid.server.security.Escalator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,7 +57,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   private ObjectMapper objectMapper;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     objectMapper = new ObjectMapper(new SmileFactory());
     connector = derbyConnectorRule.getConnector();
@@ -104,7 +92,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     updater.stop();
   }
@@ -167,46 +155,4 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     Assert.assertArrayEquals(credentials.getHash(), recalculatedHash);
   }
 
-  private Injector setupInjector()
-  {
-    return Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder,
-                    Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", null, null, true, false)
-                );
-
-                binder.bind(Escalator.class).toInstance(
-                    new BasicHTTPEscalator(null, null, null)
-                );
-
-                binder.bind(AuthenticatorMapper.class).toInstance(
-                    new AuthenticatorMapper(
-                        ImmutableMap.of(
-                            "test",
-                            new BasicHTTPAuthenticator(
-                                null,
-                                "test",
-                                "test",
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
-                            )
-                        )
-                    )
-                );
-              }
-            }
-        )
-    );
-  }
 }

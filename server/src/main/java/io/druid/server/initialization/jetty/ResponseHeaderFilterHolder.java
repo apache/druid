@@ -80,7 +80,7 @@ public class ResponseHeaderFilterHolder implements ServletFilterHolder
     private volatile FilterConfig config;
 
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException
+    public void init(FilterConfig filterConfig)
     {
       this.config = filterConfig;
     }

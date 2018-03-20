@@ -46,7 +46,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,7 +76,7 @@ public class IncrementalIndexTest
   }
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     DimensionsSpec dimensions = new DimensionsSpec(
         Arrays.<DimensionSchema>asList(

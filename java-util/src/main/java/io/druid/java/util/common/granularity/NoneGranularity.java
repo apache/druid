@@ -46,12 +46,6 @@ public class NoneGranularity extends Granularity
   }
 
   @Override
-  public DateTime decrement(DateTime time)
-  {
-    return time.minus(1);
-  }
-
-  @Override
   public DateTime bucketStart(DateTime time)
   {
     return time;

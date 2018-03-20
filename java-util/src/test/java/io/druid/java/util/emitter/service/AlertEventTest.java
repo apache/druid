@@ -33,7 +33,7 @@ import java.util.Map;
 public class AlertEventTest
 {
   @Test
-  public void testStupid() throws Exception
+  public void testStupid()
   {
     AlertEvent event = AlertBuilder.create("blargy")
                                    .addData("something1", "a")
@@ -55,7 +55,7 @@ public class AlertEventTest
   }
 
   @Test
-  public void testAnomaly() throws Exception
+  public void testAnomaly()
   {
     AlertEvent event = AlertBuilder.create("blargy")
                                    .severity(Severity.ANOMALY)
@@ -78,7 +78,7 @@ public class AlertEventTest
   }
 
   @Test
-  public void testComponentFailure() throws Exception
+  public void testComponentFailure()
   {
     AlertEvent event = AlertBuilder.create("blargy")
                                    .severity(Severity.COMPONENT_FAILURE)
@@ -101,7 +101,7 @@ public class AlertEventTest
   }
 
   @Test
-  public void testServiceFailure() throws Exception
+  public void testServiceFailure()
   {
     AlertEvent event = AlertBuilder.create("blargy")
                                    .severity(Severity.SERVICE_FAILURE)
@@ -124,7 +124,7 @@ public class AlertEventTest
   }
 
   @Test
-  public void testDefaulting() throws Exception
+  public void testDefaulting()
   {
     final String service = "some service";
     final String host = "some host";

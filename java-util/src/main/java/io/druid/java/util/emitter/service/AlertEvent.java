@@ -22,14 +22,14 @@ package io.druid.java.util.emitter.service;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.core.Event;
 import org.joda.time.DateTime;
 
-import java.util.Collections;
 import java.util.Map;
 
 /**
  */
-public class AlertEvent implements ServiceEvent
+public class AlertEvent implements Event
 {
   private final ImmutableMap<String, String> serviceDimensions;
   private final Severity severity;
@@ -95,7 +95,6 @@ public class AlertEvent implements ServiceEvent
     this(DateTimes.nowUtc(), service, host, Severity.DEFAULT, description, ImmutableMap.<String, Object>of());
   }
 
-  @Override
   public DateTime getCreatedTime()
   {
     return createdTime;
@@ -107,24 +106,6 @@ public class AlertEvent implements ServiceEvent
     return "alerts";
   }
 
-  @Override
-  public String getService()
-  {
-    return serviceDimensions.get("service");
-  }
-
-  @Override
-  public String getHost()
-  {
-    return serviceDimensions.get("host");
-  }
-
-  @Override
-  public boolean isSafeToBuffer()
-  {
-    return false;
-  }
-
   public Severity getSeverity()
   {
     return severity;
@@ -133,11 +114,6 @@ public class AlertEvent implements ServiceEvent
   public String getDescription()
   {
     return description;
-  }
-
-  public Map<String, Object> getDataMap()
-  {
-    return Collections.unmodifiableMap(dataMap);
   }
 
   @Override

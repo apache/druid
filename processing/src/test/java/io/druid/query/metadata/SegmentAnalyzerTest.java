@@ -50,13 +50,13 @@ public class SegmentAnalyzerTest
       EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class);
 
   @Test
-  public void testIncrementalWorks() throws Exception
+  public void testIncrementalWorks()
   {
     testIncrementalWorksHelper(null);
     testIncrementalWorksHelper(emptyAnalyses);
   }
 
-  private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses) throws Exception
+  private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
         new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), null),
@@ -109,13 +109,13 @@ public class SegmentAnalyzerTest
   }
 
   @Test
-  public void testMappedWorks() throws Exception
+  public void testMappedWorks()
   {
     testMappedWorksHelper(null);
     testMappedWorksHelper(emptyAnalyses);
   }
 
-  private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses) throws Exception
+  private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
         new QueryableIndexSegment("test_1", TestIndex.getMMappedTestIndex()),

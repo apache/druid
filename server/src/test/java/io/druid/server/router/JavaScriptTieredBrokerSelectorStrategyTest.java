@@ -91,7 +91,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
   }
 
   @Test
-  public void testGetBrokerServiceName() throws Exception
+  public void testGetBrokerServiceName()
   {
     final LinkedHashMap<String, String> tierBrokerMap = new LinkedHashMap<>();
     tierBrokerMap.put("fast", "druid/fastBroker");

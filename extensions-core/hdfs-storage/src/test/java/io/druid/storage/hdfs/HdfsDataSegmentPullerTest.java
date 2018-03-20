@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package io.druid.segment.loading;
+package io.druid.storage.hdfs;
 
 import com.google.common.io.ByteStreams;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.storage.hdfs.HdfsDataSegmentPuller;
+import io.druid.segment.loading.SegmentLoadingException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -60,7 +60,7 @@ public class HdfsDataSegmentPullerTest
   private static Configuration conf;
 
   @BeforeClass
-  public static void setupStatic() throws IOException, ClassNotFoundException
+  public static void setupStatic() throws IOException
   {
     hdfsTmpDir = File.createTempFile("hdfsHandlerTest", "dir");
     if (!hdfsTmpDir.delete()) {
@@ -133,7 +133,7 @@ public class HdfsDataSegmentPullerTest
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(uri, outTmpDir);
+      puller.getSegmentFiles(new Path(uri), outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
@@ -172,7 +172,7 @@ public class HdfsDataSegmentPullerTest
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(uri, outTmpDir);
+      puller.getSegmentFiles(new Path(uri), outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
@@ -205,7 +205,7 @@ public class HdfsDataSegmentPullerTest
     }
     try {
       Assert.assertFalse(outFile.exists());
-      puller.getSegmentFiles(uri, outTmpDir);
+      puller.getSegmentFiles(new Path(uri), outTmpDir);
       Assert.assertTrue(outFile.exists());
 
       Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));

@@ -42,7 +42,7 @@ public class PolyBindTest
   private Properties props;
   private Injector injector;
 
-  public void setUp(Module... modules) throws Exception
+  public void setUp(Module... modules)
   {
     props = new Properties();
     injector = Guice.createInjector(
@@ -66,7 +66,7 @@ public class PolyBindTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     setUp(
         new Module()

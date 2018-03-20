@@ -36,7 +36,7 @@ import java.util.Properties;
 public class MetadataStorageTablesConfigTest
 {
   @Test
-  public void testSerdeMetadataStorageTablesConfig() throws Exception
+  public void testSerdeMetadataStorageTablesConfig()
   {
     Injector injector = Guice.createInjector(
         new Module()

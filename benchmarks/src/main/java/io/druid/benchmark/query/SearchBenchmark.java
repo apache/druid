@@ -410,7 +410,7 @@ public class SearchBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole) throws Exception
+  public void querySingleIncrementalIndex(Blackhole blackhole)
   {
     QueryRunner<SearchHit> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -428,7 +428,7 @@ public class SearchBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndex(Blackhole blackhole)
   {
     final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -447,7 +447,7 @@ public class SearchBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole) throws Exception
+  public void queryMultiQueryableIndex(Blackhole blackhole)
   {
     List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
     QueryToolChest toolChest = factory.getToolchest();

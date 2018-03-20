@@ -38,14 +38,14 @@ public class SQLMetadataConnectorTest
   private MetadataStorageTablesConfig tablesConfig;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
   }
 
   @Test
-  public void testCreateTables() throws Exception
+  public void testCreateTables()
   {
     final LinkedList<String> tables = new LinkedList<String>();
     final String entryType = tablesConfig.getTaskEntryType();
@@ -69,7 +69,7 @@ public class SQLMetadataConnectorTest
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             for (String table : tables) {
               Assert.assertTrue(
@@ -89,7 +89,7 @@ public class SQLMetadataConnectorTest
   }
 
   @Test
-  public void testInsertOrUpdate() throws Exception
+  public void testInsertOrUpdate()
   {
     final String tableName = "test";
     connector.createConfigTable(tableName);
@@ -130,7 +130,7 @@ public class SQLMetadataConnectorTest
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();

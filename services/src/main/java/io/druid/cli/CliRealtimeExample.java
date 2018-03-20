@@ -42,7 +42,6 @@ import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
@@ -155,7 +154,7 @@ public class CliRealtimeExample extends ServerRunnable
     }
 
     @Override
-    public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+    public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
     {
       return segment;
     }
@@ -170,25 +169,25 @@ public class CliRealtimeExample extends ServerRunnable
   private static class NoopDataSegmentAnnouncer implements DataSegmentAnnouncer
   {
     @Override
-    public void announceSegment(DataSegment segment) throws IOException
+    public void announceSegment(DataSegment segment)
     {
       // do nothing
     }
 
     @Override
-    public void unannounceSegment(DataSegment segment) throws IOException
+    public void unannounceSegment(DataSegment segment)
     {
       // do nothing
     }
 
     @Override
-    public void announceSegments(Iterable<DataSegment> segments) throws IOException
+    public void announceSegments(Iterable<DataSegment> segments)
     {
       // do nothing
     }
 
     @Override
-    public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+    public void unannounceSegments(Iterable<DataSegment> segments)
     {
       // do nothing
     }

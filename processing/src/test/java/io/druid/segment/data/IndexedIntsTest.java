@@ -24,7 +24,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -38,7 +37,7 @@ public class IndexedIntsTest
   private final IndexedInts indexed;
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return Arrays.asList(
         new Object[][]{
@@ -56,7 +55,7 @@ public class IndexedIntsTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     Assert.assertEquals(array.length, indexed.size());
     for (int i = 0; i < array.length; i++) {

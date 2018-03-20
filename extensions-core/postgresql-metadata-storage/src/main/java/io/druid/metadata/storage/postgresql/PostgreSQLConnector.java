@@ -21,7 +21,6 @@ package io.druid.metadata.storage.postgresql;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -117,7 +116,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       final String valueColumn,
       final String key,
       final byte[] value
-  ) throws Exception
+  )
   {
     return getDBI().withHandle(
         new HandleCallback<Void>()

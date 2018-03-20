@@ -22,14 +22,12 @@ package io.druid.collections;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class StupidResourceHolderTest
 {
   private StupidResourceHolder<String> resourceHolder;
 
   @Test
-  public void testCreateAndGet() throws IOException
+  public void testCreateAndGet()
   {
     String expected = "String";
     resourceHolder = StupidResourceHolder.create(expected);

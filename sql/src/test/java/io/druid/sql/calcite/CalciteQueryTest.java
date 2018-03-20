@@ -1722,7 +1722,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testUnplannableQueries() throws Exception
+  public void testUnplannableQueries()
   {
     // All of these queries are unplannable because they rely on features Druid doesn't support.
     // This test is here to confirm that we don't fall back to Calcite's interpreter or enumerable implementation.
@@ -1740,7 +1740,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testUnplannableExactCountDistinctQueries() throws Exception
+  public void testUnplannableExactCountDistinctQueries()
   {
     // All of these queries are unplannable in exact COUNT DISTINCT mode.
 
@@ -6252,7 +6252,7 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
-  public void testUsingSubqueryAsFilterForbiddenByConfig() throws Exception
+  public void testUsingSubqueryAsFilterForbiddenByConfig()
   {
     assertQueryIsUnplannable(
         PLANNER_CONFIG_NO_SUBQUERIES,

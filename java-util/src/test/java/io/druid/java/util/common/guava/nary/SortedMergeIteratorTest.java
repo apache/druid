@@ -31,7 +31,7 @@ import java.util.Arrays;
 public class SortedMergeIteratorTest
 {
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     SortedMergeIterator<Integer, Integer> iter = SortedMergeIterator.create(
         Arrays.asList(1, 4, 5, 7, 9).iterator(),

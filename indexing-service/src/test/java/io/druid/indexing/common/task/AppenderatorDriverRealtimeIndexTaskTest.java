@@ -220,7 +220,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       synchronized (this) {
         closed = true;
@@ -288,7 +288,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
-  public void testDefaultResource() throws Exception
+  public void testDefaultResource()
   {
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
     Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
@@ -1208,10 +1208,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
             //Noop
           }
 
-          Map<SegmentDescriptor, Pair<Executor, Runnable>> getHandOffCallbacks()
-          {
-            return handOffCallbacks;
-          }
         };
       }
     };
@@ -1254,7 +1250,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
   }
 
-  public long sumMetric(final Task task, final DimFilter filter, final String metric) throws Exception
+  public long sumMetric(final Task task, final DimFilter filter, final String metric)
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

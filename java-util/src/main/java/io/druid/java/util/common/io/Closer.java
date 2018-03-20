@@ -146,56 +146,6 @@ public final class Closer implements Closeable
   }
 
   /**
-   * Stores the given throwable and rethrows it. It will be rethrown as is if it is an
-   * {@code IOException}, {@code RuntimeException}, {@code Error} or a checked exception of the
-   * given type. Otherwise, it will be rethrown wrapped in a {@code RuntimeException}. <b>Note:</b>
-   * Be sure to declare all of the checked exception types your try block can throw when calling an
-   * overload of this method so as to avoid losing the original exception type.
-   *
-   * <p>This method always throws, and as such should be called as
-   * {@code throw closer.rethrow(e, ...);} to ensure the compiler knows that it will throw.
-   *
-   * @return this method does not return; it always throws
-   * @throws IOException when the given throwable is an IOException
-   * @throws X when the given throwable is of the declared type X
-   */
-  public <X extends Exception> RuntimeException rethrow(Throwable e, Class<X> declaredType) throws IOException, X
-  {
-    Preconditions.checkNotNull(e);
-    thrown = e;
-    Throwables.propagateIfPossible(e, IOException.class);
-    Throwables.propagateIfPossible(e, declaredType);
-    throw new RuntimeException(e);
-  }
-
-  /**
-   * Stores the given throwable and rethrows it. It will be rethrown as is if it is an
-   * {@code IOException}, {@code RuntimeException}, {@code Error} or a checked exception of either
-   * of the given types. Otherwise, it will be rethrown wrapped in a {@code RuntimeException}.
-   * <b>Note:</b> Be sure to declare all of the checked exception types your try block can throw
-   * when calling an overload of this method so as to avoid losing the original exception type.
-   *
-   * <p>This method always throws, and as such should be called as
-   * {@code throw closer.rethrow(e, ...);} to ensure the compiler knows that it will throw.
-   *
-   * @return this method does not return; it always throws
-   * @throws IOException when the given throwable is an IOException
-   * @throws X1 when the given throwable is of the declared type X1
-   * @throws X2 when the given throwable is of the declared type X2
-   */
-  public <X1 extends Exception, X2 extends Exception> RuntimeException rethrow(
-      Throwable e, Class<X1> declaredType1,
-      Class<X2> declaredType2
-  ) throws IOException, X1, X2
-  {
-    Preconditions.checkNotNull(e);
-    thrown = e;
-    Throwables.propagateIfPossible(e, IOException.class);
-    Throwables.propagateIfPossible(e, declaredType1, declaredType2);
-    throw new RuntimeException(e);
-  }
-
-  /**
    * Closes all {@code Closeable} instances that have been added to this {@code Closer}. If an
    * exception was thrown in the try block and passed to one of the {@code exceptionThrown} methods,
    * any exceptions thrown when attempting to close a closeable will be suppressed. Otherwise, the

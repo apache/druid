@@ -25,7 +25,6 @@ import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -46,7 +45,7 @@ public class MetadataStoreBasedUsedSegmentLister implements UsedSegmentLister
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
       String dataSource, List<Interval> intervals
-  ) throws IOException
+  )
   {
     return indexerMetadataStorageCoordinator.getUsedSegmentsForIntervals(dataSource, intervals);
   }

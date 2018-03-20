@@ -116,7 +116,7 @@ public class DiskNormalizedCostBalancerStrategyTest
   }
 
   @Test
-  public void testNormalizedCostBalancerMultiThreadedStrategy() throws InterruptedException
+  public void testNormalizedCostBalancerMultiThreadedStrategy()
   {
     List<ServerHolder> serverHolderList = setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
@@ -130,7 +130,7 @@ public class DiskNormalizedCostBalancerStrategyTest
   }
 
   @Test
-  public void testNormalizedCostBalancerSingleThreadStrategy() throws InterruptedException
+  public void testNormalizedCostBalancerSingleThreadStrategy()
   {
     List<ServerHolder> serverHolderList = setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);

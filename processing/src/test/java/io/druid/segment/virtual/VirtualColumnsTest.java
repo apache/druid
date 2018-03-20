@@ -206,7 +206,7 @@ public class VirtualColumnsTest
   }
 
   @Test
-  public void testGetCacheKey() throws Exception
+  public void testGetCacheKey()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(
@@ -225,7 +225,7 @@ public class VirtualColumnsTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(

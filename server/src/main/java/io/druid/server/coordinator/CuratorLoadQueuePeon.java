@@ -22,9 +22,9 @@ package io.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
@@ -284,7 +284,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
           new CuratorWatcher()
           {
             @Override
-            public void process(WatchedEvent watchedEvent) throws Exception
+            public void process(WatchedEvent watchedEvent)
             {
               switch (watchedEvent.getType()) {
                 case NodeDeleted:

@@ -286,7 +286,7 @@ public class JavaScriptAggregatorTest
     Assert.assertTrue(false);
   }
 
-  public static void main(String... args) throws Exception
+  public static void main(String... args)
   {
     final JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector(
         new double[]{42.12d, 9d});

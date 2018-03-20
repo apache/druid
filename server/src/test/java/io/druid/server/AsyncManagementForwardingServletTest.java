@@ -53,7 +53,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -345,25 +344,25 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     handler.addServletWithMapping(new ServletHolder(new HttpServlet()
     {
       @Override
-      protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+      protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException
       {
         handle(req, resp);
       }
 
       @Override
-      protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+      protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException
       {
         handle(req, resp);
       }
 
       @Override
-      protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+      protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException
       {
         handle(req, resp);
       }
 
       @Override
-      protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+      protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException
       {
         handle(req, resp);
       }

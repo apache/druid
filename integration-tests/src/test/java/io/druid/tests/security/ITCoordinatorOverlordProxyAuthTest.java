@@ -34,7 +34,7 @@ public class ITCoordinatorOverlordProxyAuthTest
   CoordinatorResourceTestClient coordinatorClient;
   
   @Test
-  public void testProxyAuth() throws Exception
+  public void testProxyAuth()
   {
     HttpResponseStatus responseStatus = coordinatorClient.getProxiedOverlordScalingResponseStatus();
     Assert.assertEquals(HttpResponseStatus.OK, responseStatus);

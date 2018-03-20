@@ -62,7 +62,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   public static final String CONF_MAX_SPLIT_SIZE = "druid.datasource.split.max.size";
 
   @Override
-  public List<InputSplit> getSplits(JobContext context) throws IOException, InterruptedException
+  public List<InputSplit> getSplits(JobContext context) throws IOException
   {
     JobConf conf = new JobConf(context.getConfiguration());
 
@@ -142,7 +142,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   public RecordReader<NullWritable, InputRow> createRecordReader(
       InputSplit split,
       TaskAttemptContext context
-  ) throws IOException, InterruptedException
+  )
   {
     return new DatasourceRecordReader();
   }

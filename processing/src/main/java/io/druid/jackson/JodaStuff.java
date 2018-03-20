@@ -80,7 +80,7 @@ class JodaStuff
   private static class DateTimeKeyDeserializer extends KeyDeserializer
   {
     @Override
-    public Object deserializeKey(String key, DeserializationContext ctxt) throws IOException, JsonProcessingException
+    public Object deserializeKey(String key, DeserializationContext ctxt)
     {
       return DateTimes.of(key);
     }

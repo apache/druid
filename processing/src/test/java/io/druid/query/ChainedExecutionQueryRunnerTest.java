@@ -93,7 +93,7 @@ public class ChainedExecutionQueryRunnerTest
                 new IAnswer<Void>()
                 {
                   @Override
-                  public Void answer() throws Throwable
+                  public Void answer()
                   {
                     queryIsRegistered.countDown();
                     return null;
@@ -217,7 +217,7 @@ public class ChainedExecutionQueryRunnerTest
                 new IAnswer<Void>()
                 {
                   @Override
-                  public Void answer() throws Throwable
+                  public Void answer()
                   {
                     queryIsRegistered.countDown();
                     return null;
