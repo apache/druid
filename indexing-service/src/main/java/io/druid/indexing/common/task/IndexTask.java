@@ -280,16 +280,15 @@ public class IndexTask extends AbstractTask
   private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
     Preconditions.checkState(
-        !(tuningConfig.isForceGuaranteedRollup() &&
-          (tuningConfig.isForceExtendableShardSpecs() || ioConfig.isAppendToExisting())),
-        "Perfect rollup cannot be guaranteed with extendable shardSpecs"
+        !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
+        "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
   }
 
   private static boolean isExtendableShardSpecs(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
-    return !isGuaranteedRollup(ioConfig, tuningConfig);
+    return tuningConfig.isForceExtendableShardSpecs() || ioConfig.isAppendToExisting();
   }
 
   /**
@@ -1023,11 +1022,6 @@ public class IndexTask extends AbstractTask
                                    : reportParseExceptions;
       this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
       this.basePersistDirectory = basePersistDirectory;
-
-      Preconditions.checkArgument(
-          !(this.forceExtendableShardSpecs && this.forceGuaranteedRollup),
-          "Perfect rollup cannot be guaranteed with extendable shardSpecs"
-      );
 
       this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     }
