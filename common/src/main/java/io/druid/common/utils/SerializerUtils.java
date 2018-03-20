@@ -61,7 +61,7 @@ public class SerializerUtils
     final int length = in.getInt();
     return StringUtils.fromUtf8(readBytes(in, length));
   }
-  
+
   public byte[] readBytes(ByteBuffer in, int length)
   {
     byte[] bytes = new byte[length];

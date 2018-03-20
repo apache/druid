@@ -20,7 +20,6 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Iterators;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.parsers.CloseableIterator;
@@ -170,7 +169,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
-      return CloseableIterators.withEmptyBaggage(Iterators.<Entry<KeyType>>emptyIterator());
+      return CloseableIterators.withEmptyBaggage(Collections.<Entry<KeyType>>emptyIterator());
     }
 
     if (sorted) {
