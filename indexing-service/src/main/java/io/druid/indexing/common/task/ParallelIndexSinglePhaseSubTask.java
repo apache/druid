@@ -93,28 +93,29 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
   private static final Logger log = new Logger(ParallelIndexSinglePhaseSubTask.class);
   private static final String TYPE = "parallelIndexSinglePhaseSubIndex";
 
+  private final int numAttempts;
   private final IndexTask.IndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
 
-  // TODO: add attempt
   @JsonCreator
   public ParallelIndexSinglePhaseSubTask(
-      @JsonProperty("id") final String id,
       @JsonProperty("groupId") final String groupId,
-      @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("resource") final TaskResource taskResource,
+      @JsonProperty("supervisorTaskId") final String supervisorTaskId,
+      @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final IndexTask.IndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context
   )
   {
     super(
-        getOrMakeId(id, TYPE, ingestionSchema.getDataSchema().getDataSource()),
+        getOrMakeId(null, TYPE, ingestionSchema.getDataSchema().getDataSource()),
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context
     );
 
+    this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
 
@@ -147,7 +148,6 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
 
   private boolean checkLockAcquired(TaskActionClient actionClient, SortedSet<Interval> intervals)
   {
-    // TODO: check when intervals are not specified
     try {
       Tasks.tryAcquireExclusiveLocks(actionClient, intervals);
       return true;
@@ -156,6 +156,12 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
       log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
       return false;
     }
+  }
+
+  @JsonProperty
+  public int getNumAttempts()
+  {
+    return numAttempts;
   }
 
   @JsonProperty("spec")

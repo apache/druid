@@ -35,4 +35,12 @@ public class InputSplit<T>
   {
     return split;
   }
+
+  @Override
+  public String toString()
+  {
+    return "InputSplit{" +
+           "split=" + split +
+           "}";
+  }
 }

@@ -26,11 +26,15 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.TaskStatus;
 import io.druid.client.indexing.TaskStatusResponse;
+import io.druid.indexer.TaskState;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -42,13 +46,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Responsible for submitting tasks, monitoring task statuses, resubmitting failed tasks, and returning the final task
  * status.
  */
-public class TaskMonitor
+public class TaskMonitor<T extends Task>
 {
   private static final Logger log = new Logger(TaskMonitor.class);
 
   private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded(("task-monitor-%d"));
 
-  private final ConcurrentMap<String, MonitorEntry> taskFutureMap = new ConcurrentHashMap<>();
+  // taskId -> monitorEntry
+  private final ConcurrentMap<String, MonitorEntry> runningTasks = new ConcurrentHashMap<>();
 
   // overlord client
   private final AtomicInteger numRunningTasks = new AtomicInteger();
@@ -73,7 +78,7 @@ public class TaskMonitor
     taskStatusChecker.scheduleAtFixedRate(
         () -> {
           try {
-            final Iterator<Entry<String, MonitorEntry>> iterator = taskFutureMap.entrySet().iterator();
+            final Iterator<Entry<String, MonitorEntry>> iterator = runningTasks.entrySet().iterator();
             while (iterator.hasNext()) {
               final Entry<String, MonitorEntry> entry = iterator.next();
               final String taskId = entry.getKey();
@@ -90,20 +95,19 @@ public class TaskMonitor
                   case FAILED:
                     numRunningTasks.decrementAndGet();
                     log.warn("task[%s] failed!", taskId);
-                    if (monitorEntry.numRetry < maxRetry) {
+                    if (monitorEntry.numTries() < maxRetry) {
                       log.info(
                           "We still have chnaces[%d/%d] to complete. Retrying task[%s]",
-                          monitorEntry.numRetry,
+                          monitorEntry.numTries(),
                           maxRetry,
                           taskId
                       );
-                      monitorEntry.incrementNumRetry();
-                      retry(monitorEntry.task);
+                      retry(monitorEntry, taskStatus);
                     } else {
                       log.error(
-                          "task[%s] failed after [%d] retries",
+                          "task[%s] failed after [%d] tries",
                           taskId,
-                          monitorEntry.numRetry
+                          monitorEntry.numTries()
                       );
                       iterator.remove();
                       monitorEntry.setLastStatus(taskStatus);
@@ -132,36 +136,41 @@ public class TaskMonitor
     log.info("Stopped taskMonitor");
   }
 
-  public ListenableFuture<TaskStatus> submit(Task task)
+  public ListenableFuture<SubTaskCompleteEvent<T>> submit(SubTaskSpec<T> spec)
   {
     if (!running) {
       return Futures.immediateFailedFuture(new ISE("TaskMonitore is not running"));
     }
+    final T task = spec.newSubTask(0);
     log.info("Submitting a new task[%s]", task.getId());
-    final String taskId = indexingServiceClient.runTask(task);
-
+    indexingServiceClient.runTask(task);
     numRunningTasks.incrementAndGet();
 
-    final SettableFuture<TaskStatus> taskFuture = SettableFuture.create();
-    taskFutureMap.put(taskId, new MonitorEntry(task, taskFuture));
+    final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
+    runningTasks.put(task.getId(), new MonitorEntry(spec, task, taskFuture));
+
     return taskFuture;
   }
 
-  private void retry(Task task)
+  private void retry(MonitorEntry monitorEntry, TaskStatus lastFailedTaskStatus)
   {
     if (running) {
+      final SubTaskSpec<T> spec = monitorEntry.spec;
+      final T task = spec.newSubTask(monitorEntry.taskHistory.size() + 1);
       indexingServiceClient.runTask(task);
       numRunningTasks.incrementAndGet();
+
+      runningTasks.put(task.getId(), monitorEntry.withNewRunningTask(task, lastFailedTaskStatus));
     }
   }
 
   public void killAll()
   {
-    taskFutureMap.keySet().forEach(taskId -> {
+    runningTasks.keySet().forEach(taskId -> {
       log.info("Request to kill subtask[%s]", taskId);
       indexingServiceClient.killTask(taskId);
     });
-    taskFutureMap.clear();
+    runningTasks.clear();
   }
 
   public int getNumRunningTasks()
@@ -169,28 +178,104 @@ public class TaskMonitor
     return numRunningTasks.intValue();
   }
 
-  private static class MonitorEntry
+  private class MonitorEntry
   {
-    // TODO: should change task id
-    private final Task task;
-    private final SettableFuture<TaskStatus> future;
+    private final SubTaskSpec<T> spec;
+    private final T runningTask;
+    private final List<TaskStatus> taskHistory;
+    private final SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture;
 
-    private int numRetry;
-
-    MonitorEntry(Task task, SettableFuture<TaskStatus> future)
+    MonitorEntry(
+        SubTaskSpec<T> spec,
+        T runningTask,
+        SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture
+    )
     {
-      this.task = task;
-      this.future = future;
+      this(spec, runningTask, new ArrayList<>(), completeEventFuture);
     }
 
-    void setLastStatus(TaskStatus taskStatus)
+    private MonitorEntry(
+        SubTaskSpec<T> spec,
+        T runningTask,
+        List<TaskStatus> taskHistory,
+        SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture
+    )
     {
-      future.set(taskStatus);
+      this.spec = spec;
+      this.runningTask = runningTask;
+      this.taskHistory = taskHistory;
+      this.completeEventFuture = completeEventFuture;
     }
 
-    void incrementNumRetry()
+    MonitorEntry withNewRunningTask(T newTask, TaskStatus statusOfLastTask)
     {
-      numRetry++;
+      taskHistory.add(statusOfLastTask);
+      return new MonitorEntry(
+          spec,
+          newTask,
+          taskHistory,
+          completeEventFuture
+      );
+    }
+
+    int numTries()
+    {
+      return taskHistory.size() + 1; // count runningTask. this is valid only until setLastStatus() is called
+    }
+
+    void setLastStatus(TaskStatus lastStatus)
+    {
+      if (!runningTask.getId().equals(lastStatus.getId())) {
+        throw new ISE(
+            "Task id[%s] of lastStatus is different from the running task[%s]",
+            lastStatus.getId(),
+            runningTask.getId()
+        );
+      }
+
+      taskHistory.add(lastStatus);
+      completeEventFuture.set(new SubTaskCompleteEvent<>(spec, lastStatus.getStatusCode(), taskHistory));
+    }
+  }
+
+  static class SubTaskCompleteEvent<T extends Task>
+  {
+    private final SubTaskSpec<T> spec;
+    private final TaskState lastState;
+    @Nullable
+    private final List<TaskStatus> attemptHistory;
+
+    SubTaskCompleteEvent(
+        SubTaskSpec<T> spec,
+        TaskState lastState,
+        @Nullable List<TaskStatus> attemptHistory
+    )
+    {
+      this.spec = Preconditions.checkNotNull(spec, "spec");
+      this.lastState = Preconditions.checkNotNull(lastState, "lastState");
+      this.attemptHistory = attemptHistory;
+    }
+
+    SubTaskSpec<T> getSpec()
+    {
+      return spec;
+    }
+
+    TaskState getLastState()
+    {
+      return lastState;
+    }
+
+    @Nullable
+    List<TaskStatus> getAttemptHistory()
+    {
+      return attemptHistory;
+    }
+
+    @Nullable
+    TaskStatus getLastStatus()
+    {
+      return attemptHistory == null ? null : attemptHistory.get(attemptHistory.size() - 1);
     }
   }
 }

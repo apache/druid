@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,8 +44,10 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -83,10 +86,11 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
   private final int maxNumTasks;
   private final TaskMonitor taskMonitor;
 
-  private final BlockingQueue<TaskStatus> taskCompleteEvents = new LinkedBlockingDeque<>();
+  private final BlockingQueue<SubTaskCompleteEvent<ParallelIndexSinglePhaseSubTask>> taskCompleteEvents = new LinkedBlockingDeque<>();
   private final List<DataSegment> segments = new ArrayList<>();
 
   private volatile boolean stopped;
+  private int nextSpecId = 0;
 
   @JsonCreator
   public ParallelIndexSinglePhaseSupervisorTask(
@@ -176,7 +180,7 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
 
   private io.druid.indexing.common.TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
-    final Iterator<ParallelIndexSinglePhaseSubTask> subTaskIterator = subTaskIterator();
+    final Iterator<ParallelIndexSinglePhaseSubTaskSpec> subTaskIterator = subTaskSpecIterator();
     final int numTotalTasks = baseFirehoseFactory.getNumSplits();
     final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckingPeriodMs();
     TaskState state = TaskState.FAILED;
@@ -194,17 +198,17 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
       }
 
       while (!stopped && !Thread.currentThread().isInterrupted()) {
-        final TaskStatus taskCompleteEvent = taskCompleteEvents.poll(taskStatusCheckingPeriod, TimeUnit.MILLISECONDS);
+        final SubTaskCompleteEvent<ParallelIndexSinglePhaseSubTask> taskCompleteEvent = taskCompleteEvents.poll(
+            taskStatusCheckingPeriod,
+            TimeUnit.MILLISECONDS
+        );
 
         if (taskCompleteEvent != null) {
-          final TaskState completeState = taskCompleteEvent.getStatusCode();
-          if (completeState == null) {
-            throw new ISE("Complete state of task[%s] is null", taskCompleteEvent.getId());
-          }
+          final TaskState completeState = taskCompleteEvent.getLastState();
           switch (completeState) {
             case SUCCESS:
               numCompleteTasks++;
-              segments.addAll((Collection<DataSegment>) taskCompleteEvent.getReport().getPayload());
+              segments.addAll((Collection<DataSegment>) taskCompleteEvent.getLastStatus().getReport().getPayload());
               log.info("[%d/%d] tasks succeeded", numCompleteTasks, numTotalTasks);
               if (!subTaskIterator.hasNext()) {
                 if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
@@ -217,7 +221,11 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
                     state = TaskState.SUCCESS;
                   } else {
                     // Failed
-                    throw new ISE("Expected to complete [%d] tasks, but we got [%d]", numTotalTasks, numCompleteTasks);
+                    throw new ISE(
+                        "Expected to complete [%d] tasks, but we got [%d] tasks",
+                        numTotalTasks,
+                        numCompleteTasks
+                    );
                   }
                 }
               } else if (taskMonitor.getNumRunningTasks() < maxNumTasks) {
@@ -228,10 +236,20 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
               // TaskMonitor already tried everything it can do for failed tasks. We failed.
               state = TaskState.FAILED;
               stopped = true;
-              log.error("Failed because of the failed sub task[%s]", taskCompleteEvent.getId());
+              final TaskStatus lastStatus = taskCompleteEvent.getLastStatus();
+              if (lastStatus != null) {
+                log.error("Failed because of the failed sub task[%s]", lastStatus.getId());
+              } else {
+                final ParallelIndexSinglePhaseSubTaskSpec spec =
+                    (ParallelIndexSinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
+                log.error(
+                    "Failed to run sub tasks for inputSplits[%s]",
+                    getSplitsIfSplittable(spec.getIngestionSpec().getIOConfig().getFirehoseFactory())
+                );
+              }
               break;
             default:
-              throw new ISE("Complete task[%s] is in an invalid state[%s]", taskCompleteEvent.getId(), completeState);
+              throw new ISE("spec[%s] is in an invalid state[%s]", taskCompleteEvent.getSpec().getId(), completeState);
           }
         }
       }
@@ -315,42 +333,53 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
     }
   }
 
-  private void submitNewTask(ParallelIndexSinglePhaseSubTask task)
+  private void submitNewTask(ParallelIndexSinglePhaseSubTaskSpec spec)
   {
-    final ListenableFuture<TaskStatus> future = taskMonitor.submit(task);
+    final ListenableFuture<SubTaskCompleteEvent<ParallelIndexSinglePhaseSubTask>> future = taskMonitor.submit(spec);
     Futures.addCallback(
         future,
-        new FutureCallback<TaskStatus>()
+        new FutureCallback<SubTaskCompleteEvent<ParallelIndexSinglePhaseSubTask>>()
         {
           @Override
-          public void onSuccess(TaskStatus taskStatus)
+          public void onSuccess(SubTaskCompleteEvent<ParallelIndexSinglePhaseSubTask> completeEvent)
           {
-            taskCompleteEvents.offer(taskStatus);
+            // this callback is called if a task completed wheter it succeeded or not.
+            taskCompleteEvents.offer(completeEvent);
           }
 
           @Override
           public void onFailure(Throwable t)
           {
-            taskCompleteEvents.offer(new TaskStatus(task.getId(), TaskState.FAILED, null, -1));
+            // this callback is called only when there were some problems in TaskMonitor.
+            try {
+              log.error(
+                  t,
+                  "Error while running a task for inputSplits[%s]",
+                  getSplitsIfSplittable(spec.getIngestionSpec().getIOConfig().getFirehoseFactory())
+              );
+            }
+            catch (IOException e) {
+              t.addSuppressed(new RE(e, "Error while getting splits for error logging"));
+            }
+            taskCompleteEvents.offer(new SubTaskCompleteEvent<>(spec, TaskState.FAILED, null));
           }
         }
     );
   }
 
   @VisibleForTesting
-  Iterator<ParallelIndexSinglePhaseSubTask> subTaskIterator() throws IOException
+  Iterator<ParallelIndexSinglePhaseSubTaskSpec> subTaskSpecIterator() throws IOException
   {
-    return Iterators.transform(baseFirehoseFactory.getSplits(), split -> newTask((InputSplit<?>) split));
+    return Iterators.transform(baseFirehoseFactory.getSplits(), split -> newTaskSpec((InputSplit<?>) split));
   }
 
   @VisibleForTesting
-  ParallelIndexSinglePhaseSubTask newTask(InputSplit<?> split)
+  ParallelIndexSinglePhaseSubTaskSpec newTaskSpec(InputSplit<?> split)
   {
-    return new ParallelIndexSinglePhaseSubTask(
-        null,
+    return new ParallelIndexSinglePhaseSubTaskSpec(
+        getId() + "_" + nextSpecId++,
         getGroupId(),
         getId(),
-        null,
         new IndexIngestionSpec(
             ingestionSchema.getDataSchema(),
             new IndexIOConfig(
@@ -361,5 +390,15 @@ public class ParallelIndexSinglePhaseSupervisorTask extends AbstractTask
         ),
         getContext()
     );
+  }
+
+  private static List<InputSplit> getSplitsIfSplittable(FirehoseFactory firehoseFactory) throws IOException
+  {
+    if (firehoseFactory instanceof FiniteFirehoseFactory) {
+      final FiniteFirehoseFactory finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
+      return Lists.newArrayList(finiteFirehoseFactory.getSplits());
+    } else {
+      throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());
+    }
   }
 }

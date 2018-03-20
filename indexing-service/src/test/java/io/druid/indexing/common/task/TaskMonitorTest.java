@@ -25,6 +25,7 @@ import io.druid.client.indexing.TaskStatus;
 import io.druid.client.indexing.TaskStatusResponse;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
 import io.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
 import org.junit.Assert;
@@ -32,6 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -45,7 +47,7 @@ public class TaskMonitorTest
 {
   private final ExecutorService taskRunner = Execs.multiThreaded(5, "task-monitor-test-%d");
   private final ConcurrentMap<String, TaskState> tasks = new ConcurrentHashMap<>();
-  private final TaskMonitor monitor = new TaskMonitor(new TestIndexingServiceClient(), 3);
+  private final TaskMonitor<TestTask> monitor = new TaskMonitor<>(new TestIndexingServiceClient(), 3);
 
   @Before
   public void setup()
@@ -64,52 +66,92 @@ public class TaskMonitorTest
   @Test
   public void testBasic() throws InterruptedException, ExecutionException, TimeoutException
   {
-    final List<ListenableFuture<TaskStatus>> futures = IntStream
+    final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = IntStream
         .range(0, 10)
-        .mapToObj(i -> monitor.submit(new TestTask("id" + i, 100, 0)))
+        .mapToObj(i -> monitor.submit(new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, 100L, 0)))
         .collect(Collectors.toList());
     for (int i = 0; i < futures.size(); i++) {
       // # of threads of taskRunner is 5, so the expected max timeout is 2 sec. We additionally wait three more seconds
       // here to make sure the test passes.
-      final TaskStatus result = futures.get(i).get(1, TimeUnit.SECONDS);
-      Assert.assertEquals("id" + i, result.getId());
-      Assert.assertEquals(TaskState.SUCCESS, result.getStatusCode());
+      final SubTaskCompleteEvent<TestTask> result = futures.get(i).get(1, TimeUnit.SECONDS);
+      Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
+      Assert.assertEquals("specId" + i, result.getSpec().getId());
+      Assert.assertNotNull(result.getLastStatus());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
     }
   }
 
   @Test
   public void testRetry() throws InterruptedException, ExecutionException, TimeoutException
   {
-    final List<ListenableFuture<TaskStatus>> futures = IntStream
+    final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = IntStream
         .range(0, 10)
-        .mapToObj(i -> monitor.submit(new TestTask("id" + i, 100, 2)))
+        .mapToObj(i -> monitor.submit(new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, 100L, 2)))
         .collect(Collectors.toList());
     for (int i = 0; i < futures.size(); i++) {
       // # of threads of taskRunner is 5, and each task is expected to be run 3 times (with 2 retries), so the expected
       // max timeout is 6 sec. We additionally wait 4 more seconds here to make sure the test passes.
-      final TaskStatus result = futures.get(i).get(2, TimeUnit.SECONDS);
-      Assert.assertEquals("id" + i, result.getId());
-      Assert.assertEquals(TaskState.SUCCESS, result.getStatusCode());
+      final SubTaskCompleteEvent<TestTask> result = futures.get(i).get(2, TimeUnit.SECONDS);
+      Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
+      Assert.assertEquals("specId" + i, result.getSpec().getId());
+
+      Assert.assertNotNull(result.getLastStatus());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
+
+      final List<TaskStatus> attemptHistory = result.getAttemptHistory();
+      Assert.assertNotNull(attemptHistory);
+      Assert.assertEquals(3, attemptHistory.size());
+      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(0).getStatusCode());
+      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(1).getStatusCode());
+    }
+  }
+
+  private static class TestTaskSpec extends SubTaskSpec<TestTask>
+  {
+    private final long runTime;
+    private final int numMaxFails;
+
+    private int numFails;
+
+    public TestTaskSpec(
+        String id,
+        String groupId,
+        String supervisorTaskId,
+        Map<String, Object> context,
+        long runTime,
+        int numMaxFails
+    )
+    {
+      super(id, groupId, supervisorTaskId, context);
+      this.runTime = runTime;
+      this.numMaxFails = numMaxFails;
+    }
+
+    @Override
+    public TestTask newSubTask(int numAttempts)
+    {
+      return new TestTask(getId(), numAttempts, runTime, numFails++ < numMaxFails);
     }
   }
 
   private static class TestTask extends NoopTask
   {
-    private final int numMaxFails;
+    private final int numAttempts;
+    private final boolean shouldFail;
 
-    private int numFails;
-
-    public TestTask(String id, long runTime, int numMaxFails)
+    TestTask(String id, int numAttempts, long runTime, boolean shouldFail)
     {
       super(id, "testDataSource", runTime, 0, null, null, null);
-      this.numMaxFails = numMaxFails;
+      this.numAttempts = numAttempts;
+      this.shouldFail = shouldFail;
     }
 
     @Override
     public io.druid.indexing.common.TaskStatus run(TaskToolbox toolbox) throws Exception
     {
-      if (numFails < numMaxFails) {
-        numFails++;
+      if (shouldFail) {
         Thread.sleep(getRunTime());
         return io.druid.indexing.common.TaskStatus.failure(getId());
       } else {

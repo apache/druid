@@ -17,40 +17,49 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
 
-/**
- * TaskReport can be optionally included in io.druid.indexing.common.TaskStatus to report some ingestion results to
- * Supervisors or supervisorTasks. See ParallelIndexSinglePhaseSupervisorTask and ParallelIndexSinglePhaseSubTask
- * as an example.
- */
-public class TaskReport
+public abstract class SubTaskSpec<T extends Task>
 {
-  private final String taskId;
-  private final Object payload; // can't use generic to not change TaskStatus
+  private final String id;
+  private final String groupId;
+  private final String supervisorTaskId;
+  private final Map<String, Object> context;
 
-  @JsonCreator
-  public TaskReport(
-      @JsonProperty("taskId") String taskId,
-      @JsonProperty("payload") Object payload
+  public SubTaskSpec(
+      String id,
+      String groupId,
+      String supervisorTaskId,
+      Map<String, Object> context
   )
   {
-    this.taskId = taskId;
-    this.payload = payload;
+    this.id = id;
+    this.groupId = groupId;
+    this.supervisorTaskId = supervisorTaskId;
+    this.context = context;
   }
 
-  @JsonProperty
-  public String getTaskId()
+  public String getId()
   {
-    return taskId;
+    return id;
   }
 
-  @JsonProperty
-  public Object getPayload()
+  public String getGroupId()
   {
-    return payload;
+    return groupId;
   }
+
+  public String getSupervisorTaskId()
+  {
+    return supervisorTaskId;
+  }
+
+  public Map<String, Object> getContext()
+  {
+    return context;
+  }
+
+  public abstract T newSubTask(int numAttempts);
 }

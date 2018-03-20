@@ -147,10 +147,18 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
 
-    final Iterator<ParallelIndexSinglePhaseSubTask> subTaskIterator = task.subTaskIterator();
+    final Iterator<ParallelIndexSinglePhaseSubTaskSpec> subTaskSpecIterator = task.subTaskSpecIterator();
 
-    while (subTaskIterator.hasNext()) {
-      final ParallelIndexSinglePhaseSubTask subTask = subTaskIterator.next();
+    while (subTaskSpecIterator.hasNext()) {
+      final ParallelIndexSinglePhaseSubTaskSpec spec = subTaskSpecIterator.next();
+      final ParallelIndexSinglePhaseSubTask subTask = new ParallelIndexSinglePhaseSubTask(
+          spec.getGroupId(),
+          null,
+          spec.getSupervisorTaskId(),
+          0,
+          spec.getIngestionSpec(),
+          spec.getContext()
+      );
       final TaskActionClient subTaskActionClient = createActionClient(subTask);
       prepareTaskForLocking(subTask);
       Assert.assertTrue(subTask.isReady(subTaskActionClient));
@@ -274,7 +282,7 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
     }
 
     @Override
-    Iterator<ParallelIndexSinglePhaseSubTask> subTaskIterator() throws IOException
+    Iterator<ParallelIndexSinglePhaseSubTaskSpec> subTaskSpecIterator() throws IOException
     {
       final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
           .getIOConfig()
@@ -287,7 +295,7 @@ public class ParallelIndexSinglePhaseSupervisorTaskTest extends IngestionTestBas
         catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
-        return newTask((InputSplit<?>) split);
+        return newTaskSpec((InputSplit<?>) split);
       });
     }
   }
