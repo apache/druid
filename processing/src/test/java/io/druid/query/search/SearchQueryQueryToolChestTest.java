@@ -59,7 +59,7 @@ public class SearchQueryQueryToolChestTest
         new SearchResultValue(ImmutableList.of(new SearchHit("dim1", "a")))
     );
 
-    Object preparedValue = strategy.prepareForCache(false).apply(
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
         result
     );
 
@@ -69,7 +69,7 @@ public class SearchQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<SearchResultValue> fromCacheResult = strategy.pullFromCache(false).apply(fromCacheValue);
+    Result<SearchResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
   }

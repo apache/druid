@@ -91,6 +91,20 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> QueryRunner<T> makeRunner(Query<T> query, QueryRunner<T> baseClientRunner)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    return new ResultLevelCachingQueryRunner<>(makeRunner(query, baseClientRunner, toolChest),
+                                               toolChest,
+                                               query,
+                                               objectMapper,
+                                               cache,
+                                               cacheConfig);
+  }
+
+  private <T> QueryRunner<T> makeRunner(
+      Query<T> query,
+      QueryRunner<T> baseClientRunner,
+      QueryToolChest<T, Query<T>> toolChest
+  )
+  {
     PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
         query.<String>getContextValue("postProcessing"),
         new TypeReference<PostProcessingOperator<T>>()
@@ -98,30 +112,21 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
     );
 
-    return new ResultLevelCachingQueryRunner<>(
-        new FluentQueryRunnerBuilder<>(toolChest)
-            .create(
-                new SetAndVerifyContextQueryRunner(
-                    serverConfig,
-                    new RetryQueryRunner<>(
-                        baseClientRunner,
-                        retryConfig,
-                        objectMapper
-                    )
+    return new FluentQueryRunnerBuilder<>(toolChest)
+        .create(
+            new SetAndVerifyContextQueryRunner(
+                serverConfig,
+                new RetryQueryRunner<>(
+                    baseClientRunner,
+                    retryConfig,
+                    objectMapper
                 )
             )
-            .applyPreMergeDecoration()
-            .mergeResults()
-            .applyPostMergeDecoration()
-            .emitCPUTimeMetric(emitter)
-            .postProcess(postProcessing),
-        toolChest,
-        query,
-        objectMapper,
-        cache,
-        cacheConfig
-    );
+        )
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration()
+        .emitCPUTimeMetric(emitter)
+        .postProcess(postProcessing);
   }
-
-
 }

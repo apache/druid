@@ -125,7 +125,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         ), new SequenceWrapper()
         {
           @Override
-          public void after(boolean isDone, Throwable thrown) throws Exception
+          public void after(boolean isDone, Throwable thrown)
           {
             Preconditions.checkNotNull(
                 resultLevelCachePopulator,
@@ -133,6 +133,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
             );
             if (thrown != null) {
               log.error(
+                  thrown,
                   "Error while preparing for result level caching for query %s with error %s ",
                   query.getId(),
                   thrown.getMessage()
@@ -227,7 +228,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         resultLevelCachePopulator.cacheObjectStream.write(StringUtils.toUtf8(resultSetId));
       }
       catch (IOException ioe) {
-        log.error("Failed to write cached values for query %s", query.getId());
+        log.error(ioe, "Failed to write cached values for query %s", query.getId());
         return null;
       }
       return resultLevelCachePopulator;
@@ -283,7 +284,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         }
       }
       catch (IOException ex) {
-        log.error("Failed to retrieve entry to be cached. Result Level caching will not be performed!");
+        log.error(ex, "Failed to retrieve entry to be cached. Result Level caching will not be performed!");
         shouldPopulate = false;
         resultLevelCachePopulator.cacheObjectStream = null;
       }

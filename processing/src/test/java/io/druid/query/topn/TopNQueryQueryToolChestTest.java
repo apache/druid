@@ -91,7 +91,7 @@ public class TopNQueryQueryToolChestTest
         )
     );
 
-    Object preparedValue = strategy.prepareForCache(false).apply(
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
         result1
     );
 
@@ -101,7 +101,7 @@ public class TopNQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TopNResultValue> fromCacheResult = strategy.pullFromCache(false).apply(fromCacheValue);
+    Result<TopNResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result1, fromCacheResult);
 

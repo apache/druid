@@ -215,7 +215,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     )
     );
 
-    Object preparedValue = strategy.prepareForCache(false).apply(
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
         result
     );
 
@@ -225,7 +225,7 @@ public class TimeBoundaryQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TimeBoundaryResultValue> fromCacheResult = strategy.pullFromCache(false).apply(fromCacheValue);
+    Result<TimeBoundaryResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
   }
