@@ -43,9 +43,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class Execs
 {
-  private static final ListeningExecutorService SAME_THREAD_EXECUTOR_SERVICE_INSTANCE = MoreExecutors
-      .listeningDecorator(new SameThreadExecutorService());
-
   /**
    * Returns an ExecutorService which is terminated and shutdown from the beginning and not able to accept any tasks.
    */
@@ -61,7 +58,7 @@ public class Execs
    */
   public static ListeningExecutorService sameThreadExecutor()
   {
-    return SAME_THREAD_EXECUTOR_SERVICE_INSTANCE;
+    return MoreExecutors.listeningDecorator(new SameThreadExecutorService());
   }
 
   public static ExecutorService singleThreaded(@NotNull String nameFormat)

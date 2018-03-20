@@ -28,31 +28,38 @@ import java.util.concurrent.TimeUnit;
 
 public class SameThreadExecutorServiceTest
 {
-  private final SameThreadExecutorService service = new SameThreadExecutorService();
 
   @Test
   public void timeoutAndShutdownTest() throws Exception
   {
+    final SameThreadExecutorService service = new SameThreadExecutorService();
     Assert.assertFalse(service.awaitTermination(10, TimeUnit.MILLISECONDS));
   }
 
   @Test
   public void runsTasks() throws Exception
   {
+    final SameThreadExecutorService service = new SameThreadExecutorService();
     final CountDownLatch finished = new CountDownLatch(1);
     service.submit(finished::countDown);
     finished.await();
   }
 
-  @Test(expected = UnsupportedOperationException.class)
-  public void cannotShutdown() throws Exception
+  @Test
+  public void multiShutdownIsFine()
   {
+    final SameThreadExecutorService service = new SameThreadExecutorService();
+    Assert.assertFalse(service.isShutdown());
     service.shutdown();
+    Assert.assertTrue(service.isShutdown());
+    service.shutdown();
+    Assert.assertTrue(service.isShutdown());
   }
 
   @Test(expected = ExecutionException.class)
   public void exceptionsCaught() throws Exception
   {
+    final SameThreadExecutorService service = new SameThreadExecutorService();
     service.submit(() -> {
       throw new RuntimeException();
     }).get();
