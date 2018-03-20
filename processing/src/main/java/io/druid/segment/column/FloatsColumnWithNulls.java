@@ -45,6 +45,12 @@ class FloatsColumnWithNulls extends FloatsColumn
   }
 
   @Override
+  public boolean isNull(int rowNum)
+  {
+    return nullValueBitmap.get(rowNum);
+  }
+
+  @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     super.inspectRuntimeShape(inspector);
