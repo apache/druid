@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import io.druid.indexer.TaskReport;
 import io.druid.indexer.TaskState;
 
 import java.util.Map;
@@ -38,57 +39,54 @@ public class TaskStatus
 {
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.RUNNING, -1, null, null, null);
+    return new TaskStatus(taskId, TaskState.RUNNING, -1, null, null);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, null, null);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, null);
   }
 
-  public static TaskStatus success(String taskId, Map<String, Object> metrics, String errorMsg, Map<String, Object> context)
+  public static TaskStatus success(String taskId, String errorMsg, Map<String, TaskReport> taskReports)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, -1, metrics, errorMsg, context);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, errorMsg, taskReports);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, null, null, null);
+    return new TaskStatus(taskId, TaskState.FAILED, -1, null, null);
   }
 
-  public static TaskStatus failure(String taskId, Map<String, Object> metrics, String errorMsg, Map<String, Object> context)
+  public static TaskStatus failure(String taskId, String errorMsg, Map<String, TaskReport> taskReports)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, metrics, errorMsg, context);
+    return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg, taskReports);
   }
 
   public static TaskStatus fromCode(String taskId, TaskState code)
   {
-    return new TaskStatus(taskId, code, -1, null, null, null);
+    return new TaskStatus(taskId, code, -1, null, null);
   }
 
   private final String id;
   private final TaskState status;
   private final long duration;
-  private final Map<String, Object> metrics;
   private final String errorMsg;
-  private final Map<String, Object> context;
+  private final Map<String, TaskReport> taskReports;
 
   @JsonCreator
   protected TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
       @JsonProperty("duration") long duration,
-      @JsonProperty("metrics") Map<String, Object> metrics,
       @JsonProperty("errorMsg") String errorMsg,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("taskReports") Map<String, TaskReport> taskReports
   )
   {
     this.id = id;
     this.status = status;
     this.duration = duration;
-    this.metrics = metrics;
     this.errorMsg = errorMsg;
-    this.context = context;
+    this.taskReports = taskReports;
 
     // Check class invariants.
     Preconditions.checkNotNull(id, "id");
@@ -113,22 +111,16 @@ public class TaskStatus
     return duration;
   }
 
-  @JsonProperty("metrics")
-  public Map<String, Object> getMetrics()
-  {
-    return metrics;
-  }
-
   @JsonProperty("errorMsg")
   public String getErrorMsg()
   {
     return errorMsg;
   }
 
-  @JsonProperty("context")
-  public Map<String, Object> getContext()
+  @JsonProperty("taskReports")
+  public Map<String, TaskReport> getTaskReports()
   {
-    return context;
+    return taskReports;
   }
 
   /**
@@ -180,7 +172,19 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, _duration, metrics, errorMsg, context);
+    return new TaskStatus(id, status, _duration, errorMsg, taskReports);
+  }
+
+  @Override
+  public String toString()
+  {
+    return Objects.toStringHelper(this)
+                  .add("id", id)
+                  .add("status", status)
+                  .add("duration", duration)
+                  .add("errorMsg", errorMsg)
+                  .add("taskReports", taskReports)
+                  .toString();
   }
 
   @Override
@@ -193,30 +197,16 @@ public class TaskStatus
       return false;
     }
     TaskStatus that = (TaskStatus) o;
-    return duration == that.duration &&
-           java.util.Objects.equals(id, that.id) &&
+    return getDuration() == that.getDuration() &&
+           java.util.Objects.equals(getId(), that.getId()) &&
            status == that.status &&
-           java.util.Objects.equals(metrics, that.metrics) &&
-           java.util.Objects.equals(errorMsg, that.errorMsg) &&
-           java.util.Objects.equals(context, that.context);
+           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
+           java.util.Objects.equals(getTaskReports(), that.getTaskReports());
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(id, status, duration);
-  }
-
-  @Override
-  public String toString()
-  {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("status", status)
-                  .add("duration", duration)
-                  .add("metrics", metrics)
-                  .add("errorMsg", errorMsg)
-                  .add("context", context)
-                  .toString();
+    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg(), getTaskReports());
   }
 }

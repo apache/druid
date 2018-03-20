@@ -40,13 +40,10 @@ public class TaskStatusPlus
   private final String dataSource;
 
   @Nullable
-  private final Map<String, Object> metrics;
-
-  @Nullable
   private final String errorMsg;
 
   @Nullable
-  private final Map<String, Object> context;
+  private final Map<String, TaskReport> taskReports;
 
   @JsonCreator
   public TaskStatusPlus(
@@ -58,9 +55,8 @@ public class TaskStatusPlus
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("metrics") Map<String, Object> metrics,
       @JsonProperty("errorMsg") String errorMsg,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("taskReports") Map<String, TaskReport> taskReports
   )
   {
     if (state != null && state.isComplete()) {
@@ -74,9 +70,8 @@ public class TaskStatusPlus
     this.duration = duration;
     this.location = Preconditions.checkNotNull(location, "location");
     this.dataSource = dataSource;
-    this.metrics = metrics;
     this.errorMsg = errorMsg;
-    this.context = context;
+    this.taskReports = taskReports;
   }
 
   @JsonProperty
@@ -131,13 +126,6 @@ public class TaskStatusPlus
   }
 
   @Nullable
-  @JsonProperty("metrics")
-  public Map<String, Object> getMetrics()
-  {
-    return metrics;
-  }
-
-  @Nullable
   @JsonProperty("errorMsg")
   public String getErrorMsg()
   {
@@ -145,10 +133,10 @@ public class TaskStatusPlus
   }
 
   @Nullable
-  @JsonProperty("context")
-  public Map<String, Object> getContext()
+  @JsonProperty("taskReports")
+  public Map<String, TaskReport> getTaskReports()
   {
-    return context;
+    return taskReports;
   }
 
   @Override
@@ -157,65 +145,36 @@ public class TaskStatusPlus
     if (this == o) {
       return true;
     }
-
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final TaskStatusPlus that = (TaskStatusPlus) o;
-    if (!id.equals(that.id)) {
-      return false;
-    }
-    if (!type.equals(that.type)) {
-      return false;
-    }
-    if (!createdTime.equals(that.createdTime)) {
-      return false;
-    }
-    if (!queueInsertionTime.equals(that.queueInsertionTime)) {
-      return false;
-    }
-    if (!Objects.equals(state, that.state)) {
-      return false;
-    }
-    if (!Objects.equals(duration, that.duration)) {
-      return false;
-    }
-
-    if (!Objects.equals(location, that.location)) {
-      return false;
-    }
-
-    if (!Objects.equals(dataSource, that.dataSource)) {
-      return false;
-    }
-
-    if (!Objects.equals(metrics, that.metrics)) {
-      return false;
-    }
-
-    if (!Objects.equals(errorMsg, that.errorMsg)) {
-      return false;
-    }
-
-    return Objects.equals(context, that.context);
+    TaskStatusPlus that = (TaskStatusPlus) o;
+    return Objects.equals(getId(), that.getId()) &&
+           Objects.equals(getType(), that.getType()) &&
+           Objects.equals(getCreatedTime(), that.getCreatedTime()) &&
+           Objects.equals(getQueueInsertionTime(), that.getQueueInsertionTime()) &&
+           getState() == that.getState() &&
+           Objects.equals(getDuration(), that.getDuration()) &&
+           Objects.equals(getLocation(), that.getLocation()) &&
+           Objects.equals(getDataSource(), that.getDataSource()) &&
+           Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
+           Objects.equals(getTaskReports(), that.getTaskReports());
   }
 
   @Override
   public int hashCode()
   {
     return Objects.hash(
-        id,
-        type,
-        createdTime,
-        queueInsertionTime,
-        state,
-        duration,
-        location,
-        dataSource,
-        metrics,
-        errorMsg,
-        context
+        getId(),
+        getType(),
+        getCreatedTime(),
+        getQueueInsertionTime(),
+        getState(),
+        getDuration(),
+        getLocation(),
+        getDataSource(),
+        getErrorMsg(),
+        getTaskReports()
     );
   }
 }

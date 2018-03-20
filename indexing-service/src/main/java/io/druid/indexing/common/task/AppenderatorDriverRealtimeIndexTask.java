@@ -40,8 +40,11 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
 import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexer.TaskReport;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -363,9 +366,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
          .emit();
       return TaskStatus.failure(
           getId(),
-          getTaskCompletionMetrics(),
           Throwables.getStackTraceAsString(e),
-          getTaskCompletionContext()
+          getTaskCompletionReports()
       );
     }
     finally {
@@ -386,9 +388,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     log.info("Job done!");
     return TaskStatus.success(
         getId(),
-        getTaskCompletionMetrics(),
         null,
-        getTaskCompletionContext()
+        getTaskCompletionReports()
     );
   }
 
@@ -506,20 +507,31 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
   }
 
-  private Map<String, Object> getTaskCompletionContext()
+  private Map<String, TaskReport> getTaskCompletionReports()
   {
-    Map<String, Object> context = Maps.newHashMap();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
-    if (buildSegmentsParseExceptionMessages != null) {
-      Map<String, Object> unparseableEventsMap = Maps.newHashMap();
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
-      context.put("unparseableEvents", unparseableEventsMap);
-    }
-    context.put("ingestionState", ingestionState);
-    return context;
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                ingestionState,
+                getTaskCompletionUnparseableEvents(),
+                getTaskCompletionRowStats()
+            )
+        )
+    );
   }
 
-  private Map<String, Object> getTaskCompletionMetrics()
+  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  {
+    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    if (buildSegmentsParseExceptionMessages != null) {
+      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+    }
+    return unparseableEventsMap;
+  }
+
+  private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metricsMap = Maps.newHashMap();
     if (metrics != null) {

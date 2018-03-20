@@ -39,6 +39,9 @@ import io.druid.indexer.IngestionState;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexer.TaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
@@ -237,9 +240,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       return TaskStatus.failure(
           getId(),
-          getTaskCompletionMetrics(),
           Throwables.getStackTraceAsString(effectiveException),
-          getTaskCompletionContext()
+          getTaskCompletionReports()
       );
     }
     finally {
@@ -301,9 +303,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (indexerSchema == null) {
         return TaskStatus.failure(
             getId(),
-            getTaskCompletionMetrics(),
             determineConfigStatus.getErrorMsg(),
-            getTaskCompletionContext()
+            getTaskCompletionReports()
         );
       }
     }
@@ -388,13 +389,16 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (buildSegmentsStatus.getDataSegments() != null) {
         ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(buildSegmentsStatus.getDataSegments());
-        return TaskStatus.success(getId(), getTaskCompletionMetrics(), null, getTaskCompletionContext());
+        return TaskStatus.success(
+            getId(),
+            null,
+            getTaskCompletionReports()
+        );
       } else {
         return TaskStatus.failure(
             getId(),
-            getTaskCompletionMetrics(),
             buildSegmentsStatus.getErrorMsg(),
-            getTaskCompletionContext()
+            getTaskCompletionReports()
         );
       }
     }
@@ -430,7 +434,21 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return Response.ok(returnMap).build();
   }
 
-  private Map<String, Object> getTaskCompletionMetrics()
+  private Map<String, TaskReport> getTaskCompletionReports()
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                ingestionState,
+                null,
+                getTaskCompletionRowStats()
+            )
+        )
+    );
+  }
+
+  private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
     if (determineConfigStatus != null) {
@@ -446,13 +464,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       );
     }
     return metrics;
-  }
-
-  private Map<String, Object> getTaskCompletionContext()
-  {
-    Map<String, Object> context = Maps.newHashMap();
-    context.put("ingestionState", ingestionState);
-    return context;
   }
 
   public static class InnerProcessingStatsGetter implements TaskMetricsGetter

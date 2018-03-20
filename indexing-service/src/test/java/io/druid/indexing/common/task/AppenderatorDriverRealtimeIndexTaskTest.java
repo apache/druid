@@ -47,6 +47,7 @@ import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -612,6 +613,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     TaskStatus status = statusFuture.get();
     Assert.assertTrue(status.getErrorMsg().contains("java.lang.RuntimeException: Max parse exceptions exceeded, terminating task..."));
 
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "buildSegments",
         Arrays.asList(
@@ -619,7 +624,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         )
     );
 
-    Assert.assertEquals(expectedUnparseables, status.getContext().get("unparseableEvents"));
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
   @Test(timeout = 60_000L)
@@ -704,7 +709,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
-    Assert.assertEquals(expectedMetrics, taskStatus.getMetrics());
+
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskStatus.getTaskReports()
+    );
+
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
   }
 
   @Test(timeout = 60_000L)
@@ -792,7 +802,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
-    Assert.assertEquals(expectedMetrics, taskStatus.getMetrics());
+
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskStatus.getTaskReports()
+    );
+
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "buildSegments",
         Arrays.asList(
@@ -802,8 +817,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
             "Unparseable timestamp found! Event: null"
         )
     );
-    Assert.assertEquals(expectedUnparseables, taskStatus.getContext().get("unparseableEvents"));
-    Assert.assertEquals(IngestionState.COMPLETED, taskStatus.getContext().get("ingestionState"));
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
   }
 
   @Test(timeout = 60_000L)
@@ -850,6 +865,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
     Assert.assertTrue(taskStatus.getErrorMsg().contains("Max parse exceptions exceeded, terminating task..."));
+
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskStatus.getTaskReports()
+    );
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
@@ -859,7 +879,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
             TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
         )
     );
-    Assert.assertEquals(expectedMetrics, taskStatus.getMetrics());
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "buildSegments",
         Arrays.asList(
@@ -869,8 +889,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
             "Unparseable timestamp found! Event: null"
         )
     );
-    Assert.assertEquals(expectedUnparseables, taskStatus.getContext().get("unparseableEvents"));
-    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, taskStatus.getContext().get("ingestionState"));
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
   }
 
   @Test(timeout = 60_000L)
@@ -1102,6 +1122,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
       // Wait for the task to finish.
       TaskStatus status = statusFuture.get();
+
+      IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+          status.getTaskReports()
+      );
+
       Map<String, Object> expectedMetrics = ImmutableMap.of(
           "buildSegments",
           ImmutableMap.of(
@@ -1111,7 +1136,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
               TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
           )
       );
-      Assert.assertEquals(expectedMetrics, status.getMetrics());
+      Assert.assertEquals(expectedMetrics, reportData.getRowStats());
       Assert.assertTrue(status.getErrorMsg().contains("java.lang.IllegalArgumentException\n\tat java.nio.Buffer.position"));
     }
   }

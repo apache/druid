@@ -37,6 +37,7 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
@@ -845,7 +846,10 @@ public class IndexTaskTest
         "buildSegments",
         Arrays.asList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
     );
-    Assert.assertEquals(expectedUnparseables, status.getContext().get("unparseableEvents"));
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
   @Test
@@ -925,6 +929,10 @@ public class IndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals(null, status.getErrorMsg());
 
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "determinePartitions",
         ImmutableMap.of(
@@ -941,7 +949,7 @@ public class IndexTaskTest
             TaskMetricsUtils.ROWS_THROWN_AWAY, 1L
         )
     );
-    Assert.assertEquals(expectedMetrics, status.getMetrics());
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "determinePartitions",
@@ -963,7 +971,7 @@ public class IndexTaskTest
         )
     );
 
-    Assert.assertEquals(expectedUnparseables, status.getContext().get("unparseableEvents"));
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
   @Test
@@ -1043,6 +1051,10 @@ public class IndexTaskTest
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
@@ -1053,7 +1065,7 @@ public class IndexTaskTest
         )
     );
 
-    Assert.assertEquals(expectedMetrics, status.getMetrics());
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "determinePartitions",
@@ -1066,7 +1078,7 @@ public class IndexTaskTest
         )
     );
 
-    Assert.assertEquals(expectedUnparseables, status.getContext().get("unparseableEvents"));
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
   @Test
@@ -1146,6 +1158,10 @@ public class IndexTaskTest
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "determinePartitions",
         ImmutableMap.of(
@@ -1156,7 +1172,7 @@ public class IndexTaskTest
         )
     );
 
-    Assert.assertEquals(expectedMetrics, status.getMetrics());
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "determinePartitions",
@@ -1169,7 +1185,7 @@ public class IndexTaskTest
         new ArrayList<>()
     );
 
-    Assert.assertEquals(expectedUnparseables, status.getContext().get("unparseableEvents"));
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
 
@@ -1305,13 +1321,17 @@ public class IndexTaskTest
 
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "determinePartitions",
         new ArrayList<>(),
         "buildSegments",
         Arrays.asList("Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
-    Assert.assertEquals(expectedUnparseables, status.getContext().get("unparseableEvents"));
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)

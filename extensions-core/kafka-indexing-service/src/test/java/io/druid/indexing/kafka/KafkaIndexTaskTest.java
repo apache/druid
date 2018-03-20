@@ -41,6 +41,7 @@ import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.task.IndexTaskTest;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
@@ -1044,6 +1045,10 @@ public class KafkaIndexTaskTest
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
@@ -1053,7 +1058,7 @@ public class KafkaIndexTaskTest
             TaskMetricsUtils.ROWS_THROWN_AWAY, 1L
         )
     );
-    Assert.assertEquals(expectedMetrics, status.getMetrics());
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> unparseableEvents = ImmutableMap.of(
         "buildSegments",
@@ -1067,7 +1072,7 @@ public class KafkaIndexTaskTest
         )
     );
 
-    Assert.assertEquals(unparseableEvents, status.getContext().get("unparseableEvents"));
+    Assert.assertEquals(unparseableEvents, reportData.getUnparseableEvents());
   }
 
   @Test(timeout = 60_000L)
@@ -1117,6 +1122,10 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
     Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
+    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        status.getTaskReports()
+    );
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
@@ -1126,7 +1135,7 @@ public class KafkaIndexTaskTest
             TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
         )
     );
-    Assert.assertEquals(expectedMetrics, status.getMetrics());
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> unparseableEvents = ImmutableMap.of(
         "buildSegments",
@@ -1136,7 +1145,7 @@ public class KafkaIndexTaskTest
         )
     );
 
-    Assert.assertEquals(unparseableEvents, status.getContext().get("unparseableEvents"));
+    Assert.assertEquals(unparseableEvents, reportData.getUnparseableEvents());
   }
 
   @Test(timeout = 60_000L)
