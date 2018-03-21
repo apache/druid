@@ -36,7 +36,7 @@ import io.druid.query.aggregation.PostAggregator;
 /**
  * Returns a distinct count estimate and error bounds from a given ArrayOfDoublesSketch."
  * The result will be three double values: estimate of the number of distinct keys, lower bound and upper bound.
- * The bounds are given at the given number of standard deviations (optional, defaults to 1).
+ * The bounds are provided at the given number of standard deviations (optional, defaults to 1).
  * This must be an integer value of 1, 2 or 3 corresponding to approximately 68.3%, 95.4% and 99.7%
  * confidence intervals.
  */

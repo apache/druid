@@ -35,6 +35,10 @@ import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
+/**
+ * Returns a result of a specified set operation on the given array of sketches. Supported operations are:
+ * union, intersection and set difference (UNION, INTERSECT, NOT).
+ */
 public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketchMultiPostAggregator
 {
 

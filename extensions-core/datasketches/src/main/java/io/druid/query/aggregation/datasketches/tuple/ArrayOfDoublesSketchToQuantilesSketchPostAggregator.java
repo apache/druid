@@ -41,7 +41,7 @@ import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
  * ArrayOfDoublesSketch using parameter k that determines the accuracy and size of the quantiles sketch.
  * The column number is optional (the default is 1).
  * The parameter k is optional (the default is defined in the sketch library).
- * The result is a serialized quantiles sketch.
+ * The result is a quantiles sketch.
  * See https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html
  */
 public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
