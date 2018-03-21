@@ -37,12 +37,12 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
   // 1. 4 bytes for representing its type (Double, Float, Long or String)
   // 2. 8 bytes for saving its value or the array position and length (in the case of String)
   static final Integer ALLOC_PER_DIM = 12;
-  static  final Integer NO_DIM = -1;
+  static final Integer NO_DIM = -1;
   static final Integer TIME_STAMP_INDEX = 0;
   static final Integer DIMS_LENGTH_INDEX = TIME_STAMP_INDEX + Long.BYTES;
   static final Integer DIMS_INDEX = DIMS_LENGTH_INDEX + Integer.BYTES;
 
-  InternalDataIncrementalIndex(
+  protected InternalDataIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -52,7 +52,8 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
   }
 
-  static int getDimIndexInBuffer(ByteBuffer buff, int dimIndex) {
+  static int getDimIndexInBuffer(ByteBuffer buff, int dimIndex)
+  {
     int dimsLength = getDimsLength(buff);
     if (dimIndex >= dimsLength) {
       return NO_DIM;
@@ -149,15 +150,18 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return capabilities.getType();
   }
 
-  static long getTimestamp(ByteBuffer buff) {
+  static long getTimestamp(ByteBuffer buff)
+  {
     return buff.getLong(TIME_STAMP_INDEX);
   }
 
-  static int getDimsLength(ByteBuffer buff) {
+  static int getDimsLength(ByteBuffer buff)
+  {
     return buff.getInt(DIMS_LENGTH_INDEX);
   }
 
-  static Object getDimValue(ByteBuffer buff, int dimIndex) {
+  static Object getDimValue(ByteBuffer buff, int dimIndex)
+  {
     Object dimObject = null;
     int dimsLength = getDimsLength(buff);
     if (dimIndex >= dimsLength) {
@@ -186,7 +190,8 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return dimObject;
   }
 
-  static boolean checkDimsAllNull(ByteBuffer buff) {
+  static boolean checkDimsAllNull(ByteBuffer buff)
+  {
     int dimsLength = getDimsLength(buff);
     for (int index = 0; index < dimsLength; index++) {
       if (buff.getInt(getDimIndexInBuffer(buff, index)) != NO_DIM) {
