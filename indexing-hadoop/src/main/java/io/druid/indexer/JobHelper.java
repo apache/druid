@@ -23,9 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import com.google.common.io.OutputSupplier;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.FileUtils;
@@ -90,6 +88,7 @@ public class JobHelper
   {
     return new Path(base, "classpath");
   }
+
   public static final String INDEX_ZIP = "index.zip";
   public static final String DESCRIPTOR_JSON = "descriptor.json";
 
@@ -277,17 +276,9 @@ public class JobHelper
   static void uploadJar(File jarFile, final Path path, final FileSystem fs) throws IOException
   {
     log.info("Uploading jar to path[%s]", path);
-    ByteStreams.copy(
-        Files.newInputStreamSupplier(jarFile),
-        new OutputSupplier<OutputStream>()
-        {
-          @Override
-          public OutputStream getOutput() throws IOException
-          {
-            return fs.create(path);
-          }
-        }
-    );
+    try (OutputStream os = fs.create(path)) {
+      Files.asByteSource(jarFile).copyTo(os);
+    }
   }
 
   static boolean isSnapshot(File jarFile)
@@ -562,8 +553,10 @@ public class JobHelper
       DataSegmentPusher dataSegmentPusher
   )
   {
-    return new Path(prependFSIfNullScheme(fs, basePath),
-                    dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName));
+    return new Path(
+        prependFSIfNullScheme(fs, basePath),
+        dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName)
+    );
   }
 
   public static Path makeTmpPath(
@@ -576,9 +569,10 @@ public class JobHelper
   {
     return new Path(
         prependFSIfNullScheme(fs, basePath),
-        StringUtils.format("./%s.%d",
-                           dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
-                           taskAttemptID.getId()
+        StringUtils.format(
+            "./%s.%d",
+            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+            taskAttemptID.getId()
         )
     );
   }
