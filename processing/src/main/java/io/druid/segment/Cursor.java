@@ -27,9 +27,9 @@ import org.joda.time.DateTime;
  * io.druid.segment.incremental.IncrementalIndexStorageAdapter.IncrementalIndexCursor} is an implementation for {@link
  * io.druid.segment.incremental.IncrementalIndex}.
  *
- * Cursor interface is conceptually similar to {@link TimeAndDimsPointer}, that is used for historical segment
- * creation rather than query execution. If those interfaces could be collapsed (and if it is worthwhile) is yet to be
- * determined.
+ * Cursor is conceptually similar to {@link TimeAndDimsPointer}, but the latter is used for historical segment creation
+ * rather than query execution (as Cursor). If those abstractions could be collapsed (and if it is worthwhile) is yet to
+ * be determined.
  */
 public interface Cursor
 {

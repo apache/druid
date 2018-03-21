@@ -41,9 +41,9 @@ import java.util.Map;
  * of only time point and dimension and metric values, not tied to a specific position in any data structure (aka "row
  * index").
  *
- * TimeAndDimsPointer intrface is conceptually similar to {@link Cursor}, that is used for query execution rather than
- * historical segments creation. If those interfaces could be collapsed (and if it is worthwhile) is yet to be
- * determined.
+ * TimeAndDimsPointer is conceptually similar to {@link Cursor}, but the latter is used for query execution rather than
+ * historical segments creation (as TimeAndDimsPointer). If those abstractions could be collapsed (and if it is
+ * worthwhile) is yet to be determined.
  */
 public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
 {
