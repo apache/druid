@@ -28,6 +28,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
+import io.druid.query.history.QueryHistoryEntry;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -159,7 +160,11 @@ public class DruidStatement implements Closeable
       final AuthenticationResult authenticationResult
   )
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
+    try (final DruidPlanner planner = plannerFactory.createPlanner(
+        ImmutableMap.<String, Object>builder()
+            .putAll(queryContext)
+            .put(QueryHistoryEntry.CTX_SQL_QUERY_TEXT, query)
+            .build())) {
       synchronized (lock) {
         ensure(State.NEW);
         this.plannerResult = planner.plan(query, authenticationResult);

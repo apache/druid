@@ -32,8 +32,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.druid.java.util.emitter.core.NoopEmitter;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -43,8 +41,11 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.ExpressionModule;
 import io.druid.guice.annotations.Json;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.DruidProcessingConfig;
@@ -65,6 +66,9 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
+import io.druid.query.history.QueryHistoryConfig;
+import io.druid.query.history.QueryHistoryManager;
+import io.druid.query.history.SQLQueryHistoryManager;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -92,12 +96,12 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Authenticator;
@@ -105,6 +109,7 @@ import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.Escalator;
+import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.Resource;
 import io.druid.server.security.ResourceType;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -394,6 +399,33 @@ public class CalciteTests
     return CONGLOMERATE;
   }
 
+  private static final TestDerbyConnector.DerbyConnectorRule DERBY_CONNECTOR_RULE = new TestDerbyConnector.DerbyConnectorRule()
+  {
+    {
+      try {
+        before();
+      }
+      catch (Throwable t) {
+        throw new RuntimeException(t);
+      }
+    }
+  };
+
+  private static final QueryHistoryManager QUERY_HISTORY_MANAGER;
+  public static final DefaultObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  public static final QueryHistoryConfig QUERY_HISTORY_CONFIG = new QueryHistoryConfig(false);
+
+  static {
+    TestDerbyConnector connector = DERBY_CONNECTOR_RULE.getConnector();
+    connector.createQueryHistoryTable();
+    QUERY_HISTORY_MANAGER = new SQLQueryHistoryManager(
+        connector,
+        DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier(),
+        JSON_MAPPER,
+        QUERY_HISTORY_CONFIG
+    );
+  }
+
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(final QuerySegmentWalker walker)
   {
     return new QueryLifecycleFactory(
@@ -410,7 +442,9 @@ public class CalciteTests
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
         new NoopRequestLogger(),
         new AuthConfig(),
-        TEST_AUTHORIZER_MAPPER
+        TEST_AUTHORIZER_MAPPER,
+        QUERY_HISTORY_MANAGER,
+        JSON_MAPPER
     );
   }
 

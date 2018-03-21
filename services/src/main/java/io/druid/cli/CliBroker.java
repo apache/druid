@@ -48,10 +48,14 @@ import io.druid.guice.QueryableModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.RetryQueryRunnerConfig;
+import io.druid.query.history.QueryHistoryConfig;
+import io.druid.query.history.QueryHistoryManager;
+import io.druid.query.history.QueryHistoryManagerProvider;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.BrokerQueryResource;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
+import io.druid.server.QueryHistoryResource;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -98,6 +102,10 @@ public class CliBroker extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
             binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
 
+            JsonConfigProvider.bind(binder, "druid.broker.history", QueryHistoryConfig.class);
+
+            binder.bind(QueryHistoryManager.class)
+                .toProvider(QueryHistoryManagerProvider.class);
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);
             binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
@@ -120,6 +128,7 @@ public class CliBroker extends ServerRunnable
             binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, BrokerResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
+            Jerseys.addResource(binder, QueryHistoryResource.class);
 
             LifecycleModule.register(binder, BrokerQueryResource.class);
             LifecycleModule.register(binder, DruidBroker.class);

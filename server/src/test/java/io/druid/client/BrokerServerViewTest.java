@@ -36,10 +36,14 @@ import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
+import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.query.TableDataSource;
 import io.druid.segment.TestHelper;
+import io.druid.query.history.QueryHistoryConfig;
+import io.druid.query.history.QueryHistoryManager;
+import io.druid.query.history.SQLQueryHistoryManager;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -55,6 +59,7 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -64,6 +69,10 @@ import java.util.concurrent.Executor;
 
 public class BrokerServerViewTest extends CuratorTestBase
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  private QueryHistoryManager queryHistoryManager;
+
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
 
@@ -86,6 +95,14 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector.createQueryHistoryTable();
+    queryHistoryManager = new SQLQueryHistoryManager(
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        jsonMapper,
+        new QueryHistoryConfig(false)
+    );
   }
 
   @Test
@@ -341,7 +358,9 @@ public class BrokerServerViewTest extends CuratorTestBase
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
-        new BrokerSegmentWatcherConfig()
+        new BrokerSegmentWatcherConfig(),
+        queryHistoryManager,
+        jsonMapper
     );
 
     baseView.start();

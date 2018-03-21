@@ -19,12 +19,15 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.annotations.Json;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.history.QueryHistoryManager;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthorizerMapper;
@@ -38,6 +41,8 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
+  private final QueryHistoryManager queryHistoryManager;
+  private final ObjectMapper objectMappler;
 
   @Inject
   public QueryLifecycleFactory(
@@ -47,7 +52,9 @@ public class QueryLifecycleFactory
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthConfig authConfig,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final QueryHistoryManager queryHistoryManager,
+      @Json final ObjectMapper objectMappler
   )
   {
     this.warehouse = warehouse;
@@ -56,6 +63,8 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
+    this.queryHistoryManager = queryHistoryManager;
+    this.objectMappler = objectMappler;
   }
 
   public QueryLifecycle factorize()
@@ -67,6 +76,8 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         authorizerMapper,
+        queryHistoryManager,
+        objectMappler,
         System.currentTimeMillis(),
         System.nanoTime()
     );

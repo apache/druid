@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
@@ -37,12 +38,16 @@ import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
 import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.java.util.http.client.response.StatusResponseHolder;
+import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.Druids;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.ReflectionQueryToolChestWarehouse;
 import io.druid.query.Result;
+import io.druid.query.history.QueryHistoryConfig;
+import io.druid.query.history.QueryHistoryManager;
+import io.druid.query.history.SQLQueryHistoryManager;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -55,6 +60,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -67,13 +74,32 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class DirectDruidClientTest
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  private QueryHistoryManager queryHistoryManager;
+
+  private final ObjectMapper jsonMapper;
   private final Map<String, Object> defaultContext;
 
   public DirectDruidClientTest()
   {
+    jsonMapper = new DefaultObjectMapper();
     defaultContext = new HashMap<>();
     defaultContext.put(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE);
     defaultContext.put(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
+  }
+
+  @Before
+  public void setUp() throws Exception
+  {
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector.createQueryHistoryTable();
+    queryHistoryManager = new SQLQueryHistoryManager(
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        jsonMapper,
+        new QueryHistoryConfig(false)
+    );
   }
 
   @Test
@@ -139,7 +165,9 @@ public class DirectDruidClientTest
         httpClient,
         "http",
         "foo",
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        queryHistoryManager,
+        jsonMapper
     );
     DirectDruidClient client2 = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
@@ -148,7 +176,9 @@ public class DirectDruidClientTest
         httpClient,
         "http",
         "foo2",
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        queryHistoryManager,
+        jsonMapper
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
@@ -257,7 +287,9 @@ public class DirectDruidClientTest
         httpClient,
         "http",
         "foo",
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        queryHistoryManager,
+        jsonMapper
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
@@ -327,7 +359,9 @@ public class DirectDruidClientTest
         httpClient,
         "http",
         hostName,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        queryHistoryManager,
+        jsonMapper
     );
 
     QueryableDruidServer queryableDruidServer = new QueryableDruidServer(

@@ -47,6 +47,7 @@ public class PostgreSQLConnectorTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         )

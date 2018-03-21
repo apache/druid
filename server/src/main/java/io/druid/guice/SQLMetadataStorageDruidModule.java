@@ -45,6 +45,11 @@ import io.druid.metadata.SQLMetadataSegmentManagerProvider;
 import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import io.druid.metadata.SQLMetadataSupervisorManager;
+import io.druid.query.history.QueryHistoryConfig;
+import io.druid.query.history.QueryHistoryManager;
+import io.druid.query.history.QueryHistoryManagerProvider;
+import io.druid.query.history.SQLQueryHistoryManager;
+import io.druid.query.history.SQLQueryHistoryManagerProvider;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.audit.SQLAuditManager;
 import io.druid.server.audit.SQLAuditManagerConfig;
@@ -85,6 +90,8 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManager.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManagerProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(QueryHistoryManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(QueryHistoryManagerProvider.class), defaultValue);
   }
 
   @Override
@@ -145,6 +152,18 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.optionBinder(binder, Key.get(MetadataSupervisorManager.class))
             .addBinding(type)
             .to(SQLMetadataSupervisorManager.class)
+            .in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, "druid.broker.history", QueryHistoryConfig.class);
+
+    PolyBind.optionBinder(binder, Key.get(QueryHistoryManager.class))
+            .addBinding(type)
+            .to(SQLQueryHistoryManager.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(QueryHistoryManagerProvider.class))
+            .addBinding(type)
+            .to(SQLQueryHistoryManagerProvider.class)
             .in(LazySingleton.class);
   }
 }

@@ -20,6 +20,7 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.JavaType;
@@ -29,6 +30,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -63,6 +65,8 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.query.history.QueryHistoryEntry;
+import io.druid.query.history.QueryHistoryManager;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -111,6 +115,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final String scheme;
   private final String host;
   private final ServiceEmitter emitter;
+  private final QueryHistoryManager queryHistoryManager;
+  private final ObjectMapper objectMappler;
 
   private final AtomicInteger openConnections;
   private final boolean isSmile;
@@ -145,7 +151,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       HttpClient httpClient,
       String scheme,
       String host,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      QueryHistoryManager queryHistoryManager,
+      ObjectMapper objectMappler
   )
   {
     this.warehouse = warehouse;
@@ -155,6 +163,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.scheme = scheme;
     this.host = host;
     this.emitter = emitter;
+    this.queryHistoryManager = queryHistoryManager;
+    this.objectMappler = objectMappler;
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
@@ -230,8 +240,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
-          acquireResponseMetrics().reportNodeTimeToFirstByte(responseStartTimeNs - requestStartTimeNs).emit(emitter);
-
+          long ttfb = responseStartTimeNs - requestStartTimeNs;
+          acquireResponseMetrics().reportNodeTimeToFirstByte(ttfb).emit(emitter);
+          try {
+            queryHistoryManager.addEntry(QueryHistoryEntry.builder()
+                .type(QueryHistoryEntry.TYPE_NODE_TIME)
+                .queryID(query.getId())
+                .payload(objectMapper.writeValueAsString(ImmutableMap.of("host", host, "time", TimeUnit.NANOSECONDS.toMillis(ttfb))))
+                .build());
+          }
+          catch (JsonProcessingException e) {
+            log.error(e, "Error saving query history within id: [%s]", query.getId());
+          }
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
             // context may be null in case of error or query timeout

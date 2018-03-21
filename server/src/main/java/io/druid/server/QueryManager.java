@@ -46,6 +46,11 @@ public class QueryManager implements QueryWatcher
     );
   }
 
+  public boolean isRunningQuery(String id)
+  {
+    return queries.containsKey(id);
+  }
+
   public boolean cancelQuery(String id)
   {
     queryDatasources.removeAll(id);

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.ISE;
@@ -30,6 +31,7 @@ import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.history.QueryHistoryEntry;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -83,7 +85,12 @@ public class SqlResource
     final PlannerResult plannerResult;
     final DateTimeZone timeZone;
 
-    try (final DruidPlanner planner = plannerFactory.createPlanner(sqlQuery.getContext())) {
+    try (final DruidPlanner planner = plannerFactory.createPlanner(
+        ImmutableMap.<String, Object>builder()
+            .putAll(sqlQuery.getContext())
+            .put(QueryHistoryEntry.CTX_SQL_QUERY_TEXT, sqlQuery.getQuery())
+            .build()
+    )) {
       plannerResult = planner.plan(sqlQuery.getQuery(), req);
       timeZone = planner.getPlannerContext().getTimeZone();
 

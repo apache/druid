@@ -29,6 +29,7 @@ import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
 import io.druid.guice.annotations.EscalatedClient;
+import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.Execs;
@@ -39,6 +40,7 @@ import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
+import io.druid.query.history.QueryHistoryManager;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -72,6 +74,8 @@ public class BrokerServerView implements TimelineServerView
   private final FilteredServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
+  private final QueryHistoryManager queryHistoryManager;
+  private final ObjectMapper objectMappler;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
 
   private volatile boolean initialized = false;
@@ -85,7 +89,9 @@ public class BrokerServerView implements TimelineServerView
       FilteredServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
       ServiceEmitter emitter,
-      final BrokerSegmentWatcherConfig segmentWatcherConfig
+      final BrokerSegmentWatcherConfig segmentWatcherConfig,
+      final QueryHistoryManager queryHistoryManager,
+      @Json final ObjectMapper objectMappler
   )
   {
     this.warehouse = warehouse;
@@ -95,6 +101,8 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
+    this.queryHistoryManager = queryHistoryManager;
+    this.objectMappler = objectMappler;
     this.clients = new ConcurrentHashMap<>();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
@@ -181,7 +189,8 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getScheme(), server.getHost(), emitter);
+    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getScheme(), server.getHost(),
+        emitter, queryHistoryManager, objectMappler);
   }
 
   private QueryableDruidServer removeServer(DruidServer server)

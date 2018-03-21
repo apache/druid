@@ -31,6 +31,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
@@ -41,6 +42,9 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.history.QueryHistoryConfig;
+import io.druid.query.history.QueryHistoryManager;
+import io.druid.query.history.SQLQueryHistoryManager;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.server.log.TestRequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -59,6 +63,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
@@ -78,9 +83,14 @@ import java.util.concurrent.Executors;
  */
 public class QueryResourceTest
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  private QueryHistoryManager queryHistoryManager;
+
   private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of());
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+
 
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
   public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
@@ -125,6 +135,14 @@ public class QueryResourceTest
   @Before
   public void setup()
   {
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector.createQueryHistoryTable();
+    queryHistoryManager = new SQLQueryHistoryManager(
+        connector,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        jsonMapper,
+        new QueryHistoryConfig(false)
+    );
     EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
@@ -138,7 +156,9 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            queryHistoryManager,
+            jsonMapper
         ),
         jsonMapper,
         jsonMapper,
@@ -248,7 +268,9 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(null, null),
-            authMapper
+            authMapper,
+            queryHistoryManager,
+            jsonMapper
         ),
         jsonMapper,
         jsonMapper,
@@ -280,7 +302,9 @@ public class QueryResourceTest
     ((StreamingOutput) response.getEntity()).write(baos);
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        {
+        }
     );
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -355,7 +379,9 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(null, null),
-            authMapper
+            authMapper,
+            queryHistoryManager,
+            jsonMapper
         ),
         jsonMapper,
         jsonMapper,
@@ -476,7 +502,9 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(null, null),
-            authMapper
+            authMapper,
+            queryHistoryManager,
+            jsonMapper
         ),
         jsonMapper,
         jsonMapper,

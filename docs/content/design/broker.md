@@ -67,6 +67,17 @@ Returns segment information lists including server locations for the given datas
 
 Returns a flag indicating if the broker knows about all segments in Zookeeper. This can be used to know when a broker node is ready to be queried after a restart.
 
+* `/druid/v2/history`
+
+Returns a list of query ids for all executed queries.
+
+* `/druid/v2/history?sql`
+
+Returns a list of query ids for all executed sql queries.
+
+* `/druid/v2/history/{queryId}`
+
+Returns full query details for a specific query by the query ID.
 
 ### POST
 

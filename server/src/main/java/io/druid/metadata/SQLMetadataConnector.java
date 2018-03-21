@@ -382,6 +382,27 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
+  private void createQueryHistoryTable(String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                    + "  id %2$s NOT NULL,\n"
+                    + "  query_id VARCHAR(255) NOT NULL,\n"
+                    + "  created_date VARCHAR(255) NOT NULL,\n"
+                    + "  type VARCHAR(255) NOT NULL,\n"
+                    + "  payload %3$s NOT NULL,\n"
+                    + "  PRIMARY KEY (id)\n"
+                    + ")",
+                tableName, getSerialType(), getPayloadType()
+            ),
+            StringUtils.format("CREATE INDEX idx_%1$s_query_id ON %1$s(query_id)", tableName)
+        )
+    );
+  }
+
   @Override
   public Void insertOrUpdate(
       final String tableName,
@@ -562,6 +583,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSupervisorsTable(tablesConfigSupplier.get().getSupervisorTable());
+    }
+  }
+
+  @Override
+  public void createQueryHistoryTable()
+  {
+    if (config.get().isCreateTables()) {
+      createQueryHistoryTable(tablesConfigSupplier.get().getQueryHistoryTable());
     }
   }
 

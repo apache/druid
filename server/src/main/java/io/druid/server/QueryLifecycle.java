@@ -20,7 +20,9 @@
 package io.druid.server;
 
 import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import io.druid.client.DirectDruidClient;
 import io.druid.java.util.common.DateTimes;
@@ -39,6 +41,8 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.history.QueryHistoryEntry;
+import io.druid.query.history.QueryHistoryManager;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthenticationResult;
@@ -75,6 +79,8 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
+  private final QueryHistoryManager queryHistoryManager;
+  private final ObjectMapper objectMappler;
   private final long startMs;
   private final long startNs;
 
@@ -90,6 +96,8 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
+      final QueryHistoryManager queryHistoryManager,
+      final ObjectMapper objectMappler,
       final long startMs,
       final long startNs
   )
@@ -100,6 +108,8 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
+    this.queryHistoryManager = queryHistoryManager;
+    this.objectMappler = objectMappler;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -335,6 +345,32 @@ public class QueryLifecycle
               new QueryStats(statsMap)
           )
       );
+
+      queryHistoryManager.addEntry(
+          QueryHistoryEntry.builder()
+                           .queryID(baseQuery.getId())
+                           .type(QueryHistoryEntry.TYPE_DATASOURCES)
+                           .payload(objectMappler.writeValueAsString(ImmutableMap.of("datasources", baseQuery.getDataSource().getNames())))
+                           .build()
+      );
+
+      queryHistoryManager.addEntry(
+          QueryHistoryEntry.builder()
+              .queryID(baseQuery.getId())
+              .type(QueryHistoryEntry.TYPE_BROKER_TIME)
+              .payload(objectMappler.writeValueAsString(ImmutableMap.of("time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs))))
+              .build()
+      );
+
+      if (baseQuery.getContext().containsKey(QueryHistoryEntry.CTX_SQL_QUERY_TEXT)) {
+        queryHistoryManager.addEntry(
+            QueryHistoryEntry.builder()
+                .queryID(baseQuery.getId())
+                .type(QueryHistoryEntry.TYPE_SQL_QUERY_TEXT)
+                .payload(objectMappler.writeValueAsString(ImmutableMap.of("text", baseQuery.getContext().get(QueryHistoryEntry.CTX_SQL_QUERY_TEXT))))
+                .build()
+        );
+      }
     }
     catch (Exception ex) {
       log.error(ex, "Unable to log query [%s]!", baseQuery);
