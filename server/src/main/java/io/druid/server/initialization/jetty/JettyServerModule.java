@@ -60,7 +60,6 @@ import io.druid.server.initialization.TLSServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
-import org.apache.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -90,6 +89,7 @@ public class JettyServerModule extends JerseyServletModule
   private static final Logger log = new Logger(JettyServerModule.class);
 
   private static final AtomicInteger activeConnections = new AtomicInteger();
+  private static final String HTTP_1_1_STRING = "HTTP/1.1";
 
   @Override
   protected void configureServlets()
@@ -268,7 +268,7 @@ public class JettyServerModule extends JerseyServletModule
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       final ServerConnector connector = new ServerConnector(
           server,
-          new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()),
+          new SslConnectionFactory(sslContextFactory, HTTP_1_1_STRING),
           new HttpConnectionFactory(httpsConfiguration)
       );
       connector.setPort(node.getTlsPort());
