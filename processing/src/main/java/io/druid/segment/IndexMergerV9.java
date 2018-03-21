@@ -171,7 +171,7 @@ public class IndexMergerV9 implements IndexMerger
       /************* Setup Dim Conversions **************/
       progress.progress();
       startTime = System.currentTimeMillis();
-      writeDimValueAndSetupDimConversion(adapters, progress, mergedDimensions, mergers);
+      setUpDimConversion(adapters, progress, mergedDimensions, mergers);
       log.info("Completed dim conversions in %,d millis.", System.currentTimeMillis() - startTime);
 
       /************* Walk through data sets, merge them, and write merged columns *************/
@@ -677,7 +677,7 @@ public class IndexMergerV9 implements IndexMerger
     }
   }
 
-  private void writeDimValueAndSetupDimConversion(
+  private void setUpDimConversion(
       final List<IndexableAdapter> indexes,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
