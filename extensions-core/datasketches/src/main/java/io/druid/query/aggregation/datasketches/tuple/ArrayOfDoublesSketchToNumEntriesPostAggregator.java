@@ -30,7 +30,7 @@ import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
 /**
- * Returns the number of retained entries from a given ArrayOfDoublesSketch.
+ * Returns the number of retained entries from a given {@link ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchToNumEntriesPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {

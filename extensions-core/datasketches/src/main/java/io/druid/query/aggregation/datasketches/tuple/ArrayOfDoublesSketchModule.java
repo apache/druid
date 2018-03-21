@@ -36,7 +36,7 @@ import io.druid.segment.serde.ComplexMetrics;
  * This module is to support numeric Tuple sketches, which extend the functionality of the count-distinct
  * Theta sketches by adding arrays of double values associated with unique keys.
  * 
- * https://datasketches.github.io/docs/Tuple/TupleOverview.html
+ * See <a href=https://datasketches.github.io/docs/Tuple/TupleOverview.html>Tuple Sketch Overview</a>
  */
 public class ArrayOfDoublesSketchModule implements DruidModule
 {

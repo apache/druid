@@ -28,7 +28,7 @@ import io.druid.segment.BaseObjectColumnValueSelector;
 /**
  * This aggregator merges existing sketches.
  * The input column contains ArrayOfDoublesSketch.
- * The output is ArrayOfDoublesSketch that is a union of the input sketches.
+ * The output is {@link ArrayOfDoublesSketch} that is a union of the input sketches.
  */
 public class ArrayOfDoublesSketchMergeAggregator implements Aggregator
 {

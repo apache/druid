@@ -30,7 +30,7 @@ import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
 /**
- * Returns a distinct count estimate from a given ArrayOfDoublesSketch.
+ * Returns a distinct count estimate from a given {@link ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchToEstimatePostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {

@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * This aggregator builds sketches from raw data.
  * The input is in the form of a key and array of double values.
- * The output is ArrayOfDoublesSketch.
+ * The output is {@link ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 {

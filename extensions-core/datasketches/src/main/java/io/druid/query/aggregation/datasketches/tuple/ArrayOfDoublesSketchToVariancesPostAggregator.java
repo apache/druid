@@ -35,7 +35,7 @@ import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
 /**
- * Returns a list of variance values from a given ArrayOfDoublesSketch.
+ * Returns a list of variance values from a given {@link ArrayOfDoublesSketch}.
  * The result will be N double values, where N is the number of double values kept in the sketch per key.
  */
 public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator

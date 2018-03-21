@@ -37,12 +37,12 @@ import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 
 /**
- * Returns a quanitles DoublesSketch constructed from a given column of double values from a given
- * ArrayOfDoublesSketch using parameter k that determines the accuracy and size of the quantiles sketch.
+ * Returns a quanitles {@link DoublesSketch} constructed from a given column of double values from a given
+ * {@link ArrayOfDoublesSketch} using parameter k that determines the accuracy and size of the quantiles sketch.
  * The column number is optional (the default is 1).
  * The parameter k is optional (the default is defined in the sketch library).
  * The result is a quantiles sketch.
- * See https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html
+ * See <a href=https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html>Quantiles Sketch Overview</a>
  */
 public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {

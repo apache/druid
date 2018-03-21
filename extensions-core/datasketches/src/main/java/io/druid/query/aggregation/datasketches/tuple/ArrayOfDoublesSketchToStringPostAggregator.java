@@ -31,7 +31,9 @@ import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
 /**
- * 
+ * Returns a human-readable summary of a given {@link ArrayOfDoublesSketch}.
+ * This is a string returned by toString() method of the sketch.
+ * This can be useful for debugging.
  */
 public class ArrayOfDoublesSketchToStringPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {

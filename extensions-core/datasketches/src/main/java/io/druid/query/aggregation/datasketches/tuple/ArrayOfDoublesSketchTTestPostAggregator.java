@@ -37,9 +37,9 @@ import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 
 /**
- * Performs Student's t-test and returns a list of p-values given two ArrayOfDoublesSketches.
+ * Performs Student's t-test and returns a list of p-values given two instances of {@link ArrayOfDoublesSketch}.
  * The result will be N double values, where N is the number of double values kept in the sketch per key.
- * See http://commons.apache.org/proper/commons-math/javadocs/api-3.4/org/apache/commons/math3/stat/inference/TTest.html
+ * See <a href=http://commons.apache.org/proper/commons-math/javadocs/api-3.4/org/apache/commons/math3/stat/inference/TTest.html>Student's t-test</a>
  */
 public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketchMultiPostAggregator
 {
