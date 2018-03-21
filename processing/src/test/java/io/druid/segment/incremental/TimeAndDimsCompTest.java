@@ -26,6 +26,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
@@ -74,6 +75,81 @@ public class TimeAndDimsCompTest
     Assert.assertTrue(comparator.compare(td5, td6) > 0);
     Assert.assertTrue(comparator.compare(td4, td5) < 0);
     Assert.assertTrue(comparator.compare(td5, td4) > 0);
+  }
+
+  @Test
+  public void testTimeAndDimsSerialization() throws IndexSizeExceededException
+  {
+    IncrementalIndex index = new IncrementalIndex.Builder()
+            .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+            .setMaxRowCount(1000)
+            .buildOnheap();
+
+    long time = System.currentTimeMillis();
+    TimeAndDims[] origTimeAndDims = new TimeAndDims[6];
+    ByteBuffer[] serializedTimeAndDims = new ByteBuffer[6];
+    TimeAndDims[] deserializedTimeAndDims = new TimeAndDims[6];
+
+    Comparator<TimeAndDims> comparator = index.dimsComparator();
+
+    origTimeAndDims[0] = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));
+    origTimeAndDims[1] = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
+    origTimeAndDims[2] = index.toTimeAndDims(toMapRow(time, "billy", "A"));
+    origTimeAndDims[3] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
+    origTimeAndDims[4] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
+    origTimeAndDims[5] = index.toTimeAndDims(toMapRow(time + 1));
+
+    for (int i = 0; i < 6; i++) {
+      serializedTimeAndDims[i] = ((InternalDataIncrementalIndex) index).timeAndDimsSerialization(origTimeAndDims[i]);
+      deserializedTimeAndDims[i] = ((InternalDataIncrementalIndex) index).timeAndDimsDeserialization(serializedTimeAndDims[i]);
+      Assert.assertEquals(0, comparator.compare(origTimeAndDims[i], deserializedTimeAndDims[i]));
+    }
+  }
+
+  @Test
+  public void testTimeAndDimsByteBufferComparator() throws IndexSizeExceededException
+  {
+    IncrementalIndex index = new InternalDataIncrementalIndex.Builder()
+            .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+            .setMaxRowCount(1000)
+            .buildOnheap();
+
+    long time = System.currentTimeMillis();
+
+    TimeAndDims[] timeAndDimsArray = new TimeAndDims[6];
+    timeAndDimsArray[0] = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));
+    timeAndDimsArray[1] = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
+    timeAndDimsArray[2] = index.toTimeAndDims(toMapRow(time, "billy", "A"));
+    timeAndDimsArray[3] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
+    timeAndDimsArray[4] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
+    timeAndDimsArray[5] = index.toTimeAndDims(toMapRow(time + 1));
+
+    ByteBuffer[] timeAndDimsByteBufferArray = new ByteBuffer[6];
+    for (int i = 0; i < 6; i++) {
+      timeAndDimsByteBufferArray[i] = ((InternalDataIncrementalIndex) index).timeAndDimsSerialization(timeAndDimsArray[i]);
+    }
+
+    Comparator<ByteBuffer> comparator = ((InternalDataIncrementalIndex) index).dimsByteBufferComparator();
+
+    Assert.assertEquals(0, comparator.compare(timeAndDimsByteBufferArray[0], timeAndDimsByteBufferArray[0]));
+    Assert.assertEquals(0, comparator.compare(timeAndDimsByteBufferArray[1], timeAndDimsByteBufferArray[1]));
+    Assert.assertEquals(0, comparator.compare(timeAndDimsByteBufferArray[2], timeAndDimsByteBufferArray[2]));
+
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[0], timeAndDimsByteBufferArray[1]) > 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[1], timeAndDimsByteBufferArray[0]) < 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[1], timeAndDimsByteBufferArray[2]) > 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[2], timeAndDimsByteBufferArray[1]) < 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[0], timeAndDimsByteBufferArray[2]) > 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[2], timeAndDimsByteBufferArray[0]) < 0);
+
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[5], timeAndDimsByteBufferArray[0]) > 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[5], timeAndDimsByteBufferArray[1]) > 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[5], timeAndDimsByteBufferArray[2]) > 0);
+
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[3], timeAndDimsByteBufferArray[5]) > 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[4], timeAndDimsByteBufferArray[5]) > 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[3], timeAndDimsByteBufferArray[4]) < 0);
+    Assert.assertTrue(comparator.compare(timeAndDimsByteBufferArray[4], timeAndDimsByteBufferArray[3]) > 0);
   }
 
   private MapBasedInputRow toMapRow(long time, Object... dimAndVal)

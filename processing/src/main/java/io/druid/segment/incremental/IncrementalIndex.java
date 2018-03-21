@@ -228,7 +228,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final Map<String, MetricDesc> metricDescs;
 
   private final Map<String, DimensionDesc> dimensionDescs;
-  private final List<DimensionDesc> dimensionDescsList;
+  protected final List<DimensionDesc> dimensionDescsList;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
 

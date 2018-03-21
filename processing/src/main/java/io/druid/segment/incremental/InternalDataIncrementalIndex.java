@@ -52,9 +52,14 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
   }
 
+<<<<<<< HEAD
   static int getDimIndexInBuffer(ByteBuffer buff, int dimIndex)
   {
     int dimsLength = getDimsLength(buff);
+=======
+  static int getDimIndexInBuffer(ByteBuffer buff, int dimIndex) {
+    int dimsLength = getDimsLengthFromBuffer(buff);
+>>>>>>> 8161fd5df6aaa009397190d7014b772bda5eabd5
     if (dimIndex >= dimsLength) {
       return NO_DIM;
     }
@@ -137,7 +142,18 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return buf;
   }
 
-  ValueType getDimValueType(int dimIndex)
+  TimeAndDims timeAndDimsDeserialization(ByteBuffer buff) {
+    long timeStamp = getTimeStampFromBuffer(buff);
+    int dimsLength = getDimsLengthFromBuffer(buff);
+    Object[] dims = new Object[dimsLength];
+    for (int dimIndex = 0; dimIndex < dimsLength; dimIndex++) {
+      Object dim = getDimValueFromBuffer(buff, dimIndex);
+      dims[dimIndex] = dim;
+    }
+    return new TimeAndDims(timeStamp, dims, dimensionDescsList, TimeAndDims.EMPTY_ROW_INDEX);
+  }
+
+  private ValueType getDimValueType(int dimIndex)
   {
     DimensionDesc dimensionDesc = getDimensions().get(dimIndex);
     if (dimensionDesc == null) {
@@ -163,7 +179,7 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
   static Object getDimValue(ByteBuffer buff, int dimIndex)
   {
     Object dimObject = null;
-    int dimsLength = getDimsLength(buff);
+    int dimsLength = getDimsLengthFromBuffer(buff);
     if (dimIndex >= dimsLength) {
       return null;
     }
@@ -190,9 +206,14 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return dimObject;
   }
 
+<<<<<<< HEAD
   static boolean checkDimsAllNull(ByteBuffer buff)
   {
     int dimsLength = getDimsLength(buff);
+=======
+  private static boolean checkDimsAllNullFromBuffer(ByteBuffer buff) {
+    int dimsLength = getDimsLengthFromBuffer(buff);
+>>>>>>> 8161fd5df6aaa009397190d7014b772bda5eabd5
     for (int index = 0; index < dimsLength; index++) {
       if (buff.getInt(getDimIndexInBuffer(buff, index)) != NO_DIM) {
         return false;
@@ -201,20 +222,25 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return true;
   }
 
+  public final Comparator<ByteBuffer> dimsByteBufferComparator()
+  {
+    return new TimeAndDimsByteBuffersComp(dimensionDescsList);
+  }
+
   static final class TimeAndDimsByteBuffersComp implements Comparator<ByteBuffer>
   {
-    private List<DimensionDesc> dimensionDescs;
+    private List<DimensionDesc> dimensionDescsList;
 
-    public TimeAndDimsByteBuffersComp(List<DimensionDesc> dimDescs)
+    public TimeAndDimsByteBuffersComp(List<DimensionDesc> dimensionDescsList)
     {
-      this.dimensionDescs = dimDescs;
+      this.dimensionDescsList = dimensionDescsList;
     }
 
     @Override
     public int compare(ByteBuffer lhs, ByteBuffer rhs)
     {
-      int retVal = Longs.compare(getTimestamp(lhs), getTimestamp(rhs));
-      int numComparisons = Math.min(getDimsLength(lhs), getDimsLength(rhs));
+      int retVal = Longs.compare(getTimeStampFromBuffer(lhs), getTimeStampFromBuffer(rhs));
+      int numComparisons = Math.min(getDimsLengthFromBuffer(lhs), getDimsLengthFromBuffer(rhs));
 
       int dimIndex = 0;
       while (retVal == 0 && dimIndex < numComparisons) {
@@ -233,20 +259,20 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
           return 1;
         }
 
-        final DimensionIndexer indexer = dimensionDescs.get(dimIndex).getIndexer();
-        Object lhsObject = getDimValue(lhs, dimIndex);
-        Object rhsObject = getDimValue(rhs, dimIndex);
+        final DimensionIndexer indexer = dimensionDescsList.get(dimIndex).getIndexer();
+        Object lhsObject = getDimValueFromBuffer(lhs, dimIndex);
+        Object rhsObject = getDimValueFromBuffer(rhs, dimIndex);
         retVal = indexer.compareUnsortedEncodedKeyComponents(lhsObject, rhsObject);
         ++dimIndex;
       }
 
       if (retVal == 0) {
-        int lengthDiff = Ints.compare(getDimsLength(lhs), getDimsLength(rhs));
+        int lengthDiff = Ints.compare(getDimsLengthFromBuffer(lhs), getDimsLengthFromBuffer(rhs));
         if (lengthDiff == 0) {
           return 0;
         }
         ByteBuffer largerDims = lengthDiff > 0 ? lhs : rhs;
-        return checkDimsAllNull(largerDims) ? 0 : lengthDiff;
+        return checkDimsAllNullFromBuffer(largerDims) ? 0 : lengthDiff;
       }
 
       return retVal;
