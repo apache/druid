@@ -471,7 +471,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public abstract Iterable<TimeAndDims> timeRangeIterable(boolean descending, long timeStart, long timeEnd);
 
-  public abstract Iterable<io.druid.segment.incremental.IncrementalIndex.TimeAndDims> keySet();
+  public abstract Iterable<TimeAndDims> keySet();
 
   @Override
   public void close()
