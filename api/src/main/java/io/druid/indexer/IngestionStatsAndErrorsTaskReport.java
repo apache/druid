@@ -17,10 +17,11 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.indexer.TaskReport;
+
+import java.util.Objects;
 
 public class IngestionStatsAndErrorsTaskReport implements TaskReport
 {
@@ -57,5 +58,34 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
   public Object getPayload()
   {
     return payload;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IngestionStatsAndErrorsTaskReport that = (IngestionStatsAndErrorsTaskReport) o;
+    return Objects.equals(getTaskId(), that.getTaskId()) &&
+           Objects.equals(getPayload(), that.getPayload());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getTaskId(), getPayload());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IngestionStatsAndErrorsTaskReport{" +
+           "taskId='" + taskId + '\'' +
+           ", payload=" + payload +
+           '}';
   }
 }

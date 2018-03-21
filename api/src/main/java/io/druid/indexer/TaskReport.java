@@ -19,6 +19,8 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
@@ -28,6 +30,12 @@ import java.util.Map;
  * Supervisors or supervisorTasks. See ParallelIndexSinglePhaseSupervisorTask and ParallelIndexSinglePhaseSubTask
  * as an example.
  */
+/**
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "ingestionStatsAndErrors", value = IngestionStatsAndErrorsTaskReport.class)
+})
 public interface TaskReport
 {
   String getTaskId();

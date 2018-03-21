@@ -47,7 +47,7 @@ import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;

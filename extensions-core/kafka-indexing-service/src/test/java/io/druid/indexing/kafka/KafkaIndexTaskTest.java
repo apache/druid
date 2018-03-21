@@ -41,7 +41,7 @@ import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.task.IndexTaskTest;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;

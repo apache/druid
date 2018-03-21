@@ -37,7 +37,7 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;

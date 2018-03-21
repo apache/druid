@@ -17,11 +17,9 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskReport;
 
 import java.util.Map;
 import java.util.Objects;
@@ -93,5 +91,15 @@ public class IngestionStatsAndErrorsTaskReportData
   {
     return (IngestionStatsAndErrorsTaskReportData) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
                                                               .getPayload();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IngestionStatsAndErrorsTaskReportData{" +
+           "ingestionState=" + ingestionState +
+           ", unparseableEvents=" + unparseableEvents +
+           ", rowStats=" + rowStats +
+           '}';
   }
 }
