@@ -332,7 +332,7 @@ The HyperLogLog algorithm generates decimal estimates with some error. "round" c
 values to whole numbers. Note that even with rounding, the cardinality is still an estimate. The "round" field only
 affects query-time behavior, and is ignored at ingestion-time.
 
-For more approximate aggregators, please see [theta sketches](../development/extensions-core/datasketches-aggregators.html).
+For more approximate aggregators, check out the [DataSketches extension](../development/extensions-core/datasketches-extension.html).
 
 ## Miscellaneous Aggregations
 
