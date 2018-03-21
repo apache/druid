@@ -136,7 +136,7 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return buf;
   }
 
-  TimeAndDims timeAndDimsDeserialization(ByteBuffer buff, List<DimensionDesc> dimensionDescsList) {
+  TimeAndDims timeAndDimsDeserialization(ByteBuffer buff) {
     long timeStamp = getTimeStampFromBuffer(buff);
     int dimsLength = getDimsLengthFromBuffer(buff);
     Object[] dims = new Object[dimsLength];
@@ -207,13 +207,18 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return true;
   }
 
+  public final Comparator<ByteBuffer> dimsByteBufferComparator()
+  {
+    return new TimeAndDimsByteBuffersComp(dimensionDescsList);
+  }
+
   static final class TimeAndDimsByteBuffersComp implements Comparator<ByteBuffer>
   {
-    private List<DimensionDesc> dimensionDescs;
+    private List<DimensionDesc> dimensionDescsList;
 
-    public TimeAndDimsByteBuffersComp(List<DimensionDesc> dimDescs)
+    public TimeAndDimsByteBuffersComp(List<DimensionDesc> dimensionDescsList)
     {
-      this.dimensionDescs = dimDescs;
+      this.dimensionDescsList = dimensionDescsList;
     }
 
     @Override
@@ -239,7 +244,7 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
           return 1;
         }
 
-        final DimensionIndexer indexer = dimensionDescs.get(dimIndex).getIndexer();
+        final DimensionIndexer indexer = dimensionDescsList.get(dimIndex).getIndexer();
         Object lhsObject = getDimValueFromBuffer(lhs, dimIndex);
         Object rhsObject = getDimValueFromBuffer(rhs, dimIndex);
         retVal = indexer.compareUnsortedEncodedKeyComponents(lhsObject, rhsObject);
