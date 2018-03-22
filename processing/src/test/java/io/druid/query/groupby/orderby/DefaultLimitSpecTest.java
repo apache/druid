@@ -74,9 +74,9 @@ public class DefaultLimitSpecTest
     //defaults
     String json = "{\"type\": \"default\"}";
 
-    DefaultLimitSpec spec = mapper.readValue(
-        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
-        DefaultLimitSpec.class
+    DefaultLimitSpec spec = (DefaultLimitSpec) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
+        LimitSpec.class
     );
 
     Assert.assertEquals(
@@ -90,9 +90,9 @@ public class DefaultLimitSpecTest
            + "  \"columns\":[{\"dimension\":\"d\",\"direction\":\"DESCENDING\", \"dimensionOrder\":\"numeric\"}],\n"
            + "  \"limit\":10\n"
            + "}";
-    spec = mapper.readValue(
-        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
-        DefaultLimitSpec.class
+    spec = (DefaultLimitSpec) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
+        LimitSpec.class
     );
     Assert.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.DESCENDING,
@@ -106,9 +106,9 @@ public class DefaultLimitSpecTest
            + "  \"limit\":10\n"
            + "}";
 
-    spec = mapper.readValue(
-        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
-        DefaultLimitSpec.class
+    spec = (DefaultLimitSpec) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
+        LimitSpec.class
     );
 
     Assert.assertEquals(
@@ -122,9 +122,9 @@ public class DefaultLimitSpecTest
            + "  \"columns\":[{\"dimension\":\"d\"}],\n"
            + "  \"limit\":10\n"
            + "}";
-    spec = mapper.readValue(
-        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
-        DefaultLimitSpec.class
+    spec = (DefaultLimitSpec) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
+        LimitSpec.class
     );
     Assert.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
@@ -137,9 +137,9 @@ public class DefaultLimitSpecTest
            + "  \"columns\":[\"d\"],\n"
            + "  \"limit\":10\n"
            + "}";
-    spec = mapper.readValue(
-        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
-        DefaultLimitSpec.class
+    spec = (DefaultLimitSpec) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
+        LimitSpec.class
     );
     Assert.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
