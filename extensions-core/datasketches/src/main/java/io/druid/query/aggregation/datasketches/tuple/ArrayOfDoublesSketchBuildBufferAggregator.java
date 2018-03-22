@@ -38,7 +38,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 /**
  * This aggregator builds sketches from raw data.
  * The input is in the form of a key and array of double values.
- * The output is {@link ArrayOfDoublesSketch}.
+ * The output is {@link com.yahoo.sketches.tuple.ArrayOfDoublesSketch}.
  */
 public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregator
 {
