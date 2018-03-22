@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.tests.indexer;
 
 import io.druid.testing.guice.DruidTestModuleFactory;
@@ -24,13 +23,11 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITIndexerTest extends AbstractITBatchIndexTest
+public class ITParallelIndexSinglePhaseTest extends AbstractITBatchIndexTest
 {
-  private static String INDEX_TASK = "/indexer/wikipedia_index_task.json";
-  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static String INDEX_DATASOURCE = "wikipedia_index_test";
-  private static String REINDEX_TASK = "/indexer/wikipedia_reindex_task.json";
-  private static String REINDEX_DATASOURCE = "wikipedia_reindex_test";
+  private static String INDEX_TASK = "/indexer/wikipedia_parallel_single_phase_index_task.json";
+  private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_single_phase_index_queries.json";
+  private static String INDEX_DATASOURCE = "wikipedia_parallel_single_phase_index_test";
 
   @Test
   public void testIndexData() throws Exception
@@ -41,15 +38,9 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_TASK,
           INDEX_QUERIES_RESOURCE
       );
-      doReindexTest(
-          REINDEX_DATASOURCE,
-          REINDEX_TASK,
-          INDEX_QUERIES_RESOURCE
-      );
     }
     finally {
       unloadAndKillData(INDEX_DATASOURCE);
-      unloadAndKillData(REINDEX_DATASOURCE);
     }
   }
 }

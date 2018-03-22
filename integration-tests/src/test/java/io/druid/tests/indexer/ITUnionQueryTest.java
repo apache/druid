@@ -47,7 +47,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(ITUnionQueryTest.class);
   private static final String UNION_TASK_RESOURCE = "/indexer/wikipedia_union_index_task.json";
   private static final String EVENT_RECEIVER_SERVICE_PREFIX = "eventReceiverServiceName";
-  private static final String UNION_DATA_FILE = "/indexer/wikipedia_index_data.json";
+  private static final String UNION_DATA_FILE = "/data/batch_index/wikipedia_index_data1.json";
   private static final String UNION_QUERIES_RESOURCE = "/indexer/union_queries.json";
   private static final String UNION_DATASOURCE = "wikipedia_index_test";
 
