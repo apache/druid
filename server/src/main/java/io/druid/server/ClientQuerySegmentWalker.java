@@ -91,6 +91,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> QueryRunner<T> makeRunner(Query<T> query, QueryRunner<T> baseClientRunner)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+
+    // This does not adhere to the fluent workflow. See https://github.com/druid-io/druid/issues/5517
     return new ResultLevelCachingQueryRunner<>(makeRunner(query, baseClientRunner, toolChest),
                                                toolChest,
                                                query,
