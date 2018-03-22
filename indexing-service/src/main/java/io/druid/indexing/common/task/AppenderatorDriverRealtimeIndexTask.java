@@ -38,6 +38,7 @@ import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
@@ -185,7 +186,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(final TaskToolbox toolbox) throws Exception
   {
     runThread = Thread.currentThread();
 
@@ -326,7 +327,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     }
 
     log.info("Job done!");
-    return TaskStatus.success(getId());
+    return new TaskStatusWithReports(TaskStatus.success(getId()), null);
   }
 
   @Override

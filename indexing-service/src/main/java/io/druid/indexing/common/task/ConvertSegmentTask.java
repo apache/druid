@@ -28,6 +28,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
@@ -241,7 +242,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
   {
     final Iterable<DataSegment> segmentsToUpdate;
     if (segment == null) {
@@ -285,10 +286,10 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     for (final Task subTask : generateSubTasks(getGroupId(), segmentsToUpdate, indexSpec, force, validate, getContext())) {
       final TaskStatus status = subTask.run(toolbox);
       if (!status.isSuccess()) {
-        return TaskStatus.fromCode(getId(), status.getStatusCode());
+        return new TaskStatusWithReports(TaskStatus.fromCode(getId(), status.getStatusCode()), null);
       }
     }
-    return success();
+    return new TaskStatusWithReports(success(), null);
   }
 
   protected Iterable<Task> generateSubTasks(
@@ -398,7 +399,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
     {
       log.info("Subs are good!  Italian BMT and Meatball are probably my favorite.");
       try {
@@ -408,7 +409,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         log.error(e, "Conversion failed.");
         throw e;
       }
-      return success();
+      return new TaskStatusWithReports(success(), null);
     }
 
     private void convertSegment(TaskToolbox toolbox) throws SegmentLoadingException, IOException

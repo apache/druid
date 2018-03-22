@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockListAction;
@@ -61,7 +62,7 @@ public class RealtimeishTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
   {
     final Interval interval1 = Intervals.of("2010-01-01T00/PT1H");
     final Interval interval2 = Intervals.of("2010-01-01T01/PT1H");
@@ -129,6 +130,6 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("locks4", ImmutableList.<TaskLock>of(), locks4);
 
     // Exit
-    return TaskStatus.success(getId());
+    return new TaskStatusWithReports(TaskStatus.success(getId()), null);
   }
 }

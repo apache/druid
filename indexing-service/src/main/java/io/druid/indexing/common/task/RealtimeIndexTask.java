@@ -36,6 +36,7 @@ import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
@@ -198,7 +199,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(final TaskToolbox toolbox) throws Exception
   {
     runThread = Thread.currentThread();
 
@@ -478,7 +479,7 @@ public class RealtimeIndexTask extends AbstractTask
     }
 
     log.info("Job done!");
-    return TaskStatus.success(getId());
+    return new TaskStatusWithReports(TaskStatus.success(getId()), null);
   }
 
   @Override

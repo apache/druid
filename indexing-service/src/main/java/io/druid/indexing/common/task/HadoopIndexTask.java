@@ -38,6 +38,7 @@ import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
@@ -170,7 +171,7 @@ public class HadoopIndexTask extends HadoopTask
 
   @SuppressWarnings("unchecked")
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
   {
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
@@ -229,7 +230,7 @@ public class HadoopIndexTask extends HadoopTask
             specVersion,
             version
         );
-        return TaskStatus.failure(getId());
+        return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
       }
     }
 
@@ -253,9 +254,9 @@ public class HadoopIndexTask extends HadoopTask
       );
 
       toolbox.publishSegments(publishedSegments);
-      return TaskStatus.success(getId());
+      return new TaskStatusWithReports(TaskStatus.success(getId()), null);
     } else {
-      return TaskStatus.failure(getId());
+      return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
     }
   }
 

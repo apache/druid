@@ -68,9 +68,9 @@ public class TestTasks
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatusWithReports run(TaskToolbox toolbox)
     {
-      return TaskStatus.success(getId());
+      return new TaskStatusWithReports(TaskStatus.success(getId()), null);
     }
   }
 
@@ -96,13 +96,13 @@ public class TestTasks
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
     {
       while (!Thread.currentThread().isInterrupted()) {
         Thread.sleep(1000);
       }
 
-      return TaskStatus.failure(getId());
+      return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
     }
   }
 }

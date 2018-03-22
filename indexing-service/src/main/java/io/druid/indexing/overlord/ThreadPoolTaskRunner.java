@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -262,7 +263,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       }
     }
     final ListenableFuture<TaskStatus> statusFuture = exec.get(taskPriority)
-                                                          .submit(new ThreadPoolTaskRunnerCallable(
+                                                                     .submit(new ThreadPoolTaskRunnerCallable(
                                                               task,
                                                               location,
                                                               toolbox
@@ -439,11 +440,11 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     }
 
     @Override
-    public TaskStatus call()
+    public TaskStatusWithReports call()
     {
       final long startTime = System.currentTimeMillis();
 
-      TaskStatus status;
+      TaskStatusWithReports statusAndReports;
 
       try {
         log.info("Running task: %s", task.getId());
@@ -453,7 +454,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
             location
         );
         TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
-        status = task.run(toolbox);
+        statusAndReports = task.run(toolbox);
       }
       catch (InterruptedException e) {
         // Don't reset the interrupt flag of the thread, as we do want to continue to the end of this callable.
@@ -464,21 +465,24 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
           // Not stopping, this is definitely unexpected.
           log.warn(e, "Interrupted while running task[%s]", task);
         }
-
-        status = TaskStatus.failure(task.getId());
+        statusAndReports = new TaskStatusWithReports(TaskStatus.failure(task.getId()), null);
       }
       catch (Exception e) {
         log.error(e, "Exception while running task[%s]", task);
-        status = TaskStatus.failure(task.getId());
+        statusAndReports = new TaskStatusWithReports(TaskStatus.failure(task.getId()), null);
       }
       catch (Throwable t) {
         log.error(t, "Uncaught Throwable while running task[%s]", task);
         throw t;
       }
 
-      status = status.withDuration(System.currentTimeMillis() - startTime);
-      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
-      return status;
+      TaskStatus statusWithDuration = statusAndReports.getTaskStatus()
+                                                      .withDuration(System.currentTimeMillis() - startTime);
+      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), statusWithDuration);
+      return new TaskStatusWithReports(
+          statusWithDuration,
+          statusAndReports.getTaskReports()
+      );
     }
   }
 }

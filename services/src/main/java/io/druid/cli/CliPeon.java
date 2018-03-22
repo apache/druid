@@ -185,6 +185,7 @@ public class CliPeon extends GuiceRunnable
                 new ExecutorLifecycleConfig()
                     .setTaskFile(new File(taskAndStatusFile.get(0)))
                     .setStatusFile(new File(taskAndStatusFile.get(1)))
+                    .setReportsFile(new File(taskAndStatusFile.get(2)))
             );
 
             binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);

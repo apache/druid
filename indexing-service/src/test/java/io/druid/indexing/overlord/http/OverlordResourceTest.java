@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
@@ -439,7 +440,7 @@ public class OverlordResourceTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public TaskStatusWithReports run(TaskToolbox toolbox)
       {
         return null;
       }

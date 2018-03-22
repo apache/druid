@@ -43,6 +43,7 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
@@ -216,7 +217,7 @@ public class IndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(final TaskToolbox toolbox) throws Exception
   {
     final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                        .getGranularitySpec()
@@ -262,9 +263,9 @@ public class IndexTask extends AbstractTask
     }
 
     if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, versions, firehoseFactory, firehoseTempDir)) {
-      return TaskStatus.success(getId());
+      return new TaskStatusWithReports(TaskStatus.success(getId()), null);
     } else {
-      return TaskStatus.failure(getId());
+      return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
     }
   }
 

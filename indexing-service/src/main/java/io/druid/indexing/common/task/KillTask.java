@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
 import io.druid.indexing.common.actions.SegmentNukeAction;
@@ -66,7 +67,7 @@ public class KillTask extends AbstractFixedIntervalTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
   {
     // Confirm we have a lock (will throw if there isn't exactly one element)
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox.getTaskActionClient()));
@@ -104,6 +105,6 @@ public class KillTask extends AbstractFixedIntervalTask
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(ImmutableSet.of(segment)));
     }
 
-    return TaskStatus.success(getId());
+    return new TaskStatusWithReports(TaskStatus.success(getId()), null);
   }
 }

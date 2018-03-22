@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
@@ -136,7 +137,7 @@ public class NoopTask extends AbstractTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
   {
     if (firehoseFactory != null) {
       log.info("Connecting firehose");
@@ -147,7 +148,7 @@ public class NoopTask extends AbstractTask
       log.info("Sleeping for %,d millis.", runTime);
       Thread.sleep(runTime);
       log.info("Woke up!");
-      return TaskStatus.success(getId());
+      return new TaskStatusWithReports(TaskStatus.success(getId()), null);
     }
   }
 

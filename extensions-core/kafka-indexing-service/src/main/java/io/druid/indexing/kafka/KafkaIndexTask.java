@@ -51,7 +51,7 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
@@ -412,7 +412,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatusWithReports run(final TaskToolbox toolbox) throws Exception
   {
     // for backwards compatibility, should be remove from versions greater than 0.12.x
     if (useLegacy) {
@@ -904,10 +904,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
-    return success();
+    return new TaskStatusWithReports(success(), null);
   }
 
-  private TaskStatus runLegacy(final TaskToolbox toolbox) throws Exception
+  private TaskStatusWithReports runLegacy(final TaskToolbox toolbox) throws Exception
   {
     log.info("Starting up!");
     startTime = DateTimes.nowUtc();
@@ -1272,7 +1272,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
-    return success();
+    return new TaskStatusWithReports(success(), null);
   }
 
   private void checkAndMaybeThrowException()
