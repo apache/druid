@@ -25,6 +25,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.emitter.core.Event;
 import org.joda.time.DateTime;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -106,6 +107,16 @@ public class AlertEvent implements Event
     return "alerts";
   }
 
+  public String getService()
+  {
+    return serviceDimensions.get("service");
+  }
+
+  public String getHost()
+  {
+    return serviceDimensions.get("host");
+  }
+
   public Severity getSeverity()
   {
     return severity;
@@ -114,6 +125,11 @@ public class AlertEvent implements Event
   public String getDescription()
   {
     return description;
+  }
+
+  public Map<String, Object> getDataMap()
+  {
+    return Collections.unmodifiableMap(dataMap);
   }
 
   @Override
