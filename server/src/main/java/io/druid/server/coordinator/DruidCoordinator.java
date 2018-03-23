@@ -97,7 +97,8 @@ public class DruidCoordinator
 {
   public static Comparator<DataSegment> SEGMENT_COMPARATOR = Ordering.from(Comparators.intervalsByEndThenStart())
                                                                      .onResultOf(
-                                                                         (Function<DataSegment, Interval>) segment -> segment.getInterval())
+                                                                         (Function<DataSegment, Interval>) segment -> segment
+                                                                             .getInterval())
                                                                      .compound(Ordering.<DataSegment>natural())
                                                                      .reverse();
 
