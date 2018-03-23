@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -26,10 +27,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.indexer.TaskReport;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.appenderator.CountingActionBasedSegmentAllocator;
@@ -86,29 +87,33 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * A worker task of {@link ParallelIndexSinglePhaseSupervisorTask}. Similar to {@link IndexTask}, but this class returns
- * a {@link TaskReport} to {@link ParallelIndexSinglePhaseSupervisorTask} including the information of pushed segments
- * once it finishes its work.
+ * A worker task of {@link SinglePhaseParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
+ * generates and pushes segments, and reports them to the {@link SinglePhaseParallelIndexSupervisorTask} instead of
+ * publishing on its own.
  */
-public class ParallelIndexSinglePhaseSubTask extends AbstractTask
+public class SinglePhaseParallelIndexSubTask extends AbstractTask
 {
-  private static final Logger log = new Logger(ParallelIndexSinglePhaseSubTask.class);
-  private static final String TYPE = "parallelIndexSinglePhaseSubIndex";
+  private static final Logger log = new Logger(SinglePhaseParallelIndexSubTask.class);
+  private static final String TYPE = "index_single_phase_sub";
 
   private final int numAttempts;
-  private final IndexTask.IndexIngestionSpec ingestionSchema;
+  private final SinglePhaseParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
+  private final IndexingServiceClient indexingServiceClient;
+  private final IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient> taskClientFactory;
 
   @JsonCreator
-  public ParallelIndexSinglePhaseSubTask(
-      // id shouldn't be null except when this task is created by ParallelIndexSinglePhaseSupervisorTask
+  public SinglePhaseParallelIndexSubTask(
+      // id shouldn't be null except when this task is created by SinglePhaseParallelIndexSupervisorTask
       @JsonProperty("id") @Nullable final String id,
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
-      @JsonProperty("spec") final IndexTask.IndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context
+      @JsonProperty("spec") final SinglePhaseParallelIndexIngestionSpec ingestionSchema,
+      @JsonProperty("context") final Map<String, Object> context,
+      @JacksonInject IndexingServiceClient indexingServiceClient,
+      @JacksonInject IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient> taskClientFactory
   )
   {
     super(
@@ -119,13 +124,15 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
         context
     );
 
-    this.numAttempts = numAttempts;
-    this.ingestionSchema = ingestionSchema;
-    this.supervisorTaskId = supervisorTaskId;
-
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
       throw new UnsupportedOperationException("Guaranteed rollup is not supported");
     }
+
+    this.numAttempts = numAttempts;
+    this.ingestionSchema = ingestionSchema;
+    this.supervisorTaskId = supervisorTaskId;
+    this.indexingServiceClient = indexingServiceClient;
+    this.taskClientFactory = taskClientFactory;
   }
 
   @Override
@@ -169,7 +176,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
   }
 
   @JsonProperty("spec")
-  public IndexTask.IndexIngestionSpec getIngestionSchema()
+  public SinglePhaseParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
   }
@@ -234,8 +241,16 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
         firehoseFactory,
         firehoseTempDir
     );
+    final SinglePhaseParallelIndexTaskClient taskClient = taskClientFactory.build(
+        new ClientBasedTaskInfoProvider(indexingServiceClient),
+        getId(),
+        1, // always use a single http thread
+        ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
+        ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
+    );
+    taskClient.report(supervisorTaskId, pushedSegments);
 
-    return TaskStatus.success(getId(), new TaskReport(getId(), pushedSegments));
+    return TaskStatus.success(getId());
   }
 
   private Map<Interval, TaskLock> tryAcquireExclusiveSurrogateLocks(
@@ -314,7 +329,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
   }
 
   private static IndexTask.ShardSpecs createShardSpecsFromInput(
-      IndexTask.IndexIngestionSpec ingestionSchema,
+      SinglePhaseParallelIndexIngestionSpec ingestionSchema,
       FirehoseFactory firehoseFactory,
       File firehoseTempDir,
       GranularitySpec granularitySpec,
@@ -341,7 +356,7 @@ public class ParallelIndexSinglePhaseSubTask extends AbstractTask
   }
 
   private static List<Interval> collectIntervalsAndShardSpecs(
-      IndexTask.IndexIngestionSpec ingestionSchema,
+      SinglePhaseParallelIndexIngestionSpec ingestionSchema,
       FirehoseFactory firehoseFactory,
       File firehoseTempDir,
       GranularitySpec granularitySpec,

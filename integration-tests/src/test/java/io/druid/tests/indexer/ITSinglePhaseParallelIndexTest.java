@@ -23,7 +23,7 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITParallelIndexSinglePhaseTest extends AbstractITBatchIndexTest
+public class ITSinglePhaseParallelIndexTest extends AbstractITBatchIndexTest
 {
   private static String INDEX_TASK = "/indexer/wikipedia_parallel_single_phase_index_task.json";
   private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_single_phase_index_queries.json";

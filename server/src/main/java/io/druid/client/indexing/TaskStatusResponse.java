@@ -21,6 +21,7 @@ package io.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.indexer.TaskStatusPlus;
 
 import java.util.Objects;
 
@@ -30,12 +31,12 @@ import java.util.Objects;
 public class TaskStatusResponse
 {
   private final String task; // Task ID, named "task" in the JSONification of this class.
-  private final TaskStatus status;
+  private final TaskStatusPlus status;
 
   @JsonCreator
   public TaskStatusResponse(
       @JsonProperty("task") final String task,
-      @JsonProperty("status") final TaskStatus status
+      @JsonProperty("status") final TaskStatusPlus status
   )
   {
     this.task = task;
@@ -49,7 +50,7 @@ public class TaskStatusResponse
   }
 
   @JsonProperty
-  public TaskStatus getStatus()
+  public TaskStatusPlus getStatus()
   {
     return status;
   }

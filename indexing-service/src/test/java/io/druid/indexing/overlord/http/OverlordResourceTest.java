@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -39,8 +40,8 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.java.util.common.DateTimes;
-import io.druid.segment.TestHelper;
 import io.druid.java.util.common.Pair;
+import io.druid.segment.TestHelper;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthConfig;
@@ -345,11 +346,26 @@ public class OverlordResourceTest
   public void testGetTaskStatus() throws Exception
   {
     expectAuthorizationTokenCheck();
+    EasyMock.expect(taskStorageQueryAdapter.getTask("mytask"))
+            .andReturn(Optional.of(NoopTask.create("mytask", 0)));
+
     EasyMock.expect(taskStorageQueryAdapter.getStatus("mytask"))
-            .andReturn(Optional.of(TaskStatus.success("mytask")));
+            .andReturn(Optional.of(TaskStatus.running("mytask")));
+
+    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource("mytask"))
+            .andReturn(Pair.of(DateTimes.of("2018-01-01"), "mydatasource"));
+
+    EasyMock.expect(taskStorageQueryAdapter.getTask("othertask"))
+            .andReturn(Optional.absent());
 
     EasyMock.expect(taskStorageQueryAdapter.getStatus("othertask"))
             .andReturn(Optional.absent());
+
+    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource("othertask"))
+            .andReturn(null);
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks())
+        .andReturn(ImmutableList.of());
 
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
 
@@ -358,7 +374,22 @@ public class OverlordResourceTest
         TestHelper.makeJsonMapper().writeValueAsString(response1.getEntity()),
         TaskStatusResponse.class
     );
-    Assert.assertEquals(new TaskStatusResponse("mytask", TaskStatus.success("mytask")), taskStatusResponse1);
+    Assert.assertEquals(
+        new TaskStatusResponse(
+            "mytask",
+            new TaskStatusPlus(
+                "mytask",
+                "noop",
+                DateTimes.of("2018-01-01"),
+                DateTimes.EPOCH,
+                TaskState.RUNNING,
+                -1L,
+                TaskLocation.unknown(),
+                "mydatasource"
+            )
+        ),
+        taskStatusResponse1
+    );
 
     final Response response2 = overlordResource.getTaskStatus("othertask");
     final TaskStatusResponse taskStatusResponse2 = TestHelper.makeJsonMapper().readValue(

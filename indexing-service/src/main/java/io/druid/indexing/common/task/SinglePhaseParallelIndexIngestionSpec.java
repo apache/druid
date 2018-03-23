@@ -24,25 +24,25 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 
-public class ParallelIndexSinglePhaseIngestionSpec
-    extends IngestionSpec<ParallelIndexSinglePhaseIOConfig, ParallelIndexSinglePhaseTuningConfig>
+public class SinglePhaseParallelIndexIngestionSpec
+    extends IngestionSpec<SinglePhaseParallelIndexIOConfig, SinglePhaseParallelIndexTuningConfig>
 {
   private final DataSchema dataSchema;
-  private final ParallelIndexSinglePhaseIOConfig ioConfig;
-  private final ParallelIndexSinglePhaseTuningConfig tuningConfig;
+  private final SinglePhaseParallelIndexIOConfig ioConfig;
+  private final SinglePhaseParallelIndexTuningConfig tuningConfig;
 
   @JsonCreator
-  public ParallelIndexSinglePhaseIngestionSpec(
+  public SinglePhaseParallelIndexIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("ioConfig") ParallelIndexSinglePhaseIOConfig ioConfig,
-      @JsonProperty("tuningConfig") ParallelIndexSinglePhaseTuningConfig tuningConfig
+      @JsonProperty("ioConfig") SinglePhaseParallelIndexIOConfig ioConfig,
+      @JsonProperty("tuningConfig") SinglePhaseParallelIndexTuningConfig tuningConfig
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
 
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
-    this.tuningConfig = tuningConfig == null ? ParallelIndexSinglePhaseTuningConfig.defaultConfig() : tuningConfig;
+    this.tuningConfig = tuningConfig == null ? SinglePhaseParallelIndexTuningConfig.defaultConfig() : tuningConfig;
   }
 
   @Override
@@ -54,14 +54,14 @@ public class ParallelIndexSinglePhaseIngestionSpec
 
   @Override
   @JsonProperty("ioConfig")
-  public ParallelIndexSinglePhaseIOConfig getIOConfig()
+  public SinglePhaseParallelIndexIOConfig getIOConfig()
   {
     return ioConfig;
   }
 
   @Override
   @JsonProperty("tuningConfig")
-  public ParallelIndexSinglePhaseTuningConfig getTuningConfig()
+  public SinglePhaseParallelIndexTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }

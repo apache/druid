@@ -28,38 +28,90 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-public interface IndexingServiceClient
+public class NoopIndexingServiceClient implements IndexingServiceClient
 {
-  void killSegments(String dataSource, Interval interval);
+  @Override
+  public void killSegments(String dataSource, Interval interval)
+  {
 
-  int killPendingSegments(String dataSource, DateTime end);
+  }
 
-  void upgradeSegment(DataSegment dataSegment);
+  @Override
+  public int killPendingSegments(String dataSource, DateTime end)
+  {
+    return 0;
+  }
 
-  void mergeSegments(List<DataSegment> segments);
+  @Override
+  public void upgradeSegment(DataSegment dataSegment)
+  {
 
-  String compactSegments(
+  }
+
+  @Override
+  public void mergeSegments(List<DataSegment> segments)
+  {
+    
+  }
+
+  @Override
+  public String compactSegments(
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
-  );
+  )
+  {
+    return null;
+  }
 
-  int getTotalWorkerCapacity();
+  @Override
+  public int getTotalWorkerCapacity()
+  {
+    return 0;
+  }
 
-  String runTask(Object taskObject);
+  @Override
+  public String runTask(Object taskObject)
+  {
+    return null;
+  }
 
-  String killTask(String taskId);
+  @Override
+  public String killTask(String taskId)
+  {
+    return null;
+  }
 
-  List<TaskStatusPlus> getRunningTasks();
+  @Override
+  public List<TaskStatusPlus> getRunningTasks()
+  {
+    return null;
+  }
 
-  List<TaskStatusPlus> getPendingTasks();
+  @Override
+  public List<TaskStatusPlus> getPendingTasks()
+  {
+    return null;
+  }
 
-  List<TaskStatusPlus> getWaitingTasks();
+  @Override
+  public List<TaskStatusPlus> getWaitingTasks()
+  {
+    return null;
+  }
 
   @Nullable
-  TaskStatusResponse getTaskStatus(String taskId);
+  @Override
+  public TaskStatusResponse getTaskStatus(String taskId)
+  {
+    return null;
+  }
 
   @Nullable
-  TaskStatusPlus getLastCompleteTask();
+  @Override
+  public TaskStatusPlus getLastCompleteTask()
+  {
+    return null;
+  }
 }

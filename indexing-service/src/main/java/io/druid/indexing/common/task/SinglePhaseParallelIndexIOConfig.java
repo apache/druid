@@ -17,40 +17,26 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import io.druid.data.input.FirehoseFactory;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+
+import javax.annotation.Nullable;
 
 /**
- * TaskReport can be optionally included in io.druid.indexing.common.TaskStatus to report some ingestion results to
- * Supervisors or supervisorTasks. See ParallelIndexSinglePhaseSupervisorTask and ParallelIndexSinglePhaseSubTask
- * as an example.
+ * Same with {@link IndexIOConfig} except its JSON type name.
  */
-public class TaskReport
+@JsonTypeName("index_single_phase_parallel")
+public class SinglePhaseParallelIndexIOConfig extends IndexIOConfig
 {
-  private final String taskId;
-  private final Object payload; // can't use generic to not change TaskStatus
-
-  @JsonCreator
-  public TaskReport(
-      @JsonProperty("taskId") String taskId,
-      @JsonProperty("payload") Object payload
+  public SinglePhaseParallelIndexIOConfig(
+      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
+      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
   )
   {
-    this.taskId = taskId;
-    this.payload = payload;
-  }
-
-  @JsonProperty
-  public String getTaskId()
-  {
-    return taskId;
-  }
-
-  @JsonProperty
-  public Object getPayload()
-  {
-    return payload;
+    super(firehoseFactory, appendToExisting);
   }
 }

@@ -1,5 +1,5 @@
 {
-    "type": "parallelIndexSinglePhase",
+    "type": "index_single_phase_parallel",
     "spec": {
         "dataSchema": {
             "dataSource": "wikipedia_parallel_single_phase_index_test",
@@ -55,7 +55,7 @@
             }
         },
         "ioConfig": {
-            "type": "parallelIndexSinglePhase",
+            "type": "index_single_phase_parallel",
             "firehose": {
                 "type": "local",
                 "baseDir": "/resources/data/batch_index",

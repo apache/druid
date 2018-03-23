@@ -28,6 +28,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
@@ -36,6 +37,7 @@ import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.coordinator.CoordinatorClient;
+import io.druid.client.indexing.HttpIndexingServiceClient;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.guice.Binders;
 import io.druid.guice.CacheModule;
@@ -62,6 +64,9 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClient;
+import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -169,7 +174,11 @@ public class CliPeon extends GuiceRunnable
             JsonConfigProvider.bind(binder, "druid.peon.taskActionClient.retry", RetryPolicyConfig.class);
 
             configureTaskActionClient(binder);
-            binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
+            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
+
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>>(){})
+                  .to(SinglePhaseParallelIndexTaskClientFactory.class)
+                  .in(LazySingleton.class);
 
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 

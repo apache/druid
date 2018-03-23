@@ -237,16 +237,63 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    final TaskStatusResponse response = new TaskStatusResponse(
-        taskid,
-        taskStorageQueryAdapter.getStatus(taskid).orNull()
-    );
+    if (taskMaster.getTaskRunner().isPresent()) {
+      final TaskRunner taskRunner = taskMaster.getTaskRunner().get();
 
-    final Response.Status status = response.getStatus() == null
-                                   ? Response.Status.NOT_FOUND
-                                   : Response.Status.OK;
+      final Task task = taskStorageQueryAdapter.getTask(taskid).orNull();
+      final TaskStatus taskStatus = taskStorageQueryAdapter.getStatus(taskid).orNull();
+      final Pair<DateTime, String> createdDateAndDataSource = taskStorageQueryAdapter.getCreatedDateAndDataSource(
+          taskid
+      );
+      final TaskStatusResponse response;
+      if (task != null && taskStatus != null && createdDateAndDataSource != null) {
+        final TaskRunnerWorkItem workItem = taskRunner
+            .getKnownTasks()
+            .stream()
+            .filter(item -> item.getTaskId().equals(taskid))
+            .findAny()
+            .orElse(null);
+        if (workItem != null) {
+          response = new TaskStatusResponse(
+              taskid,
+              new TaskStatusPlus(
+                  taskid,
+                  task.getType(),
+                  createdDateAndDataSource.lhs,
+                  workItem.getQueueInsertionTime(),
+                  taskStatus.getStatusCode(),
+                  taskStatus.getDuration(),
+                  workItem.getLocation(),
+                  createdDateAndDataSource.rhs
+              )
+          );
+        } else {
+          response = new TaskStatusResponse(
+              taskid,
+              new TaskStatusPlus(
+                  taskid,
+                  task.getType(),
+                  createdDateAndDataSource.lhs,
+                  DateTimes.EPOCH,
+                  taskStatus.getStatusCode(),
+                  taskStatus.getDuration(),
+                  TaskLocation.unknown(),
+                  createdDateAndDataSource.rhs
+              )
+          );
+        }
+      } else {
+        response = new TaskStatusResponse(taskid, null);
+      }
 
-    return Response.status(status).entity(response).build();
+      final Response.Status status = response.getStatus() == null
+                                     ? Response.Status.NOT_FOUND
+                                     : Response.Status.OK;
+
+      return Response.status(status).entity(response).build();
+    } else {
+      return Response.status(Response.Status.NOT_FOUND).entity("No tasks are running").build();
+    }
   }
 
   @GET

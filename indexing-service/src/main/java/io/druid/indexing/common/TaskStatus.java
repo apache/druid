@@ -24,10 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import io.druid.indexer.TaskReport;
 import io.druid.indexer.TaskState;
-
-import javax.annotation.Nullable;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
@@ -39,45 +36,37 @@ public class TaskStatus
 {
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.RUNNING, null, -1);
+    return new TaskStatus(taskId, TaskState.RUNNING, -1);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, null, -1);
-  }
-
-  public static TaskStatus success(String taskId, TaskReport report)
-  {
-    return new TaskStatus(taskId, TaskState.SUCCESS, report, -1);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, null, -1);
+    return new TaskStatus(taskId, TaskState.FAILED, -1);
   }
 
   public static TaskStatus fromCode(String taskId, TaskState code)
   {
-    return new TaskStatus(taskId, code, null, -1);
+    return new TaskStatus(taskId, code, -1);
   }
 
   private final String id;
   private final TaskState status;
-  private final TaskReport report;
   private final long duration;
 
   @JsonCreator
   protected TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
-      @JsonProperty("report") @Nullable TaskReport report,
       @JsonProperty("duration") long duration
   )
   {
     this.id = id;
     this.status = status;
-    this.report = report;
     this.duration = duration;
 
     // Check class invariants.
@@ -95,12 +84,6 @@ public class TaskStatus
   public TaskState getStatusCode()
   {
     return status;
-  }
-
-  @JsonProperty("report")
-  public TaskReport getReport()
-  {
-    return report;
   }
 
   @JsonProperty("duration")
@@ -158,7 +141,7 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, report, _duration);
+    return new TaskStatus(id, status, _duration);
   }
 
   @Override
@@ -173,14 +156,13 @@ public class TaskStatus
     TaskStatus that = (TaskStatus) o;
     return duration == that.duration &&
            java.util.Objects.equals(id, that.id) &&
-           status == that.status &&
-           java.util.Objects.equals(report, that.report);
+           status == that.status;
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(id, status, report, duration);
+    return java.util.Objects.hash(id, status, duration);
   }
 
   @Override
@@ -189,7 +171,6 @@ public class TaskStatus
     return Objects.toStringHelper(this)
                   .add("id", id)
                   .add("status", status)
-                  .add("report", report)
                   .add("duration", duration)
                   .toString();
   }

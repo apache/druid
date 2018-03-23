@@ -19,24 +19,11 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.data.input.FirehoseFactory;
-import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import io.druid.indexing.common.IndexTaskClient;
+import io.druid.indexing.common.TaskInfoProvider;
+import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
-
-/**
- * Same with {@link IndexIOConfig} except its JSON type name.
- */
-@JsonTypeName("parallelIndexSinglePhase")
-public class ParallelIndexSinglePhaseIOConfig extends IndexIOConfig
+public interface IndexTaskClientFactory<T extends IndexTaskClient>
 {
-  public ParallelIndexSinglePhaseIOConfig(
-      @JsonProperty("firehose") FirehoseFactory firehoseFactory,
-      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
-  )
-  {
-    super(firehoseFactory, appendToExisting);
-  }
+  T build(TaskInfoProvider taskInfoProvider, String callerId, int numThreads, Duration httpTimeout, long numRetries);
 }

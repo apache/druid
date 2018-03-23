@@ -25,24 +25,34 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.joda.time.Duration;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-@JsonTypeName("parallelIndexSinglePhase")
-public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
+@JsonTypeName("index_single_phase_parallel")
+public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
 {
   private static final int DEFAULT_MAX_NUM_BATCH_TASKS = Integer.MAX_VALUE; // unlimited
   private static final int DEFAULT_MAX_RETRY = 3;
   private static final long DEFAULT_TASK_STATUS_CHECK_PERIOD_MS = 1000;
 
+  private static final Duration DEFAULT_CHAT_HANDLER_TIMEOUT = new Period("PT10S").toStandardDuration();
+  private static final int DEFAULT_CHAT_HANDLER_NUM_RETRIES = 5;
+
   private final int maxNumBatchTasks;
   private final int maxRetry;
   private final long taskStatusCheckPeriodMs;
 
-  public static ParallelIndexSinglePhaseTuningConfig defaultConfig()
+  private final Duration chatHandlerTimeout;
+  private final int chatHandlerNumRetries;
+
+  public static SinglePhaseParallelIndexTuningConfig defaultConfig()
   {
-    return new ParallelIndexSinglePhaseTuningConfig(
+    return new SinglePhaseParallelIndexTuningConfig(
+        null,
+        null,
         null,
         null,
         null,
@@ -60,7 +70,7 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
   }
 
   @JsonCreator
-  public ParallelIndexSinglePhaseTuningConfig(
+  public SinglePhaseParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
@@ -73,7 +83,9 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("maxNumBatchTasks") @Nullable Integer maxNumBatchTasks,
       @JsonProperty("maxRetry") @Nullable Integer maxRetry,
-      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs
+      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs,
+      @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
+      @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries
   )
   {
     super(
@@ -86,7 +98,7 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
         maxPendingPersists,
         null,
         forceExtendableShardSpecs,
-        false, // ParallelIndexSinglePhaseSupervisorTask can't be used for guaranteed rollup
+        false, // SinglePhaseParallelIndexSupervisorTask can't be used for guaranteed rollup
         reportParseExceptions,
         null,
         pushTimeout,
@@ -98,6 +110,9 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
     this.taskStatusCheckPeriodMs = taskStatusCheckPeriodMs == null ?
                                    DEFAULT_TASK_STATUS_CHECK_PERIOD_MS :
                                    taskStatusCheckPeriodMs;
+
+    this.chatHandlerTimeout = DEFAULT_CHAT_HANDLER_TIMEOUT;
+    this.chatHandlerNumRetries = DEFAULT_CHAT_HANDLER_NUM_RETRIES;
   }
 
   @JsonProperty
@@ -118,6 +133,18 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
     return taskStatusCheckPeriodMs;
   }
 
+  @JsonProperty
+  public Duration getChatHandlerTimeout()
+  {
+    return chatHandlerTimeout;
+  }
+
+  @JsonProperty
+  public int getChatHandlerNumRetries()
+  {
+    return chatHandlerNumRetries;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -127,7 +154,7 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ParallelIndexSinglePhaseTuningConfig that = (ParallelIndexSinglePhaseTuningConfig) o;
+    SinglePhaseParallelIndexTuningConfig that = (SinglePhaseParallelIndexTuningConfig) o;
     return getMaxRowsInMemory() == that.getMaxRowsInMemory() &&
            Objects.equals(getMaxTotalRows(), that.getMaxTotalRows()) &&
            getMaxPendingPersists() == that.getMaxPendingPersists() &&
@@ -141,7 +168,9 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
            Objects.equals(getSegmentWriteOutMediumFactory(), that.getSegmentWriteOutMediumFactory()) &&
            maxNumBatchTasks == that.maxNumBatchTasks &&
            maxRetry == that.maxRetry &&
-           taskStatusCheckPeriodMs == that.taskStatusCheckPeriodMs;
+           taskStatusCheckPeriodMs == that.taskStatusCheckPeriodMs &&
+           chatHandlerTimeout.equals(that.chatHandlerTimeout) &&
+           chatHandlerNumRetries == that.chatHandlerNumRetries;
   }
 
   @Override
@@ -161,7 +190,9 @@ public class ParallelIndexSinglePhaseTuningConfig extends IndexTuningConfig
         getSegmentWriteOutMediumFactory(),
         maxNumBatchTasks,
         maxRetry,
-        taskStatusCheckPeriodMs
+        taskStatusCheckPeriodMs,
+        chatHandlerTimeout,
+        chatHandlerNumRetries
     );
   }
 }

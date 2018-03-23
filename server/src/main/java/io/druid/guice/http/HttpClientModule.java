@@ -23,15 +23,15 @@ import com.google.common.collect.Sets;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.HttpClientConfig;
-import io.druid.java.util.http.client.HttpClientInit;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClientConfig;
+import io.druid.java.util.http.client.HttpClientInit;
 import io.druid.server.security.Escalator;
 
 import java.lang.annotation.Annotation;

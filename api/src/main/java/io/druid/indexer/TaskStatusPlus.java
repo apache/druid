@@ -108,6 +108,12 @@ public class TaskStatusPlus
     return location;
   }
 
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -146,11 +152,19 @@ public class TaskStatusPlus
   {
     return Objects.hash(id, type, createdTime, queueInsertionTime, state, duration, location);
   }
-  
-  @JsonProperty
-  public String getDataSource()
+
+  @Override
+  public String toString()
   {
-    return dataSource;
+    return "TaskStatusPlus{" +
+           "id=" + id +
+           ", type=" + type +
+           ", createdTime=" + createdTime +
+           ", queueInsertionTime=" + queueInsertionTime +
+           ", state=" + state +
+           ", duration=" + duration +
+           ", location=" + location +
+           ", dataSource=" + dataSource +
+           "}";
   }
-  
 }

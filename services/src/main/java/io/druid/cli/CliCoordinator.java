@@ -33,6 +33,7 @@ import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.HttpServerInventoryViewResource;
 import io.druid.client.coordinator.Coordinator;
+import io.druid.client.indexing.HttpIndexingServiceClient;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.ConditionalMultibind;
@@ -167,7 +168,7 @@ public class CliCoordinator extends ServerRunnable
                   .toProvider(AuditManagerProvider.class)
                   .in(ManageLifecycle.class);
 
-            binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
+            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
             binder.bind(CoordinatorServerView.class).in(LazySingleton.class);
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);

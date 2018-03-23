@@ -35,6 +35,7 @@ import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.indexing.IndexingService;
+import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.IndexingServiceFirehoseModule;
@@ -54,12 +55,13 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClient;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
-import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -77,6 +79,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelper;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleanerConfig;
+import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
@@ -181,7 +184,10 @@ public class CliOverlord extends ServerRunnable
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
-            binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+            binder.bind(IndexingServiceClient.class).toProvider(Providers.of(null));
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>>(){})
+                  .toProvider(Providers.of(null));
+            binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
 
             configureTaskStorage(binder);
             configureAutoscale(binder);

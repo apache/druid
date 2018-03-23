@@ -17,26 +17,27 @@
  * under the License.
  */
 
-package io.druid.indexing.kafka;
+package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.EscalatedGlobal;
-import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.Smile;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.task.IndexTaskClientFactory;
 import io.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-public class KafkaIndexTaskClientFactory implements IndexTaskClientFactory<KafkaIndexTaskClient>
+public class SinglePhaseParallelIndexTaskClientFactory
+    implements IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>
 {
-  private HttpClient httpClient;
-  private ObjectMapper mapper;
+  private final HttpClient httpClient;
+  private final ObjectMapper mapper;
 
   @Inject
-  public KafkaIndexTaskClientFactory(
+  public SinglePhaseParallelIndexTaskClientFactory(
       @EscalatedGlobal HttpClient httpClient,
-      @Json ObjectMapper mapper
+      @Smile ObjectMapper mapper
   )
   {
     this.httpClient = httpClient;
@@ -44,21 +45,21 @@ public class KafkaIndexTaskClientFactory implements IndexTaskClientFactory<Kafka
   }
 
   @Override
-  public KafkaIndexTaskClient build(
+  public SinglePhaseParallelIndexTaskClient build(
       TaskInfoProvider taskInfoProvider,
-      String dataSource,
+      String callerId,
       int numThreads,
       Duration httpTimeout,
       long numRetries
   )
   {
-    return new KafkaIndexTaskClient(
+    Preconditions.checkState(numThreads == 1, "expect numThreads to be 1");
+    return new SinglePhaseParallelIndexTaskClient(
         httpClient,
         mapper,
         taskInfoProvider,
-        dataSource,
-        numThreads,
         httpTimeout,
+        callerId,
         numRetries
     );
   }

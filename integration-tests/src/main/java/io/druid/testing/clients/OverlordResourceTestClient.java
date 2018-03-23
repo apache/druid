@@ -25,6 +25,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import io.druid.client.indexing.TaskStatusResponse;
 import io.druid.indexer.TaskState;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
@@ -125,12 +126,13 @@ public class OverlordResourceTestClient
       );
 
       LOG.info("Index status response" + response.getContent());
-      Map<String, Object> responseData = jsonMapper.readValue(
-          response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      TaskStatusResponse taskStatusResponse = jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<TaskStatusResponse>()
+          {
+          }
       );
-      //TODO: figure out a better way to parse the response...
-      String status = (String) ((Map) responseData.get("status")).get("status");
-      return TaskState.valueOf(status);
+      return taskStatusResponse.getStatus().getState();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

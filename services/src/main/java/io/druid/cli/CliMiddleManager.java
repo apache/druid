@@ -24,9 +24,11 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
+import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.WorkerNodeService;
 import io.druid.guice.IndexingServiceFirehoseModule;
@@ -39,6 +41,8 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
+import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClient;
 import io.druid.indexing.overlord.ForkingTaskRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.worker.Worker;
@@ -91,6 +95,9 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
             binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
 
+            binder.bind(IndexingServiceClient.class).toProvider(Providers.of(null));
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>>(){})
+                  .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
 
             binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);

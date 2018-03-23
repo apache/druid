@@ -24,9 +24,9 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.client.indexing.TaskStatus;
 import io.druid.client.indexing.TaskStatusResponse;
 import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
@@ -85,8 +85,8 @@ public class TaskMonitor<T extends Task>
               final MonitorEntry monitorEntry = entry.getValue();
               final TaskStatusResponse taskStatusResponse = indexingServiceClient.getTaskStatus(taskId);
               if (taskStatusResponse != null) {
-                final TaskStatus taskStatus = taskStatusResponse.getStatus();
-                switch (taskStatus.getStatusCode()) {
+                final TaskStatusPlus taskStatus = taskStatusResponse.getStatus();
+                switch (taskStatus.getState()) {
                   case SUCCESS:
                     numRunningTasks.decrementAndGet();
                     iterator.remove();
@@ -100,10 +100,9 @@ public class TaskMonitor<T extends Task>
                     log.warn("task[%s] failed!", taskId);
                     if (monitorEntry.numTries() < maxRetry) {
                       log.info(
-                          "We still have chnaces[%d/%d] to complete. Retrying spec[%s]",
+                          "We still have chnaces[%d/%d] to complete.",
                           monitorEntry.numTries(),
-                          maxRetry,
-                          monitorEntry.spec.getId()
+                          maxRetry
                       );
                       retry(monitorEntry, taskStatus);
                     } else {
@@ -119,7 +118,7 @@ public class TaskMonitor<T extends Task>
                     // do nothing
                     break;
                   default:
-                    throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getStatusCode(), taskId);
+                    throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getState(), taskId);
                 }
               }
             }
@@ -157,11 +156,12 @@ public class TaskMonitor<T extends Task>
     return taskFuture;
   }
 
-  private void retry(MonitorEntry monitorEntry, TaskStatus lastFailedTaskStatus)
+  private void retry(MonitorEntry monitorEntry, TaskStatusPlus lastFailedTaskStatus)
   {
     if (running) {
       final SubTaskSpec<T> spec = monitorEntry.spec;
       final T task = spec.newSubTask(monitorEntry.taskHistory.size() + 1);
+      log.info("Submitting a new task[%s] for retrying spec[%s]", task.getId(), spec.getId());
       indexingServiceClient.runTask(task);
       numRunningTasks.incrementAndGet();
 
@@ -190,7 +190,7 @@ public class TaskMonitor<T extends Task>
   {
     private final SubTaskSpec<T> spec;
     private final T runningTask;
-    private final List<TaskStatus> taskHistory;
+    private final List<TaskStatusPlus> taskHistory;
     private final SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture;
 
     MonitorEntry(
@@ -205,7 +205,7 @@ public class TaskMonitor<T extends Task>
     private MonitorEntry(
         SubTaskSpec<T> spec,
         T runningTask,
-        List<TaskStatus> taskHistory,
+        List<TaskStatusPlus> taskHistory,
         SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture
     )
     {
@@ -215,7 +215,7 @@ public class TaskMonitor<T extends Task>
       this.completeEventFuture = completeEventFuture;
     }
 
-    MonitorEntry withNewRunningTask(T newTask, TaskStatus statusOfLastTask)
+    MonitorEntry withNewRunningTask(T newTask, TaskStatusPlus statusOfLastTask)
     {
       taskHistory.add(statusOfLastTask);
       return new MonitorEntry(
@@ -231,7 +231,7 @@ public class TaskMonitor<T extends Task>
       return taskHistory.size() + 1; // count runningTask. this is valid only until setLastStatus() is called
     }
 
-    void setLastStatus(TaskStatus lastStatus)
+    void setLastStatus(TaskStatusPlus lastStatus)
     {
       if (!runningTask.getId().equals(lastStatus.getId())) {
         throw new ISE(
@@ -242,7 +242,7 @@ public class TaskMonitor<T extends Task>
       }
 
       taskHistory.add(lastStatus);
-      completeEventFuture.set(new SubTaskCompleteEvent<>(spec, lastStatus.getStatusCode(), taskHistory));
+      completeEventFuture.set(new SubTaskCompleteEvent<>(spec, lastStatus.getState(), taskHistory));
     }
   }
 
@@ -251,12 +251,12 @@ public class TaskMonitor<T extends Task>
     private final SubTaskSpec<T> spec;
     private final TaskState lastState;
     @Nullable
-    private final List<TaskStatus> attemptHistory;
+    private final List<TaskStatusPlus> attemptHistory;
 
     SubTaskCompleteEvent(
         SubTaskSpec<T> spec,
         TaskState lastState,
-        @Nullable List<TaskStatus> attemptHistory
+        @Nullable List<TaskStatusPlus> attemptHistory
     )
     {
       this.spec = Preconditions.checkNotNull(spec, "spec");
@@ -275,13 +275,13 @@ public class TaskMonitor<T extends Task>
     }
 
     @Nullable
-    List<TaskStatus> getAttemptHistory()
+    List<TaskStatusPlus> getAttemptHistory()
     {
       return attemptHistory;
     }
 
     @Nullable
-    TaskStatus getLastStatus()
+    TaskStatusPlus getLastStatus()
     {
       return attemptHistory == null ? null : attemptHistory.get(attemptHistory.size() - 1);
     }

@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexing.common.IndexTaskClient.TaskNotRunnableException;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
@@ -149,7 +150,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = KafkaIndexTaskClient.TaskNotRunnableException.class)
+  @Test(expected = TaskNotRunnableException.class)
   public void testTaskNotRunnableException()
   {
     reset(taskInfoProvider);
@@ -992,7 +993,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     @Override
-    void checkConnection(String host, int port)
+    protected void checkConnection(String host, int port)
     {
     }
   }

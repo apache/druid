@@ -24,6 +24,9 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.TypeLiteral;
+import io.druid.guice.LazySingleton;
+import io.druid.indexing.common.task.IndexTaskClientFactory;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import io.druid.initialization.DruidModule;
@@ -50,5 +53,8 @@ public class KafkaIndexTaskModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    binder.bind(new TypeLiteral<IndexTaskClientFactory<KafkaIndexTaskClient>>(){})
+          .to(KafkaIndexTaskClientFactory.class)
+          .in(LazySingleton.class);
   }
 }

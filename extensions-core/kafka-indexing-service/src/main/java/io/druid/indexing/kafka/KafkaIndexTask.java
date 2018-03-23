@@ -90,14 +90,10 @@ import io.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.ChatHandlers;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.ForbiddenException;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceAction;
-import io.druid.server.security.ResourceType;
 import io.druid.timeline.DataSegment;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -1340,17 +1336,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
    */
   private Access authorizationCheck(final HttpServletRequest req, Action action)
   {
-    ResourceAction resourceAction = new ResourceAction(
-        new Resource(dataSchema.getDataSource(), ResourceType.DATASOURCE),
-        action
-    );
-
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
-    }
-
-    return access;
+    return ChatHandlers.authorizationCheck(req, action, dataSchema.getDataSource(), authorizerMapper);
   }
 
   @VisibleForTesting

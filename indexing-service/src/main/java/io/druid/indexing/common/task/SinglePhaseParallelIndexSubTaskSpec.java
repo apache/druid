@@ -19,19 +19,17 @@
 
 package io.druid.indexing.common.task;
 
-import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-
 import java.util.Map;
 
-final class ParallelIndexSinglePhaseSubTaskSpec extends SubTaskSpec<ParallelIndexSinglePhaseSubTask>
+class SinglePhaseParallelIndexSubTaskSpec extends SubTaskSpec<SinglePhaseParallelIndexSubTask>
 {
-  private final IndexIngestionSpec ingestionSpec;
+  private final SinglePhaseParallelIndexIngestionSpec ingestionSpec;
 
-  ParallelIndexSinglePhaseSubTaskSpec(
+  SinglePhaseParallelIndexSubTaskSpec(
       String id,
       String groupId,
       String supervisorTaskId,
-      IndexIngestionSpec indexIngestionSpec,
+      SinglePhaseParallelIndexIngestionSpec indexIngestionSpec,
       Map<String, Object> context
   )
   {
@@ -39,22 +37,24 @@ final class ParallelIndexSinglePhaseSubTaskSpec extends SubTaskSpec<ParallelInde
     this.ingestionSpec = indexIngestionSpec;
   }
 
-  public IndexIngestionSpec getIngestionSpec()
+  public SinglePhaseParallelIndexIngestionSpec getIngestionSpec()
   {
     return ingestionSpec;
   }
 
   @Override
-  public ParallelIndexSinglePhaseSubTask newSubTask(int numAttempts)
+  public SinglePhaseParallelIndexSubTask newSubTask(int numAttempts)
   {
-    return new ParallelIndexSinglePhaseSubTask(
+    return new SinglePhaseParallelIndexSubTask(
         null,
         getGroupId(),
         null,
         getSupervisorTaskId(),
         numAttempts,
         getIngestionSpec(),
-        getContext()
+        getContext(),
+        null,
+        null
     );
   }
 }

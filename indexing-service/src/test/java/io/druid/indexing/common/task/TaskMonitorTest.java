@@ -20,12 +20,15 @@
 package io.druid.indexing.common.task;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.client.indexing.TaskStatus;
+import io.druid.client.indexing.NoopIndexingServiceClient;
 import io.druid.client.indexing.TaskStatusResponse;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatusPlus;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
 import org.junit.Assert;
@@ -77,7 +80,7 @@ public class TaskMonitorTest
       Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
       Assert.assertEquals("specId" + i, result.getSpec().getId());
       Assert.assertNotNull(result.getLastStatus());
-      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getState());
       Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
     }
   }
@@ -97,14 +100,14 @@ public class TaskMonitorTest
       Assert.assertEquals("specId" + i, result.getSpec().getId());
 
       Assert.assertNotNull(result.getLastStatus());
-      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getState());
       Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
 
-      final List<TaskStatus> attemptHistory = result.getAttemptHistory();
+      final List<TaskStatusPlus> attemptHistory = result.getAttemptHistory();
       Assert.assertNotNull(attemptHistory);
       Assert.assertEquals(3, attemptHistory.size());
-      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(0).getStatusCode());
-      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(1).getStatusCode());
+      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(0).getState());
+      Assert.assertEquals(TaskState.FAILED, attemptHistory.get(1).getState());
     }
   }
 
@@ -132,41 +135,34 @@ public class TaskMonitorTest
     @Override
     public TestTask newSubTask(int numAttempts)
     {
-      return new TestTask(getId(), numAttempts, runTime, numFails++ < numMaxFails);
+      return new TestTask(getId(), runTime, numFails++ < numMaxFails);
     }
   }
 
   private static class TestTask extends NoopTask
   {
-    private final int numAttempts;
     private final boolean shouldFail;
 
-    TestTask(String id, int numAttempts, long runTime, boolean shouldFail)
+    TestTask(String id, long runTime, boolean shouldFail)
     {
       super(id, "testDataSource", runTime, 0, null, null, null);
-      this.numAttempts = numAttempts;
       this.shouldFail = shouldFail;
     }
 
     @Override
-    public io.druid.indexing.common.TaskStatus run(TaskToolbox toolbox) throws Exception
+    public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       if (shouldFail) {
         Thread.sleep(getRunTime());
-        return io.druid.indexing.common.TaskStatus.failure(getId());
+        return TaskStatus.failure(getId());
       } else {
         return super.run(toolbox);
       }
     }
   }
 
-  private class TestIndexingServiceClient extends IndexingServiceClient
+  private class TestIndexingServiceClient extends NoopIndexingServiceClient
   {
-    TestIndexingServiceClient()
-    {
-      super(null, null);
-    }
-
     @Override
     public String runTask(Object taskObject)
     {
@@ -181,7 +177,16 @@ public class TaskMonitorTest
     {
       return new TaskStatusResponse(
           taskId,
-          new TaskStatus(taskId, tasks.get(taskId), null, -1)
+          new TaskStatusPlus(
+              taskId,
+              "testTask",
+              DateTimes.EPOCH,
+              DateTimes.EPOCH,
+              tasks.get(taskId),
+              -1L,
+              TaskLocation.unknown(),
+              "testDataSource"
+          )
       );
     }
   }
