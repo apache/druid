@@ -21,7 +21,9 @@ package io.druid.server.coordinator;
 
 import io.druid.timeline.DataSegment;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableSet;
 
 public interface BalancerStrategy
 {
@@ -30,6 +32,11 @@ public interface BalancerStrategy
   ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
   BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders);
+
+  default Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
+  {
+    return serverHolders.descendingIterator();
+  }
 
   void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList);
 }

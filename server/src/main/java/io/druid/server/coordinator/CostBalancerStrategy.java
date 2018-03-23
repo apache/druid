@@ -21,6 +21,7 @@ package io.druid.server.coordinator;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -32,9 +33,12 @@ import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.NavigableSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -219,6 +223,34 @@ public class CostBalancerStrategy implements BalancerStrategy
     return sampler.getRandomBalancerSegmentHolder(serverHolders);
   }
 
+  @Override
+  public Iterator<ServerHolder> pickServersToDrop(DataSegment toDrop, NavigableSet<ServerHolder> serverHolders)
+  {
+    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
+
+    for (final ServerHolder server : serverHolders) {
+      futures.add(
+          exec.submit(
+              () -> Pair.of(computeCost(toDrop, server, true), server)
+          )
+      );
+    }
+
+    final ListenableFuture<List<Pair<Double, ServerHolder>>> resultsFuture = Futures.allAsList(futures);
+
+    try {
+      List<Pair<Double, ServerHolder>> results = resultsFuture.get();
+      return results.stream()
+                    .sorted(Comparator.comparingDouble((Pair<Double, ServerHolder> o) -> o.lhs))
+                    .map(x -> x.rhs).collect(Collectors.toList())
+                    .iterator();
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
+    }
+    return Iterators.emptyIterator();
+  }
+
   /**
    * Calculates the initial cost of the Druid segment configuration.
    *
@@ -341,14 +373,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     for (final ServerHolder server : serverHolders) {
       futures.add(
           exec.submit(
-              new Callable<Pair<Double, ServerHolder>>()
-              {
-                @Override
-                public Pair<Double, ServerHolder> call()
-                {
-                  return Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server);
-                }
-              }
+              () -> Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server)
           )
       );
     }
