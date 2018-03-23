@@ -31,20 +31,21 @@ import java.util.List;
  * used during the segment merging process (i.e., work done by {@link IndexMerger}).
  *
  * This object is responsible for:
- *   - merging any relevant structures from the segments (e.g., encoding dictionaries)
+ *   - merging encoding dictionaries, if present
  *   - writing the merged column data and any merged indexing structures (e.g., dictionaries, bitmaps) to disk
  *
  * At a high level, the index merging process can be broken down into the following steps:
- *   - Merge any value representation metadata across segments
- *     E.g. for dictionary encoded Strings, each segment has its own unique space of id->value mappings.
- *     These need to be merged across segments into a shared space of dictionary mappings.
+ *   - Merge segment's encoding dictionaries. These need to be merged across segments into a shared space of dictionary
+ *     mappings: {@link #writeMergedValueDictionary(List)}.
  *
- *   - Merge the rows across segments into a common sequence of rows
+ *   - Merge the rows across segments into a common sequence of rows. Done outside of scope of this interface,
+ *     currently in {@link IndexMergerV9}.
  *
- *   - After constructing the merged sequence of rows, build any applicable index structures (e.g, bitmap indexes)
+ *   - After constructing the merged sequence of rows, process each individual row via {@link #processMergedRow},
+ *     potentially continuing updating the internal structures.
  *
- *   - Write the value representation metadata (e.g. dictionary), the sequence of row values,
- *     and index structures to a merged segment.
+ *   - Write the value representation metadata (dictionary, bitmaps), the sequence of row values,
+ *     and index structures to a merged segment: {@link #writeIndexes}
  *
  * A class implementing this interface is expected to be highly stateful, updating its internal state as these
  * functions are called.
@@ -53,40 +54,42 @@ public interface DimensionMerger
 {
   /**
    * Given a list of segment adapters:
-   * - Read any value metadata (e.g., dictionary encoding information) from the adapters
-   * - Merge this value metadata and update the internal state of the implementing class.
+   * - Read _sorted order_ (e. g. see {@link
+   *   io.druid.segment.incremental.IncrementalIndexAdapter#getDimValueLookup(String)}) dictionary encoding information
+   *   from the adapters
+   * - Merge those sorted order dictionary into a one big sorted order dictionary and write this merged dictionary.
    *
    * The implementer should maintain knowledge of the "index number" of the adapters in the input list,
    * i.e., the position of each adapter in the input list.
    *
    * This "index number" will be used to refer to specific segments later
-   * in {@link #convertSegmentRowValuesToMergedRowValues}.
-   *
-   * Otherwise, the details of how this merging occurs and how to store the merged data is left to the implementer.
+   * in {@link #convertSortedSegmentRowValuesToMergedRowValues}.
    *
    * @param adapters List of adapters to be merged.
+   * @see DimensionIndexer#convertUnsortedValuesToSorted
    */
-  void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException;
+  void writeMergedValueDictionary(List<IndexableAdapter> adapters) throws IOException;
 
   /**
-   * Creates a value selector, which converts values with per-segment encoding (from the given selector) to their
-   * equivalent representation in the merged set of rows.
+   * Creates a value selector, which converts values with per-segment, _sorted order_ (see {@link
+   * DimensionIndexer#convertUnsortedValuesToSorted}) encoding from the given selector to their equivalent
+   * representation in the merged set of rows.
    *
    * This method is used by the index merging process to build the merged sequence of rows.
    *
    * The implementing class is expected to use the merged value metadata constructed
-   * during {@link #writeMergedValueMetadata(List)}, if applicable.
+   * during {@link #writeMergedValueDictionary(List)}, if applicable.
    *
    * For example, an implementation of this function for a dictionary-encoded String column would convert the
-   * segment-specific dictionary values within the row to the common merged dictionary values
-   * determined during {@link #writeMergedValueMetadata(List)}.
+   * segment-specific, sorted order dictionary values within the row to the common merged dictionary values
+   * determined during {@link #writeMergedValueDictionary(List)}.
    *
    * @param segmentIndex indicates which segment the row originated from, in the order established in
-   * {@link #writeMergedValueMetadata(List)}
+   * {@link #writeMergedValueDictionary(List)}
    * @param source the selector from which to take values to convert
    * @return a selector with converted values
    */
-  ColumnValueSelector convertSegmentRowValuesToMergedRowValues(int segmentIndex, ColumnValueSelector source);
+  ColumnValueSelector convertSortedSegmentRowValuesToMergedRowValues(int segmentIndex, ColumnValueSelector source);
 
   /**
    * Process a column value(s) (potentially multi-value) of a row from the given selector and update the
@@ -103,7 +106,7 @@ public interface DimensionMerger
   /**
    * Internally construct any index structures relevant to this DimensionMerger.
    *
-   * After receiving the sequence of merged rows via iterated processMergedRow() calls, the DimensionMerger
+   * After receiving the sequence of merged rows via iterated {@link #processMergedRow} calls, the DimensionMerger
    * can now build any index structures it needs.
    *
    * For example, a dictionary encoded String implementation would create its bitmap indexes
@@ -111,7 +114,7 @@ public interface DimensionMerger
    *
    * The index merger will provide a list of row number conversion IntBuffer objects.
    * Each IntBuffer is associated with one of the segments being merged; the position of the IntBuffer in the list
-   * corresponds to the position of segment adapters within the input list of {@link #writeMergedValueMetadata(List)}.
+   * corresponds to the position of segment adapters within the input list of {@link #writeMergedValueDictionary(List)}.
    *
    * For example, suppose there are two segments A and B.
    * Row 24 from segment A maps to row 99 in the merged sequence of rows,

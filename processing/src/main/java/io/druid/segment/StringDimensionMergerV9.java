@@ -110,7 +110,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   }
 
   @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
+  public void writeMergedValueDictionary(List<IndexableAdapter> adapters) throws IOException
   {
     boolean dimHasValues = false;
     boolean dimAbsentFromSomeIndex = false;
@@ -229,7 +229,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   }
 
   @Override
-  public ColumnValueSelector convertSegmentRowValuesToMergedRowValues(int segmentIndex, ColumnValueSelector source)
+  public ColumnValueSelector convertSortedSegmentRowValuesToMergedRowValues(int segmentIndex, ColumnValueSelector source)
   {
     IntBuffer converter = dimConversions.get(segmentIndex);
     if (converter == null) {

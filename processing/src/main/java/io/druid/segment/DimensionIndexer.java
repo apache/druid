@@ -277,6 +277,12 @@ public interface DimensionIndexer
    */
   Object convertUnsortedEncodedKeyComponentToActualArrayOrList(EncodedKeyComponentType key, boolean asList);
 
+  /**
+   * Converts dictionary-encoded row values from unspecified (random) encoding order, to sorted encoding. This step
+   * is needed to be able to correctly map per-segment encoded values to global values on the next conversion step,
+   * {@link DimensionMerger#convertSortedSegmentRowValuesToMergedRowValues}. The latter method requires sorted encoding
+   * values on the input, because {@link DimensionMerger#writeMergedValueDictionary} takes sorted lookups as it's input.
+   */
   ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues);
 
   /**

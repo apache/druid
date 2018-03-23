@@ -301,7 +301,7 @@ public interface IndexMerger
   }
 
   /**
-   * This method applies {@link DimensionMerger#convertSegmentRowValuesToMergedRowValues(int, ColumnValueSelector)} to
+   * This method applies {@link DimensionMerger#convertSortedSegmentRowValuesToMergedRowValues(int, ColumnValueSelector)} to
    * all dimension column selectors of the given sourceRowIterator, using the given index number.
    */
   static TransformableRowIterator toMergedIndexRowIterator(
@@ -318,7 +318,7 @@ public interface IndexMerger
     for (int i = 0; i < mergers.size(); i++) {
       ColumnValueSelector sourceDimensionSelector = sourceRowPointer.getDimensionSelector(i);
       ColumnValueSelector convertedDimensionSelector =
-          mergers.get(i).convertSegmentRowValuesToMergedRowValues(indexNumber, sourceDimensionSelector);
+          mergers.get(i).convertSortedSegmentRowValuesToMergedRowValues(indexNumber, sourceDimensionSelector);
       convertedDimensionSelectors[i] = convertedDimensionSelector;
       // convertedDimensionSelector could be just the same object as sourceDimensionSelector, it means that this
       // type of column doesn't have any kind of special per-index encoding that needs to be converted to the "global"
@@ -326,7 +326,7 @@ public interface IndexMerger
       //noinspection ObjectEquality
       anySelectorChanged |= convertedDimensionSelector != sourceDimensionSelector;
 
-      convertedMarkedDimensionSelectors[i] = mergers.get(i).convertSegmentRowValuesToMergedRowValues(
+      convertedMarkedDimensionSelectors[i] = mergers.get(i).convertSortedSegmentRowValuesToMergedRowValues(
           indexNumber,
           markedSourceRowPointer.getDimensionSelector(i)
       );

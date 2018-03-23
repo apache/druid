@@ -59,13 +59,13 @@ public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
   abstract GenericColumnSerializer setupEncodedValueWriter();
 
   @Override
-  public final void writeMergedValueMetadata(List<IndexableAdapter> adapters)
+  public final void writeMergedValueDictionary(List<IndexableAdapter> adapters)
   {
     // numeric values have no additional metadata
   }
 
   @Override
-  public final ColumnValueSelector convertSegmentRowValuesToMergedRowValues(
+  public final ColumnValueSelector convertSortedSegmentRowValuesToMergedRowValues(
       int segmentIndex,
       ColumnValueSelector source
   )
