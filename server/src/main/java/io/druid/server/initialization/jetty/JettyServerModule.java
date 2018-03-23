@@ -68,6 +68,7 @@ import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
@@ -294,6 +295,42 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     server.setConnectors(connectors);
+    final long gracefulStop = config.getGracefulShutdownTimeout().toStandardDuration().getMillis();
+    if (gracefulStop > 0) {
+      server.setStopTimeout(gracefulStop);
+    }
+    server.addLifeCycleListener(new LifeCycle.Listener()
+    {
+      @Override
+      public void lifeCycleStarting(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle starting [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStarted(LifeCycle event)
+      {
+        log.debug("Jetty lifeycle started [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleFailure(LifeCycle event, Throwable cause)
+      {
+        log.error(cause, "Jetty lifecycle event failed [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStopping(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle stopping [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStopped(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle stopped [%s]", event.getClass());
+      }
+    });
 
     // initialize server
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
@@ -339,8 +376,19 @@ public class JettyServerModule extends JerseyServletModule
           public void stop()
           {
             try {
+              final long unannounceDelay = config.getUnannouncePropogationDelay().toStandardDuration().getMillis();
+              if (unannounceDelay > 0) {
+                log.info("Waiting %s ms for unannouncement to propogate.", unannounceDelay);
+                Thread.sleep(unannounceDelay);
+              } else {
+                log.debug("Skipping unannounce wait.");
+              }
               log.info("Stopping Jetty Server...");
               server.stop();
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new RE(e, "Interrupted waiting for jetty shutdown.");
             }
             catch (Exception e) {
               log.warn(e, "Unable to stop Jetty server.");
