@@ -21,9 +21,8 @@ package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import io.druid.java.util.common.guava.Comparators;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
