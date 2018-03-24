@@ -94,6 +94,7 @@ public class GroupByQueryEngineV2
       final GroupByQueryConfig config
   )
   {
+    final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     if (storageAdapter == null) {
       throw new ISE(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
@@ -150,10 +151,10 @@ public class GroupByQueryEngineV2
                 final ByteBuffer buffer = bufferHolder.get();
 
                 // Check array-based aggregation is applicable
-                if (isArrayAggregateApplicable(config, query, dims, storageAdapter, buffer)) {
+                if (isArrayAggregateApplicable(querySpecificConfig, query, dims, storageAdapter, buffer)) {
                   return new ArrayAggregateIterator(
                       query,
-                      config,
+                      querySpecificConfig,
                       cursor,
                       buffer,
                       fudgeTimestamp,
@@ -165,7 +166,7 @@ public class GroupByQueryEngineV2
                 } else {
                   return new HashAggregateIterator(
                       query,
-                      config,
+                      querySpecificConfig,
                       cursor,
                       buffer,
                       fudgeTimestamp,
