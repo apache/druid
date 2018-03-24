@@ -21,7 +21,6 @@ package io.druid.server.coordinator;
 
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -33,6 +32,7 @@ import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -248,7 +248,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
     }
-    return Iterators.emptyIterator();
+    return Collections.emptyIterator();
   }
 
   /**
