@@ -422,6 +422,20 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           Objects.requireNonNull(bufferPool, "bufferPool is null")
       );
     }
+
+    public IncrementalIndex buildOffheapOak()
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OffheapOakIncrementalIndex(
+              Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
+              deserializeComplexMetrics,
+              reportParseExceptions,
+              concurrentEventAdd
+      );
+    }
   }
 
   public boolean isRollup()

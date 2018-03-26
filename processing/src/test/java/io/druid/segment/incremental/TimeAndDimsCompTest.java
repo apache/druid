@@ -83,7 +83,9 @@ public class TimeAndDimsCompTest
     IncrementalIndex index = new IncrementalIndex.Builder()
             .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
             .setMaxRowCount(1000)
-            .buildOnheap();
+            .buildOffheapOak();
+
+    OffheapOakIncrementalIndex oakIndex = (OffheapOakIncrementalIndex) index;
 
     long time = System.currentTimeMillis();
     TimeAndDims[] origTimeAndDims = new TimeAndDims[6];
@@ -96,12 +98,12 @@ public class TimeAndDimsCompTest
     origTimeAndDims[1] = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
     origTimeAndDims[2] = index.toTimeAndDims(toMapRow(time, "billy", "A"));
     origTimeAndDims[3] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
-    origTimeAndDims[4] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
+    origTimeAndDims[4] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "A,B"));
     origTimeAndDims[5] = index.toTimeAndDims(toMapRow(time + 1));
 
     for (int i = 0; i < 6; i++) {
-      serializedTimeAndDims[i] = ((InternalDataIncrementalIndex) index).timeAndDimsSerialization(origTimeAndDims[i]);
-      deserializedTimeAndDims[i] = ((InternalDataIncrementalIndex) index).timeAndDimsDeserialization(serializedTimeAndDims[i]);
+      serializedTimeAndDims[i] = oakIndex.timeAndDimsSerialization(origTimeAndDims[i]);
+      deserializedTimeAndDims[i] = oakIndex.timeAndDimsDeserialization(serializedTimeAndDims[i]);
       Assert.assertEquals(0, comparator.compare(origTimeAndDims[i], deserializedTimeAndDims[i]));
     }
   }
@@ -109,10 +111,12 @@ public class TimeAndDimsCompTest
   @Test
   public void testTimeAndDimsByteBufferComparator() throws IndexSizeExceededException
   {
-    IncrementalIndex index = new InternalDataIncrementalIndex.Builder()
+    IncrementalIndex index = new OffheapOakIncrementalIndex.Builder()
             .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
             .setMaxRowCount(1000)
-            .buildOnheap();
+            .buildOffheapOak();
+
+    OffheapOakIncrementalIndex oakIndex = (OffheapOakIncrementalIndex) index;
 
     long time = System.currentTimeMillis();
 
@@ -121,15 +125,15 @@ public class TimeAndDimsCompTest
     timeAndDimsArray[1] = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
     timeAndDimsArray[2] = index.toTimeAndDims(toMapRow(time, "billy", "A"));
     timeAndDimsArray[3] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
-    timeAndDimsArray[4] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
+    timeAndDimsArray[4] = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B,A"));
     timeAndDimsArray[5] = index.toTimeAndDims(toMapRow(time + 1));
 
     ByteBuffer[] timeAndDimsByteBufferArray = new ByteBuffer[6];
     for (int i = 0; i < 6; i++) {
-      timeAndDimsByteBufferArray[i] = ((InternalDataIncrementalIndex) index).timeAndDimsSerialization(timeAndDimsArray[i]);
+      timeAndDimsByteBufferArray[i] = oakIndex.timeAndDimsSerialization(timeAndDimsArray[i]);
     }
 
-    Comparator<ByteBuffer> comparator = ((InternalDataIncrementalIndex) index).dimsByteBufferComparator();
+    Comparator<ByteBuffer> comparator = oakIndex.dimsByteBufferComparator();
 
     Assert.assertEquals(0, comparator.compare(timeAndDimsByteBufferArray[0], timeAndDimsByteBufferArray[0]));
     Assert.assertEquals(0, comparator.compare(timeAndDimsByteBufferArray[1], timeAndDimsByteBufferArray[1]));

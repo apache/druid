@@ -71,6 +71,9 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     int sumOfArrayLengths = 0;
     for (int i = 0; i < dims.length; i++) {
       Object dim = dims[i];
+      DimensionDesc dimensionDesc = getDimensions().get(i);
+      if (dimensionDesc != null) {
+      }
       if (dim == null) {
         continue;
       }
@@ -92,7 +95,7 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     int currArrayIndex = DIMS_INDEX + ALLOC_PER_DIM * dims.length;
     for (int dimIndex = 0; dimIndex < dims.length; dimIndex++) {
       ValueType valueType = getDimValueType(dimIndex);
-      if (valueType == null) {
+      if (valueType == null || dims[dimIndex] == null) {
         buf.putInt(currDimsIndex, NO_DIM);
         currDimsIndex += ALLOC_PER_DIM;
         continue;
@@ -121,6 +124,11 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
           currDimsIndex += Integer.BYTES;
           buf.putInt(currDimsIndex, currArrayIndex);
           currDimsIndex += Integer.BYTES;
+          if (dims[dimIndex] == null) {
+            buf.putInt(currDimsIndex, 0);
+            currDimsIndex += Integer.BYTES;
+            break;
+          }
           int[] array = (int[]) dims[dimIndex];
           buf.putInt(currDimsIndex, array.length);
           currDimsIndex += Integer.BYTES;

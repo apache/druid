@@ -17,11 +17,10 @@
  * under the License.
  */
 
-package processing.src.main.java.io.druid.segment.incremental;
+package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.segment.incremental.IncrementalIndex;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
