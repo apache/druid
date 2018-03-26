@@ -52,7 +52,8 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
   }
 
-  static int getDimIndexInBuffer(ByteBuffer buff, int dimIndex) {
+  static int getDimIndexInBuffer(ByteBuffer buff, int dimIndex)
+  {
     int dimsLength = getDimsLength(buff);
     if (dimIndex >= dimsLength) {
       return NO_DIM;
@@ -136,7 +137,8 @@ public abstract class InternalDataIncrementalIndex<AggregatorType> extends Incre
     return buf;
   }
 
-  TimeAndDims timeAndDimsDeserialization(ByteBuffer buff) {
+  TimeAndDims timeAndDimsDeserialization(ByteBuffer buff)
+  {
     long timeStamp = getTimestamp(buff);
     int dimsLength = getDimsLength(buff);
     Object[] dims = new Object[dimsLength];
