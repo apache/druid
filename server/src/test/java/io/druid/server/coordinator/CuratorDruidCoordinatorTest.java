@@ -69,6 +69,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
+ * This tests zookeeper specific coordinator/load queue/historical interactions, such as moving segments by the balancer
  */
 public class CuratorDruidCoordinatorTest extends CuratorTestBase
 {
@@ -76,8 +77,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private MetadataSegmentManager databaseSegmentManager;
   private ScheduledExecutorFactory scheduledExecutorFactory;
   private ConcurrentMap<String, LoadQueuePeon> loadManagementPeons;
-  private LoadQueuePeon loadQueuePeon;
-  private LoadQueuePeon loadQueuePeon2;
+  private LoadQueuePeon sourceLoadQueuePeon;
+  private LoadQueuePeon destinationLoadQueuePeon;
   private MetadataRuleManager metadataRuleManager;
   private CountDownLatch leaderAnnouncerLatch;
   private CountDownLatch leaderUnannouncerLatch;
@@ -88,8 +89,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private JacksonConfigManager configManager;
   private DruidNode druidNode;
   private static final String SEGPATH = "/druid/segments";
-  private static final String LOADPATH = "/druid/loadQueue/localhost:1";
-  private static final String LOADPATH2 = "/druid/loadQueue/localhost:2";
+  private static final String SOURCE_LOAD_PATH = "/druid/loadQueue/localhost:1";
+  private static final String DESTINATION_LOAD_PATH = "/druid/loadQueue/localhost:2";
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
 
@@ -133,8 +134,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     curator.start();
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(SEGPATH);
-    curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
-    curator.create().creatingParentsIfNeeded().forPath(LOADPATH2);
+    curator.create().creatingParentsIfNeeded().forPath(SOURCE_LOAD_PATH);
+    curator.create().creatingParentsIfNeeded().forPath(DESTINATION_LOAD_PATH);
 
     objectMapper = new DefaultObjectMapper();
     druidCoordinatorConfig = new TestDruidCoordinatorConfig(
@@ -152,32 +153,32 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
-        LOADPATH,
+        SOURCE_LOAD_PATH,
         true,
         true,
-        Execs.singleThreaded("coordinator_test_path_children_cache-%d")
+        Execs.singleThreaded("coordinator_test_path_children_cache_src-%d")
     );
     destinationLoadQueueChildrenCache = new PathChildrenCache(
         curator,
-        LOADPATH2,
+        DESTINATION_LOAD_PATH,
         true,
         true,
-        Execs.singleThreaded("coordinator_test_path_children_cache2-%d")
+        Execs.singleThreaded("coordinator_test_path_children_cache_dest-%d")
     );
-    loadQueuePeon = new CuratorLoadQueuePeon(
+    sourceLoadQueuePeon = new CuratorLoadQueuePeon(
         curator,
-        LOADPATH,
+        SOURCE_LOAD_PATH,
         objectMapper,
-        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
+        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_src_scheduled-%d"),
+        Execs.singleThreaded("coordinator_test_load_queue_peon_src-%d"),
         druidCoordinatorConfig
     );
-    loadQueuePeon2 = new CuratorLoadQueuePeon(
+    destinationLoadQueuePeon = new CuratorLoadQueuePeon(
         curator,
-        LOADPATH2,
+        DESTINATION_LOAD_PATH,
         objectMapper,
-        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon2_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon2-%d"),
+        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_dest_scheduled-%d"),
+        Execs.singleThreaded("coordinator_test_load_queue_peon_dest-%d"),
         druidCoordinatorConfig
     );
     druidNode = new DruidNode("hey", "what", 1234, null, true, false);
@@ -233,21 +234,22 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   public void tearDown() throws Exception
   {
     baseView.stop();
-    loadQueuePeon.stop();
+    sourceLoadQueuePeon.stop();
     sourceLoadQueueChildrenCache.close();
     destinationLoadQueueChildrenCache.close();
     tearDownServerAndCurator();
   }
 
-  @Test
+  @Test(timeout = 5_000)
   public void testMoveSegment() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(4);
 
-    // temporarily set latch count to 1
     segmentRemovedLatch = new CountDownLatch(0);
 
+    CountDownLatch destCountdown = new CountDownLatch(1);
+    CountDownLatch srcCountdown = new CountDownLatch(1);
     setupView();
 
     DruidServer source = new DruidServer(
@@ -305,38 +307,44 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
+    // these child watchers are used to simulate actions of historicals, announcing a segment on noticing a load queue
+    // for the destination and unannouncing from source server when noticing a drop request
+
     sourceLoadQueueChildrenCache.getListenable().addListener(
         (curatorFramework, pathChildrenCacheEvent) -> {
-          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
+            srcCountdown.countDown();
+          } else if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
             //Simulate source server dropping segment
             unannounceSegmentFromBatchForServer(source, segmentToMove, sourceSegKeys.get(2), zkPathsConfig);
-            segmentRemovedLatch.countDown();
           }
         }
     );
 
     destinationLoadQueueChildrenCache.getListenable().addListener(
         (curatorFramework, pathChildrenCacheEvent) -> {
-          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
+            destCountdown.countDown();
+          } else if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
             //Simulate destination server loading segment
             announceBatchSegmentsForServer(dest, ImmutableSet.of(segmentToMove), zkPathsConfig, jsonMapper);
-            segmentAddedLatch.countDown();
           }
         }
     );
 
-    sourceLoadQueueChildrenCache.start();
-    destinationLoadQueueChildrenCache.start();
+    sourceLoadQueueChildrenCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+    destinationLoadQueueChildrenCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
 
-    Thread.sleep(100);
+    Assert.assertTrue(timing.forWaiting().awaitLatch(srcCountdown));
+    Assert.assertTrue(timing.forWaiting().awaitLatch(destCountdown));
 
-    loadManagementPeons.put("localhost:1", loadQueuePeon);
-    loadManagementPeons.put("localhost:2", loadQueuePeon2);
+
+    loadManagementPeons.put("localhost:1", sourceLoadQueuePeon);
+    loadManagementPeons.put("localhost:2", destinationLoadQueuePeon);
 
 
     segmentRemovedLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(1);
-
 
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(sourceSegments.get(2));
@@ -351,13 +359,17 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         null
     );
 
-
+    // wait for destination server to load segment
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
-    Thread.sleep(100);
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH2, segmentToMove.getIdentifier()));
+
+    // remove load queue key from destination server to trigger adding drop to load queue
+    curator.delete().guaranteed().forPath(ZKPaths.makePath(DESTINATION_LOAD_PATH, segmentToMove.getIdentifier()));
+
+    // wait for drop
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
-    Thread.sleep(100);
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH, segmentToMove.getIdentifier()));
+
+    // clean up drop from load queue
+    curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getIdentifier()));
 
     List<DruidServer> servers = serverView.getInventory().stream().collect(Collectors.toList());
 
@@ -451,8 +463,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     baseView.start();
 
-    loadQueuePeon.start();
-    loadQueuePeon2.start();
+    sourceLoadQueuePeon.start();
+    destinationLoadQueuePeon.start();
 
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
@@ -504,7 +516,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
                       .dataSource("test_curator_druid_coordinator")
                       .interval(Intervals.of(intervalStr))
                       .loadSpec(
-                          ImmutableMap.<String, Object>of(
+                          ImmutableMap.of(
                               "type",
                               "local",
                               "path",
@@ -512,8 +524,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
                           )
                       )
                       .version(version)
-                      .dimensions(ImmutableList.<String>of())
-                      .metrics(ImmutableList.<String>of())
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(0)
