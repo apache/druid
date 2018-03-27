@@ -261,7 +261,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  public FiniteFirehoseFactory<StringInputRowParser, S3Object> withSplit(InputSplit<S3Object> split)
+  public FiniteFirehoseFactory<StringInputRowParser, S3ObjectSummary> withSplit(InputSplit<S3ObjectSummary> split)
   {
     final String authority = split.get().getBucketName();
     final String path = split.get().getKey();
