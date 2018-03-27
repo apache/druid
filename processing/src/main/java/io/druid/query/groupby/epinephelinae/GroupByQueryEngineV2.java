@@ -91,10 +91,9 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig config
+      final GroupByQueryConfig querySpecificConfig
   )
   {
-    final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     if (storageAdapter == null) {
       throw new ISE(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
@@ -187,14 +186,14 @@ public class GroupByQueryEngineV2
   }
 
   private static boolean isArrayAggregateApplicable(
-      GroupByQueryConfig config,
+      GroupByQueryConfig querySpecificConfig,
       GroupByQuery query,
       GroupByColumnSelectorPlus[] dims,
       StorageAdapter storageAdapter,
       ByteBuffer buffer
   )
   {
-    if (config.isForceHashAggregation()) {
+    if (querySpecificConfig.isForceHashAggregation()) {
       return false;
     }
 
@@ -277,7 +276,7 @@ public class GroupByQueryEngineV2
 
     public GroupByEngineIterator(
         final GroupByQuery query,
-        final GroupByQueryConfig config,
+        final GroupByQueryConfig querySpecificConfig,
         final Cursor cursor,
         final ByteBuffer buffer,
         final DateTime fudgeTimestamp,
@@ -286,7 +285,7 @@ public class GroupByQueryEngineV2
     )
     {
       this.query = query;
-      this.querySpecificConfig = config.withOverrides(query);
+      this.querySpecificConfig = querySpecificConfig;
       this.cursor = cursor;
       this.buffer = buffer;
       this.keySerde = new GroupByEngineKeySerde(dims);
@@ -414,7 +413,7 @@ public class GroupByQueryEngineV2
 
     public HashAggregateIterator(
         GroupByQuery query,
-        GroupByQueryConfig config,
+        GroupByQueryConfig querySpecificConfig,
         Cursor cursor,
         ByteBuffer buffer,
         DateTime fudgeTimestamp,
@@ -422,7 +421,7 @@ public class GroupByQueryEngineV2
         boolean allSingleValueDims
     )
     {
-      super(query, config, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
 
       final int dimCount = query.getDimensions().size();
       stack = new int[dimCount];
@@ -565,7 +564,7 @@ public class GroupByQueryEngineV2
 
     public ArrayAggregateIterator(
         GroupByQuery query,
-        GroupByQueryConfig config,
+        GroupByQueryConfig querySpecificConfig,
         Cursor cursor,
         ByteBuffer buffer,
         DateTime fudgeTimestamp,
@@ -574,7 +573,7 @@ public class GroupByQueryEngineV2
         int cardinality
     )
     {
-      super(query, config, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
+      super(query, querySpecificConfig, cursor, buffer, fudgeTimestamp, dims, allSingleValueDims);
       this.cardinality = cardinality;
       if (dims.length == 1) {
         this.dim = dims[0];
