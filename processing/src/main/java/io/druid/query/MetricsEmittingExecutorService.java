@@ -22,23 +22,28 @@ package io.druid.query;
 import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import io.druid.collections.BlockingPool;
+import io.druid.collections.DefaultBlockingPool;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.Callable;
 
 public class MetricsEmittingExecutorService extends ForwardingListeningExecutorService
     implements ExecutorServiceMonitor.MetricEmitter
 {
   private final ListeningExecutorService delegate;
+  private final BlockingPool<ByteBuffer> mergeBufferPool;
 
   public MetricsEmittingExecutorService(
       ListeningExecutorService delegate,
-      ExecutorServiceMonitor executorServiceMonitor
-  )
+      BlockingPool<ByteBuffer> mergeBufferPool,
+      ExecutorServiceMonitor executorServiceMonitor)
   {
     super();
     this.delegate = delegate;
+    this.mergeBufferPool = mergeBufferPool;
     executorServiceMonitor.add(this);
   }
 
@@ -66,6 +71,7 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
   {
     if (delegate instanceof PrioritizedExecutorService) {
       emitter.emit(metricBuilder.build("segment/scan/pending", ((PrioritizedExecutorService) delegate).getQueueSize()));
+      emitter.emit(metricBuilder.build("merge/buffers/size", ((DefaultBlockingPool) mergeBufferPool).getPoolSize()));
     }
   }
 
