@@ -24,6 +24,8 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.io.Files;
 import io.druid.common.aws.AWSCredentialsConfig;
+import io.druid.common.aws.AWSEndpointConfig;
+import io.druid.common.aws.AWSProxyConfig;
 import io.druid.guice.AWSModule;
 import io.druid.metadata.DefaultPasswordProvider;
 import org.easymock.EasyMock;
@@ -58,7 +60,7 @@ public class TestAWSCredentialsProvider
     assertEquals(credentials.getAWSSecretKey(), "secretKeySample");
 
     // try to create
-    s3Module.getRestS3Service(provider);
+    s3Module.getAmazonS3Client(provider, new AWSProxyConfig(), new AWSEndpointConfig());
   }
 
   @Rule
@@ -86,6 +88,6 @@ public class TestAWSCredentialsProvider
     assertEquals(sessionCredentials.getSessionToken(), "sessionTokenSample");
 
     // try to create
-    s3Module.getRestS3Service(provider);
+    s3Module.getAmazonS3Client(provider, new AWSProxyConfig(), new AWSEndpointConfig());
   }
 }

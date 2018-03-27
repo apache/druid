@@ -101,9 +101,9 @@ public class InputRowParserSerdeTest
             null
         )
     );
-    final MapInputRowParser parser2 = jsonMapper.readValue(
+    final MapInputRowParser parser2 = (MapInputRowParser) jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
-        MapInputRowParser.class
+        InputRowParser.class
     );
     final InputRow parsed = parser2.parseBatch(
         ImmutableMap.<String, Object>of(
@@ -134,9 +134,9 @@ public class InputRowParserSerdeTest
             null
         )
     );
-    final MapInputRowParser parser2 = jsonMapper.readValue(
+    final MapInputRowParser parser2 = (MapInputRowParser) jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
-        MapInputRowParser.class
+        InputRowParser.class
     );
     final InputRow parsed = parser2.parseBatch(
         ImmutableMap.<String, Object>of(

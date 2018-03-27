@@ -293,7 +293,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
 
-
   @Override
   public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
   {
@@ -341,7 +340,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
-      public Function<Result<TopNResultValue>, Object> prepareForCache()
+      public Function<Result<TopNResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<TopNResultValue>, Object>()
         {
@@ -361,6 +360,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               for (String aggName : aggFactoryNames) {
                 vals.add(result.getMetric(aggName));
               }
+              if (isResultLevelCache) {
+                for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                  vals.add(result.getMetric(postAgg.getName()));
+                }
+              }
               retVal.add(vals);
             }
             return retVal;
@@ -369,7 +373,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
-      public Function<Object, Result<TopNResultValue>> pullFromCache()
+      public Function<Object, Result<TopNResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<TopNResultValue>>()
         {
@@ -401,7 +405,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               for (PostAggregator postAgg : postAggs) {
                 vals.put(postAgg.getName(), postAgg.compute(vals));
               }
-
+              if (isResultLevelCache) {
+                Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
+                while (postItr.hasNext() && resultIter.hasNext()) {
+                  vals.put(postItr.next().getName(), resultIter.next());
+                }
+              }
               retVal.add(vals);
             }
 

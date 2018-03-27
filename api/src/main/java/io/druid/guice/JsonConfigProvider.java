@@ -130,8 +130,8 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
       Key<Supplier<T>> supplierKey
   )
   {
-    binder.bind(supplierKey).toProvider((Provider) of(propertyBase, clazz)).in(LazySingleton.class);
-    binder.bind(instanceKey).toProvider(new SupplierProvider<T>(supplierKey));
+    binder.bind(supplierKey).toProvider(of(propertyBase, clazz)).in(LazySingleton.class);
+    binder.bind(instanceKey).toProvider(new SupplierProvider<>(supplierKey));
   }
 
   @SuppressWarnings("unchecked")

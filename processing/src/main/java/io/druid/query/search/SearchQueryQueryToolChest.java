@@ -206,7 +206,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       }
 
       @Override
-      public Function<Result<SearchResultValue>, Object> prepareForCache()
+      public Function<Result<SearchResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<SearchResultValue>, Object>()
         {
@@ -221,7 +221,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       }
 
       @Override
-      public Function<Object, Result<SearchResultValue>> pullFromCache()
+      public Function<Object, Result<SearchResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<SearchResultValue>>()
         {

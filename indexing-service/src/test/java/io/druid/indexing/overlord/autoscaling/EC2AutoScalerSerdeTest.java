@@ -74,12 +74,12 @@ public class EC2AutoScalerSerdeTest
         }
     );
 
-    final EC2AutoScaler autoScaler = objectMapper.readValue(json, EC2AutoScaler.class);
+    final EC2AutoScaler autoScaler = (EC2AutoScaler) objectMapper.readValue(json, AutoScaler.class);
     verifyAutoScaler(autoScaler);
 
-    final EC2AutoScaler roundTripAutoScaler = objectMapper.readValue(
+    final EC2AutoScaler roundTripAutoScaler = (EC2AutoScaler) objectMapper.readValue(
         objectMapper.writeValueAsBytes(autoScaler),
-        EC2AutoScaler.class
+        AutoScaler.class
     );
     verifyAutoScaler(roundTripAutoScaler);
 
