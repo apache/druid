@@ -355,8 +355,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(2, sumMetric(task, null, "rows").longValue());
-    Assert.assertEquals(3, sumMetric(task, null, "met1").longValue());
+    Assert.assertEquals(2, sumMetric(task, null, "met1"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
     awaitHandoffs();
 
@@ -417,8 +417,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(2, sumMetric(task, null, "rows").longValue());
-    Assert.assertEquals(3, sumMetric(task, null, "met1").longValue());
+    Assert.assertEquals(2, sumMetric(task, null, "met1"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
     awaitHandoffs();
 
@@ -482,8 +482,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(2000, sumMetric(task, null, "rows").longValue());
-    Assert.assertEquals(2000, sumMetric(task, null, "met1").longValue());
+    Assert.assertEquals(2000, sumMetric(task, null, "met1"));
+    Assert.assertEquals(2000, sumMetric(task, null, "met1"));
 
     awaitHandoffs();
 
@@ -550,14 +550,14 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(2, sumMetric(task, null, "rows").longValue());
-    Assert.assertEquals(2, sumMetric(task, new SelectorDimFilter("dim1t", "foofoo", null), "rows").longValue());
+    Assert.assertEquals(2, sumMetric(task, null, "met1"));
+    Assert.assertEquals(2, sumMetric(task, new SelectorDimFilter("dim1t", "foofoo", null), "met1"));
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0, sumMetric(task, new SelectorDimFilter("dim1t", "barbar", null), "rows").longValue());
+      Assert.assertEquals(0, sumMetric(task, new SelectorDimFilter("dim1t", "barbar", null), "met1"));
     } else {
       Assert.assertNull(sumMetric(task, new SelectorDimFilter("dim1t", "barbar", null), "rows"));
     }
-    Assert.assertEquals(3, sumMetric(task, null, "met1").longValue());
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
     awaitHandoffs();
 
@@ -681,8 +681,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(2, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(3, sumMetric(task, null, "rows").longValue());
-    Assert.assertEquals(3, sumMetric(task, null, "met1").longValue());
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
     awaitHandoffs();
 
@@ -754,7 +754,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       }
 
       // Do a query, at this point the previous data should be loaded.
-      Assert.assertEquals(1, sumMetric(task2, null, "rows").longValue());
+      Assert.assertEquals(1, sumMetric(task2, null, "met1"));
 
       final TestFirehose firehose = (TestFirehose) task2.getFirehose();
 
@@ -772,7 +772,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
       // Do a query.
-      Assert.assertEquals(2, sumMetric(task2, null, "rows").longValue());
+      Assert.assertEquals(2, sumMetric(task2, null, "met1"));
 
       awaitHandoffs();
 
@@ -829,7 +829,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
       // Do a query.
-      Assert.assertEquals(1, sumMetric(task1, null, "rows").longValue());
+      Assert.assertEquals(1, sumMetric(task1, null, "met1"));
 
       // Trigger graceful shutdown.
       task1.stopGracefully();
