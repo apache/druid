@@ -219,7 +219,7 @@ public class GroupByQueryEngineV2
       final AggregatorFactory[] aggregatorFactories = query
           .getAggregatorSpecs()
           .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]);
-      final int requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
+      final long requiredBufferCapacity = BufferArrayGrouper.requiredBufferCapacity(
           cardinality,
           aggregatorFactories
       );
