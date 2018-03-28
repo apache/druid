@@ -186,7 +186,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatusWithReports run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     runThread = Thread.currentThread();
 

@@ -38,6 +38,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -194,7 +195,7 @@ public class ExecutorLifecycle
                 TaskStatusWithReports taskStatusWithReports = (TaskStatusWithReports) taskStatus;
                 final File reportsFileParent = reportsFile.getParentFile();
                 if (reportsFileParent != null) {
-                  reportsFileParent.mkdirs();
+                  FileUtils.forceMkdir(reportsFileParent);
                 }
                 jsonMapper.writeValue(reportsFile, taskStatusWithReports.getTaskReports());
 
@@ -205,10 +206,9 @@ public class ExecutorLifecycle
 
               final File statusFileParent = statusFile.getParentFile();
               if (statusFileParent != null) {
-                statusFileParent.mkdirs();
+                FileUtils.forceMkdir(statusFileParent);
               }
               jsonMapper.writeValue(statusFile, taskStatus);
-
 
               return taskStatus;
             }

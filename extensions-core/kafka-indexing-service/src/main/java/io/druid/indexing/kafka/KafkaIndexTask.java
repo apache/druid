@@ -51,6 +51,7 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
@@ -412,7 +413,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   }
 
   @Override
-  public TaskStatusWithReports run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     // for backwards compatibility, should be remove from versions greater than 0.12.x
     if (useLegacy) {

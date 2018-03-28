@@ -34,7 +34,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
-import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -140,7 +139,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   }
 
   @Override
-  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox.getTaskActionClient()));
     final ServiceEmitter emitter = toolbox.getEmitter();
@@ -197,14 +196,14 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 
       toolbox.publishSegments(ImmutableList.of(uploadedSegment));
 
-      return new TaskStatusWithReports(TaskStatus.success(getId()), null);
+      return TaskStatus.success(getId());
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception merging[%s]", mergedSegment.getDataSource())
          .addData("interval", mergedSegment.getInterval())
          .emit();
 
-      return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
+      return TaskStatus.failure(getId());
     }
   }
 

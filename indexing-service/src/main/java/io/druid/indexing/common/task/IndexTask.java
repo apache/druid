@@ -217,7 +217,7 @@ public class IndexTask extends AbstractTask
   }
 
   @Override
-  public TaskStatusWithReports run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     final boolean determineIntervals = !ingestionSchema.getDataSchema()
                                                        .getGranularitySpec()

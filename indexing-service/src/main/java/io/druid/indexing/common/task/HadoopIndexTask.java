@@ -171,7 +171,7 @@ public class HadoopIndexTask extends HadoopTask
 
   @SuppressWarnings("unchecked")
   @Override
-  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();

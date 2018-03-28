@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.java.util.common.DateTimes;
@@ -121,7 +120,7 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
   }
 
   @Override
-  public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     final List<DataSegment> segments = toolbox.getTaskActionClient().submit(
         new SegmentListUsedAction(
@@ -142,9 +141,9 @@ public class SameIntervalMergeTask extends AbstractFixedIntervalTask
     );
     final TaskStatus status = mergeTask.run(toolbox);
     if (!status.isSuccess()) {
-      return new TaskStatusWithReports(TaskStatus.fromCode(getId(), status.getStatusCode()), null);
+      return TaskStatus.fromCode(getId(), status.getStatusCode());
     }
-    return new TaskStatusWithReports(success(), null);
+    return success();
   }
 
   public static class SubTask extends MergeTask

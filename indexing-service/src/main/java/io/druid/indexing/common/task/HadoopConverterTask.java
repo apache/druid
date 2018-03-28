@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 import io.druid.indexer.updater.HadoopConverterJob;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.UOE;
@@ -217,7 +216,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
     }
 
     @Override
-    public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
+    public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       final Map<String, String> hadoopProperties = new HashMap<>();
       final Properties properties = injector.getInstance(Properties.class);
@@ -245,7 +244,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
           loader
       );
       if (finishedSegmentString == null) {
-        return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
+        return TaskStatus.failure(getId());
       }
       final List<DataSegment> finishedSegments = HadoopDruidConverterConfig.jsonMapper.readValue(
           finishedSegmentString,
@@ -255,7 +254,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
       );
       log.debug("Found new segments %s", Arrays.toString(finishedSegments.toArray()));
       toolbox.publishSegments(finishedSegments);
-      return new TaskStatusWithReports(success(), null);
+      return success();
     }
   }
 

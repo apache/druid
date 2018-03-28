@@ -440,11 +440,11 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     }
 
     @Override
-    public TaskStatusWithReports call()
+    public TaskStatus call()
     {
       final long startTime = System.currentTimeMillis();
 
-      TaskStatusWithReports statusAndReports;
+      TaskStatus status;
 
       try {
         log.info("Running task: %s", task.getId());
@@ -454,7 +454,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
             location
         );
         TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
-        statusAndReports = task.run(toolbox);
+        status = task.run(toolbox);
       }
       catch (InterruptedException e) {
         // Don't reset the interrupt flag of the thread, as we do want to continue to the end of this callable.
@@ -465,24 +465,27 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
           // Not stopping, this is definitely unexpected.
           log.warn(e, "Interrupted while running task[%s]", task);
         }
-        statusAndReports = new TaskStatusWithReports(TaskStatus.failure(task.getId()), null);
+
+        status = TaskStatus.failure(task.getId());
       }
       catch (Exception e) {
         log.error(e, "Exception while running task[%s]", task);
-        statusAndReports = new TaskStatusWithReports(TaskStatus.failure(task.getId()), null);
+        status = TaskStatus.failure(task.getId());
       }
       catch (Throwable t) {
         log.error(t, "Uncaught Throwable while running task[%s]", task);
         throw t;
       }
 
-      TaskStatus statusWithDuration = statusAndReports.getTaskStatus()
-                                                      .withDuration(System.currentTimeMillis() - startTime);
-      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), statusWithDuration);
-      return new TaskStatusWithReports(
-          statusWithDuration,
-          statusAndReports.getTaskReports()
-      );
+      status = status.withDuration(System.currentTimeMillis() - startTime);
+      TaskStatus statusForNotification;
+      if (status instanceof TaskStatusWithReports) {
+        statusForNotification = ((TaskStatusWithReports) status).getTaskStatus();
+      } else {
+        statusForNotification = status;
+      }
+      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), statusForNotification);
+      return status;
     }
   }
 }

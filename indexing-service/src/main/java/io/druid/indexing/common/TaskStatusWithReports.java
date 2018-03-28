@@ -20,15 +20,13 @@
 package io.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
 public class TaskStatusWithReports extends TaskStatus
 {
-  @JsonProperty
-  private TaskStatus taskStatus;
-
   @JsonProperty
   private Map<String, TaskReport> taskReports;
 
@@ -43,14 +41,17 @@ public class TaskStatusWithReports extends TaskStatus
         taskStatus.getStatusCode(),
         taskStatus.getDuration()
     );
-    this.taskStatus = taskStatus;
     this.taskReports = taskReports;
   }
 
-  @JsonProperty
+  @JsonIgnore
   public TaskStatus getTaskStatus()
   {
-    return taskStatus;
+    return new TaskStatus(
+        getId(),
+        getStatusCode(),
+        getDuration()
+    );
   }
 
   @JsonProperty

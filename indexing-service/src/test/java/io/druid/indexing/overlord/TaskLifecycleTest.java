@@ -47,7 +47,6 @@ import io.druid.indexer.TaskState;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestUtils;
@@ -872,7 +871,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(
             toolbox.getTaskActionClient()
@@ -886,7 +885,7 @@ public class TaskLifecycleTest
                                                .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
-        return new TaskStatusWithReports(TaskStatus.success(getId()), null);
+        return TaskStatus.success(getId());
       }
     };
 
@@ -909,7 +908,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
@@ -920,7 +919,7 @@ public class TaskLifecycleTest
                                                .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
-        return new TaskStatusWithReports(TaskStatus.success(getId()), null);
+        return TaskStatus.success(getId());
       }
     };
 
@@ -943,7 +942,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public TaskStatusWithReports run(TaskToolbox toolbox) throws Exception
+      public TaskStatus run(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
@@ -954,7 +953,7 @@ public class TaskLifecycleTest
                                                .build();
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
-        return new TaskStatusWithReports(TaskStatus.success(getId()), null);
+        return TaskStatus.success(getId());
       }
     };
 
