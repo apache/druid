@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common.io.smoosh;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -45,6 +44,7 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -370,7 +370,7 @@ public class FileSmoosher implements Closeable
 
     File metaFile = metaFile(baseDir);
 
-    try (Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), Charsets.UTF_8))) {
+    try (Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
       out.write(StringUtils.format("v1,%d,%d", maxChunkSize, outFiles.size()));
       out.write("\n");
 

@@ -20,7 +20,6 @@
 package io.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.base.Charsets;
 import com.google.common.collect.FluentIterable;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
@@ -33,6 +32,7 @@ import net.thisptr.jackson.jq.exception.JsonQueryException;
 
 import javax.annotation.Nullable;
 import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -50,7 +50,7 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
-  private final CharsetEncoder enc = Charsets.UTF_8.newEncoder();
+  private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
   @Override
   public Iterable<String> discoverRootFields(final JsonNode obj)

@@ -20,7 +20,6 @@
 package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -37,6 +36,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,8 +73,8 @@ public class InputRowParserSerdeTest
   public void testStringInputRowParserSerdeMultiCharset() throws Exception
   {
     Charset[] testCharsets = {
-        Charsets.US_ASCII, Charsets.ISO_8859_1, Charsets.UTF_8,
-        Charsets.UTF_16BE, Charsets.UTF_16LE, Charsets.UTF_16
+        StandardCharsets.US_ASCII, StandardCharsets.ISO_8859_1, StandardCharsets.UTF_8,
+        StandardCharsets.UTF_16BE, StandardCharsets.UTF_16LE, StandardCharsets.UTF_16
     };
 
     for (Charset testCharset : testCharsets) {

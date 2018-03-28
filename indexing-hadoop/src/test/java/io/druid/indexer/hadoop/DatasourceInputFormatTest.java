@@ -19,7 +19,6 @@
 
 package io.druid.indexer.hadoop;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -51,6 +50,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -281,7 +281,7 @@ public class DatasourceInputFormatTest
   {
     // Use the builtin supplier, reading from the local filesystem, rather than testFormatter.
     final File tmpFile = temporaryFolder.newFile("something:with:colons");
-    Files.write("dummy", tmpFile, Charsets.UTF_8);
+    Files.write("dummy", tmpFile, StandardCharsets.UTF_8);
 
     final ImmutableList<WindowedDataSegment> mySegments = ImmutableList.of(
         WindowedDataSegment.of(
