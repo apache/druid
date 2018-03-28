@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.common.config.ConfigManager;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
@@ -34,6 +33,7 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.metadata.MetadataCASUpdate;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
@@ -140,7 +140,6 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         if (authorizer instanceof BasicRoleBasedAuthorizer) {
           String authorizerName = entry.getKey();
           authorizerNames.add(authorizerName);
-          BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
 
           byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
           Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
@@ -167,7 +166,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           new Callable<ScheduledExecutors.Signal>()
           {
             @Override
-            public ScheduledExecutors.Signal call() throws Exception
+            public ScheduledExecutors.Signal call()
             {
               if (stopped) {
                 return ScheduledExecutors.Signal.STOP;

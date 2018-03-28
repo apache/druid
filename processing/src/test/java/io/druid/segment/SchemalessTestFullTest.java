@@ -65,7 +65,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -79,7 +78,7 @@ import java.util.Map;
 public class SchemalessTestFullTest
 {
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return ImmutableList.of(
         new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},

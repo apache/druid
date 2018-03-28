@@ -60,7 +60,6 @@ import io.druid.server.initialization.TLSServerConfig;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
-import org.apache.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -69,13 +68,13 @@ import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
-import javax.servlet.ServletException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -91,6 +90,7 @@ public class JettyServerModule extends JerseyServletModule
   private static final Logger log = new Logger(JettyServerModule.class);
 
   private static final AtomicInteger activeConnections = new AtomicInteger();
+  private static final String HTTP_1_1_STRING = "HTTP/1.1";
 
   @Override
   protected void configureServlets()
@@ -135,7 +135,7 @@ public class JettyServerModule extends JerseyServletModule
     @Override
     protected ResourceConfig getDefaultResourceConfig(
         Map<String, Object> props, WebConfig webConfig
-    ) throws ServletException
+    )
     {
       return new DefaultResourceConfig(resources);
     }
@@ -269,7 +269,7 @@ public class JettyServerModule extends JerseyServletModule
       httpsConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       final ServerConnector connector = new ServerConnector(
           server,
-          new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString()),
+          new SslConnectionFactory(sslContextFactory, HTTP_1_1_STRING),
           new HttpConnectionFactory(httpsConfiguration)
       );
       connector.setPort(node.getTlsPort());
@@ -295,6 +295,42 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     server.setConnectors(connectors);
+    final long gracefulStop = config.getGracefulShutdownTimeout().toStandardDuration().getMillis();
+    if (gracefulStop > 0) {
+      server.setStopTimeout(gracefulStop);
+    }
+    server.addLifeCycleListener(new LifeCycle.Listener()
+    {
+      @Override
+      public void lifeCycleStarting(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle starting [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStarted(LifeCycle event)
+      {
+        log.debug("Jetty lifeycle started [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleFailure(LifeCycle event, Throwable cause)
+      {
+        log.error(cause, "Jetty lifecycle event failed [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStopping(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle stopping [%s]", event.getClass());
+      }
+
+      @Override
+      public void lifeCycleStopped(LifeCycle event)
+      {
+        log.debug("Jetty lifecycle stopped [%s]", event.getClass());
+      }
+    });
 
     // initialize server
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
@@ -340,8 +376,19 @@ public class JettyServerModule extends JerseyServletModule
           public void stop()
           {
             try {
+              final long unannounceDelay = config.getUnannouncePropogationDelay().toStandardDuration().getMillis();
+              if (unannounceDelay > 0) {
+                log.info("Waiting %s ms for unannouncement to propogate.", unannounceDelay);
+                Thread.sleep(unannounceDelay);
+              } else {
+                log.debug("Skipping unannounce wait.");
+              }
               log.info("Stopping Jetty Server...");
               server.stop();
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new RE(e, "Interrupted waiting for jetty shutdown.");
             }
             catch (Exception e) {
               log.warn(e, "Unable to stop Jetty server.");

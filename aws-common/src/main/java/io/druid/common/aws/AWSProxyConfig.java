@@ -17,35 +17,45 @@
  * under the License.
  */
 
-package io.druid.java.util.common.guava;
+package io.druid.common.aws;
 
-import com.google.common.base.Supplier;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.HashMap;
-
-/**
- */
-public class DefaultingHashMap<K, V> extends HashMap<K, V>
+public class AWSProxyConfig
 {
-  private final Supplier<V> supplier;
+  @JsonProperty
+  private String host;
 
-  public DefaultingHashMap(
-      Supplier<V> supplier
-  )
+  @JsonProperty
+  private int port = -1; // AWS's default proxy port is -1
+
+  @JsonProperty
+  private String username;
+
+  @JsonProperty
+  private String password;
+
+  @JsonProperty
+  public String getHost()
   {
-    this.supplier = supplier;
+    return host;
   }
 
-  @Override
-  public V get(Object o)
+  @JsonProperty
+  public int getPort()
   {
-    V retVal = super.get(o);
+    return port;
+  }
 
-    if (retVal == null) {
-      retVal = supplier.get();
-      super.put((K) o, retVal);
-    }
+  @JsonProperty
+  public String getUsername()
+  {
+    return username;
+  }
 
-    return retVal;
+  @JsonProperty
+  public String getPassword()
+  {
+    return password;
   }
 }

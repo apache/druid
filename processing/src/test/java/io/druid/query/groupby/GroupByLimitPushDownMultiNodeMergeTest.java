@@ -49,10 +49,6 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.expression.TestExprMacroTable;
-import io.druid.segment.virtual.ExpressionVirtualColumn;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -63,10 +59,12 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -87,6 +85,8 @@ import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -451,7 +451,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   }
 
   @Test
-  public void testDescendingNumerics() throws Exception
+  public void testDescendingNumerics()
   {
     QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
     QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
@@ -570,7 +570,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   }
 
   @Test
-  public void testPartialLimitPushDownMerge() throws Exception
+  public void testPartialLimitPushDownMerge()
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 

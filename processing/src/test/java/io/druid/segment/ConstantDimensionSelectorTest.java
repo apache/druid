@@ -40,7 +40,7 @@ public class ConstantDimensionSelectorTest
   );
 
   @Test
-  public void testGetRow() throws Exception
+  public void testGetRow()
   {
     IndexedInts row = NULL_SELECTOR.getRow();
     Assert.assertEquals(1, row.size());
@@ -48,7 +48,7 @@ public class ConstantDimensionSelectorTest
   }
 
   @Test
-  public void testGetValueCardinality() throws Exception
+  public void testGetValueCardinality()
   {
     Assert.assertEquals(1, NULL_SELECTOR.getValueCardinality());
     Assert.assertEquals(1, CONST_SELECTOR.getValueCardinality());
@@ -57,7 +57,7 @@ public class ConstantDimensionSelectorTest
   }
 
   @Test
-  public void testLookupName() throws Exception
+  public void testLookupName()
   {
     Assert.assertEquals(null, NULL_SELECTOR.lookupName(0));
     Assert.assertEquals("billy", CONST_SELECTOR.lookupName(0));
@@ -66,7 +66,7 @@ public class ConstantDimensionSelectorTest
   }
 
   @Test
-  public void testLookupId() throws Exception
+  public void testLookupId()
   {
     Assert.assertEquals(0, NULL_SELECTOR.idLookup().lookupId(null));
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 0 : -1, NULL_SELECTOR.idLookup().lookupId(""));

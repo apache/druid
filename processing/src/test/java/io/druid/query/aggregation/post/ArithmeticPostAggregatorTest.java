@@ -120,7 +120,7 @@ public class ArithmeticPostAggregatorTest
   }
 
   @Test
-  public void testQuotient() throws Exception
+  public void testQuotient()
   {
     ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
         null,
@@ -140,7 +140,7 @@ public class ArithmeticPostAggregatorTest
   }
 
   @Test
-  public void testDiv() throws Exception
+  public void testDiv()
   {
     ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
         null,
@@ -158,7 +158,7 @@ public class ArithmeticPostAggregatorTest
   }
 
   @Test
-  public void testNumericFirstOrdering() throws Exception
+  public void testNumericFirstOrdering()
   {
     ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
         null,

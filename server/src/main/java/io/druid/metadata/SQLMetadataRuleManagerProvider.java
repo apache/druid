@@ -66,7 +66,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
           new Lifecycle.Handler()
           {
             @Override
-            public void start() throws Exception
+            public void start()
             {
               connector.createRulesTable();
               SQLMetadataRuleManager.createDefaultRule(

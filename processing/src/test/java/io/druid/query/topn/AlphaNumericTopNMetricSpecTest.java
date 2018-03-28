@@ -35,7 +35,7 @@ public class AlphaNumericTopNMetricSpecTest
 {
   // Test derived from sample code listed on Apache 2.0 licensed https://github.com/amjjd/java-alphanum
   @Test
-  public void testComparator() throws Exception
+  public void testComparator()
   {
     final Comparator<String> comparator = AlphaNumericTopNMetricSpec.comparator;
 
@@ -104,8 +104,8 @@ public class AlphaNumericTopNMetricSpecTest
                        + "    \"previousStop\": \"test\"\n"
                        + "}";
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
-    TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
+    TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), TopNMetricSpec.class);
+    TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), TopNMetricSpec.class);
     Assert.assertEquals(expectedMetricSpec, actualMetricSpec);
     Assert.assertEquals(expectedMetricSpec1, actualMetricSpec1);
   }

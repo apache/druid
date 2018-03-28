@@ -37,8 +37,8 @@ import com.google.inject.Provides;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.common.utils.ServletResourceUtils;
 import io.druid.curator.announcement.Announcer;
-import io.druid.guice.ExpressionModule;
 import io.druid.discovery.LookupNodeService;
+import io.druid.guice.ExpressionModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -176,7 +176,6 @@ class LookupListeningResource extends ListenerResource
 
           @Override
           public Object post(final Map<String, LookupExtractorFactory> lookups)
-              throws Exception
           {
             final Map<String, LookupExtractorFactory> failedUpdates = new HashMap<>();
             for (final String name : lookups.keySet()) {

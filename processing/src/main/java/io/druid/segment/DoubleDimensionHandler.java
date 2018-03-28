@@ -26,7 +26,6 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public class DoubleDimensionHandler implements DimensionHandler<Double, Double, Double>
 {
@@ -55,7 +54,7 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
-  ) throws IOException
+  )
   {
     return new DoubleDimensionMergerV9(
         dimensionName,

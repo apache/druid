@@ -49,8 +49,6 @@ public class CoordinatorServerView implements InventoryView
 
   private final ServerInventoryView baseView;
 
-  private volatile boolean initialized = false;
-
   @Inject
   public CoordinatorServerView(
       ServerInventoryView baseView
@@ -82,7 +80,6 @@ public class CoordinatorServerView implements InventoryView
           @Override
           public ServerView.CallbackAction segmentViewInitialized()
           {
-            initialized = true;
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -100,19 +97,6 @@ public class CoordinatorServerView implements InventoryView
           }
         }
     );
-  }
-
-  public boolean isInitialized()
-  {
-    return initialized;
-  }
-
-  public void clear()
-  {
-    synchronized (lock) {
-      timelines.clear();
-      segmentLoadInfos.clear();
-    }
   }
 
   private void removeServer(DruidServer server)

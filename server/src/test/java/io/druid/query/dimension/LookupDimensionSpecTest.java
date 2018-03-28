@@ -21,6 +21,7 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
@@ -70,12 +71,13 @@ public class LookupDimensionSpecTest
   public void testSerDesr(DimensionSpec lookupDimSpec) throws IOException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerSubtypes(new NamedType(LookupDimensionSpec.class, "lookup"));
     InjectableValues injectableValues = new InjectableValues.Std().addValue(
         LookupReferencesManager.class,
         LOOKUP_REF_MANAGER
     );
     String serLookup = mapper.writeValueAsString(lookupDimSpec);
-    Assert.assertEquals(lookupDimSpec, mapper.reader(LookupDimensionSpec.class).with(injectableValues).readValue(serLookup));
+    Assert.assertEquals(lookupDimSpec, mapper.reader(DimensionSpec.class).with(injectableValues).readValue(serLookup));
   }
 
   private Object[] parametersForTestSerDesr()

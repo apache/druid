@@ -24,8 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
-import java.io.IOException;
-
 public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
 {
   private final String supervisorId;
@@ -81,7 +79,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   @Override
   public Boolean perform(
       Task task, TaskActionToolbox toolbox
-  ) throws IOException
+  )
   {
     return toolbox.getSupervisorManager()
                   .checkPointDataSourceMetadata(supervisorId, sequenceName, previousCheckPoint, currentCheckPoint);

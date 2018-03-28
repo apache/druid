@@ -21,17 +21,16 @@ package io.druid.emitter.ambari.metrics;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.core.Emitter;
 import io.druid.java.util.emitter.core.Event;
 import io.druid.java.util.emitter.service.AlertEvent;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.metrics2.sink.timeline.AbstractTimelineMetricsSink;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetrics;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -202,7 +201,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
     synchronized (started) {
       if (started.get()) {
@@ -220,7 +219,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     synchronized (started) {
       flush();

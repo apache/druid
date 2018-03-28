@@ -37,7 +37,7 @@ public class ResourcePoolTest
   ResourcePool<String, String> pool;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
@@ -52,7 +52,7 @@ public class ResourcePoolTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     primePool();
     EasyMock.replay(resourceFactory);
@@ -79,7 +79,7 @@ public class ResourcePoolTest
   }
 
   @Test
-  public void testFailedResource() throws Exception
+  public void testFailedResource()
   {
     primePool();
 
@@ -98,7 +98,7 @@ public class ResourcePoolTest
   }
 
   @Test
-  public void testFaultyFailedResourceReplacement() throws Exception
+  public void testFaultyFailedResourceReplacement()
   {
     primePool();
 
@@ -279,7 +279,7 @@ public class ResourcePoolTest
     }
 
     @Override
-    public String answer() throws Throwable
+    public String answer()
     {
       return string + count++;
     }

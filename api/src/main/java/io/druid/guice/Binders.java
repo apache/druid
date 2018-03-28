@@ -27,7 +27,6 @@ import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.tasklogs.TaskLogs;
 
@@ -36,10 +35,6 @@ import io.druid.tasklogs.TaskLogs;
 @PublicApi
 public class Binders
 {
-  public static MapBinder<String, DataSegmentPuller> dataSegmentPullerBinder(Binder binder)
-  {
-    return MapBinder.newMapBinder(binder, String.class, DataSegmentPuller.class);
-  }
 
   public static MapBinder<String, DataSegmentKiller> dataSegmentKillerBinder(Binder binder)
   {

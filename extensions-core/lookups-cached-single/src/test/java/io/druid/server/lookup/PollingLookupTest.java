@@ -121,7 +121,7 @@ public class PollingLookupTest
   }
 
   @Before
-  public void setUp() throws InterruptedException
+  public void setUp()
   {
     pollingLookup = new PollingLookup(POLL_PERIOD, dataFetcher, pollingCacheFactory);
   }
@@ -143,7 +143,7 @@ public class PollingLookupTest
   }
 
   @Test
-  public void testApply() throws InterruptedException
+  public void testApply()
   {
     assertMapLookup(firstLookupMap, pollingLookup);
   }

@@ -52,7 +52,7 @@ public interface FirehoseV2 extends Closeable
   /**
    * For initial start
    */
-  void start() throws Exception;
+  void start();
 
   /**
    * Advance the firehose to the next offset.  Implementations of this interface should make sure that

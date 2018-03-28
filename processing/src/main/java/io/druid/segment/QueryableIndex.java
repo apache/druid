@@ -49,5 +49,5 @@ public interface QueryableIndex extends ColumnSelector, Closeable
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
   @Override
-  void close() throws IOException;
+  void close();
 }

@@ -17,13 +17,36 @@
  * under the License.
  */
 
-package io.druid.java.util.emitter.service;
+package io.druid.common.aws;
 
-import io.druid.java.util.emitter.core.Event;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public interface ServiceEvent extends Event
+public class AWSEndpointConfig
 {
-  String getService();
+  @JsonProperty
+  private String url;
 
-  String getHost();
+  @JsonProperty
+  private String serviceName;
+
+  @JsonProperty
+  private String signingRegion;
+
+  @JsonProperty
+  public String getUrl()
+  {
+    return url;
+  }
+
+  @JsonProperty
+  public String getServiceName()
+  {
+    return serviceName;
+  }
+
+  @JsonProperty
+  public String getSigningRegion()
+  {
+    return signingRegion;
+  }
 }

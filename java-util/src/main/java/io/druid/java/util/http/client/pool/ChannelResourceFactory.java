@@ -115,14 +115,14 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
           new ChannelFutureListener()
           {
             @Override
-            public void operationComplete(ChannelFuture f) throws Exception
+            public void operationComplete(ChannelFuture f)
             {
               if (f.isSuccess()) {
                 sslHandler.handshake().addListener(
                     new ChannelFutureListener()
                     {
                       @Override
-                      public void operationComplete(ChannelFuture f2) throws Exception
+                      public void operationComplete(ChannelFuture f2)
                       {
                         if (f2.isSuccess()) {
                           handshakeFuture.setSuccess();

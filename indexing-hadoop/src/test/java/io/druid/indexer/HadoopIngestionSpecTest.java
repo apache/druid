@@ -19,7 +19,6 @@
 
 package io.druid.indexer;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -50,7 +49,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testGranularitySpec() throws JsonProcessingException
+  public void testGranularitySpec()
   {
     final HadoopIngestionSpec schema;
 
@@ -220,7 +219,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testDbUpdaterJobSpec() throws Exception
+  public void testDbUpdaterJobSpec()
   {
     final HadoopIngestionSpec schema;
 
@@ -286,7 +285,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testUniqueId() throws Exception
+  public void testUniqueId()
   {
     final HadoopIngestionSpec schema = jsonReadWriteRead(
         "{\"uniqueId\" : \"test_unique_id\"}",

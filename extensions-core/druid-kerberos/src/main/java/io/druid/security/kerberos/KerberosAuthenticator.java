@@ -160,7 +160,7 @@ public class KerberosAuthenticator implements Authenticator
           SignerSecretProvider signerSecretProvider = new SignerSecretProvider()
           {
             @Override
-            public void init(Properties config, ServletContext servletContext, long tokenValidity) throws Exception
+            public void init(Properties config, ServletContext servletContext, long tokenValidity)
             {
 
             }
@@ -186,7 +186,7 @@ public class KerberosAuthenticator implements Authenticator
 
       // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling in doFilterSuper
       @Override
-      protected AuthenticationToken getToken(HttpServletRequest request) throws IOException, AuthenticationException
+      protected AuthenticationToken getToken(HttpServletRequest request) throws AuthenticationException
       {
         AuthenticationToken token = null;
         String tokenStr = null;
@@ -334,13 +334,14 @@ public class KerberosAuthenticator implements Authenticator
               };
               if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
                 String signedToken = mySigner.sign(token.toString());
-                tokenToAuthCookie(httpResponse,
-                                 signedToken,
-                                 getCookieDomain(),
-                                 getCookiePath(),
-                                 token.getExpires(),
-                                 !token.isExpired() && token.getExpires() > 0,
-                                 isHttps
+                tokenToAuthCookie(
+                    httpResponse,
+                    signedToken,
+                    getCookieDomain(),
+                    getCookiePath(),
+                    token.getExpires(),
+                    !token.isExpired() && token.getExpires() > 0,
+                    isHttps
                 );
               }
               doFilter(filterChain, httpRequest, httpResponse);
@@ -361,8 +362,14 @@ public class KerberosAuthenticator implements Authenticator
         }
         if (unauthorizedResponse) {
           if (!httpResponse.isCommitted()) {
-            tokenToAuthCookie(httpResponse, "", getCookieDomain(),
-                             getCookiePath(), 0, false, isHttps
+            tokenToAuthCookie(
+                httpResponse,
+                "",
+                getCookieDomain(),
+                getCookiePath(),
+                0,
+                false,
+                isHttps
             );
             // If response code is 401. Then WWW-Authenticate Header should be
             // present.. reset to 403 if not found..

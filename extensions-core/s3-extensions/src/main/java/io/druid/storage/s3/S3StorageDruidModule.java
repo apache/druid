@@ -19,8 +19,12 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSSessionCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
@@ -28,13 +32,14 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.common.aws.AWSCredentialsConfig;
+import io.druid.common.aws.AWSEndpointConfig;
+import io.druid.common.aws.AWSProxyConfig;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.security.AWSCredentials;
+import org.apache.commons.lang.StringUtils;
 
 import java.util.List;
 
@@ -75,6 +80,8 @@ public class S3StorageDruidModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.s3.proxy", AWSProxyConfig.class);
+    JsonConfigProvider.bind(binder, "druid.s3.endpoint", AWSEndpointConfig.class);
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
              .addBinding("s3")
              .to(S3TimestampVersionedDataFinder.class)
@@ -83,7 +90,6 @@ public class S3StorageDruidModule implements DruidModule
              .addBinding("s3n")
              .to(S3TimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
-    Binders.dataSegmentPullerBinder(binder).addBinding(SCHEME).to(S3DataSegmentPuller.class).in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(S3DataSegmentKiller.class).in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME).to(S3DataSegmentMover.class).in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder)
@@ -102,15 +108,44 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public RestS3Service getRestS3Service(AWSCredentialsProvider provider)
+  public AmazonS3 getAmazonS3Client(
+      AWSCredentialsProvider provider,
+      AWSProxyConfig proxyConfig,
+      AWSEndpointConfig endpointConfig
+  )
   {
-    if (provider.getCredentials() instanceof AWSSessionCredentials) {
-      return new RestS3Service(new AWSSessionCredentialsAdapter(provider));
-    } else {
-      return new RestS3Service(new AWSCredentials(
-          provider.getCredentials().getAWSAccessKeyId(),
-          provider.getCredentials().getAWSSecretKey()
-      ));
+    // AmazonS3ClientBuilder can't be used because it makes integration tests failed
+    final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
+    final AmazonS3Client client = new AmazonS3Client(provider, setProxyConfig(configuration, proxyConfig));
+
+    if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
+      if (StringUtils.isNotEmpty(endpointConfig.getServiceName()) &&
+          StringUtils.isNotEmpty(endpointConfig.getSigningRegion())) {
+        client.setEndpoint(endpointConfig.getUrl(), endpointConfig.getServiceName(), endpointConfig.getSigningRegion());
+      } else {
+        client.setEndpoint(endpointConfig.getUrl());
+      }
     }
+
+    client.setS3ClientOptions(S3ClientOptions.builder().enableForceGlobalBucketAccess().build());
+
+    return client;
+  }
+
+  private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
+  {
+    if (StringUtils.isNotEmpty(proxyConfig.getHost())) {
+      conf.setProxyHost(proxyConfig.getHost());
+    }
+    if (proxyConfig.getPort() != -1) {
+      conf.setProxyPort(proxyConfig.getPort());
+    }
+    if (StringUtils.isNotEmpty(proxyConfig.getUsername())) {
+      conf.setProxyUsername(proxyConfig.getUsername());
+    }
+    if (StringUtils.isNotEmpty(proxyConfig.getPassword())) {
+      conf.setProxyPassword(proxyConfig.getPassword());
+    }
+    return conf;
   }
 }

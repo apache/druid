@@ -22,11 +22,8 @@ package io.druid.firehose.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
-import io.druid.java.util.common.parsers.ParseException;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Committer;
 import io.druid.data.input.FirehoseFactoryV2;
@@ -34,10 +31,13 @@ import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.firehose.kafka.KafkaSimpleConsumer.BytesMessageWithOffset;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.parsers.ParseException;
+import io.druid.java.util.emitter.EmittingLogger;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -147,7 +147,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
   }
 
   @Override
-  public FirehoseV2 connect(final ByteBufferInputRowParser firehoseParser, Object lastCommit) throws IOException
+  public FirehoseV2 connect(final ByteBufferInputRowParser firehoseParser, Object lastCommit)
   {
     final Map<Integer, Long> lastOffsets = loadOffsetFromPreviousMetaData(lastCommit);
 
@@ -177,7 +177,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       private volatile boolean stopped;
       private volatile BytesMessageWithOffset msg = null;
       private volatile InputRow row = null;
-      private volatile Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      private volatile Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       {
         lastOffsetPartitions = Maps.newHashMap();
@@ -185,7 +185,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       }
 
       @Override
-      public void start() throws Exception
+      public void start()
       {
       }
 
@@ -212,7 +212,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
               msg = messageQueue.take();
               final byte[] message = msg.message();
               nextIterator = message == null
-                             ? Iterators.emptyIterator()
+                             ? Collections.emptyIterator()
                              : firehoseParser.parseBatch(ByteBuffer.wrap(message)).iterator();
               continue;
             }
@@ -336,7 +336,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
     }
 
     @Override
-    public synchronized void close() throws IOException
+    public synchronized void close()
     {
       if (stopped.compareAndSet(false, true)) {
         thread.interrupt();

@@ -93,7 +93,7 @@ public class LongMinAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     LongMinAggregatorFactory one = new LongMinAggregatorFactory("name1", "fieldName1");
     LongMinAggregatorFactory oneMore = new LongMinAggregatorFactory("name1", "fieldName1");

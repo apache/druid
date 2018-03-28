@@ -33,7 +33,7 @@ import java.util.Arrays;
 public class FunctionalIterableTest
 {
   @Test
-  public void testTransform() throws Exception
+  public void testTransform()
   {
     Assert.assertEquals(
         Lists.<Integer>newArrayList(
@@ -54,7 +54,7 @@ public class FunctionalIterableTest
   }
 
   @Test
-  public void testTransformCat() throws Exception
+  public void testTransformCat()
   {
     Assert.assertEquals(
         Lists.<String>newArrayList(
@@ -75,7 +75,7 @@ public class FunctionalIterableTest
   }
 
   @Test
-  public void testKeep() throws Exception
+  public void testKeep()
   {
     Assert.assertEquals(
         Lists.<Integer>newArrayList(
@@ -99,7 +99,7 @@ public class FunctionalIterableTest
   }
 
   @Test
-  public void testFilter() throws Exception
+  public void testFilter()
   {
     Assert.assertEquals(
         Lists.<String>newArrayList(
@@ -120,7 +120,7 @@ public class FunctionalIterableTest
   }
 
   @Test
-  public void testDrop() throws Exception
+  public void testDrop()
   {
     Assert.assertEquals(
         Lists.<String>newArrayList(

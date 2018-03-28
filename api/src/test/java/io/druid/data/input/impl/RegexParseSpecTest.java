@@ -43,9 +43,9 @@ public class RegexParseSpecTest
         Collections.singletonList("abc"),
         "abc"
     );
-    final RegexParseSpec serde = jsonMapper.readValue(
+    final RegexParseSpec serde = (RegexParseSpec) jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
-        RegexParseSpec.class
+        ParseSpec.class
     );
     Assert.assertEquals("abc", serde.getTimestampSpec().getTimestampColumn());
     Assert.assertEquals("iso", serde.getTimestampSpec().getTimestampFormat());

@@ -86,7 +86,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSignature() throws Exception
+  public void testSignature()
   {
     final String sql = "SELECT * FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {
@@ -126,7 +126,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSelectAllInFirstFrame() throws Exception
+  public void testSelectAllInFirstFrame()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {
@@ -159,7 +159,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @Test
-  public void testSelectSplitOverTwoFrames() throws Exception
+  public void testSelectSplitOverTwoFrames()
   {
     final String sql = "SELECT __time, cnt, dim1, dim2, m1 FROM druid.foo";
     final DruidStatement statement = new DruidStatement("", 0, null, () -> {

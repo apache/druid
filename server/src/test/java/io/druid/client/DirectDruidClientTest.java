@@ -19,16 +19,11 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.HttpResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.QueryableDruidServer;
@@ -38,6 +33,10 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.query.Druids;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryPlus;
@@ -172,15 +171,15 @@ public class DirectDruidClientTest
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout
-    Sequence s2 = client1.run(QueryPlus.wrap(query), defaultContext);
+    client1.run(QueryPlus.wrap(query), defaultContext);
     Assert.assertEquals(2, client1.getNumOpenConnections());
     futureException.setException(new ReadTimeoutException());
     Assert.assertEquals(1, client1.getNumOpenConnections());
 
     // subsequent connections should work
-    Sequence s3 = client1.run(QueryPlus.wrap(query), defaultContext);
-    Sequence s4 = client1.run(QueryPlus.wrap(query), defaultContext);
-    Sequence s5 = client1.run(QueryPlus.wrap(query), defaultContext);
+    client1.run(QueryPlus.wrap(query), defaultContext);
+    client1.run(QueryPlus.wrap(query), defaultContext);
+    client1.run(QueryPlus.wrap(query), defaultContext);
 
     Assert.assertTrue(client1.getNumOpenConnections() == 4);
 
@@ -206,7 +205,7 @@ public class DirectDruidClientTest
   }
 
   @Test
-  public void testCancel() throws Exception
+  public void testCancel()
   {
     HttpClient httpClient = EasyMock.createStrictMock(HttpClient.class);
 
@@ -287,7 +286,7 @@ public class DirectDruidClientTest
   }
 
   @Test
-  public void testQueryInterruptionExceptionLogMessage() throws JsonProcessingException
+  public void testQueryInterruptionExceptionLogMessage()
   {
     HttpClient httpClient = EasyMock.createMock(HttpClient.class);
     SettableFuture<Object> interruptionFuture = SettableFuture.create();

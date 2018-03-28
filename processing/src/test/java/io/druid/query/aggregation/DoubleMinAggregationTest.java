@@ -93,7 +93,7 @@ public class DoubleMinAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     DoubleMinAggregatorFactory one = new DoubleMinAggregatorFactory("name1", "fieldName1");
     DoubleMinAggregatorFactory oneMore = new DoubleMinAggregatorFactory("name1", "fieldName1");

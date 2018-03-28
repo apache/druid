@@ -210,7 +210,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                         new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
                         {
                           @Override
-                          public Sequence<SegmentAnalysis> call() throws Exception
+                          public Sequence<SegmentAnalysis> call()
                           {
                             return Sequences.simple(input.run(threadSafeQueryPlus, responseContext).toList());
                           }

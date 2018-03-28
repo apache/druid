@@ -35,14 +35,14 @@ public class MapCacheTest
   private MapCache cache;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     baseMap = new ByteCountingLRUMap(1024 * 1024);
     cache = new MapCache(baseMap);
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
     Assert.assertEquals(0, baseMap.size());

@@ -21,7 +21,6 @@ package io.druid.firehose.rabbitmq;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterators;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -46,6 +45,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -205,7 +205,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
        */
       private long lastDeliveryTag;
 
-      private Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      private Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
@@ -314,7 +314,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
     }
 
     @Override
-    public void handleCancel(String consumerTag) throws IOException
+    public void handleCancel(String consumerTag)
     {
       _queue.clear();
     }
@@ -326,7 +326,6 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
         AMQP.BasicProperties properties,
         byte[] body
     )
-        throws IOException
     {
       this._queue.add(new Delivery(envelope, properties, body));
     }

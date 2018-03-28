@@ -54,7 +54,7 @@ public class VersionedIntervalTimelineTest
   VersionedIntervalTimeline<String, Integer> timeline;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -78,7 +78,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testApril() throws Exception
+  public void testApril()
   {
     assertValues(
         Arrays.asList(
@@ -91,7 +91,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testApril2() throws Exception
+  public void testApril2()
   {
     Assert.assertEquals(
         makeSingle(1),
@@ -109,7 +109,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testApril3() throws Exception
+  public void testApril3()
   {
     Assert.assertEquals(
         makeSingle(1),
@@ -130,7 +130,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testApril4() throws Exception
+  public void testApril4()
   {
     Assert.assertEquals(
         makeSingle(1),
@@ -155,7 +155,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testMay() throws Exception
+  public void testMay()
   {
     assertValues(
         Collections.singletonList(
@@ -166,7 +166,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testMay2() throws Exception
+  public void testMay2()
   {
     Assert.assertNotNull(timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle(1)));
     assertValues(
@@ -180,7 +180,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testMay3() throws Exception
+  public void testMay3()
   {
     Assert.assertEquals(
         makeSingle(9),
@@ -200,7 +200,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testInsertInWrongOrder() throws Exception
+  public void testInsertInWrongOrder()
   {
     DateTime overallStart = DateTimes.nowUtc().minus(Hours.TWO);
 
@@ -225,7 +225,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testRemove() throws Exception
+  public void testRemove()
   {
     for (TimelineObjectHolder<String, Integer> holder : timeline.findOvershadowed()) {
       for (PartitionChunk<Integer> chunk : holder.getObject()) {
@@ -237,7 +237,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testFindEntry() throws Exception
+  public void testFindEntry()
   {
     Assert.assertEquals(
         new ImmutablePartitionHolder<Integer>(new PartitionHolder<Integer>(makeSingle(1))),
@@ -271,7 +271,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testFindEntryWithOverlap() throws Exception
+  public void testFindEntryWithOverlap()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -285,7 +285,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testPartitioning() throws Exception
+  public void testPartitioning()
   {
     assertValues(
         ImmutableList.of(
@@ -306,7 +306,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testPartialPartitionNotReturned() throws Exception
+  public void testPartialPartitionNotReturned()
   {
     testRemove();
 
@@ -343,7 +343,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testIncompletePartitionDoesNotOvershadow() throws Exception
+  public void testIncompletePartitionDoesNotOvershadow()
   {
     testRemove();
 
@@ -363,7 +363,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testRemovePartitionMakesIncomplete() throws Exception
+  public void testRemovePartitionMakesIncomplete()
   {
     testIncompletePartitionDoesNotOvershadow();
 
@@ -377,7 +377,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testInsertAndRemoveSameThingsion() throws Exception
+  public void testInsertAndRemoveSameThingsion()
   {
     add("2011-05-01/2011-05-10", "5", 10);
     assertValues(
@@ -421,7 +421,7 @@ public class VersionedIntervalTimelineTest
   //   1|----|
   //      1|----|
   @Test(expected = UnsupportedOperationException.class)
-  public void testOverlapSameVersionThrowException() throws Exception
+  public void testOverlapSameVersionThrowException()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -432,7 +432,7 @@ public class VersionedIntervalTimelineTest
   //   1|----|
   //   1|----|
   @Test
-  public void testOverlapSameVersionIsOkay() throws Exception
+  public void testOverlapSameVersionIsOkay()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -452,7 +452,7 @@ public class VersionedIntervalTimelineTest
   // 1|----|----|
   //   2|----|
   @Test
-  public void testOverlapSecondBetween() throws Exception
+  public void testOverlapSecondBetween()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -473,7 +473,7 @@ public class VersionedIntervalTimelineTest
   //   2|----|
   // 1|----|----|
   @Test
-  public void testOverlapFirstBetween() throws Exception
+  public void testOverlapFirstBetween()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -494,7 +494,7 @@ public class VersionedIntervalTimelineTest
   //   1|----|
   //      2|----|
   @Test
-  public void testOverlapFirstBefore() throws Exception
+  public void testOverlapFirstBefore()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -513,7 +513,7 @@ public class VersionedIntervalTimelineTest
   //      2|----|
   //   1|----|
   @Test
-  public void testOverlapFirstAfter() throws Exception
+  public void testOverlapFirstAfter()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -532,7 +532,7 @@ public class VersionedIntervalTimelineTest
   //   1|----|
   // 2|----|
   @Test
-  public void testOverlapSecondBefore() throws Exception
+  public void testOverlapSecondBefore()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -551,7 +551,7 @@ public class VersionedIntervalTimelineTest
   // 2|----|
   //   1|----|
   @Test
-  public void testOverlapSecondAfter() throws Exception
+  public void testOverlapSecondAfter()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -570,7 +570,7 @@ public class VersionedIntervalTimelineTest
   //   1|----------|
   //      2|----|
   @Test
-  public void testOverlapFirstLarger() throws Exception
+  public void testOverlapFirstLarger()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -590,7 +590,7 @@ public class VersionedIntervalTimelineTest
   //      2|----|
   //   1|----------|
   @Test
-  public void testOverlapSecondLarger() throws Exception
+  public void testOverlapSecondLarger()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -610,7 +610,7 @@ public class VersionedIntervalTimelineTest
   //   1|----|-----|
   //   2|-------|
   @Test
-  public void testOverlapSecondPartialAlign() throws Exception
+  public void testOverlapSecondPartialAlign()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -630,7 +630,7 @@ public class VersionedIntervalTimelineTest
   //   2|-------|
   //   1|----|-----|
   @Test
-  public void testOverlapFirstPartialAlign() throws Exception
+  public void testOverlapFirstPartialAlign()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -651,7 +651,7 @@ public class VersionedIntervalTimelineTest
   //       2|------------|
   //     3|---|
   @Test
-  public void testOverlapAscending() throws Exception
+  public void testOverlapAscending()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -673,7 +673,7 @@ public class VersionedIntervalTimelineTest
   //       2|------------|
   //   1|-------|
   @Test
-  public void testOverlapDescending() throws Exception
+  public void testOverlapDescending()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -695,7 +695,7 @@ public class VersionedIntervalTimelineTest
   //     3|---|
   //   1|-------|
   @Test
-  public void testOverlapMixed() throws Exception
+  public void testOverlapMixed()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -717,7 +717,7 @@ public class VersionedIntervalTimelineTest
   //      2|--------|
   //      3|-----|
   @Test
-  public void testOverlapContainedAscending() throws Exception
+  public void testOverlapContainedAscending()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -740,7 +740,7 @@ public class VersionedIntervalTimelineTest
   //      2|--------|
   //    1|-------------|
   @Test
-  public void testOverlapContainedDescending() throws Exception
+  public void testOverlapContainedDescending()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -763,7 +763,7 @@ public class VersionedIntervalTimelineTest
   //      3|-----|
   //    1|-------------|
   @Test
-  public void testOverlapContainedmixed() throws Exception
+  public void testOverlapContainedmixed()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -785,7 +785,7 @@ public class VersionedIntervalTimelineTest
   //      1|------|------|----|
   //                 2|-----|
   @Test
-  public void testOverlapSecondContained() throws Exception
+  public void testOverlapSecondContained()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -809,7 +809,7 @@ public class VersionedIntervalTimelineTest
   //                 2|-----|
   //      1|------|------|----|
   @Test
-  public void testOverlapFirstContained() throws Exception
+  public void testOverlapFirstContained()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -833,7 +833,7 @@ public class VersionedIntervalTimelineTest
   //  1|----|----|
   //  2|---------|
   @Test
-  public void testOverlapSecondContainsFirst() throws Exception
+  public void testOverlapSecondContainsFirst()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -853,7 +853,7 @@ public class VersionedIntervalTimelineTest
   //  2|---------|
   //  1|----|----|
   @Test
-  public void testOverlapFirstContainsSecond() throws Exception
+  public void testOverlapFirstContainsSecond()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -874,7 +874,7 @@ public class VersionedIntervalTimelineTest
   //     2|----|
   //        3|----|
   @Test
-  public void testOverlapLayeredAscending() throws Exception
+  public void testOverlapLayeredAscending()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -896,7 +896,7 @@ public class VersionedIntervalTimelineTest
   //     2|----|
   //  1|----|
   @Test
-  public void testOverlapLayeredDescending() throws Exception
+  public void testOverlapLayeredDescending()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -917,7 +917,7 @@ public class VersionedIntervalTimelineTest
   //  2|----|     |----|
   // 1|-------------|
   @Test
-  public void testOverlapV1Large() throws Exception
+  public void testOverlapV1Large()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -939,7 +939,7 @@ public class VersionedIntervalTimelineTest
   // 2|-------------|
   //  1|----|     |----|
   @Test
-  public void testOverlapV2Large() throws Exception
+  public void testOverlapV2Large()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -959,7 +959,7 @@ public class VersionedIntervalTimelineTest
   //    1|-------------|
   //  2|----|   |----|
   @Test
-  public void testOverlapV1LargeIsAfter() throws Exception
+  public void testOverlapV1LargeIsAfter()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -981,7 +981,7 @@ public class VersionedIntervalTimelineTest
   //  2|----|   |----|
   //    1|-------------|
   @Test
-  public void testOverlapV1SecondLargeIsAfter() throws Exception
+  public void testOverlapV1SecondLargeIsAfter()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1003,7 +1003,7 @@ public class VersionedIntervalTimelineTest
   //    1|-----------|
   //  2|----|     |----|
   @Test
-  public void testOverlapV1FirstBetween() throws Exception
+  public void testOverlapV1FirstBetween()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1024,7 +1024,7 @@ public class VersionedIntervalTimelineTest
   //  2|----|     |----|
   //    1|-----------|
   @Test
-  public void testOverlapV1SecondBetween() throws Exception
+  public void testOverlapV1SecondBetween()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1047,7 +1047,7 @@ public class VersionedIntervalTimelineTest
   //       2|---|
   // 1|-------------|
   @Test
-  public void testOverlapLargeUnderlyingWithSmallDayAlignedOverlays() throws Exception
+  public void testOverlapLargeUnderlyingWithSmallDayAlignedOverlays()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1070,7 +1070,7 @@ public class VersionedIntervalTimelineTest
   //     |----3---||---1---|
   //   |---2---|
   @Test
-  public void testOverlapCausesNullEntries() throws Exception
+  public void testOverlapCausesNullEntries()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1092,7 +1092,7 @@ public class VersionedIntervalTimelineTest
   //   2|------|  |------|
   //  3|------------------|
   @Test
-  public void testOverlapOvershadowedThirdContains() throws Exception
+  public void testOverlapOvershadowedThirdContains()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1117,7 +1117,7 @@ public class VersionedIntervalTimelineTest
   // 1|-------------|
   // 3|-------------|
   @Test
-  public void testOverlapOvershadowedAligned() throws Exception
+  public void testOverlapOvershadowedAligned()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1140,7 +1140,7 @@ public class VersionedIntervalTimelineTest
   //     1|---------|
   // 3|-----------|
   @Test
-  public void testOverlapOvershadowedSomeComplexOverlapsCantThinkOfBetterName() throws Exception
+  public void testOverlapOvershadowedSomeComplexOverlapsCantThinkOfBetterName()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1159,7 +1159,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOverlapAndRemove() throws Exception
+  public void testOverlapAndRemove()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1177,7 +1177,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOverlapAndRemove2() throws Exception
+  public void testOverlapAndRemove2()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1198,7 +1198,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOverlapAndRemove3() throws Exception
+  public void testOverlapAndRemove3()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1219,7 +1219,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOverlapAndRemove4() throws Exception
+  public void testOverlapAndRemove4()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1240,7 +1240,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOverlapAndRemove5() throws Exception
+  public void testOverlapAndRemove5()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1258,7 +1258,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testRemoveSomethingDontHave() throws Exception
+  public void testRemoveSomethingDontHave()
   {
     Assert.assertNull(
         "Don't have it, should be null",
@@ -1271,7 +1271,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testRemoveNothingBacking() throws Exception
+  public void testRemoveNothingBacking()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1293,7 +1293,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionWins1() throws Exception
+  public void testOvershadowingHigherVersionWins1()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1313,7 +1313,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionWins2() throws Exception
+  public void testOvershadowingHigherVersionWins2()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1331,7 +1331,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionWins3() throws Exception
+  public void testOvershadowingHigherVersionWins3()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1351,7 +1351,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionWins4() throws Exception
+  public void testOvershadowingHigherVersionWins4()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1369,7 +1369,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionNeverOvershadowedByLower1() throws Exception
+  public void testOvershadowingHigherVersionNeverOvershadowedByLower1()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1384,7 +1384,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionNeverOvershadowedByLower2() throws Exception
+  public void testOvershadowingHigherVersionNeverOvershadowedByLower2()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1399,7 +1399,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionNeverOvershadowedByLower3() throws Exception
+  public void testOvershadowingHigherVersionNeverOvershadowedByLower3()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1414,7 +1414,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionNeverOvershadowedByLower4() throws Exception
+  public void testOvershadowingHigherVersionNeverOvershadowedByLower4()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1432,7 +1432,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingHigherVersionNeverOvershadowedByLower5() throws Exception
+  public void testOvershadowingHigherVersionNeverOvershadowedByLower5()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1452,7 +1452,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingSameIntervalHighVersionWins() throws Exception
+  public void testOvershadowingSameIntervalHighVersionWins()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1470,7 +1470,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testOvershadowingSameIntervalSameVersionAllKept() throws Exception
+  public void testOvershadowingSameIntervalSameVersionAllKept()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1489,7 +1489,7 @@ public class VersionedIntervalTimelineTest
   }
 
   @Test
-  public void testNotFoundReturnsEmpty() throws Exception
+  public void testNotFoundReturnsEmpty()
   {
     timeline = makeStringIntegerTimeline();
 
@@ -1500,7 +1500,7 @@ public class VersionedIntervalTimelineTest
 
   // https://github.com/druid-io/druid/issues/3010
   @Test
-  public void testRemoveIncompleteKeepsComplete() throws Exception
+  public void testRemoveIncompleteKeepsComplete()
   {
     timeline = makeStringIntegerTimeline();
 

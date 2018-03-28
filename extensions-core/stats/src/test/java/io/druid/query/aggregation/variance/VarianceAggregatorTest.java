@@ -135,7 +135,7 @@ public class VarianceAggregatorTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     VarianceAggregatorFactory one = new VarianceAggregatorFactory("name1", "fieldName1");
     VarianceAggregatorFactory oneMore = new VarianceAggregatorFactory("name1", "fieldName1");

@@ -22,7 +22,6 @@ package io.druid.segment.writeout;
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 import java.io.File;
-import java.io.IOException;
 
 public class OffHeapMemorySegmentWriteOutMediumFactory implements SegmentWriteOutMediumFactory
 {
@@ -38,7 +37,7 @@ public class OffHeapMemorySegmentWriteOutMediumFactory implements SegmentWriteOu
   private OffHeapMemorySegmentWriteOutMediumFactory() {}
 
   @Override
-  public SegmentWriteOutMedium makeSegmentWriteOutMedium(File outDir) throws IOException
+  public SegmentWriteOutMedium makeSegmentWriteOutMedium(File outDir)
   {
     return new OffHeapMemorySegmentWriteOutMedium();
   }

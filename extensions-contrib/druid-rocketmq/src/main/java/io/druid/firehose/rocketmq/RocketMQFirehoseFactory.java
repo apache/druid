@@ -33,7 +33,6 @@ import com.alibaba.rocketmq.common.protocol.heartbeat.MessageModel;
 import com.alibaba.rocketmq.remoting.exception.RemotingException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -48,6 +47,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -199,7 +199,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
 
     return new Firehose()
     {
-      private Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      private Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
@@ -310,7 +310,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         defaultMQPullConsumer.shutdown();
         pullMessageService.shutdown(false);

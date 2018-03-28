@@ -110,7 +110,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                         new AbstractPrioritizedCallable<Void>(priority)
                         {
                           @Override
-                          public Void call() throws Exception
+                          public Void call()
                           {
                             try {
                               if (bySegment) {

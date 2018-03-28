@@ -65,7 +65,7 @@ public class EqualDistributionWorkerSelectStrategyTest
       );
 
   @Test
-  public void testFindWorkerForTask() throws Exception
+  public void testFindWorkerForTask()
   {
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
@@ -100,7 +100,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   }
 
   @Test
-  public void testFindWorkerForTaskWhenSameCurrCapacityUsed() throws Exception
+  public void testFindWorkerForTaskWhenSameCurrCapacityUsed()
   {
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
 
@@ -135,7 +135,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   }
 
   @Test
-  public void testOneDisableWorkerDifferentUsedCapacity() throws Exception
+  public void testOneDisableWorkerDifferentUsedCapacity()
   {
     String DISABLED_VERSION = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);
@@ -171,7 +171,7 @@ public class EqualDistributionWorkerSelectStrategyTest
   }
 
   @Test
-  public void testOneDisableWorkerSameUsedCapacity() throws Exception
+  public void testOneDisableWorkerSameUsedCapacity()
   {
     String DISABLED_VERSION = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy(null);

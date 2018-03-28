@@ -132,7 +132,7 @@ public class LoadingLookup extends LookupExtractor
     }
 
     @Override
-    public String call() throws Exception
+    public String call()
     {
       // When SQL based null handling is disabled,
       // avoid returning null and return an empty string to cache it.
@@ -150,7 +150,7 @@ public class LoadingLookup extends LookupExtractor
     }
 
     @Override
-    public List<String> call() throws Exception
+    public List<String> call()
     {
       return dataFetcher.reverseFetchKeys(value);
     }

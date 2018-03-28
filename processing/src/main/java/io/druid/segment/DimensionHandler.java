@@ -26,7 +26,6 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 /**
  * Processing related interface
@@ -105,7 +104,7 @@ public interface DimensionHandler
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
-  ) throws IOException;
+  );
 
 
   /**

@@ -56,7 +56,7 @@ public class AsyncQueryRunnerTest
   }
   
   @Test(timeout = TEST_TIMEOUT)
-  public void testAsyncNature() throws Exception
+  public void testAsyncNature()
   {
     final CountDownLatch latch = new CountDownLatch(1);
     QueryRunner baseRunner = new QueryRunner()

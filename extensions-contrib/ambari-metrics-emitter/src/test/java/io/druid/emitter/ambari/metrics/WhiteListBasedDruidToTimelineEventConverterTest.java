@@ -20,9 +20,10 @@
 package io.druid.emitter.ambari.metrics;
 
 import com.google.common.collect.Maps;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.annotations.UsedByJUnitParamsRunner;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.commons.io.IOUtils;
@@ -44,12 +45,8 @@ import java.io.OutputStream;
 public class WhiteListBasedDruidToTimelineEventConverterTest
 {
   private final String prefix = "druid";
-  private final WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter = new WhiteListBasedDruidToTimelineEventConverter(
-      prefix,
-      "druid",
-      null,
-      new DefaultObjectMapper()
-  );
+  private final WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter =
+      new WhiteListBasedDruidToTimelineEventConverter(prefix, "druid", null, new DefaultObjectMapper());
   private ServiceMetricEvent event;
   private final DateTime createdTime = DateTimes.nowUtc();
   private final String hostname = "testHost:8080";
@@ -143,6 +140,7 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
     Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", metric.getMetricName());
   }
 
+  @UsedByJUnitParamsRunner
   private Object[] parametersForTestGetName()
   {
     return new Object[]{

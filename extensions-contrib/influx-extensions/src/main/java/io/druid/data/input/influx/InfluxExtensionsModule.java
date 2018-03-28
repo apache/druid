@@ -16,24 +16,36 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.data.input.influx;
 
-package io.druid.java.util.common.collect;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import io.druid.initialization.DruidModule;
 
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.List;
 
-// Can't find a good way to abstract over which aggregator representation is used,
-// so I just pick Double/MutableDouble.
-public class AggregatingMap<K> extends HashMap<K, Double>
+public class InfluxExtensionsModule implements DruidModule
 {
-  public void add(K k, double n)
+  public InfluxExtensionsModule()
   {
-    final Double value = get(k);
+  }
 
-    if (value == null) {
-      put(k, n);
-      return;
-    }
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return Collections.singletonList(
+        new SimpleModule("InfluxInputRowParserModule")
+            .registerSubtypes(
+                new NamedType(InfluxParseSpec.class, "influx")
+            )
+    );
+  }
 
-    put(k, value + n);
+  @Override
+  public void configure(Binder binder)
+  {
   }
 }

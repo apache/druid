@@ -19,9 +19,6 @@
 package io.druid.extendedset.intset;
 
 
-import java.util.Collection;
-import java.util.NoSuchElementException;
-
 /**
  * This class provides a skeletal implementation of the {@link IntSet}
  * interface to minimize the effort required to implement this interface.
@@ -31,76 +28,12 @@ import java.util.NoSuchElementException;
  */
 public abstract class AbstractIntSet implements IntSet
 {
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public IntSet union(IntSet other)
-  {
-    IntSet res = clone();
-    res.addAll(other);
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public IntSet difference(IntSet other)
-  {
-    IntSet res = clone();
-    res.removeAll(other);
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public IntSet intersection(IntSet other)
-  {
-    IntSet res = clone();
-    res.retainAll(other);
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void complement()
-  {
-    if (isEmpty()) {
-      return;
-    }
-    for (int e = last(); e >= 0; e--) {
-      flip(e);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract IntSet empty();
 
   /**
    * {@inheritDoc}
    */
   @Override
   public abstract IntSet clone();
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract double bitmapCompressionRatio();
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract double collectionCompressionRatio();
 
   /**
    * {@inheritDoc}
@@ -118,106 +51,6 @@ public abstract class AbstractIntSet implements IntSet
    * {@inheritDoc}
    */
   @Override
-  public abstract String debugInfo();
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void clear()
-  {
-    IntIterator itr = iterator();
-    while (itr.hasNext()) {
-      itr.next();
-      itr.remove();
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void clear(int from, int to)
-  {
-    if (from > to) {
-      throw new IndexOutOfBoundsException("from: " + from + " > to: " + to);
-    }
-    for (int e = from; e <= to; e++) {
-      remove(e);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void fill(int from, int to)
-  {
-    if (from > to) {
-      throw new IndexOutOfBoundsException("from: " + from + " > to: " + to);
-    }
-    for (int e = from; e <= to; e++) {
-      add(e);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void flip(int e)
-  {
-    if (!add(e)) {
-      remove(e);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract int get(int i);
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract int indexOf(int e);
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract IntSet convert(int... a);
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract IntSet convert(Collection<Integer> c);
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int first()
-  {
-    if (isEmpty()) {
-      throw new NoSuchElementException();
-    }
-    return iterator().next();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract int last();
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   public abstract int size();
 
   /**
@@ -225,111 +58,6 @@ public abstract class AbstractIntSet implements IntSet
    */
   @Override
   public abstract boolean isEmpty();
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract boolean contains(int i);
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract boolean add(int i);
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public abstract boolean remove(int i);
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean addAll(IntSet c)
-  {
-    if (c == null || c.isEmpty()) {
-      return false;
-    }
-    IntIterator itr = c.iterator();
-    boolean res = false;
-    while (itr.hasNext()) {
-      res |= add(itr.next());
-    }
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean removeAll(IntSet c)
-  {
-    if (c == null || c.isEmpty()) {
-      return false;
-    }
-    IntIterator itr = c.iterator();
-    boolean res = false;
-    while (itr.hasNext()) {
-      res |= remove(itr.next());
-    }
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean retainAll(IntSet c)
-  {
-    if (c == null || c.isEmpty()) {
-      return false;
-    }
-    IntIterator itr = iterator();
-    boolean res = false;
-    while (itr.hasNext()) {
-      int e = itr.next();
-      if (!c.contains(e)) {
-        res = true;
-        itr.remove();
-      }
-    }
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int[] toArray()
-  {
-    if (isEmpty()) {
-      return null;
-    }
-    return toArray(new int[size()]);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int[] toArray(int[] a)
-  {
-    if (a.length < size()) {
-      a = new int[size()];
-    }
-    IntIterator itr = iterator();
-    int i = 0;
-    while (itr.hasNext()) {
-      a[i++] = itr.next();
-    }
-    for (; i < a.length; i++) {
-      a[i] = 0;
-    }
-    return a;
-  }
 
   /**
    * {@inheritDoc}

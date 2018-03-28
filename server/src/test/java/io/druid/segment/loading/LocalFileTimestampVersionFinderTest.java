@@ -63,7 +63,7 @@ public class LocalFileTimestampVersionFinderTest
   }
 
   @Test
-  public void testSimpleOneFileLatestVersion() throws IOException, InterruptedException
+  public void testSimpleOneFileLatestVersion() throws IOException
   {
     File oldFile = File.createTempFile("old", ".txt", tmpDir);
     Assert.assertTrue(oldFile.exists());
@@ -74,7 +74,7 @@ public class LocalFileTimestampVersionFinderTest
   }
 
   @Test
-  public void testSimpleOneFileLatestVersionNullMatcher() throws IOException, InterruptedException
+  public void testSimpleOneFileLatestVersionNullMatcher() throws IOException
   {
     File oldFile = File.createTempFile("old", ".txt", tmpDir);
     Assert.assertTrue(oldFile.exists());
@@ -85,7 +85,7 @@ public class LocalFileTimestampVersionFinderTest
   }
 
   @Test
-  public void testNoLatestVersion() throws IOException, InterruptedException
+  public void testNoLatestVersion() throws IOException
   {
     File oldFile = File.createTempFile("test", ".txt", tmpDir);
     oldFile.delete();
