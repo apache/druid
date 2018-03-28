@@ -45,6 +45,12 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
+  public int getUsedBufferCount()
+  {
+    return 0;
+  }
+
+  @Override
   public ReferenceCountingResourceHolder<T> take(long timeoutMs)
   {
     throw new UnsupportedOperationException();

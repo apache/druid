@@ -71,7 +71,7 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
   {
     if (delegate instanceof PrioritizedExecutorService) {
       emitter.emit(metricBuilder.build("segment/scan/pending", ((PrioritizedExecutorService) delegate).getQueueSize()));
-      emitter.emit(metricBuilder.build("merge/buffers/size", ((DefaultBlockingPool) mergeBufferPool).getPoolSize()));
+      emitter.emit(metricBuilder.build("query/merge/buffersUsed", ((DefaultBlockingPool) mergeBufferPool).getUsedBufferCount()));
     }
   }
 

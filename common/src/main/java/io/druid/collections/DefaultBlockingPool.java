@@ -75,6 +75,12 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
+  public int getUsedBufferCount()
+  {
+    return maxSize - objects.size();
+  }
+
+  @Override
   @Nullable
   public ReferenceCountingResourceHolder<T> take(final long timeoutMs)
   {

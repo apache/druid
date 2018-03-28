@@ -26,6 +26,8 @@ public interface BlockingPool<T>
 {
   int maxSize();
 
+  int getUsedBufferCount();
+
   /**
    * Take a resource from the pool, waiting up to the
    * specified wait time if necessary for an element to become available.

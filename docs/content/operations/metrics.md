@@ -37,6 +37,7 @@ Available Metrics
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/failed/count`|number of failed queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/interrupted/count`|number of queries interrupted due to cancellation or timeout|This metric is only available if the QueryCountStatsMonitor module is included.||
+|`query/merge/buffersUsed`|number of merge buffers allocated to broker while performing groupBy merge queries|||
 
 ### Historical
 
