@@ -175,13 +175,6 @@ public final class LifecycleLock
       }
     }
 
-    void reset()
-    {
-      if (!compareAndSetState(STOPPED, NOT_STARTED)) {
-        throw new IllegalMonitorStateException("Not called exitStop() before reset()");
-      }
-    }
-
     void exitStopAndReset()
     {
       if (!compareAndSetState(STOPPING, NOT_STARTED)) {
@@ -279,7 +272,7 @@ public final class LifecycleLock
    * LifecycleLock is used in a restartable object, this method must be called before exit from stop() on this object,
    * usually in a finally block.
    *
-   * @throws IllegalMonitorStateException if {@link #exitStop()} is not yet called on this LifecycleLock
+   * @throws IllegalMonitorStateException if {@link #canStop()} is not yet called on this LifecycleLock
    */
   public void exitStopAndReset()
   {
