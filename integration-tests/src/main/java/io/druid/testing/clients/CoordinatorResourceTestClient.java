@@ -21,7 +21,6 @@ package io.druid.testing.clients;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import io.druid.java.util.common.ISE;
@@ -38,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +59,7 @@ public class CoordinatorResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.coordinator = config.getCoordinatorUrl();
-    this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
+    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
   }
 
   private String getCoordinatorURL()

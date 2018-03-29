@@ -37,7 +37,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.commons.codec.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
@@ -60,6 +59,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class AsyncManagementForwardingServletTest extends BaseJettyTest
@@ -239,7 +239,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     connection.setDoOutput(true);
     OutputStream os = connection.getOutputStream();
-    os.write(coordinatorExpectedRequest.body.getBytes(Charsets.UTF_8));
+    os.write(coordinatorExpectedRequest.body.getBytes(StandardCharsets.UTF_8));
     os.close();
 
     Assert.assertEquals(200, connection.getResponseCode());
@@ -267,7 +267,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     connection.setDoOutput(true);
     OutputStream os = connection.getOutputStream();
-    os.write(overlordExpectedRequest.body.getBytes(Charsets.UTF_8));
+    os.write(overlordExpectedRequest.body.getBytes(StandardCharsets.UTF_8));
     os.close();
 
     Assert.assertEquals(200, connection.getResponseCode());

@@ -22,7 +22,6 @@ package io.druid.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -150,6 +149,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1470,8 +1470,8 @@ public class CachingClusteredClientTest
         .setContext(CONTEXT);
 
     final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-    collector.add(hashFn.hashString("abc123", Charsets.UTF_8).asBytes());
-    collector.add(hashFn.hashString("123abc", Charsets.UTF_8).asBytes());
+    collector.add(hashFn.hashString("abc123", StandardCharsets.UTF_8).asBytes());
+    collector.add(hashFn.hashString("123abc", StandardCharsets.UTF_8).asBytes());
 
     testQueryCaching(
         getDefaultQueryRunner(),

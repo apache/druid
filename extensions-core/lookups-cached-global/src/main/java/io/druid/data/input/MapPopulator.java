@@ -19,13 +19,13 @@
 
 package io.druid.data.input;
 
-import com.google.common.base.Charsets;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.parsers.Parser;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -79,7 +79,7 @@ public class MapPopulator<K, V>
    */
   public PopulateResult populate(final ByteSource source, final Map<K, V> map) throws IOException
   {
-    return source.asCharSource(Charsets.UTF_8).readLines(
+    return source.asCharSource(StandardCharsets.UTF_8).readLines(
         new LineProcessor<PopulateResult>()
         {
           private int lines = 0;

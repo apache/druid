@@ -26,13 +26,13 @@ import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputSplit;
 import io.druid.java.util.common.logger.Logger;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -74,7 +74,7 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
             }
             final T object = iterator.next();
             try {
-              return IOUtils.lineIterator(wrapObjectStream(object, openObjectStream(object)), Charsets.UTF_8);
+              return IOUtils.lineIterator(wrapObjectStream(object, openObjectStream(object)), StandardCharsets.UTF_8);
             }
             catch (Exception e) {
               LOG.error(

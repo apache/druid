@@ -20,7 +20,6 @@
 package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
@@ -39,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -112,7 +112,7 @@ public class FileRequestLogger implements RequestLogger
   {
     return new OutputStreamWriter(
         new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-        Charsets.UTF_8
+        StandardCharsets.UTF_8
     );
   }
 

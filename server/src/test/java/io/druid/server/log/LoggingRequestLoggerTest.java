@@ -21,7 +21,6 @@ package io.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
@@ -51,6 +50,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -99,7 +99,7 @@ public class LoggingRequestLoggerTest
         .newBuilder()
         .setName("test stream")
         .setTarget(baos)
-        .setLayout(JsonLayout.createLayout(false, true, false, true, true, Charsets.UTF_8))
+        .setLayout(JsonLayout.createLayout(false, true, false, true, true, StandardCharsets.UTF_8))
         .build();
     final Logger logger = (Logger)
         LogManager.getLogger(LoggingRequestLogger.class);
