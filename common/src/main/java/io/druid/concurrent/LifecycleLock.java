@@ -181,13 +181,20 @@ public final class LifecycleLock
         throw new IllegalMonitorStateException("Not called exitStop() before reset()");
       }
     }
+
+    void exitStopAndReset()
+    {
+      if (!compareAndSetState(STOPPING, NOT_STARTED)) {
+        throw new IllegalMonitorStateException("Not called exitStop() before reset()");
+      }
+    }
   }
 
   private final Sync sync = new Sync();
 
   /**
    * Start latch, only one canStart() call in any thread on this LifecycleLock object could return true, if {@link
-   * #reset()} is not called in between.
+   * #exitStopAndReset()} is not called in between.
    */
   public boolean canStart()
   {
@@ -257,8 +264,8 @@ public final class LifecycleLock
   }
 
   /**
-   * If this LifecycleLock is used in a restartable object, which uses {@link #reset()}, exitStop() must be called
-   * before exit from stop() on this object, usually in a finally block.
+   * Finalizes stopping the the LifecycleLock. This method must be called before exit from stop() on this object,
+   * usually in a finally block. If you're using a restartable object, use {@link #exitStopAndReset()} instead.
    *
    * @throws IllegalMonitorStateException if {@link #canStop()} is not yet called on this LifecycleLock
    */
@@ -268,12 +275,14 @@ public final class LifecycleLock
   }
 
   /**
-   * Resets the LifecycleLock after {@link #exitStop()}, so that {@link #canStart()} could be called again.
+   * Finalizes stopping the LifecycleLock and resets it, so that {@link #canStart()} could be called again. If this
+   * LifecycleLock is used in a restartable object, this method must be called before exit from stop() on this object,
+   * usually in a finally block.
    *
    * @throws IllegalMonitorStateException if {@link #exitStop()} is not yet called on this LifecycleLock
    */
-  public void reset()
+  public void exitStopAndReset()
   {
-    sync.reset();
+    sync.exitStopAndReset();
   }
 }

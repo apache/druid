@@ -170,7 +170,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       exec = null;
     }
     finally {
-      lifecycleLock.exitStop();
+      lifecycleLock.exitStopAndReset();
     }
   }
 

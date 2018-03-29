@@ -36,12 +36,6 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.ClientResponse;
-import io.druid.java.util.http.client.response.HttpResponseHandler;
-import io.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.audit.AuditInfo;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.LifecycleLock;
@@ -54,6 +48,12 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StreamUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.ClientResponse;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
+import io.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
 import io.druid.query.lookup.LookupsState;
 import io.druid.server.http.HostAndPortWithScheme;
 import io.druid.server.listener.resource.ListenerResource;
@@ -124,8 +124,7 @@ public class LookupCoordinatorManager
   // Updated by config watching service
   private AtomicReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>> lookupMapConfigRef;
 
-  @VisibleForTesting
-  final LifecycleLock lifecycleLock = new LifecycleLock();
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private ListeningScheduledExecutorService executorService;
   private ListenableScheduledFuture<?> backgroundManagerFuture;
@@ -333,115 +332,121 @@ public class LookupCoordinatorManager
     return tierLookups.get(lookupName);
   }
 
+  public boolean isStarted()
+  {
+    return lifecycleLock.isStarted();
+  }
+
+  @VisibleForTesting
+  boolean awaitStarted(long waitTimeMs)
+  {
+    return lifecycleLock.awaitStarted(waitTimeMs, TimeUnit.MILLISECONDS);
+  }
+
   // start() and stop() are synchronized so that they never run in parallel in case of ZK acting funny or druid bug and
   // coordinator becomes leader and drops leadership in quick succession.
   public void start()
   {
-    synchronized (lifecycleLock) {
-      if (!lifecycleLock.canStart()) {
-        throw new ISE("LookupCoordinatorManager can't start.");
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("LookupCoordinatorManager can't start.");
+    }
+
+    try {
+      LOG.debug("Starting.");
+
+      if (lookupNodeDiscovery == null) {
+        lookupNodeDiscovery = new LookupNodeDiscovery(druidNodeDiscoveryProvider);
       }
 
-      try {
-        LOG.debug("Starting.");
+      //first ensure that previous executorService from last cycle of start/stop has finished completely.
+      //so that we don't have multiple live executorService instances lying around doing lookup management.
+      if (executorService != null &&
+          !executorService.awaitTermination(
+              lookupCoordinatorManagerConfig.getHostTimeout().getMillis() * 10,
+              TimeUnit.MILLISECONDS
+          )) {
+        throw new ISE("WTF! LookupCoordinatorManager executor from last start() hasn't finished. Failed to Start.");
+      }
 
-        if (lookupNodeDiscovery == null) {
-          lookupNodeDiscovery = new LookupNodeDiscovery(druidNodeDiscoveryProvider);
-        }
+      executorService = MoreExecutors.listeningDecorator(
+          Executors.newScheduledThreadPool(
+              lookupCoordinatorManagerConfig.getThreadPoolSize(),
+              Execs.makeThreadFactory("LookupCoordinatorManager--%s")
+          )
+      );
 
-        //first ensure that previous executorService from last cycle of start/stop has finished completely.
-        //so that we don't have multiple live executorService instances lying around doing lookup management.
-        if (executorService != null &&
-            !executorService.awaitTermination(
-                lookupCoordinatorManagerConfig.getHostTimeout().getMillis() * 10,
-                TimeUnit.MILLISECONDS
-            )) {
-          throw new ISE("WTF! LookupCoordinatorManager executor from last start() hasn't finished. Failed to Start.");
-        }
+      initializeLookupsConfigWatcher();
 
-        executorService = MoreExecutors.listeningDecorator(
-            Executors.newScheduledThreadPool(
-                lookupCoordinatorManagerConfig.getThreadPoolSize(),
-                Execs.makeThreadFactory("LookupCoordinatorManager--%s")
-            )
-        );
-
-        initializeLookupsConfigWatcher();
-
-        this.backgroundManagerExitedLatch = new CountDownLatch(1);
-        this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
-            this::lookupManagementLoop,
-            lookupCoordinatorManagerConfig.getInitialDelay(),
-            lookupCoordinatorManagerConfig.getPeriod(),
-            TimeUnit.MILLISECONDS
-        );
-        Futures.addCallback(
-            backgroundManagerFuture, new FutureCallback<Object>()
+      this.backgroundManagerExitedLatch = new CountDownLatch(1);
+      this.backgroundManagerFuture = executorService.scheduleWithFixedDelay(
+          this::lookupManagementLoop,
+          lookupCoordinatorManagerConfig.getInitialDelay(),
+          lookupCoordinatorManagerConfig.getPeriod(),
+          TimeUnit.MILLISECONDS
+      );
+      Futures.addCallback(
+          backgroundManagerFuture, new FutureCallback<Object>()
+          {
+            @Override
+            public void onSuccess(@Nullable Object result)
             {
-              @Override
-              public void onSuccess(@Nullable Object result)
-              {
-                backgroundManagerExitedLatch.countDown();
-                LOG.debug("Exited background lookup manager");
-              }
+              backgroundManagerExitedLatch.countDown();
+              LOG.debug("Exited background lookup manager");
+            }
 
-              @Override
-              public void onFailure(Throwable t)
-              {
-                backgroundManagerExitedLatch.countDown();
-                if (backgroundManagerFuture.isCancelled()) {
-                  LOG.debug("Exited background lookup manager due to cancellation.");
-                } else {
-                  LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
-                }
+            @Override
+            public void onFailure(Throwable t)
+            {
+              backgroundManagerExitedLatch.countDown();
+              if (backgroundManagerFuture.isCancelled()) {
+                LOG.debug("Exited background lookup manager due to cancellation.");
+              } else {
+                LOG.makeAlert(t, "Background lookup manager exited with error!").emit();
               }
             }
-        );
+          }
+      );
 
-        LOG.debug("Started");
-      }
-      catch (Exception ex) {
-        LOG.makeAlert(ex, "Got Exception while start()").emit();
-      }
-      finally {
-        //so that subsequent stop() would happen, even if start() failed with exception
-        lifecycleLock.started();
-        lifecycleLock.exitStart();
-      }
+      LOG.debug("Started");
+    }
+    catch (Exception ex) {
+      LOG.makeAlert(ex, "Got Exception while start()").emit();
+    }
+    finally {
+      //so that subsequent stop() would happen, even if start() failed with exception
+      lifecycleLock.started();
+      lifecycleLock.exitStart();
     }
   }
 
   public void stop()
   {
-    synchronized (lifecycleLock) {
-      if (!lifecycleLock.canStop()) {
-        throw new ISE("LookupCoordinatorManager can't stop.");
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("LookupCoordinatorManager can't stop.");
+    }
+
+    try {
+      LOG.debug("Stopping");
+
+      if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
+        LOG.warn("Background lookup manager thread could not be cancelled");
       }
 
-      try {
-        LOG.debug("Stopping");
-
-        if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
-          LOG.warn("Background lookup manager thread could not be cancelled");
-        }
-
-        // signal the executorService to shut down ASAP, if this coordinator becomes leader again
-        // then start() would ensure that this executorService is finished before starting a
-        // new one.
-        if (executorService != null) {
-          executorService.shutdownNow();
-        }
-
-        LOG.debug("Stopped");
+      // signal the executorService to shut down ASAP, if this coordinator becomes leader again
+      // then start() would ensure that this executorService is finished before starting a
+      // new one.
+      if (executorService != null) {
+        executorService.shutdownNow();
       }
-      catch (Exception ex) {
-        LOG.makeAlert(ex, "Got Exception while stop()").emit();
-      }
-      finally {
-        //so that subsequent start() would happen, even if stop() failed with exception
-        lifecycleLock.exitStop();
-        lifecycleLock.reset();
-      }
+
+      LOG.debug("Stopped");
+    }
+    catch (Exception ex) {
+      LOG.makeAlert(ex, "Got Exception while stop()").emit();
+    }
+    finally {
+      //so that subsequent start() would happen, even if stop() failed with exception
+      lifecycleLock.exitStopAndReset();
     }
   }
 
