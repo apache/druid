@@ -480,7 +480,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       status = status.withDuration(System.currentTimeMillis() - startTime);
       TaskStatus statusForNotification;
       if (status instanceof TaskStatusWithReports) {
-        statusForNotification = ((TaskStatusWithReports) status).getTaskStatus();
+        statusForNotification = ((TaskStatusWithReports) status).makeTaskStatusWithoutReports();
       } else {
         statusForNotification = status;
       }

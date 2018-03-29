@@ -201,7 +201,7 @@ public class ExecutorLifecycle
 
                 // we've uploaded the reports, remove them from the returned taskStatus to avoid storing huge
                 // TaskStatus objects in metadata storage or zookeeper.
-                taskStatus = taskStatusWithReports.getTaskStatus();
+                taskStatus = taskStatusWithReports.makeTaskStatusWithoutReports();
               }
 
               final File statusFileParent = statusFile.getParentFile();

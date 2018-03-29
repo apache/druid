@@ -44,19 +44,19 @@ public class TaskStatusWithReports extends TaskStatus
     this.taskReports = taskReports;
   }
 
+  @JsonProperty
+  public Map<String, TaskReport> getTaskReports()
+  {
+    return taskReports;
+  }
+
   @JsonIgnore
-  public TaskStatus getTaskStatus()
+  public TaskStatus makeTaskStatusWithoutReports()
   {
     return new TaskStatus(
         getId(),
         getStatusCode(),
         getDuration()
     );
-  }
-
-  @JsonProperty
-  public Map<String, TaskReport> getTaskReports()
-  {
-    return taskReports;
   }
 }
