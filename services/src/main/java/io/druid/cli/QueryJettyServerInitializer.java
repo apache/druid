@@ -39,6 +39,7 @@ import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -111,13 +112,24 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    final Handler[] handlers = new Handler[extensionHandlers.size() + 2];
-    handlers[0] = JettyServerInitUtils.getJettyRequestLogHandler();
-    handlers[handlers.length - 1] = JettyServerInitUtils.wrapWithDefaultGzipHandler(root);
-    for (int i = 0; i < extensionHandlers.size(); i++) {
-      handlers[i + 1] = extensionHandlers.get(i);
+    // Do not change the order of the handlers that have already been added
+    for (Handler handler : server.getHandlers()) {
+      handlerList.addHandler(handler);
     }
-    handlerList.setHandlers(handlers);
-    server.setHandler(handlerList);
+
+    handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
+
+    // Add all extension handlers
+    for (Handler handler : extensionHandlers) {
+      handlerList.addHandler(handler);
+    }
+
+    // Add Gzip handler at the very end
+    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(root));
+
+    final StatisticsHandler statisticsHandler = new StatisticsHandler();
+    statisticsHandler.setHandler(handlerList);
+
+    server.setHandler(statisticsHandler);
   }
 }

@@ -19,22 +19,24 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
-import org.jets3t.service.model.StorageObject;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -43,13 +45,13 @@ public class S3DataSegmentFinder implements DataSegmentFinder
 {
   private static final Logger log = new Logger(S3DataSegmentFinder.class);
 
-  private final RestS3Service s3Client;
+  private final AmazonS3 s3Client;
   private final ObjectMapper jsonMapper;
   private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentFinder(
-      RestS3Service s3Client,
+      AmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
       ObjectMapper jsonMapper
   )
@@ -65,24 +67,24 @@ public class S3DataSegmentFinder implements DataSegmentFinder
     final Set<DataSegment> segments = Sets.newHashSet();
 
     try {
-      Iterator<StorageObject> objectsIterator = S3Utils.storageObjectsIterator(
+      final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
           s3Client,
           config.getBucket(),
           workingDirPath.length() == 0 ? config.getBaseKey() : workingDirPath,
-          config.getMaxListingLength());
+          config.getMaxListingLength()
+      );
 
-      while (objectsIterator.hasNext()) {
-        StorageObject storageObject = objectsIterator.next();
-        storageObject.closeDataInputStream();
+      while (objectSummaryIterator.hasNext()) {
+        final S3ObjectSummary objectSummary = objectSummaryIterator.next();
 
-        if (S3Utils.toFilename(storageObject.getKey()).equals("descriptor.json")) {
-          final String descriptorJson = storageObject.getKey();
+        if (S3Utils.toFilename(objectSummary.getKey()).equals("descriptor.json")) {
+          final String descriptorJson = objectSummary.getKey();
           String indexZip = S3Utils.indexZipForSegmentPath(descriptorJson);
 
-          if (S3Utils.isObjectInBucket(s3Client, config.getBucket(), indexZip)) {
-            S3Object indexObject = s3Client.getObject(config.getBucket(), descriptorJson);
-
-            try (InputStream is = indexObject.getDataInputStream()) {
+          if (S3Utils.isObjectInBucketIgnoringPermission(s3Client, config.getBucket(), indexZip)) {
+            try (S3Object indexObject = s3Client.getObject(config.getBucket(), descriptorJson);
+                 S3ObjectInputStream is = indexObject.getObjectContent()) {
+              final ObjectMetadata objectMetadata = indexObject.getObjectMetadata();
               final DataSegment dataSegment = jsonMapper.readValue(is, DataSegment.class);
               log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
 
@@ -99,8 +101,10 @@ public class S3DataSegmentFinder implements DataSegmentFinder
                       descriptorJson,
                       indexObject
                   );
-                  S3Object newDescJsonObject = new S3Object(descriptorJson, jsonMapper.writeValueAsString(dataSegment));
-                  s3Client.putObject(config.getBucket(), newDescJsonObject);
+                  final ByteArrayInputStream bais = new ByteArrayInputStream(
+                      StringUtils.toUtf8(jsonMapper.writeValueAsString(dataSegment))
+                  );
+                  s3Client.putObject(config.getBucket(), descriptorJson, bais, objectMetadata);
                 }
               }
               segments.add(dataSegment);
@@ -114,7 +118,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
         }
       }
     }
-    catch (ServiceException e) {
+    catch (AmazonServiceException e) {
       throw new SegmentLoadingException(e, "Problem interacting with S3");
     }
     catch (IOException e) {

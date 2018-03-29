@@ -352,6 +352,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
       StorageAdapter storageAdapter
   )
   {
-    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get());
+    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get().withOverrides(query));
   }
 }

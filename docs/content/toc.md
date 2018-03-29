@@ -103,7 +103,7 @@ layout: toc
   * Experimental Features
     * [Overview](/docs/VERSION/development/experimental.html)
     * [Approximate Histograms and Quantiles](/docs/VERSION/development/extensions-core/approximate-histograms.html)
-    * [Datasketches](/docs/VERSION/development/extensions-core/datasketches-aggregators.html)
+    * [Datasketches](/docs/VERSION/development/extensions-core/datasketches-extension.html)
     * [Geographic Queries](/docs/VERSION/development/geo.html)
     * [Router](/docs/VERSION/development/router.html)
     * [Kafka Indexing Service](/docs/VERSION/development/extensions-core/kafka-ingestion.html)

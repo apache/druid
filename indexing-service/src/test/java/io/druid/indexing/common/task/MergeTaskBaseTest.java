@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 import io.druid.indexing.common.TaskToolbox;
@@ -29,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -80,7 +80,7 @@ public class MergeTaskBaseTest
             "2012-01-03T00:00:00.000Z_2012-01-05T00:00:00.000Z_V1_0" +
             "_2012-01-04T00:00:00.000Z_2012-01-06T00:00:00.000Z_V1_0" +
             "_2012-01-05T00:00:00.000Z_2012-01-07T00:00:00.000Z_V1_0",
-            Charsets.UTF_8
+            StandardCharsets.UTF_8
         ).toString() +
         "_";
     Assert.assertEquals(

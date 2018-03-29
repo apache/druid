@@ -22,7 +22,6 @@ package io.druid.indexing.kafka;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -151,6 +150,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -224,7 +224,7 @@ public class KafkaIndexTaskTest
                   new JSONPathSpec(true, ImmutableList.<JSONPathFieldSpec>of()),
                   ImmutableMap.<String, Boolean>of()
               ),
-              Charsets.UTF_8.name()
+              StandardCharsets.UTF_8.name()
           ),
           Map.class
       ),

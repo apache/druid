@@ -19,7 +19,6 @@
 
 package io.druid.java.util.metrics.cgroups;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
@@ -27,6 +26,7 @@ import io.druid.java.util.metrics.CgroupUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.LongStream;
@@ -83,7 +83,7 @@ public class CpuAcct
       return new CpuAcctMetric(new long[0], new long[0]);
     }
     try {
-      return parse(Files.readAllLines(cpuacct.toPath(), Charsets.UTF_8));
+      return parse(Files.readAllLines(cpuacct.toPath(), StandardCharsets.UTF_8));
     }
     catch (IOException e) {
       throw new RuntimeException(e);
