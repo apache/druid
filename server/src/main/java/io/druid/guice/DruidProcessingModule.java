@@ -97,7 +97,8 @@ public class DruidProcessingModule implements Module
         PrioritizedExecutorService.create(
             lifecycle,
             config
-        ), getMergeBufferPool(config),
+        ),
+        getMergeBufferPool(config),
         executorServiceMonitor
     );
   }

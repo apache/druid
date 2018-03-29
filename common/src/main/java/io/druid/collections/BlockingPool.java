@@ -26,6 +26,9 @@ public interface BlockingPool<T>
 {
   int maxSize();
 
+  /**
+   * @return number of buffers used/polled from the pool at that time.
+   */
   int getUsedBufferCount();
 
   /**
