@@ -21,7 +21,6 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -81,6 +80,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -382,7 +382,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           hasOnlyHistoricalSegments = false;
           break;
         }
-        hasher.putString(p.getServer().getSegment().getIdentifier(), Charsets.UTF_8);
+        hasher.putString(p.getServer().getSegment().getIdentifier(), StandardCharsets.UTF_8);
       }
 
       if (hasOnlyHistoricalSegments) {

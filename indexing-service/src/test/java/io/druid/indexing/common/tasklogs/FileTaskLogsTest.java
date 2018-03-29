@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.tasklogs;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
@@ -35,6 +34,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class FileTaskLogsTest
@@ -53,7 +53,7 @@ public class FileTaskLogsTest
     try {
       final File logDir = new File(tmpDir, "druid/logs");
       final File logFile = new File(tmpDir, "log");
-      Files.write("blah", logFile, Charsets.UTF_8);
+      Files.write("blah", logFile, StandardCharsets.UTF_8);
       final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
       taskLogs.pushTaskLog("foo", logFile);
 
@@ -75,7 +75,7 @@ public class FileTaskLogsTest
     final File tmpDir = temporaryFolder.newFolder();
     final File logDir = new File(tmpDir, "druid/logs");
     final File logFile = new File(tmpDir, "log");
-    Files.write("blah", logFile, Charsets.UTF_8);
+    Files.write("blah", logFile, StandardCharsets.UTF_8);
 
     if (!tmpDir.setWritable(false)) {
       throw new RuntimeException("failed to make tmp dir read-only");
@@ -96,7 +96,7 @@ public class FileTaskLogsTest
     final File logFile = new File(tmpDir, "log");
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
 
-    Files.write("log1content", logFile, Charsets.UTF_8);
+    Files.write("log1content", logFile, StandardCharsets.UTF_8);
     taskLogs.pushTaskLog("log1", logFile);
     Assert.assertEquals("log1content", readLog(taskLogs, "log1", 0));
 
@@ -107,7 +107,7 @@ public class FileTaskLogsTest
     long time = (System.currentTimeMillis() / 1000) * 1000;
     Assert.assertTrue(new File(logDir, "log1.log").lastModified() < time);
 
-    Files.write("log2content", logFile, Charsets.UTF_8);
+    Files.write("log2content", logFile, StandardCharsets.UTF_8);
     taskLogs.pushTaskLog("log2", logFile);
     Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
     Assert.assertTrue(new File(logDir, "log2.log").lastModified() >= time);
