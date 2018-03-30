@@ -461,7 +461,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               Thread.currentThread().setName(priorThreadName);
                               // Upload task logs
                               taskLogPusher.pushTaskLog(task.getId(), logFile);
-                              taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+                              if (reportsFile.exists()) {
+                                taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+                              }
                             }
 
                             TaskStatus status;

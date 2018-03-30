@@ -59,4 +59,10 @@ public class TaskStatusWithReports extends TaskStatus
         getDuration()
     );
   }
+
+  @Override
+  public TaskStatus withDuration(long _duration)
+  {
+    return new TaskStatusWithReports(super.withDuration(_duration), taskReports);
+  }
 }
