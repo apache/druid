@@ -22,8 +22,6 @@ package io.druid.indexing.common.task;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskReportFileWriter;
 
-import java.io.File;
-
 public class NoopTestTaskFileWriter extends TaskReportFileWriter
 {
   public NoopTestTaskFileWriter()
