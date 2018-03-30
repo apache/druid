@@ -33,8 +33,6 @@ import java.util.SortedSet;
  */
 public class SegmentReplicantLookup
 {
-
-
   public static SegmentReplicantLookup make(DruidCluster cluster)
   {
     final Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
