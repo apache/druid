@@ -61,7 +61,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1255,15 +1254,15 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
 
-    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(manager.isStarted());
 
     manager.start();
-    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.awaitStarted(1));
     Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
 
     manager.stop();
-    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(manager.awaitStarted(1));
     Assert.assertTrue(manager.waitForBackgroundTermination(10));
     Assert.assertFalse(manager.backgroundManagerIsRunning());
 
@@ -1292,35 +1291,35 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
 
-    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(manager.awaitStarted(1));
 
     manager.start();
-    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.awaitStarted(1));
     Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
 
     manager.stop();
-    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(manager.awaitStarted(1));
     Assert.assertTrue(manager.waitForBackgroundTermination(10));
     Assert.assertFalse(manager.backgroundManagerIsRunning());
 
     manager.start();
-    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.awaitStarted(1));
     Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
 
     manager.stop();
-    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(manager.awaitStarted(1));
     Assert.assertTrue(manager.waitForBackgroundTermination(10));
     Assert.assertFalse(manager.backgroundManagerIsRunning());
 
     manager.start();
-    Assert.assertTrue(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertTrue(manager.awaitStarted(1));
     Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
 
     manager.stop();
-    Assert.assertFalse(manager.lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    Assert.assertFalse(manager.awaitStarted(1));
     Assert.assertTrue(manager.waitForBackgroundTermination(10));
     Assert.assertFalse(manager.backgroundManagerIsRunning());
 
