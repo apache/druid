@@ -31,38 +31,32 @@ import java.util.Map;
 /**
  * Use this QueryRunner to set and verify Query contexts.
  */
-public class SetAndVerifyContextQueryRunner implements QueryRunner
+public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
 {
   private final ServerConfig serverConfig;
-  private final QueryRunner baseRunner;
+  private final QueryRunner<T> baseRunner;
 
-  public SetAndVerifyContextQueryRunner(ServerConfig serverConfig, QueryRunner baseRunner)
+  public SetAndVerifyContextQueryRunner(ServerConfig serverConfig, QueryRunner<T> baseRunner)
   {
     this.serverConfig = serverConfig;
     this.baseRunner = baseRunner;
   }
 
   @Override
-  public Sequence run(QueryPlus queryPlus, Map responseContext)
+  public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
     return baseRunner.run(
-        QueryPlus.wrap((Query) withTimeoutAndMaxScatterGatherBytes(
-            queryPlus.getQuery(),
-            serverConfig
-        )),
+        QueryPlus.wrap(withTimeoutAndMaxScatterGatherBytes(queryPlus.getQuery(), serverConfig)),
         responseContext
     );
   }
 
-  public static <T, QueryType extends Query<T>> QueryType withTimeoutAndMaxScatterGatherBytes(
-      final QueryType query,
-      ServerConfig serverConfig
-  )
+  public Query<T> withTimeoutAndMaxScatterGatherBytes(Query<T> query, ServerConfig serverConfig)
   {
-    return (QueryType) QueryContexts.verifyMaxQueryTimeout(
+    return QueryContexts.verifyMaxQueryTimeout(
         QueryContexts.withMaxScatterGatherBytes(
             QueryContexts.withDefaultTimeout(
-                (Query) query,
+                query,
                 Math.min(serverConfig.getDefaultQueryTimeout(), serverConfig.getMaxQueryTimeout())
             ),
             serverConfig.getMaxScatterGatherBytes()
