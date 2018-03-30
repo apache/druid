@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -478,13 +477,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       }
 
       status = status.withDuration(System.currentTimeMillis() - startTime);
-      TaskStatus statusForNotification;
-      if (status instanceof TaskStatusWithReports) {
-        statusForNotification = ((TaskStatusWithReports) status).makeTaskStatusWithoutReports();
-      } else {
-        statusForNotification = status;
-      }
-      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), statusForNotification);
+      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
       return status;
     }
   }

@@ -54,6 +54,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -185,7 +186,12 @@ public class CliPeon extends GuiceRunnable
                 new ExecutorLifecycleConfig()
                     .setTaskFile(new File(taskAndStatusFile.get(0)))
                     .setStatusFile(new File(taskAndStatusFile.get(1)))
-                    .setReportsFile(new File(taskAndStatusFile.get(2)))
+            );
+
+            binder.bind(TaskReportFileWriter.class).toInstance(
+                new TaskReportFileWriter(
+                    new File(taskAndStatusFile.get(2))
+                )
             );
 
             binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);

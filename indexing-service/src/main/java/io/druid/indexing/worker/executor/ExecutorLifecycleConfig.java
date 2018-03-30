@@ -40,10 +40,6 @@ public class ExecutorLifecycleConfig
   private File statusFile = null;
 
   @JsonProperty
-  @NotNull
-  private File reportsFile = null;
-
-  @JsonProperty
   @Pattern(regexp = "\\{stdin\\}")
   private String parentStreamName = "stdin";
   @JsonProperty
@@ -76,17 +72,6 @@ public class ExecutorLifecycleConfig
   public ExecutorLifecycleConfig setStatusFile(File statusFile)
   {
     this.statusFile = statusFile;
-    return this;
-  }
-
-  public File getReportsFile()
-  {
-    return reportsFile;
-  }
-
-  public ExecutorLifecycleConfig setReportsFile(File reportsFile)
-  {
-    this.reportsFile = reportsFile;
     return this;
   }
 

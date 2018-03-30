@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
@@ -90,7 +89,6 @@ public class ExecutorLifecycle
   {
     final File taskFile = Preconditions.checkNotNull(taskExecutorConfig.getTaskFile(), "taskFile");
     final File statusFile = Preconditions.checkNotNull(taskExecutorConfig.getStatusFile(), "statusFile");
-    final File reportsFile = Preconditions.checkNotNull(taskExecutorConfig.getReportsFile(), "reportsFile");
     final InputStream parentStream = Preconditions.checkNotNull(taskExecutorConfig.getParentStream(), "parentStream");
 
     try {
@@ -190,19 +188,6 @@ public class ExecutorLifecycle
                   "Task completed with status: %s",
                   jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(taskStatus)
               );
-
-              if (taskStatus instanceof TaskStatusWithReports) {
-                TaskStatusWithReports taskStatusWithReports = (TaskStatusWithReports) taskStatus;
-                final File reportsFileParent = reportsFile.getParentFile();
-                if (reportsFileParent != null) {
-                  FileUtils.forceMkdir(reportsFileParent);
-                }
-                jsonMapper.writeValue(reportsFile, taskStatusWithReports.getTaskReports());
-
-                // we've uploaded the reports, remove them from the returned taskStatus to avoid storing huge
-                // TaskStatus objects in metadata storage or zookeeper.
-                taskStatus = taskStatusWithReports.makeTaskStatusWithoutReports();
-              }
 
               final File statusFileParent = statusFile.getParentFile();
               if (statusFileParent != null) {

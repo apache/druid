@@ -1043,7 +1043,8 @@ public class IndexTaskTest
         null,
         null,
         null,
-        null
+        null,
+        new NoopTestTaskFileWriter()
     );
 
     indexTask.isReady(box.getTaskActionClient());

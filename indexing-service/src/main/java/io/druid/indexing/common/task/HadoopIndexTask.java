@@ -38,7 +38,6 @@ import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TaskStatusWithReports;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
@@ -230,7 +229,8 @@ public class HadoopIndexTask extends HadoopTask
             specVersion,
             version
         );
-        return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
+        toolbox.getTaskReportFileWriter().write(null);
+        return TaskStatus.failure(getId());
       }
     }
 
@@ -254,9 +254,11 @@ public class HadoopIndexTask extends HadoopTask
       );
 
       toolbox.publishSegments(publishedSegments);
-      return new TaskStatusWithReports(TaskStatus.success(getId()), null);
+      toolbox.getTaskReportFileWriter().write(null);
+      return TaskStatus.success(getId());
     } else {
-      return new TaskStatusWithReports(TaskStatus.failure(getId()), null);
+      toolbox.getTaskReportFileWriter().write(null);
+      return TaskStatus.failure(getId());
     }
   }
 
