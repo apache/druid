@@ -155,11 +155,11 @@ public class ThreadPoolTaskRunnerTest
     Assert.assertTrue(holder.get());
   }
 
-  private class RestorableTask extends AbstractTask
+  private static class RestorableTask extends AbstractTask
   {
     private final BooleanHolder gracefullyStopped;
 
-    protected RestorableTask(BooleanHolder gracefullyStopped)
+    RestorableTask(BooleanHolder gracefullyStopped)
     {
       super("testId", "testDataSource", Collections.emptyMap());
 
