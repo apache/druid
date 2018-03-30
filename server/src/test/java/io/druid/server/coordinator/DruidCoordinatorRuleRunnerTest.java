@@ -714,6 +714,98 @@ public class DruidCoordinatorRuleRunnerTest
   }
 
   @Test
+  public void testDropTooManyInSameTierWithLoadQueue()
+  {
+    mockCoordinator();
+    mockPeon.dropSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    mockEmptyPeon();
+
+    LoadQueuePeon loadingPeon = EasyMock.createMock(LoadQueuePeon.class);
+    mockLoadingPeon(loadingPeon, availableSegments.size() + 10, availableSegments.size());
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(
+                Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("normal", 1)
+            ),
+            new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidServer server1 = new DruidServer(
+        "serverNorm",
+        "hostNorm",
+        null,
+        1000,
+        ServerType.HISTORICAL,
+        "normal",
+        0
+    );
+    server1.addDataSegment(availableSegments.get(0));
+    server1.addDataSegment(availableSegments.get(1));
+
+    DruidServer server2 = new DruidServer(
+        "serverNorm2",
+        "hostNorm2",
+        null,
+        1000,
+        ServerType.HISTORICAL,
+        "normal",
+        0
+    );
+    for (DataSegment segment : availableSegments.subList(1, availableSegments.size())) {
+      server2.addDataSegment(segment);
+    }
+
+    DruidCluster druidCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "normal",
+            Stream.of(
+                new ServerHolder(
+                    server1.toImmutableDruidServer(),
+                    loadingPeon
+                ),
+                new ServerHolder(
+                    server2.toImmutableDruidServer(),
+                    mockPeon
+                )
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+        )
+    );
+
+    SegmentReplicantLookup segmentReplicantLookup = SegmentReplicantLookup.make(druidCluster);
+
+    ListeningExecutorService exec = MoreExecutors.listeningDecorator(
+        Executors.newFixedThreadPool(1));
+    BalancerStrategy balancerStrategy =
+        new CostBalancerStrategyFactory().createBalancerStrategy(exec);
+
+    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+        .withDruidCluster(druidCluster)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
+        .withAvailableSegments(availableSegments)
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategy(balancerStrategy)
+        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+        .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "normal"));
+    Assert.assertEquals(12L, stats.getGlobalStat("deletedCount"));
+
+    exec.shutdown();
+    EasyMock.verify(mockPeon);
+    EasyMock.verify(loadingPeon);
+  }
+
+  @Test
   public void testDropTooManyInDifferentTiers()
   {
     mockCoordinator();
@@ -1411,11 +1503,25 @@ public class DruidCoordinatorRuleRunnerTest
 
   private void mockEmptyPeon()
   {
-    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(new HashSet<>()).anyTimes();
-    EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(new HashSet<>()).anyTimes();
-    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
-    EasyMock.expect(mockPeon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
-    EasyMock.replay(mockPeon);
+    mockEmptyPeon(mockPeon);
+  }
+
+  private void mockEmptyPeon(LoadQueuePeon peon)
+  {
+    EasyMock.expect(peon.getSegmentsToLoad()).andReturn(new HashSet<>()).anyTimes();
+    EasyMock.expect(peon.getSegmentsMarkedToDrop()).andReturn(new HashSet<>()).anyTimes();
+    EasyMock.expect(peon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.expect(peon.getNumberOfSegmentsInQueue()).andReturn(0).anyTimes();
+    EasyMock.replay(peon);
+  }
+
+  private void mockLoadingPeon(LoadQueuePeon peon, long size, int segments)
+  {
+    EasyMock.expect(peon.getSegmentsToLoad()).andReturn(new HashSet<>()).anyTimes();
+    EasyMock.expect(peon.getSegmentsMarkedToDrop()).andReturn(new HashSet<>()).anyTimes();
+    EasyMock.expect(peon.getLoadQueueSize()).andReturn(size).atLeastOnce();
+    EasyMock.expect(peon.getNumberOfSegmentsInQueue()).andReturn(segments).anyTimes();
+    EasyMock.replay(peon);
   }
 
   private CoordinatorDynamicConfig createCoordinatorDynamicConfig()

@@ -241,7 +241,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     try {
       List<Pair<Double, ServerHolder>> results = resultsFuture.get();
       return results.stream()
-                    .sorted(Comparator.comparingDouble((Pair<Double, ServerHolder> o) -> o.lhs))
+                    .sorted(Comparator.comparingDouble((Pair<Double, ServerHolder> o) -> o.lhs).reversed())
                     .map(x -> x.rhs).collect(Collectors.toList())
                     .iterator();
     }
