@@ -105,7 +105,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   private final DruidCoordinatorConfig config;
 
   private final ObjectMapper jsonMapper;
-  public HttpClient httpClient;
+  private final HttpClient httpClient;
   private final URL changeRequestURL;
   private final String serverId;
 
