@@ -179,7 +179,7 @@ public class ThreadPoolTaskRunnerTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws InterruptedException
+    public TaskStatus run(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
     }

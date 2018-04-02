@@ -21,6 +21,14 @@ package io.druid.java.util.common;
 
 public final class Numbers
 {
+  /**
+   * Parse the given object as a {@code long}. The input object can be a {@link String} or one of the implementations of
+   * {@link Number}.
+   *
+   * @throws NumberFormatException if the input is an unparseable string.
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
   public static long parseLong(Object val)
   {
     if (val instanceof String) {
@@ -28,10 +36,22 @@ public final class Numbers
     } else if (val instanceof Number) {
       return ((Number) val).longValue();
     } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
     }
   }
 
+  /**
+   * Parse the given object as a {@code int}. The input object can be a {@link String} or one of the implementations of
+   * {@link Number}.
+   *
+   * @throws NumberFormatException if the input is an unparseable string.
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
   public static int parseInt(Object val)
   {
     if (val instanceof String) {
@@ -39,10 +59,23 @@ public final class Numbers
     } else if (val instanceof Number) {
       return ((Number) val).intValue();
     } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
     }
   }
 
+  /**
+   * Parse the given object as a {@code boolean}. The input object can be a {@link String} or {@link Boolean}.
+   *
+   * @return {@code true} only if the input is a {@link Boolean} representing {@code true} or a {@link String} of
+   * {@code "true"}.
+   *
+   * @throws NullPointerException if the input is null.
+   * @throws ISE if the input is not a string or a number.
+   */
   public static boolean parseBoolean(Object val)
   {
     if (val instanceof String) {
@@ -50,7 +83,11 @@ public final class Numbers
     } else if (val instanceof Boolean) {
       return (boolean) val;
     } else {
-      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+      if (val == null) {
+        throw new NullPointerException("Input is null");
+      } else {
+        throw new ISE("Unknown type [%s]", val.getClass());
+      }
     }
   }
 

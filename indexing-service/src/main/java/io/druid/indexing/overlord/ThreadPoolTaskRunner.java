@@ -41,6 +41,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Numbers;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
@@ -153,6 +154,13 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   }
 
   @Override
+  @LifecycleStart
+  public void start()
+  {
+    // No state startup required
+  }
+
+  @Override
   @LifecycleStop
   public void stop()
   {
@@ -236,34 +244,51 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
-    final TaskToolbox toolbox = toolboxFactory.build(task);
-    final Object taskPriorityObj = task.getContextValue(TaskThreadPriority.CONTEXT_KEY);
-    final int taskPriority = taskPriorityObj == null ? 0 : Numbers.parseInt(taskPriorityObj);
-    // Ensure an executor for that priority exists
-    executorService = buildExecutorService(taskPriority);
-    final ListenableFuture<TaskStatus> statusFuture = executorService.submit(
-        new ThreadPoolTaskRunnerCallable(task, location, toolbox)
-    );
-    runningItem = new ThreadPoolTaskRunnerWorkItem(
-        task,
-        location,
-        statusFuture
-    );
+    if (runningItem == null) {
+      final TaskToolbox toolbox = toolboxFactory.build(task);
+      final Object taskPriorityObj = task.getContextValue(TaskThreadPriority.CONTEXT_KEY);
+      int taskPriority = 0;
+      try {
+        taskPriority = taskPriorityObj == null ? 0 : Numbers.parseInt(taskPriorityObj);
+      }
+      catch (NumberFormatException e) {
+        log.error(e, "Error parsing task priority [%s] for task [%s]", taskPriorityObj, task.getId());
+      }
+      // Ensure an executor for that priority exists
+      executorService = buildExecutorService(taskPriority);
+      final ListenableFuture<TaskStatus> statusFuture = executorService.submit(
+          new ThreadPoolTaskRunnerCallable(task, location, toolbox)
+      );
+      runningItem = new ThreadPoolTaskRunnerWorkItem(
+          task,
+          location,
+          statusFuture
+      );
 
-    return statusFuture;
+      return statusFuture;
+    } else {
+      throw new ISE("Already running task[%s]", runningItem.getTask().getId());
+    }
   }
 
+  /**
+   * There might be a race between {@link #run(Task)} and this method, but it shouldn't happen in real applications
+   * because this method is called only in unit tests. See TaskLifecycleTest.
+   *
+   * @param taskid task ID to clean up resources for
+   */
   @Override
   public void shutdown(final String taskid)
   {
-    // shutdown is never called in peon
-    throw new UnsupportedOperationException();
+    if (runningItem != null && runningItem.getTask().getId().equals(taskid)) {
+      runningItem.getResult().cancel(true);
+    }
   }
 
   @Override
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
-    return Collections.singletonList(runningItem);
+    return runningItem == null ? Collections.emptyList() : Collections.singletonList(runningItem);
   }
 
   @Override
@@ -275,19 +300,13 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   @Override
   public Collection<TaskRunnerWorkItem> getKnownTasks()
   {
-    return Collections.singletonList(runningItem);
+    return runningItem == null ? Collections.emptyList() : Collections.singletonList(runningItem);
   }
 
   @Override
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();
-  }
-
-  @Override
-  public void start()
-  {
-    // No state startup required
   }
 
   @Override
