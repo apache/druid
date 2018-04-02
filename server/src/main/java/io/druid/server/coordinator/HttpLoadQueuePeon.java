@@ -405,7 +405,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     synchronized (lock) {
       if (stopped) {
         log.warn(
-            "Server[%s] cannot to drop segment[%s] because load queue peon is stopped.",
+            "Server[%s] cannot drop segment[%s] because load queue peon is stopped.",
             serverId,
             segment.getIdentifier()
         );
