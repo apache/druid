@@ -256,7 +256,8 @@ public class SameIntervalMergeTaskTest
             null,
             null,
             null,
-            null
+            null,
+            new NoopTestTaskFileWriter()
         )
     );
 

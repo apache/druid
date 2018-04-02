@@ -326,6 +326,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     }
 
     log.info("Job done!");
+    toolbox.getTaskReportFileWriter().write(null);
     return TaskStatus.success(getId());
   }
 
