@@ -260,7 +260,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             public void onFailure(Throwable t)
             {
               try {
-                responseHandler.description = t.getMessage();
+                responseHandler.description = t.toString();
                 logRequestFailure(t);
               }
               finally {
@@ -379,7 +379,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     synchronized (lock) {
       if (stopped) {
         log.warn(
-            "Server[%s] failed to load segment[%s] because load queue peon is stopped.",
+            "Server[%s] cannot load segment[%s] because load queue peon is stopped.",
             serverId,
             segment.getIdentifier()
         );
@@ -405,7 +405,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     synchronized (lock) {
       if (stopped) {
         log.warn(
-            "Server[%s] failed to drop segment[%s] because load queue peon is stopped.",
+            "Server[%s] cannot to drop segment[%s] because load queue peon is stopped.",
             serverId,
             segment.getIdentifier()
         );
