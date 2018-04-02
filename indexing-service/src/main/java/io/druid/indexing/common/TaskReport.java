@@ -29,8 +29,6 @@ import java.util.Map;
  * TaskReport objects contain additional information about an indexing task, such as row statistics, errors, and
  * published segments. They are kept in deep storage along with task logs.
  */
-/**
- */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
 })

@@ -114,8 +114,17 @@ import java.util.Set;
 )
 public class CliPeon extends GuiceRunnable
 {
-  @Arguments(description = "task.json status.json", required = true)
+  @Arguments(description = "task.json status.json report.json", required = true)
   public List<String> taskAndStatusFile;
+
+  // path to store the task's stdout log
+  private String taskLogPath;
+
+  // path to store the task's TaskStatus
+  private String taskStatusPath;
+
+  // path to store the task's TaskReport objects
+  private String taskReportPath;
 
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String nodeType = "indexer-executor";
@@ -142,6 +151,10 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
+            taskLogPath = taskAndStatusFile.get(0);
+            taskStatusPath = taskAndStatusFile.get(1);
+            taskReportPath = taskAndStatusFile.get(2);
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
@@ -184,13 +197,13 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, ExecutorLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskAndStatusFile.get(0)))
-                    .setStatusFile(new File(taskAndStatusFile.get(1)))
+                    .setTaskFile(new File(taskLogPath))
+                    .setStatusFile(new File(taskStatusPath))
             );
 
             binder.bind(TaskReportFileWriter.class).toInstance(
                 new TaskReportFileWriter(
-                    new File(taskAndStatusFile.get(2))
+                    new File(taskReportPath)
                 )
             );
 

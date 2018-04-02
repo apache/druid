@@ -262,7 +262,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       }
     }
     final ListenableFuture<TaskStatus> statusFuture = exec.get(taskPriority)
-                                                                     .submit(new ThreadPoolTaskRunnerCallable(
+                                                          .submit(new ThreadPoolTaskRunnerCallable(
                                                               task,
                                                               location,
                                                               toolbox
