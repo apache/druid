@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.SegmentLoaderFactory;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -49,6 +50,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
@@ -101,7 +103,8 @@ public class ThreadPoolTaskRunnerTest
         null,
         node,
         null,
-        null
+        null,
+        new TaskReportFileWriter(new File("fake"))
     );
     runner = new ThreadPoolTaskRunner(
         toolboxFactory,
