@@ -370,6 +370,12 @@ public abstract class LoadRule implements Rule
       if (holder.isServingSegment(segment)) {
         holder.getPeon().dropSegment(segment, null);
         ++numDropped;
+      } else {
+        log.warn(
+            "Server [%s] is no longer serving segment [%s], skipping drop.",
+            holder.getServer().getName(),
+            segment.getIdentifier()
+        );
       }
     }
 

@@ -239,8 +239,11 @@ public class CostBalancerStrategy implements BalancerStrategy
     final ListenableFuture<List<Pair<Double, ServerHolder>>> resultsFuture = Futures.allAsList(futures);
 
     try {
+      // results is an un-ordered list of a pair consisting of the 'cost' of a segment being on a server and the server
       List<Pair<Double, ServerHolder>> results = resultsFuture.get();
       return results.stream()
+                    // Comparator.comapringDouble will order by lowest cost...
+                    // reverse it because we want to drop from the highest cost servers first
                     .sorted(Comparator.comparingDouble((Pair<Double, ServerHolder> o) -> o.lhs).reversed())
                     .map(x -> x.rhs).collect(Collectors.toList())
                     .iterator();
