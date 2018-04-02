@@ -229,6 +229,7 @@ public class HadoopIndexTask extends HadoopTask
             specVersion,
             version
         );
+        toolbox.getTaskReportFileWriter().write(null);
         return TaskStatus.failure(getId());
       }
     }
@@ -253,8 +254,10 @@ public class HadoopIndexTask extends HadoopTask
       );
 
       toolbox.publishSegments(publishedSegments);
+      toolbox.getTaskReportFileWriter().write(null);
       return TaskStatus.success(getId());
     } else {
+      toolbox.getTaskReportFileWriter().write(null);
       return TaskStatus.failure(getId());
     }
   }

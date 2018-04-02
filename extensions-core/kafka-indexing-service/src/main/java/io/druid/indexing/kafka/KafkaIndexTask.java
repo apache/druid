@@ -904,6 +904,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
+    toolbox.getTaskReportFileWriter().write(null);
     return success();
   }
 
@@ -1272,6 +1273,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
+    toolbox.getTaskReportFileWriter().write(null);
     return success();
   }
 
