@@ -22,7 +22,6 @@ package io.druid.indexing.common;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Maps;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReport;
 
 import java.util.Map;
 

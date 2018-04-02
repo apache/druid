@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -47,8 +48,10 @@ import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.SegmentLoaderFactory;
+import io.druid.indexing.common.TaskReport;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -164,6 +167,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       "host",
       new NoopEmitter()
   );
+  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
 
   private static final String FAIL_DIM = "__fail__";
 
@@ -264,6 +268,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private TaskLockbox taskLockbox;
   private TaskToolboxFactory taskToolboxFactory;
   private File baseDir;
+  private File reportsFile;
 
   @Before
   public void setUp() throws IOException
@@ -280,6 +285,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     derbyConnector.createPendingSegmentsTable();
 
     baseDir = tempFolder.newFolder();
+    reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     makeToolboxFactory(baseDir);
   }
 
@@ -287,6 +293,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   public void tearDown()
   {
     taskExec.shutdownNow();
+    reportsFile.delete();
   }
 
   @Test(timeout = 60_000L)
@@ -613,9 +620,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     TaskStatus status = statusFuture.get();
     Assert.assertTrue(status.getErrorMsg().contains("java.lang.RuntimeException: Max parse exceptions exceeded, terminating task..."));
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "buildSegments",
@@ -699,10 +704,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 2L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 1L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
+            TaskMetricsUtils.ROWS_PROCESSED, 2,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 1,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
         )
     );
 
@@ -710,9 +715,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        taskStatus.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
   }
@@ -792,10 +795,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 2L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
+            TaskMetricsUtils.ROWS_PROCESSED, 2,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
         )
     );
 
@@ -803,9 +806,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        taskStatus.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
@@ -866,17 +867,15 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
     Assert.assertTrue(taskStatus.getErrorMsg().contains("Max parse exceptions exceeded, terminating task..."));
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        taskStatus.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 1L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
+            TaskMetricsUtils.ROWS_PROCESSED, 1,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1123,17 +1122,15 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       // Wait for the task to finish.
       TaskStatus status = statusFuture.get();
 
-      IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-          status.getTaskReports()
-      );
+      IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
       Map<String, Object> expectedMetrics = ImmutableMap.of(
           "buildSegments",
           ImmutableMap.of(
-              TaskMetricsUtils.ROWS_PROCESSED, 0L,
-              TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0L,
-              TaskMetricsUtils.ROWS_UNPARSEABLE, 0L,
-              TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
+              TaskMetricsUtils.ROWS_PROCESSED, 0,
+              TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
+              TaskMetricsUtils.ROWS_UNPARSEABLE, 0,
+              TaskMetricsUtils.ROWS_THROWN_AWAY, 0
           )
       );
       Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1459,7 +1456,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new NoopTestTaskFileWriter()
+        new TaskReportFileWriter(reportsFile)
     );
   }
 
@@ -1480,5 +1477,18 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     List<Result<TimeseriesResultValue>> results =
         task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
     return results.isEmpty() ? 0 : results.get(0).getValue().getLongMetric(metric);
+  }
+
+  private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
+  {
+    Map<String, TaskReport> taskReports = objectMapper.readValue(
+        reportsFile,
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
+    );
+    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskReports
+    );
   }
 }

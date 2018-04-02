@@ -41,6 +41,8 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.TaskReport;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.task.IndexTaskTest;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
@@ -63,7 +65,6 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
-import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import io.druid.indexing.kafka.test.TestBroker;
@@ -208,6 +209,7 @@ public class KafkaIndexTaskTest
   private List<ProducerRecord<byte[], byte[]>> records;
   private final boolean isIncrementalHandoffSupported;
   private final Set<Integer> checkpointRequestsHash = Sets.newHashSet();
+  private File reportsFile;
 
   // This should be removed in versions greater that 0.12.x
   // isIncrementalHandoffSupported should always be set to true in those later versions
@@ -327,6 +329,7 @@ public class KafkaIndexTaskTest
     doHandoff = true;
     topic = getTopicName();
     records = generateRecords(topic);
+    reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     makeToolboxFactory();
   }
 
@@ -340,7 +343,7 @@ public class KafkaIndexTaskTest
 
       runningTasks.clear();
     }
-
+    reportsFile.delete();
     destroyToolboxFactory();
   }
 
@@ -1046,17 +1049,15 @@ public class KafkaIndexTaskTest
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 4L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 3L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 1L
+            TaskMetricsUtils.ROWS_PROCESSED, 4,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 3,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 1
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1123,17 +1124,15 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
     Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 3L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0L
+            TaskMetricsUtils.ROWS_PROCESSED, 3,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -2228,7 +2227,7 @@ public class KafkaIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new NoopTestTaskFileWriter()
+        new TaskReportFileWriter(reportsFile)
     );
   }
 
@@ -2349,5 +2348,18 @@ public class KafkaIndexTaskTest
   {
     final Interval interval = Intervals.of(intervalString);
     return new SegmentDescriptor(interval, getLock(task, interval).getVersion(), partitionNum);
+  }
+
+  private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
+  {
+    Map<String, TaskReport> taskReports = objectMapper.readValue(
+        reportsFile,
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
+    );
+    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskReports
+    );
   }
 }

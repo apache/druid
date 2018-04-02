@@ -20,9 +20,11 @@
 package io.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
+@JsonTypeName("ingestionStatsAndErrors")
 public class IngestionStatsAndErrorsTaskReport implements TaskReport
 {
   public static final String REPORT_KEY = "ingestionStatsAndErrors";
@@ -87,5 +89,11 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
            "taskId='" + taskId + '\'' +
            ", payload=" + payload +
            '}';
+  }
+
+  @JsonProperty("type")
+  private String getType()
+  {
+    return "ingestionStatsAndErrors";
   }
 }

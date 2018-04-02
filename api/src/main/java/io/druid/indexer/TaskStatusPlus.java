@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.Objects;
 
 public class TaskStatusPlus
@@ -42,9 +41,6 @@ public class TaskStatusPlus
   @Nullable
   private final String errorMsg;
 
-  @Nullable
-  private final Map<String, TaskReport> taskReports;
-
   @JsonCreator
   public TaskStatusPlus(
       @JsonProperty("id") String id,
@@ -55,8 +51,7 @@ public class TaskStatusPlus
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("errorMsg") String errorMsg,
-      @JsonProperty("taskReports") Map<String, TaskReport> taskReports
+      @JsonProperty("errorMsg") String errorMsg
   )
   {
     if (state != null && state.isComplete()) {
@@ -71,7 +66,6 @@ public class TaskStatusPlus
     this.location = Preconditions.checkNotNull(location, "location");
     this.dataSource = dataSource;
     this.errorMsg = errorMsg;
-    this.taskReports = taskReports;
   }
 
   @JsonProperty
@@ -132,13 +126,6 @@ public class TaskStatusPlus
     return errorMsg;
   }
 
-  @Nullable
-  @JsonProperty("taskReports")
-  public Map<String, TaskReport> getTaskReports()
-  {
-    return taskReports;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -157,8 +144,7 @@ public class TaskStatusPlus
            Objects.equals(getDuration(), that.getDuration()) &&
            Objects.equals(getLocation(), that.getLocation()) &&
            Objects.equals(getDataSource(), that.getDataSource()) &&
-           Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
-           Objects.equals(getTaskReports(), that.getTaskReports());
+           Objects.equals(getErrorMsg(), that.getErrorMsg());
   }
 
   @Override
@@ -173,8 +159,7 @@ public class TaskStatusPlus
         getDuration(),
         getLocation(),
         getDataSource(),
-        getErrorMsg(),
-        getTaskReports()
+        getErrorMsg()
     );
   }
 }

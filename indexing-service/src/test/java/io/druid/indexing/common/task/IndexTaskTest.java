@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -37,9 +38,11 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
+import io.druid.indexing.common.TaskReport;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
@@ -81,7 +84,9 @@ import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -130,6 +135,7 @@ public class IndexTaskTest
   private IndexMergerV9 indexMergerV9;
   private IndexIO indexIO;
   private volatile int segmentAllocatePartitionCounter;
+  private File reportsFile;
 
   public IndexTaskTest()
   {
@@ -137,6 +143,18 @@ public class IndexTaskTest
     jsonMapper = testUtils.getTestObjectMapper();
     indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
+  }
+
+  @Before
+  public void setup() throws IOException
+  {
+    reportsFile = File.createTempFile("IndexTaskTestReports-" + System.currentTimeMillis(), "json");
+  }
+
+  @After
+  public void teardown() throws IOException
+  {
+    reportsFile.delete();
   }
 
   @Test
@@ -846,9 +864,7 @@ public class IndexTaskTest
         "buildSegments",
         Arrays.asList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
     );
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
@@ -929,24 +945,22 @@ public class IndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals(null, status.getErrorMsg());
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "determinePartitions",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 4L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 4L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 1L
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
+            TaskMetricsUtils.ROWS_PROCESSED, 4,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 4,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 1
         ),
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 1L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 3L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 4L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 1L
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 3,
+            TaskMetricsUtils.ROWS_PROCESSED, 1,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 4,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 1
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1051,17 +1065,15 @@ public class IndexTaskTest
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 1L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 2L
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
+            TaskMetricsUtils.ROWS_PROCESSED, 1,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 2
         )
     );
 
@@ -1158,17 +1170,15 @@ public class IndexTaskTest
     Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "determinePartitions",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 1L,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0L,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3L,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 2L
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
+            TaskMetricsUtils.ROWS_PROCESSED, 1,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 2
         )
     );
 
@@ -1321,9 +1331,7 @@ public class IndexTaskTest
 
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
-    IngestionStatsAndErrorsTaskReportData reportData = IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
-        status.getTaskReports()
-    );
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
         "determinePartitions",
@@ -1454,7 +1462,7 @@ public class IndexTaskTest
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
+        new TaskReportFileWriter(reportsFile)
     );
 
     indexTask.isReady(box.getTaskActionClient());
@@ -1564,6 +1572,19 @@ public class IndexTaskTest
         null,
         null,
         1
+    );
+  }
+
+  private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
+  {
+    Map<String, TaskReport> taskReports = jsonMapper.readValue(
+        reportsFile,
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
+    );
+    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskReports
     );
   }
 }

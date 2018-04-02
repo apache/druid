@@ -54,7 +54,6 @@ public class TaskStatusPlusTest
         1000L,
         TaskLocation.create("testHost", 1010, -1),
         "ds_test",
-        null,
         null
     );
     final String json = mapper.writeValueAsString(status);
