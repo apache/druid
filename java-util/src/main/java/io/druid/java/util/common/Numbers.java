@@ -23,7 +23,8 @@ public final class Numbers
 {
   /**
    * Parse the given object as a {@code long}. The input object can be a {@link String} or one of the implementations of
-   * {@link Number}.
+   * {@link Number}. You may want to use {@code GuavaUtils.tryParseLong()} instead if the input is a nullable string and
+   * you want to avoid any exceptions.
    *
    * @throws NumberFormatException if the input is an unparseable string.
    * @throws NullPointerException if the input is null.
