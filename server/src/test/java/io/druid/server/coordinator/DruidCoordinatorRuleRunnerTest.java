@@ -22,6 +22,7 @@ package io.druid.server.coordinator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -942,6 +943,8 @@ public class DruidCoordinatorRuleRunnerTest
 
     LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(anotherMockPeon.getLoadQueueSize()).andReturn(10L).atLeastOnce();
+    EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(Sets.newHashSet()).anyTimes();
+
     EasyMock.replay(anotherMockPeon);
 
     DruidCluster druidCluster = new DruidCluster(
