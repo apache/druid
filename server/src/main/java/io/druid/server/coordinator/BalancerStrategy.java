@@ -37,7 +37,7 @@ public interface BalancerStrategy
    * Find the best server to move a {@link DataSegment} to according the the balancing strategy.
    * @param proposalSegment segment to move
    * @param serverHolders servers to consider as move destinations
-   * @return
+   * @return The server to move to, or null if no move should be made or no server is suitable
    */
   ServerHolder findNewSegmentHomeBalancer(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
@@ -45,7 +45,7 @@ public interface BalancerStrategy
    * Find the best server on which to place a {@link DataSegment} replica according to the balancing strategy
    * @param proposalSegment segment to replicate
    * @param serverHolders servers to consider as replica holders
-   * @return
+   * @return The server to replicate to, or null if no suitable server is found
    */
   ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders);
 
