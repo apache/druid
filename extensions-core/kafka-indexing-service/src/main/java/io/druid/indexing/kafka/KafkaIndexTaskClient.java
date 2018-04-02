@@ -22,7 +22,6 @@ package io.druid.indexing.kafka;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -57,6 +56,7 @@ import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -551,7 +551,7 @@ public class KafkaIndexTaskClient
           }
 
           log.debug("HTTP %s: %s", method.getName(), serviceUri.toString());
-          response = httpClient.go(request, new FullResponseHandler(Charsets.UTF_8), httpTimeout).get();
+          response = httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
         }
         catch (Exception e) {
           Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
