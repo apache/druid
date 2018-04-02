@@ -35,7 +35,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
-import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -86,7 +85,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
 
-  private final LifecycleLock lifecycleLock = new LifecycleLock();
+  // Use to synchronize start() and stop(). These methods should be synchronized to prevent from being called at the
+  // same time if two different threads are calling them. This might be possible if a druid coordinator gets and drops
+  // leadership repeatedly in quick succession.
+  private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
@@ -96,6 +98,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
   private volatile ListeningScheduledExecutorService exec = null;
   private volatile ListenableFuture<?> future = null;
+  private volatile boolean started;
 
   @Inject
   public SQLMetadataSegmentManager(
@@ -116,11 +119,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStart
   public void start()
   {
-    if (!lifecycleLock.canStart()) {
-      return;
-    }
+    synchronized (lock) {
+      if (started) {
+        return;
+      }
 
-    try {
       exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d"));
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
@@ -143,10 +146,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
-      lifecycleLock.started();
-    }
-    finally {
-      lifecycleLock.exitStart();
+      started = true;
     }
   }
 
@@ -154,10 +154,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStop
   public void stop()
   {
-    if (!lifecycleLock.canStop()) {
-      return;
-    }
-    try {
+    synchronized (lock) {
+      if (!started) {
+        return;
+      }
+
       final ConcurrentHashMap<String, DruidDataSource> emptyMap = new ConcurrentHashMap<>();
       ConcurrentHashMap<String, DruidDataSource> current;
       do {
@@ -168,9 +169,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       future = null;
       exec.shutdownNow();
       exec = null;
-    }
-    finally {
-      lifecycleLock.exitStop();
+      started = false;
     }
   }
 
@@ -366,7 +365,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public boolean isStarted()
   {
-    return lifecycleLock.isStarted();
+    return started;
   }
 
   @Override
@@ -420,7 +419,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public void poll()
   {
     try {
-      if (!lifecycleLock.isStarted()) {
+      if (!started) {
         return;
       }
 

@@ -1458,7 +1458,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new NoopTestTaskFileWriter()
     );
   }
 

@@ -22,7 +22,6 @@ package io.druid.indexing.kafka;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -41,7 +40,7 @@ import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.task.IndexTaskTest;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
@@ -64,6 +63,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import io.druid.indexing.kafka.test.TestBroker;
@@ -158,6 +158,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -241,7 +242,7 @@ public class KafkaIndexTaskTest
                   new JSONPathSpec(true, ImmutableList.<JSONPathFieldSpec>of()),
                   ImmutableMap.<String, Boolean>of()
               ),
-              Charsets.UTF_8.name()
+              StandardCharsets.UTF_8.name()
           ),
           Map.class
       ),
@@ -2226,7 +2227,8 @@ public class KafkaIndexTaskTest
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0)
+        new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
+        new NoopTestTaskFileWriter()
     );
   }
 

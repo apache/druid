@@ -37,6 +37,8 @@ public class QueryContexts
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
+  public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
+  public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = 300_000; // 5 minutes
@@ -70,6 +72,26 @@ public class QueryContexts
   public static <T> boolean isUseCache(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "useCache", defaultValue);
+  }
+
+  public static <T> boolean isPopulateResultLevelCache(Query<T> query)
+  {
+    return isPopulateResultLevelCache(query, DEFAULT_POPULATE_RESULTLEVEL_CACHE);
+  }
+
+  public static <T> boolean isPopulateResultLevelCache(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "populateResultLevelCache", defaultValue);
+  }
+
+  public static <T> boolean isUseResultLevelCache(Query<T> query)
+  {
+    return isUseResultLevelCache(query, DEFAULT_USE_RESULTLEVEL_CACHE);
+  }
+
+  public static <T> boolean isUseResultLevelCache(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "useResultLevelCache", defaultValue);
   }
 
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)

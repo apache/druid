@@ -19,7 +19,6 @@
 
 package io.druid.client.cache;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -56,6 +55,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -87,7 +87,7 @@ public class MemcachedCache implements Cache
     @Override
     public long hash(String k)
     {
-      return fn.hashString(k, Charsets.UTF_8).asLong();
+      return fn.hashString(k, StandardCharsets.UTF_8).asLong();
     }
 
     @Override

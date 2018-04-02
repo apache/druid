@@ -17,20 +17,18 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Maps;
+import io.druid.indexer.IngestionStatsAndErrorsTaskReport;
 
 import java.util.Map;
 
 /**
- * TaskReport can be optionally included in io.druid.indexing.common.TaskStatus to report some ingestion results to
- * Supervisors or supervisorTasks. See ParallelIndexSinglePhaseSupervisorTask and ParallelIndexSinglePhaseSubTask
- * as an example.
- */
-/**
+ * TaskReport objects contain additional information about an indexing task, such as row statistics, errors, and
+ * published segments. They are kept in deep storage along with task logs.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -42,6 +40,9 @@ public interface TaskReport
 
   String getReportKey();
 
+  /**
+   * @return A JSON-serializable Object that contains a TaskReport's information
+   */
   Object getPayload();
 
   static Map<String, TaskReport> buildTaskReports(TaskReport... taskReports)

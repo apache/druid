@@ -51,11 +51,11 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexer.TaskReport;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReport;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
@@ -432,15 +432,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
-      Map<String, Object> context = Maps.newHashMap();
-      List<String> savedParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
-      if (savedParseExceptionMessages != null) {
-        context.put("unparseableEvents", savedParseExceptionMessages);
-      }
+
+      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(e),
-          getTaskCompletionReports()
+          Throwables.getStackTraceAsString(e)
       );
     }
   }
@@ -928,17 +924,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
-    Map<String, Object> context = Maps.newHashMap();
-    List<String> savedParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
-    if (savedParseExceptionMessages != null) {
-      context.put("unparseableEvents", savedParseExceptionMessages);
-    }
-
-    return TaskStatus.success(
-        getId(),
-        null,
-        getTaskCompletionReports()
-    );
+    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+    return success();
   }
 
   private TaskStatus runInternalLegacy(final TaskToolbox toolbox) throws Exception
@@ -1304,16 +1291,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
-    Map<String, Object> context = Maps.newHashMap();
-    List<String> savedParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
-    if (savedParseExceptionMessages != null) {
-      context.put("unparseableEvents", savedParseExceptionMessages);
-    }
-
+    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
     return TaskStatus.success(
         getId(),
-        null,
-        getTaskCompletionReports()
+        null
     );
   }
 

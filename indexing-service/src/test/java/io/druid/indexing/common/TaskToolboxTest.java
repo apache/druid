@@ -25,6 +25,7 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.emitter.service.ServiceEmitter;
@@ -114,7 +115,8 @@ public class TaskToolboxTest
         null,
         null,
         null,
-        null
+        null,
+        new NoopTestTaskFileWriter()
     );
   }
 

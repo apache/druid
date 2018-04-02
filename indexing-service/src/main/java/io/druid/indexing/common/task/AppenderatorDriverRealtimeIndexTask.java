@@ -39,12 +39,12 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexer.TaskReport;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -54,6 +54,7 @@ import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -364,10 +365,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     catch (Throwable e) {
       log.makeAlert(e, "Exception aborted realtime processing[%s]", dataSchema.getDataSource())
          .emit();
+      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(e),
-          getTaskCompletionReports()
+          Throwables.getStackTraceAsString(e)
       );
     }
     finally {
@@ -386,11 +387,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     }
 
     log.info("Job done!");
-    return TaskStatus.success(
-        getId(),
-        null,
-        getTaskCompletionReports()
-    );
+    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+    return TaskStatus.success(getId());
   }
 
   @Override
@@ -493,9 +491,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   /**
    * Is a firehose from this factory drainable by closing it? If so, we should drain on stopGracefully rather than
    * abruptly stopping.
-   *
+   * <p>
    * This is a hack to get around the fact that the Firehose and FirehoseFactory interfaces do not help us do this.
-   *
+   * <p>
    * Protected for tests.
    */
   protected boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
@@ -595,19 +593,16 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       String sequenceName
   )
   {
-    ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
         publisher,
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-
-    ListenableFuture<SegmentsAndMetadata> handoffFuture = Futures.transform(publishFuture, driver::registerHandoff);
-
-    pendingHandoffs.add(handoffFuture);
+    pendingHandoffs.add(ListenableFutures.transformAsync(publishFuture, driver::registerHandoff));
   }
 
   private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,
-                                                                 TimeoutException
+                                                                    TimeoutException
   {
     if (!pendingHandoffs.isEmpty()) {
       ListenableFuture<?> allHandoffs = Futures.allAsList(pendingHandoffs);

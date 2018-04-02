@@ -42,13 +42,13 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexer.TaskReport;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -448,10 +448,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
+      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(e),
-          getTaskCompletionReports()
+          Throwables.getStackTraceAsString(e)
       );
     }
 
@@ -993,10 +993,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
-            "Failed to publish segments.",
-            getTaskCompletionReports()
+            "Failed to publish segments."
         );
       } else {
         log.info(
@@ -1014,11 +1014,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
             )
         );
 
-        return TaskStatus.success(
-            getId(),
-            null,
-            getTaskCompletionReports()
-        );
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        return TaskStatus.success(getId());
       }
     }
     catch (TimeoutException | ExecutionException e) {

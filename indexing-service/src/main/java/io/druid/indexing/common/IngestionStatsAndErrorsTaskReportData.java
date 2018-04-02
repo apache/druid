@@ -17,9 +17,10 @@
  * under the License.
  */
 
-package io.druid.indexer;
+package io.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.indexer.IngestionState;
 
 import java.util.Map;
 import java.util.Objects;

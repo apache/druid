@@ -61,6 +61,21 @@ public class HdfsTaskLogs implements TaskLogs
   {
     final Path path = getTaskLogFileFromId(taskId);
     log.info("Writing task log to: %s", path);
+    pushTaskFile(path, logFile);
+    log.info("Wrote task log to: %s", path);
+  }
+
+  @Override
+  public void pushTaskReports(String taskId, File reportFile) throws IOException
+  {
+    final Path path = getTaskReportsFileFromId(taskId);
+    log.info("Writing task reports to: %s", path);
+    pushTaskFile(path, reportFile);
+    log.info("Wrote task reports to: %s", path);
+  }
+
+  private void pushTaskFile(Path path, File logFile) throws IOException
+  {
     final FileSystem fs = path.getFileSystem(hadoopConfig);
     try (
         final InputStream in = new FileInputStream(logFile);
@@ -68,14 +83,24 @@ public class HdfsTaskLogs implements TaskLogs
     ) {
       ByteStreams.copy(in, out);
     }
-
-    log.info("Wrote task log to: %s", path);
   }
 
   @Override
   public Optional<ByteSource> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final Path path = getTaskLogFileFromId(taskId);
+    return streamTaskFile(path, offset);
+  }
+
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskId) throws IOException
+  {
+    final Path path = getTaskReportsFileFromId(taskId);
+    return streamTaskFile(path, 0);
+  }
+
+  private Optional<ByteSource> streamTaskFile(final Path path, final long offset) throws IOException
+  {
     final FileSystem fs = path.getFileSystem(hadoopConfig);
     if (fs.exists(path)) {
       return Optional.<ByteSource>of(
@@ -111,6 +136,15 @@ public class HdfsTaskLogs implements TaskLogs
   private Path getTaskLogFileFromId(String taskId)
   {
     return new Path(mergePaths(config.getDirectory(), taskId.replaceAll(":", "_")));
+  }
+
+  /**
+   * Due to https://issues.apache.org/jira/browse/HDFS-13 ":" are not allowed in
+   * path names. So we format paths differently for HDFS.
+   */
+  private Path getTaskReportsFileFromId(String taskId)
+  {
+    return new Path(mergePaths(config.getDirectory(), taskId.replaceAll(":", "_") + ".reports.json"));
   }
 
   // some hadoop version Path.mergePaths does not exist

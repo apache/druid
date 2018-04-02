@@ -58,6 +58,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -465,13 +466,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
                         success
-                        && result.getResponse().getStatus() == javax.ws.rs.core.Response.Status.OK.getStatusCode()
+                        && result.getResponse().getStatus() == Status.OK.getStatusCode()
                     )
                 )
             )
         );
-
-
       }
       catch (Exception e) {
         log.error(e, "Unable to log query [%s]!", query);

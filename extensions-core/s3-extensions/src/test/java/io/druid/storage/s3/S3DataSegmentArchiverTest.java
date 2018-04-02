@@ -19,6 +19,7 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -30,7 +31,6 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -65,7 +65,7 @@ public class S3DataSegmentArchiverTest
     }
   };
   private static final S3DataSegmentPusherConfig PUSHER_CONFIG = new S3DataSegmentPusherConfig();
-  private static final RestS3Service S3_SERVICE = EasyMock.createStrictMock(RestS3Service.class);
+  private static final AmazonS3Client S3_SERVICE = EasyMock.createStrictMock(AmazonS3Client.class);
   private static final S3DataSegmentPuller PULLER = new S3DataSegmentPuller(S3_SERVICE);
   private static final DataSegment SOURCE_SEGMENT = DataSegment
       .builder()

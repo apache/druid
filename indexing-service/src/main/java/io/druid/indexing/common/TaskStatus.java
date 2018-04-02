@@ -24,10 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import io.druid.indexer.TaskReport;
 import io.druid.indexer.TaskState;
-
-import java.util.Map;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
@@ -39,54 +36,51 @@ public class TaskStatus
 {
   public static TaskStatus running(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.RUNNING, -1, null, null);
+    return new TaskStatus(taskId, TaskState.RUNNING, -1, null);
   }
 
   public static TaskStatus success(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null, null);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, null);
   }
 
-  public static TaskStatus success(String taskId, String errorMsg, Map<String, TaskReport> taskReports)
+  public static TaskStatus success(String taskId, String errorMsg)
   {
-    return new TaskStatus(taskId, TaskState.SUCCESS, -1, errorMsg, taskReports);
+    return new TaskStatus(taskId, TaskState.SUCCESS, -1, errorMsg);
   }
 
   public static TaskStatus failure(String taskId)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, null, null);
+    return new TaskStatus(taskId, TaskState.FAILED, -1, null);
   }
 
-  public static TaskStatus failure(String taskId, String errorMsg, Map<String, TaskReport> taskReports)
+  public static TaskStatus failure(String taskId, String errorMsg)
   {
-    return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg, taskReports);
+    return new TaskStatus(taskId, TaskState.FAILED, -1, errorMsg);
   }
 
   public static TaskStatus fromCode(String taskId, TaskState code)
   {
-    return new TaskStatus(taskId, code, -1, null, null);
+    return new TaskStatus(taskId, code, -1, null);
   }
 
   private final String id;
   private final TaskState status;
   private final long duration;
   private final String errorMsg;
-  private final Map<String, TaskReport> taskReports;
 
   @JsonCreator
   protected TaskStatus(
       @JsonProperty("id") String id,
       @JsonProperty("status") TaskState status,
       @JsonProperty("duration") long duration,
-      @JsonProperty("errorMsg") String errorMsg,
-      @JsonProperty("taskReports") Map<String, TaskReport> taskReports
+      @JsonProperty("errorMsg") String errorMsg
   )
   {
     this.id = id;
     this.status = status;
     this.duration = duration;
     this.errorMsg = errorMsg;
-    this.taskReports = taskReports;
 
     // Check class invariants.
     Preconditions.checkNotNull(id, "id");
@@ -115,12 +109,6 @@ public class TaskStatus
   public String getErrorMsg()
   {
     return errorMsg;
-  }
-
-  @JsonProperty("taskReports")
-  public Map<String, TaskReport> getTaskReports()
-  {
-    return taskReports;
   }
 
   /**
@@ -172,7 +160,7 @@ public class TaskStatus
 
   public TaskStatus withDuration(long _duration)
   {
-    return new TaskStatus(id, status, _duration, errorMsg, taskReports);
+    return new TaskStatus(id, status, _duration, errorMsg);
   }
 
   @Override
@@ -183,7 +171,6 @@ public class TaskStatus
                   .add("status", status)
                   .add("duration", duration)
                   .add("errorMsg", errorMsg)
-                  .add("taskReports", taskReports)
                   .toString();
   }
 
@@ -200,13 +187,12 @@ public class TaskStatus
     return getDuration() == that.getDuration() &&
            java.util.Objects.equals(getId(), that.getId()) &&
            status == that.status &&
-           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
-           java.util.Objects.equals(getTaskReports(), that.getTaskReports());
+           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg());
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg(), getTaskReports());
+    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg());
   }
 }

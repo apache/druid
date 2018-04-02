@@ -53,4 +53,17 @@ public class SwitchingTaskLogStreamer implements TaskLogStreamer
 
     return Optional.absent();
   }
+
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  {
+    for (TaskLogStreamer provider : providers) {
+      final Optional<ByteSource> stream = provider.streamTaskReports(taskid);
+      if (stream.isPresent()) {
+        return stream;
+      }
+    }
+
+    return Optional.absent();
+  }
 }

@@ -36,14 +36,14 @@ import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
 import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexer.TaskReport;
-import io.druid.indexer.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
+import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -238,10 +238,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         log.error(e, "Encountered exception in run():");
       }
 
+      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(effectiveException),
-          getTaskCompletionReports()
+          Throwables.getStackTraceAsString(effectiveException)
       );
     }
     finally {
@@ -301,10 +301,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       indexerSchema = determineConfigStatus.getSchema();
       if (indexerSchema == null) {
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
-            determineConfigStatus.getErrorMsg(),
-            getTaskCompletionReports()
+            determineConfigStatus.getErrorMsg()
         );
       }
     }
@@ -348,6 +348,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             specVersion,
             version
         );
+        toolbox.getTaskReportFileWriter().write(null);
         return TaskStatus.failure(getId());
       }
     }
@@ -389,16 +390,16 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       if (buildSegmentsStatus.getDataSegments() != null) {
         ingestionState = IngestionState.COMPLETED;
         toolbox.publishSegments(buildSegmentsStatus.getDataSegments());
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.success(
             getId(),
-            null,
-            getTaskCompletionReports()
+            null
         );
       } else {
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
-            buildSegmentsStatus.getErrorMsg(),
-            getTaskCompletionReports()
+            buildSegmentsStatus.getErrorMsg()
         );
       }
     }

@@ -19,7 +19,6 @@
 
 package io.druid.segment.realtime.firehose;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.Row;
@@ -89,7 +88,7 @@ public class LocalFirehoseFactoryTest
             false,
             0
         ),
-        Charsets.UTF_8.name()
+        StandardCharsets.UTF_8.name()
     ), null)) {
       final List<Row> rows = new ArrayList<>();
       while (firehose.hasMore()) {
