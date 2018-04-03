@@ -411,6 +411,9 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .times(2);
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
     LoadRule rule = createLoadRule(ImmutableMap.of(
@@ -555,7 +558,9 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-
+    EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
+            .andDelegateTo(balancerStrategy)
+            .times(1);
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
     LoadRule rule = createLoadRule(ImmutableMap.of(
