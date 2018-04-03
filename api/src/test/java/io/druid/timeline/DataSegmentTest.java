@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.InputRow;
@@ -82,7 +82,7 @@ public class DataSegmentTest
       }
 
       @Override
-      public Map<String, Range<String>> getDomain()
+      public Map<String, RangeSet<String>> getDomain()
       {
         return ImmutableMap.of();
       }
