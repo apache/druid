@@ -263,14 +263,4 @@ public class FireDepartmentMetrics
     messageGap.set(Math.max(messageGap(), otherSnapshot.messageGap()));
     return this;
   }
-
-  public static Map<String, Object> getRowMetricsFromFireDepartmentMetrics(FireDepartmentMetrics fdm)
-  {
-    return TaskMetricsUtils.makeIngestionRowMetrics(
-        fdm.processed(),
-        fdm.processedWithErrors(),
-        fdm.unparseable(),
-        fdm.thrownAway()
-    );
-  }
 }

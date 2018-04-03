@@ -25,5 +25,5 @@ import java.util.Map;
 public interface TaskMetricsGetter
 {
   List<String> getKeys();
-  Map<String, Double> getMetrics();
+  Map<String, Number> getTotalMetrics();
 }

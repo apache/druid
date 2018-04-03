@@ -22,7 +22,6 @@ package io.druid.segment.realtime;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
-import io.druid.java.util.common.logger.Logger;
 
 import java.util.Arrays;
 import java.util.List;
@@ -32,17 +31,12 @@ public class FireDepartmentMetricsTaskMetricsGetter implements TaskMetricsGetter
 {
   public static final List<String> KEYS = Arrays.asList(
       TaskMetricsUtils.ROWS_PROCESSED,
+      TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS,
       TaskMetricsUtils.ROWS_THROWN_AWAY,
       TaskMetricsUtils.ROWS_UNPARSEABLE
   );
 
-  private static final Logger log = new Logger(FireDepartmentMetricsTaskMetricsGetter.class);
-
   private final FireDepartmentMetrics fireDepartmentMetrics;
-
-  private double processed = 0;
-  private double thrownAway = 0;
-  private double unparseable = 0;
 
   public FireDepartmentMetricsTaskMetricsGetter(
       FireDepartmentMetrics fireDepartmentMetrics
@@ -58,24 +52,13 @@ public class FireDepartmentMetricsTaskMetricsGetter implements TaskMetricsGetter
   }
 
   @Override
-  public Map<String, Double> getMetrics()
+  public Map<String, Number> getTotalMetrics()
   {
-    double curProcessed = fireDepartmentMetrics.processed();
-    double curThrownAway = fireDepartmentMetrics.thrownAway();
-    double curUnparseable = fireDepartmentMetrics.unparseable();
-
-    double processedDiff = curProcessed - processed;
-    double thrownAwayDiff = curThrownAway - thrownAway;
-    double unparseableDiff = curUnparseable - unparseable;
-
-    processed = curProcessed;
-    thrownAway = curThrownAway;
-    unparseable = curUnparseable;
-    
     return ImmutableMap.of(
-        TaskMetricsUtils.ROWS_PROCESSED, processedDiff,
-        TaskMetricsUtils.ROWS_THROWN_AWAY, thrownAwayDiff,
-        TaskMetricsUtils.ROWS_UNPARSEABLE, unparseableDiff
+        TaskMetricsUtils.ROWS_PROCESSED, fireDepartmentMetrics.processed(),
+        TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, fireDepartmentMetrics.processedWithErrors(),
+        TaskMetricsUtils.ROWS_THROWN_AWAY, fireDepartmentMetrics.thrownAway(),
+        TaskMetricsUtils.ROWS_UNPARSEABLE, fireDepartmentMetrics.unparseable()
     );
   }
 }

@@ -476,21 +476,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         TaskMetricsUtils.ROWS_UNPARSEABLE
     );
 
-    public static final Map<String, Double> MISSING_SAMPLE_DEFAULT_VALUES = Maps.newHashMap();
-    static {
-      MISSING_SAMPLE_DEFAULT_VALUES.put(TaskMetricsUtils.ROWS_PROCESSED, 0.0d);
-      MISSING_SAMPLE_DEFAULT_VALUES.put(TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0.0d);
-      MISSING_SAMPLE_DEFAULT_VALUES.put(TaskMetricsUtils.ROWS_THROWN_AWAY, 0.0d);
-      MISSING_SAMPLE_DEFAULT_VALUES.put(TaskMetricsUtils.ROWS_UNPARSEABLE, 0.0d);
-    }
-
     private final Method getStatsMethod;
     private final Object innerProcessingRunner;
-
-    private long processed = 0;
-    private long processedWithErrors = 0;
-    private long thrownAway = 0;
-    private long unparseable = 0;
 
     public InnerProcessingStatsGetter(
         Object innerProcessingRunner
@@ -513,48 +500,12 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     }
 
     @Override
-    public Map<String, Double> getMetrics()
+    public Map<String, Number> getTotalMetrics()
     {
       try {
         Map<String, Object> statsMap = (Map<String, Object>) getStatsMethod.invoke(innerProcessingRunner);
         if (statsMap == null) {
-          return MISSING_SAMPLE_DEFAULT_VALUES;
-        }
-
-        long curProcessed = (Long) statsMap.get(TaskMetricsUtils.ROWS_PROCESSED);
-        long curProcessedWithErrors = (Long) statsMap.get(TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS);
-        long curThrownAway = (Long) statsMap.get(TaskMetricsUtils.ROWS_THROWN_AWAY);
-        long curUnparseable = (Long) statsMap.get(TaskMetricsUtils.ROWS_UNPARSEABLE);
-
-        Long processedDiff = curProcessed - processed;
-        Long procssedWithErrorsDiff = curProcessedWithErrors - processedWithErrors;
-        Long thrownAwayDiff = curThrownAway - thrownAway;
-        Long unparseableDiff = curUnparseable - unparseable;
-
-        processed = curProcessed;
-        processedWithErrors = curProcessedWithErrors;
-        thrownAway = curThrownAway;
-        unparseable = curUnparseable;
-
-        return ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, processedDiff.doubleValue(),
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, procssedWithErrorsDiff.doubleValue(),
-            TaskMetricsUtils.ROWS_THROWN_AWAY, thrownAwayDiff.doubleValue(),
-            TaskMetricsUtils.ROWS_UNPARSEABLE, unparseableDiff.doubleValue()
-        );
-      }
-      catch (Exception e) {
-        log.error(e, "Got exception from getMetrics(): ");
-        return null;
-      }
-    }
-
-    public Map<String, Double> getTotalMetrics()
-    {
-      try {
-        Map<String, Object> statsMap = (Map<String, Object>) getStatsMethod.invoke(innerProcessingRunner);
-        if (statsMap == null) {
-          return MISSING_SAMPLE_DEFAULT_VALUES;
+          return null;
         }
         long curProcessed = (Long) statsMap.get(TaskMetricsUtils.ROWS_PROCESSED);
         long curProcessedWithErrors = (Long) statsMap.get(TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS);
@@ -562,10 +513,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         long curUnparseable = (Long) statsMap.get(TaskMetricsUtils.ROWS_UNPARSEABLE);
 
         return ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, (double) curProcessed,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, (double) curProcessedWithErrors,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, (double) curThrownAway,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, (double) curUnparseable
+            TaskMetricsUtils.ROWS_PROCESSED, curProcessed,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, curProcessedWithErrors,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, curThrownAway,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, curUnparseable
         );
       }
       catch (Exception e) {

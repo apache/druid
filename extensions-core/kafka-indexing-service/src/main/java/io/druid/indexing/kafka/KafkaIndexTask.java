@@ -50,6 +50,7 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
+import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -86,6 +87,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -250,6 +252,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final boolean useLegacy;
   private CircularBuffer<Throwable> savedParseExceptions;
   private IngestionState ingestionState;
+
+  private TaskMetricsGetter metricsGetter;
 
   @JsonCreator
   public KafkaIndexTask(
@@ -508,6 +512,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
     toolbox.getMonitorScheduler().addMonitor(
         new RealtimeMetricsMonitor(
             ImmutableList.of(fireDepartmentForMetrics),
@@ -951,6 +956,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
     toolbox.getMonitorScheduler().addMonitor(
         new RealtimeMetricsMonitor(
             ImmutableList.of(fireDepartmentForMetrics),
@@ -1353,10 +1359,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (fireDepartmentMetrics != null) {
+    if (metricsGetter != null) {
       metrics.put(
           "buildSegments",
-          FireDepartmentMetrics.getRowMetricsFromFireDepartmentMetrics(fireDepartmentMetrics)
+          metricsGetter.getTotalMetrics()
       );
     }
     return metrics;
@@ -1579,15 +1585,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
 
-    if (fireDepartmentMetrics != null) {
+    if (metricsGetter != null) {
       totalsMap.put(
           "buildSegments",
-          TaskMetricsUtils.makeIngestionRowMetrics(
-              fireDepartmentMetrics.processed(),
-              fireDepartmentMetrics.processedWithErrors(),
-              fireDepartmentMetrics.unparseable(),
-              fireDepartmentMetrics.thrownAway()
-          )
+          metricsGetter.getTotalMetrics()
       );
     }
 

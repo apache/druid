@@ -42,7 +42,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -72,6 +72,7 @@ import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -165,10 +166,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private FireDepartmentMetrics buildSegmentsFireDepartmentMetrics;
 
   @JsonIgnore
+  private TaskMetricsGetter buildSegmentsMetricsGetter;
+
+  @JsonIgnore
   private CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
 
   @JsonIgnore
   private FireDepartmentMetrics determinePartitionsFireDepartmentMetrics;
+
+  @JsonIgnore
+  private TaskMetricsGetter determinePartitionsMetricsGetter;
 
   @JsonIgnore
   private CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
@@ -349,29 +356,19 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     if (needsDeterminePartitions) {
-      if (determinePartitionsFireDepartmentMetrics != null) {
+      if (determinePartitionsMetricsGetter != null) {
         totalsMap.put(
             "determinePartitions",
-            TaskMetricsUtils.makeIngestionRowMetrics(
-                determinePartitionsFireDepartmentMetrics.processed(),
-                determinePartitionsFireDepartmentMetrics.processedWithErrors(),
-                determinePartitionsFireDepartmentMetrics.unparseable(),
-                determinePartitionsFireDepartmentMetrics.thrownAway()
-            )
+            determinePartitionsMetricsGetter.getTotalMetrics()
         );
       }
     }
 
     if (needsBuildSegments) {
-      if (buildSegmentsFireDepartmentMetrics != null) {
+      if (buildSegmentsMetricsGetter != null) {
         totalsMap.put(
             "buildSegments",
-            TaskMetricsUtils.makeIngestionRowMetrics(
-                buildSegmentsFireDepartmentMetrics.processed(),
-                buildSegmentsFireDepartmentMetrics.processedWithErrors(),
-                buildSegmentsFireDepartmentMetrics.unparseable(),
-                buildSegmentsFireDepartmentMetrics.thrownAway()
-            )
+            buildSegmentsMetricsGetter.getTotalMetrics()
         );
       }
     }
@@ -495,16 +492,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (determinePartitionsFireDepartmentMetrics != null) {
+    if (determinePartitionsMetricsGetter != null) {
       metrics.put(
           "determinePartitions",
-          FireDepartmentMetrics.getRowMetricsFromFireDepartmentMetrics(determinePartitionsFireDepartmentMetrics)
+          determinePartitionsMetricsGetter.getTotalMetrics()
       );
     }
-    if (buildSegmentsFireDepartmentMetrics != null) {
+    if (buildSegmentsMetricsGetter != null) {
       metrics.put(
           "buildSegments",
-          FireDepartmentMetrics.getRowMetricsFromFireDepartmentMetrics(buildSegmentsFireDepartmentMetrics)
+          buildSegmentsMetricsGetter.getTotalMetrics()
       );
     }
     return metrics;
@@ -700,6 +697,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   ) throws IOException
   {
     determinePartitionsFireDepartmentMetrics = new FireDepartmentMetrics();
+    determinePartitionsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(
+        determinePartitionsFireDepartmentMetrics
+    );
 
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
         Comparators.intervalsByStartThenEnd()
@@ -836,6 +836,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         dataSchema, new RealtimeIOConfig(null, null, null), null
     );
     buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    buildSegmentsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(buildSegmentsFireDepartmentMetrics);
 
     if (toolbox.getMonitorScheduler() != null) {
       toolbox.getMonitorScheduler().addMonitor(

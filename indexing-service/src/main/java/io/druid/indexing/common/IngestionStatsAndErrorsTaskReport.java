@@ -91,6 +91,9 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
            '}';
   }
 
+  // TaskReports are put into a Map and serialized.
+  // Jackson doesn't normally serialize the TaskReports with a "type" field in that situation,
+  // so explictly serialize the "type" field (otherwise, deserialization fails).
   @JsonProperty("type")
   private String getType()
   {

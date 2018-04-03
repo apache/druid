@@ -39,6 +39,7 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
+import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -66,6 +67,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -141,6 +143,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
   @JsonIgnore
   private volatile FireDepartmentMetrics metrics = null;
+
+  @JsonIgnore
+  private TaskMetricsGetter metricsGetter;
 
   @JsonIgnore
   private volatile boolean gracefullyStopped = false;
@@ -250,6 +255,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     );
 
     this.metrics = fireDepartmentForMetrics.getMetrics();
+    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(metrics);
 
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -460,15 +466,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
 
-    if (metrics != null) {
+    if (metricsGetter != null) {
       totalsMap.put(
           "buildSegments",
-          TaskMetricsUtils.makeIngestionRowMetrics(
-              metrics.processed(),
-              metrics.processedWithErrors(),
-              metrics.unparseable(),
-              metrics.thrownAway()
-          )
+          metricsGetter.getTotalMetrics()
       );
     }
 
@@ -532,10 +533,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metricsMap = Maps.newHashMap();
-    if (metrics != null) {
+    if (metricsGetter != null) {
       metricsMap.put(
           "buildSegments",
-          FireDepartmentMetrics.getRowMetricsFromFireDepartmentMetrics(metrics)
+          metricsGetter.getTotalMetrics()
       );
     }
     return metricsMap;
