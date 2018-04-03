@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +29,6 @@ import org.apache.commons.codec.binary.Base64;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -47,14 +47,13 @@ public class SketchConstantPostAggregator implements PostAggregator
   public SketchConstantPostAggregator(@JsonProperty("name") String name, @JsonProperty("value") String sketchValue)
   {
     this.name = name;
-    Preconditions.checkNotNull(sketchValue);
-    this.sketchValue = SketchHolder.deserialize(sketchValue);
+    this.sketchValue = SketchHolder.deserialize(Preconditions.checkNotNull(sketchValue));
   }
 
   @Override
   public Set<String> getDependentFields()
   {
-    return Sets.newHashSet();
+    return Collections.emptySet();
   }
 
   @Override
@@ -83,15 +82,16 @@ public class SketchConstantPostAggregator implements PostAggregator
   }
 
   @JsonProperty("value")
-  public String getSketchValue()
+  public SketchHolder getSketchValue()
   {
-    return Base64.encodeBase64String(sketchValue.getSketch().toByteArray());
+    return sketchValue;
   }
 
   @Override
   public String toString()
   {
-    return "SketchConstantPostAggregator{" + "name='" + name + '\'' + ", value=" + getSketchValue() + '}';
+    return "SketchConstantPostAggregator{name='" + name + "', value='"
+        + Base64.encodeBase64String(sketchValue.getSketch().toByteArray()) + "'}";
   }
 
   @Override
@@ -106,7 +106,7 @@ public class SketchConstantPostAggregator implements PostAggregator
 
     SketchConstantPostAggregator that = (SketchConstantPostAggregator) o;
 
-    if (!getSketchValue().equals(that.getSketchValue())) {
+    if (!this.sketchValue.equals(that.sketchValue)) {
       return false;
     }
 
@@ -121,13 +121,13 @@ public class SketchConstantPostAggregator implements PostAggregator
   public int hashCode()
   {
     int result = name != null ? name.hashCode() : 0;
-    result = 37 * result + getSketchValue().hashCode();
+    result = 37 * result + sketchValue.hashCode();
     return result;
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.THETA_SKETCH_CONSTANT).appendInt(getSketchValue().hashCode()).build();
+    return new CacheKeyBuilder(PostAggregatorIds.THETA_SKETCH_CONSTANT).appendInt(hashCode()).build();
   }
 }

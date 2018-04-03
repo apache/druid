@@ -36,6 +36,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 
+import java.util.Arrays;
 import java.util.Comparator;
 
 /**
@@ -295,6 +296,14 @@ public class SketchHolder
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    return this.getSketch().equals(((SketchHolder) o).getSketch());
+    // Can't use Sketch's equals method because it is not implemented.
+    // return this.getSketch().equals(((SketchHolder) o).getSketch());
+    return Arrays.equals(this.getSketch().toByteArray(), ((SketchHolder) o).getSketch().toByteArray());
+  }
+  
+  @Override
+  public int hashCode()
+  {
+    return 31 * Base64.encodeBase64(this.getSketch().toByteArray()).hashCode();
   }
 }
