@@ -265,16 +265,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     Object determinePartitionsInnerProcessingRunner = getForeignClassloaderObject(
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessingRunner",
-        new String[]{
-            toolbox.getObjectMapper().writeValueAsString(spec),
-            toolbox.getConfig().getHadoopWorkingPath(),
-            toolbox.getSegmentPusher().getPathForHadoop()
-        },
         loader
     );
     determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
-    String[] input1 = new String[]{
+    String[] determinePartitionsInput = new String[]{
         toolbox.getObjectMapper().writeValueAsString(spec),
         toolbox.getConfig().getHadoopWorkingPath(),
         toolbox.getSegmentPusher().getPathForHadoop()
@@ -282,8 +277,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     HadoopIngestionSpec indexerSchema = null;
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-    Class<?> aClazz = determinePartitionsInnerProcessingRunner.getClass();
-    Method determinePartitionsInnerProcessingRunTask = aClazz.getMethod("runTask", input1.getClass());
+    Class<?> determinePartitionsRunnerClass = determinePartitionsInnerProcessingRunner.getClass();
+    Method determinePartitionsInnerProcessingRunTask = determinePartitionsRunnerClass.getMethod(
+        "runTask",
+        determinePartitionsInput.getClass()
+    );
     try {
       Thread.currentThread().setContextClassLoader(loader);
 
@@ -291,7 +289,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       final String determineConfigStatusString = (String) determinePartitionsInnerProcessingRunTask.invoke(
           determinePartitionsInnerProcessingRunner,
-          new Object[]{input1}
+          new Object[]{determinePartitionsInput}
       );
 
 
@@ -357,21 +355,17 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     Object innerProcessingRunner = getForeignClassloaderObject(
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
-        new String[]{
-            toolbox.getObjectMapper().writeValueAsString(indexerSchema),
-            version
-        },
         loader
     );
     buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
 
-    String[] input = new String[]{
+    String[] buildSegmentsInput = new String[]{
         toolbox.getObjectMapper().writeValueAsString(indexerSchema),
         version
     };
 
-    Class<?> aClazz2 = innerProcessingRunner.getClass();
-    Method innerProcessingRunTask = aClazz2.getMethod("runTask", input.getClass());
+    Class<?> buildSegmentsRunnerClass = innerProcessingRunner.getClass();
+    Method innerProcessingRunTask = buildSegmentsRunnerClass.getMethod("runTask", buildSegmentsInput.getClass());
 
     try {
       Thread.currentThread().setContextClassLoader(loader);
@@ -379,7 +373,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       ingestionState = IngestionState.BUILD_SEGMENTS;
       final String jobStatusString = (String) innerProcessingRunTask.invoke(
           innerProcessingRunner,
-          new Object[]{input}
+          new Object[]{buildSegmentsInput}
       );
 
       buildSegmentsStatus = toolbox.getObjectMapper().readValue(
