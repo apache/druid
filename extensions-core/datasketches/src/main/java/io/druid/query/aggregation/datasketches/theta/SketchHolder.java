@@ -304,6 +304,6 @@ public class SketchHolder
   @Override
   public int hashCode()
   {
-    return 31 * Base64.encodeBase64(this.getSketch().toByteArray()).hashCode();
+    return 31 * Arrays.hashCode(this.getSketch().toByteArray());
   }
 }
