@@ -20,9 +20,7 @@
 package io.druid.segment.realtime;
 
 import com.google.common.base.Preconditions;
-import io.druid.indexer.TaskMetricsUtils;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

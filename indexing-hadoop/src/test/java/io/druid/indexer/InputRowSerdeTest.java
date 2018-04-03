@@ -30,7 +30,6 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.jackson.AggregatorsModule;
-import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregator;
@@ -124,7 +123,8 @@ public class InputRowSerdeTest
         null
     );
 
-    byte[] data = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, false).lhs; // Ignore Unparseable aggregator
+    byte[] data = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, false)
+                               .getSerializedRow(); // Ignore Unparseable aggregator
     InputRow out = InputRowSerde.fromBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), data, aggregatorFactories);
 
     Assert.assertEquals(timestamp, out.getTimestampFromEpoch());
@@ -173,7 +173,7 @@ public class InputRowSerdeTest
         null
     );
 
-    Pair<byte[], List<String>> result = InputRowSerde.toBytes(
+    InputRowSerde.SerializeResult result = InputRowSerde.toBytes(
         InputRowSerde.getTypeHelperMap(dimensionsSpec),
         in,
         aggregatorFactories,
@@ -181,14 +181,14 @@ public class InputRowSerdeTest
     );
     Assert.assertEquals(
         Arrays.asList("Unable to parse value[m3v] for field[m3]"),
-        result.rhs
+        result.getParseExceptionMessages()
     );
   }
 
   @Test
   public void testDimensionParseExceptions()
   {
-    Pair<byte[], List<String>> result;
+    InputRowSerde.SerializeResult result;
     InputRow in = new MapBasedInputRow(
         timestamp,
         dims,
@@ -208,7 +208,7 @@ public class InputRowSerdeTest
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
     Assert.assertEquals(
         Arrays.asList("could not convert value [d1v] to long"),
-        result.rhs
+        result.getParseExceptionMessages()
     );
 
     dimensionsSpec = new DimensionsSpec(
@@ -221,7 +221,7 @@ public class InputRowSerdeTest
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
     Assert.assertEquals(
         Arrays.asList("could not convert value [d1v] to float"),
-        result.rhs
+        result.getParseExceptionMessages()
     );
 
     dimensionsSpec = new DimensionsSpec(
@@ -234,7 +234,7 @@ public class InputRowSerdeTest
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
     Assert.assertEquals(
         Arrays.asList("could not convert value [d1v] to double"),
-        result.rhs
+        result.getParseExceptionMessages()
     );
   }
 }

@@ -32,7 +32,6 @@ import io.druid.data.input.Rows;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -98,6 +97,31 @@ public class InputRowSerde
       typeHelperMap.put(dimensionSchema.getName(), typeHelper);
     }
     return typeHelperMap;
+  }
+
+  public static class SerializeResult
+  {
+    private final byte[] serializedRow;
+    private final List<String> parseExceptionMessages;
+
+    public SerializeResult(
+        final byte[] serializedRow,
+        final List<String> parseExceptionMessages
+    )
+    {
+      this.serializedRow = serializedRow;
+      this.parseExceptionMessages = parseExceptionMessages;
+    }
+
+    public byte[] getSerializedRow()
+    {
+      return serializedRow;
+    }
+
+    public List<String> getParseExceptionMessages()
+    {
+      return parseExceptionMessages;
+    }
   }
 
   public static class StringIndexSerdeTypeHelper implements IndexSerdeTypeHelper<List<String>>
@@ -241,7 +265,7 @@ public class InputRowSerde
     }
   }
 
-  public static final Pair<byte[], List<String>> toBytes(
+  public static final SerializeResult toBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       final InputRow row,
       AggregatorFactory[] aggs,
@@ -321,7 +345,7 @@ public class InputRowSerde
         }
       }
 
-      return Pair.of(out.toByteArray(), parseExceptionMessages);
+      return new SerializeResult(out.toByteArray(), parseExceptionMessages);
     }
     catch (IOException ex) {
       throw new RuntimeException(ex);

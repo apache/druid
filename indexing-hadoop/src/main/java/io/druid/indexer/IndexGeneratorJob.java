@@ -40,7 +40,6 @@ import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.indexer.path.DatasourcePathSpec;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
@@ -358,7 +357,7 @@ public class IndexGeneratorJob implements Jobby
       // type SegmentInputRow serves as a marker that these InputRow instances have already been combined
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
-      Pair<byte[], List<String>> serializedRow = inputRow instanceof SegmentInputRow ?
+      InputRowSerde.SerializeResult serializeResult = inputRow instanceof SegmentInputRow ?
                                                  InputRowSerde.toBytes(
                                                      typeHelperMap,
                                                      inputRow,
@@ -382,10 +381,14 @@ public class IndexGeneratorJob implements Jobby
                         .put(hashedDimensions)
                         .array()
           ).toBytesWritable(),
-          new BytesWritable(serializedRow.lhs)
+          new BytesWritable(serializeResult.getSerializedRow())
       );
 
-      ParseException pe = IncrementalIndex.getCombinedParseException(inputRow, serializedRow.rhs, null);
+      ParseException pe = IncrementalIndex.getCombinedParseException(
+          inputRow,
+          serializeResult.getParseExceptionMessages(),
+          null
+      );
       if (pe != null) {
         throw pe;
       } else {
@@ -465,11 +468,11 @@ public class IndexGeneratorJob implements Jobby
         InputRow inputRow = getInputRowFromRow(row, dimensions);
 
         // reportParseExceptions is true as any unparseable data is already handled by the mapper.
-        Pair<byte[], List<String>> serializedRow = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, true);
+        InputRowSerde.SerializeResult serializeResult = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, true);
 
         context.write(
             key,
-            new BytesWritable(serializedRow.lhs)
+            new BytesWritable(serializeResult.getSerializedRow())
         );
       }
       index.close();
