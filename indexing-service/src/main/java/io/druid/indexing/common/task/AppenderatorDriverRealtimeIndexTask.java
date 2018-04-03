@@ -167,6 +167,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   @JsonIgnore
   private IngestionState ingestionState;
 
+  @JsonIgnore
+  private String errorMsg;
+
   @JsonCreator
   public AppenderatorDriverRealtimeIndexTask(
       @JsonProperty("id") String id,
@@ -370,10 +373,11 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     catch (Throwable e) {
       log.makeAlert(e, "Exception aborted realtime processing[%s]", dataSchema.getDataSource())
          .emit();
+      errorMsg = Throwables.getStackTraceAsString(e);
       toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(e)
+          errorMsg
       );
     }
     finally {
@@ -513,7 +517,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             new IngestionStatsAndErrorsTaskReportData(
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats()
+                getTaskCompletionRowStats(),
+                errorMsg
             )
         )
     );

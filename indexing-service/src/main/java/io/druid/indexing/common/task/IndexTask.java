@@ -180,6 +180,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   @JsonIgnore
   private CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
 
+  @JsonIgnore
+  private String errorMsg;
+
   @JsonCreator
   public IndexTask(
       @JsonProperty("id") final String id,
@@ -445,10 +448,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in %s.", ingestionState);
+      errorMsg = Throwables.getStackTraceAsString(e);
       toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(e)
+          errorMsg
       );
     }
 
@@ -467,7 +471,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
             new IngestionStatsAndErrorsTaskReportData(
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats()
+                getTaskCompletionRowStats(),
+                errorMsg
             )
         )
     );
@@ -994,10 +999,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
       ingestionState = IngestionState.COMPLETED;
       if (published == null) {
         log.error("Failed to publish segments, aborting!");
+        errorMsg = "Failed to publish segments.";
         toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
-            "Failed to publish segments."
+            errorMsg
         );
       } else {
         log.info(

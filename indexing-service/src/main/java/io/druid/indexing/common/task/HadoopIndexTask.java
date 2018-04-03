@@ -115,6 +115,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @JsonIgnore
   private HadoopIndexGeneratorInnerProcessingStatus buildSegmentsStatus = null;
 
+  @JsonIgnore
+  private String errorMsg;
+
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
    *             for creating Druid index segments. It may be modified.
@@ -238,10 +241,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         log.error(e, "Encountered exception in run():");
       }
 
+      errorMsg = Throwables.getStackTraceAsString(effectiveException);
       toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(effectiveException)
+          errorMsg
       );
     }
     finally {
@@ -299,10 +303,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
       indexerSchema = determineConfigStatus.getSchema();
       if (indexerSchema == null) {
+        errorMsg = determineConfigStatus.getErrorMsg();
         toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
-            determineConfigStatus.getErrorMsg()
+            errorMsg
         );
       }
     }
@@ -390,10 +395,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             null
         );
       } else {
+        errorMsg = buildSegmentsStatus.getErrorMsg();
         toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.failure(
             getId(),
-            buildSegmentsStatus.getErrorMsg()
+            errorMsg
         );
       }
     }
@@ -437,7 +443,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             new IngestionStatsAndErrorsTaskReportData(
                 ingestionState,
                 null,
-                getTaskCompletionRowStats()
+                getTaskCompletionRowStats(),
+                errorMsg
             )
         )
     );

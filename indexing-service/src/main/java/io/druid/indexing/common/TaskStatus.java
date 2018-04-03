@@ -34,6 +34,8 @@ import io.druid.indexer.TaskState;
  */
 public class TaskStatus
 {
+  public static final int MAX_ERROR_MSG_LENGTH = 100;
+
   public static TaskStatus running(String taskId)
   {
     return new TaskStatus(taskId, TaskState.RUNNING, -1, null);
@@ -64,6 +66,17 @@ public class TaskStatus
     return new TaskStatus(taskId, code, -1, null);
   }
 
+  // The error message can be large, so truncate it to avoid storing large objects in zookeeper/metadata storage.
+  // The full error message will be available via a TaskReport.
+  private static String truncateErrorMsg(String errorMsg)
+  {
+    if (errorMsg != null && errorMsg.length() > MAX_ERROR_MSG_LENGTH) {
+      return errorMsg.substring(0, MAX_ERROR_MSG_LENGTH) + "...";
+    } else {
+      return errorMsg;
+    }
+  }
+
   private final String id;
   private final TaskState status;
   private final long duration;
@@ -80,7 +93,7 @@ public class TaskStatus
     this.id = id;
     this.status = status;
     this.duration = duration;
-    this.errorMsg = errorMsg;
+    this.errorMsg = truncateErrorMsg(errorMsg);
 
     // Check class invariants.
     Preconditions.checkNotNull(id, "id");

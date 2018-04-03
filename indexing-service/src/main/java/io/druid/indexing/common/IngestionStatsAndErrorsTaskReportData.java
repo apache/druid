@@ -36,15 +36,20 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private Map<String, Object> rowStats;
 
+  @JsonProperty
+  private String errorMsg;
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
-      @JsonProperty("rowStats") Map<String, Object> rowStats
+      @JsonProperty("rowStats") Map<String, Object> rowStats,
+      @JsonProperty("errorMsg") String errorMsg
   )
   {
     this.ingestionState = ingestionState;
     this.unparseableEvents = unparseableEvents;
     this.rowStats = rowStats;
+    this.errorMsg = errorMsg;
   }
 
   @JsonProperty
@@ -65,6 +70,20 @@ public class IngestionStatsAndErrorsTaskReportData
     return rowStats;
   }
 
+  @JsonProperty
+  public String getErrorMsg()
+  {
+    return errorMsg;
+  }
+
+  public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
+      Map<String, TaskReport> taskReports
+  )
+  {
+    return (IngestionStatsAndErrorsTaskReportData) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+                                                              .getPayload();
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -77,21 +96,14 @@ public class IngestionStatsAndErrorsTaskReportData
     IngestionStatsAndErrorsTaskReportData that = (IngestionStatsAndErrorsTaskReportData) o;
     return getIngestionState() == that.getIngestionState() &&
            Objects.equals(getUnparseableEvents(), that.getUnparseableEvents()) &&
-           Objects.equals(getRowStats(), that.getRowStats());
+           Objects.equals(getRowStats(), that.getRowStats()) &&
+           Objects.equals(getErrorMsg(), that.getErrorMsg());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getIngestionState(), getUnparseableEvents(), getRowStats());
-  }
-
-  public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
-      Map<String, TaskReport> taskReports
-  )
-  {
-    return (IngestionStatsAndErrorsTaskReportData) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
-                                                              .getPayload();
+    return Objects.hash(getIngestionState(), getUnparseableEvents(), getRowStats(), getErrorMsg());
   }
 
   @Override
@@ -101,6 +113,7 @@ public class IngestionStatsAndErrorsTaskReportData
            "ingestionState=" + ingestionState +
            ", unparseableEvents=" + unparseableEvents +
            ", rowStats=" + rowStats +
+           ", errorMsg='" + errorMsg + '\'' +
            '}';
   }
 }

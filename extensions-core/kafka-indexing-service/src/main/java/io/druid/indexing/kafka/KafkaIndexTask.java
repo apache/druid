@@ -253,6 +253,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private IngestionState ingestionState;
 
   private TaskMetricsGetter metricsGetter;
+  private String errorMsg;
 
   @JsonCreator
   public KafkaIndexTask(
@@ -435,11 +436,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
-
+      errorMsg = Throwables.getStackTraceAsString(e);
       toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
       return TaskStatus.failure(
           getId(),
-          Throwables.getStackTraceAsString(e)
+          errorMsg
       );
     }
   }
@@ -1339,7 +1340,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             new IngestionStatsAndErrorsTaskReportData(
                 ingestionState,
                 getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats()
+                getTaskCompletionRowStats(),
+                errorMsg
             )
         )
     );
