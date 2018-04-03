@@ -57,8 +57,19 @@ public class S3TaskLogs implements TaskLogs
   @Override
   public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
   {
-    final String taskKey = getTaskLogKey(taskid);
+    final String taskKey = getTaskLogKey(taskid, "log");
+    return streamTaskFile(offset, taskKey);
+  }
 
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "report.json");
+    return streamTaskFile(0, taskKey);
+  }
+
+  private Optional<ByteSource> streamTaskFile(final long offset, String taskKey) throws IOException
+  {
     try {
       final ObjectMetadata objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
 
@@ -107,9 +118,21 @@ public class S3TaskLogs implements TaskLogs
   @Override
   public void pushTaskLog(final String taskid, final File logFile) throws IOException
   {
-    final String taskKey = getTaskLogKey(taskid);
+    final String taskKey = getTaskLogKey(taskid, "log");
     log.info("Pushing task log %s to: %s", logFile, taskKey);
+    pushTaskFile(logFile, taskKey);
+  }
 
+  @Override
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "report.json");
+    log.info("Pushing task reports %s to: %s", reportFile, taskKey);
+    pushTaskFile(reportFile, taskKey);
+  }
+
+  private void pushTaskFile(final File logFile, String taskKey) throws IOException
+  {
     try {
       S3Utils.retryS3Operation(
           () -> {
@@ -124,9 +147,9 @@ public class S3TaskLogs implements TaskLogs
     }
   }
 
-  private String getTaskLogKey(String taskid)
+  private String getTaskLogKey(String taskid, String filename)
   {
-    return StringUtils.format("%s/%s/log", config.getS3Prefix(), taskid);
+    return StringUtils.format("%s/%s/%s", config.getS3Prefix(), taskid, filename);
   }
 
   @Override

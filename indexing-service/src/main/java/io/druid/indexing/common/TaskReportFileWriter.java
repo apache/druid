@@ -17,46 +17,42 @@
  * under the License.
  */
 
-package io.druid.tasklogs;
+package io.druid.indexing.common;
 
-import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.java.util.common.logger.Logger;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.IOException;
 
-public class NoopTaskLogs implements TaskLogs
+public class TaskReportFileWriter
 {
-  private final Logger log = new Logger(TaskLogs.class);
+  private static final Logger log = new Logger(TaskReportFileWriter.class);
 
-  @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
+  private final File reportsFile;
+  private ObjectMapper objectMapper;
+
+  public TaskReportFileWriter(File reportFile)
   {
-    return Optional.absent();
+    this.reportsFile = reportFile;
   }
 
-  @Override
-  public void pushTaskLog(String taskid, File logFile)
+  public void write(TaskReport report)
   {
-    log.info("Not pushing logs for task: %s", taskid);
+    try {
+      final File reportsFileParent = reportsFile.getParentFile();
+      if (reportsFileParent != null) {
+        FileUtils.forceMkdir(reportsFileParent);
+      }
+      objectMapper.writeValue(reportsFile, report);
+    }
+    catch (Exception e) {
+      log.error(e, "Encountered exception in write().");
+    }
   }
 
-  @Override
-  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  public void setObjectMapper(ObjectMapper objectMapper)
   {
-    log.info("Not pushing reports for task: %s", taskid);
-  }
-
-  @Override
-  public void killAll()
-  {
-    log.info("Noop: No task logs are deleted.");
-  }
-
-  @Override
-  public void killOlderThan(long timestamp)
-  {
-    log.info("Noop: No task logs are deleted.");
+    this.objectMapper = objectMapper;
   }
 }

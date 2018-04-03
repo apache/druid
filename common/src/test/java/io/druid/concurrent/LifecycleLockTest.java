@@ -138,8 +138,7 @@ public class LifecycleLockTest
     lifecycleLock.started();
     lifecycleLock.exitStart();
     Assert.assertTrue(lifecycleLock.canStop());
-    lifecycleLock.exitStop();
-    lifecycleLock.reset();
+    lifecycleLock.exitStopAndReset();
     Assert.assertTrue(lifecycleLock.canStart());
   }
 

@@ -382,7 +382,7 @@ Properties connectionProperties = new Properties();
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   try (
-      final Statement statement = client.createStatement();
+      final Statement statement = connection.createStatement();
       final ResultSet resultSet = statement.executeQuery(query)
   ) {
     while (resultSet.next()) {

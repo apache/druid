@@ -40,4 +40,9 @@ public interface TaskLogStreamer
    * @return input supplier for this log, if available from this provider
    */
   Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException;
+
+  default Optional<ByteSource> streamTaskReports(final String taskid) throws IOException
+  {
+    return Optional.absent();
+  }
 }

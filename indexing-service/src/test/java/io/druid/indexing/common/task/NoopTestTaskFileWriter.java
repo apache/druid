@@ -17,22 +17,20 @@
  * under the License.
  */
 
-package io.druid.tasklogs;
+package io.druid.indexing.common.task;
 
-import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.indexing.common.TaskReport;
+import io.druid.indexing.common.TaskReportFileWriter;
 
-import java.io.File;
-import java.io.IOException;
-
-/**
- * Something that knows how to persist local task logs to some form of long-term storage.
- */
-@ExtensionPoint
-public interface TaskLogPusher
+public class NoopTestTaskFileWriter extends TaskReportFileWriter
 {
-  void pushTaskLog(String taskid, File logFile) throws IOException;
+  public NoopTestTaskFileWriter()
+  {
+    super(null);
+  }
 
-  default void pushTaskReports(String taskid, File reportFile) throws IOException
+  @Override
+  public void write(TaskReport report)
   {
   }
 }
