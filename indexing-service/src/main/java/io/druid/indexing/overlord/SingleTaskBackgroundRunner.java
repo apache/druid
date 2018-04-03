@@ -65,11 +65,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Runs tasks in a JVM thread using an ExecutorService.
+ * Runs a single task in a JVM thread using an ExecutorService.
  */
-public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
+public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalker
 {
-  private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
+  private static final EmittingLogger log = new EmittingLogger(SingleTaskBackgroundRunner.class);
 
   private final TaskToolboxFactory toolboxFactory;
   private final TaskConfig taskConfig;
@@ -81,11 +81,11 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   private volatile ListeningExecutorService executorService;
-  private volatile ThreadPoolTaskRunnerWorkItem runningItem;
+  private volatile SingleTaskBackgroundRunnerWorkItem runningItem;
   private volatile boolean stopping;
 
   @Inject
-  public ThreadPoolTaskRunner(
+  public SingleTaskBackgroundRunner(
       TaskToolboxFactory toolboxFactory,
       TaskConfig taskConfig,
       ServiceEmitter emitter,
@@ -257,9 +257,9 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       // Ensure an executor for that priority exists
       executorService = buildExecutorService(taskPriority);
       final ListenableFuture<TaskStatus> statusFuture = executorService.submit(
-          new ThreadPoolTaskRunnerCallable(task, location, toolbox)
+          new SingleTaskBackgroundRunnerCallable(task, location, toolbox)
       );
-      runningItem = new ThreadPoolTaskRunnerWorkItem(
+      runningItem = new SingleTaskBackgroundRunnerWorkItem(
           task,
           location,
           statusFuture
@@ -349,12 +349,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     );
   }
 
-  private static class ThreadPoolTaskRunnerWorkItem extends TaskRunnerWorkItem
+  private static class SingleTaskBackgroundRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final Task task;
     private final TaskLocation location;
 
-    private ThreadPoolTaskRunnerWorkItem(
+    private SingleTaskBackgroundRunnerWorkItem(
         Task task,
         TaskLocation location,
         ListenableFuture<TaskStatus> result
@@ -389,13 +389,13 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     }
   }
 
-  private class ThreadPoolTaskRunnerCallable implements Callable<TaskStatus>
+  private class SingleTaskBackgroundRunnerCallable implements Callable<TaskStatus>
   {
     private final Task task;
     private final TaskLocation location;
     private final TaskToolbox toolbox;
 
-    ThreadPoolTaskRunnerCallable(Task task, TaskLocation location, TaskToolbox toolbox)
+    SingleTaskBackgroundRunnerCallable(Task task, TaskLocation location, TaskToolbox toolbox)
     {
       this.task = task;
       this.location = location;

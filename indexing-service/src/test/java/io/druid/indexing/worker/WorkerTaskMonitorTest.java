@@ -39,7 +39,7 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.ThreadPoolTaskRunner;
+import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -165,7 +165,7 @@ public class WorkerTaskMonitorTest
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
     return new WorkerTaskMonitor(
         jsonMapper,
-        new ThreadPoolTaskRunner(
+        new SingleTaskBackgroundRunner(
             new TaskToolboxFactory(
                 taskConfig,
                 taskActionClientFactory,

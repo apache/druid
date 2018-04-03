@@ -57,12 +57,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class ThreadPoolTaskRunnerTest
+public class SingleTaskBackgroundRunnerTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private ThreadPoolTaskRunner runner;
+  private SingleTaskBackgroundRunner runner;
 
   @Before
   public void setup() throws IOException
@@ -106,7 +106,7 @@ public class ThreadPoolTaskRunnerTest
         null,
         new TaskReportFileWriter(new File("fake"))
     );
-    runner = new ThreadPoolTaskRunner(
+    runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
         taskConfig,
         emitter,
