@@ -233,7 +233,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 5_000)
+  @Test(timeout = 10_000)
   public void testMoveSegment() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
