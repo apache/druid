@@ -105,13 +105,13 @@ public class SingleDimensionShardSpec implements ShardSpec
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> {
-        for (ShardSpec spec : shardSpecs) {
-          if (spec.isInChunk(timestamp, row)) {
-            return spec;
-          }
+      for (ShardSpec spec : shardSpecs) {
+        if (spec.isInChunk(timestamp, row)) {
+          return spec;
         }
-        throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
-      };
+      }
+      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
+    };
   }
 
   @Override

@@ -110,8 +110,8 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> {
-        int index = Math.abs(hash(timestamp, row) % getPartitions());
-        return shardSpecs.get(index);
+      int index = Math.abs(hash(timestamp, row) % getPartitions());
+      return shardSpecs.get(index);
     };
   }
 
