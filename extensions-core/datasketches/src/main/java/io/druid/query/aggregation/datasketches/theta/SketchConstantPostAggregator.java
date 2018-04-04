@@ -24,7 +24,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -41,13 +41,17 @@ public class SketchConstantPostAggregator implements PostAggregator
 {
 
   private final String name;
+  private final String value;
   private final SketchHolder sketchValue;
 
   @JsonCreator
-  public SketchConstantPostAggregator(@JsonProperty("name") String name, @JsonProperty("value") String sketchValue)
+  public SketchConstantPostAggregator(@JsonProperty("name") String name, @JsonProperty("value") String value)
   {
     this.name = name;
-    this.sketchValue = SketchHolder.deserialize(Preconditions.checkNotNull(sketchValue));
+    Preconditions.checkArgument(value != null && !value.isEmpty(),
+        "Constant value cannot be null or empty, expecting base64 encoded sketch string");
+    this.value = value;
+    this.sketchValue = SketchHolder.deserialize(value);
   }
 
   @Override
@@ -57,7 +61,7 @@ public class SketchConstantPostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator getComparator()
+  public Comparator<Object> getComparator()
   {
     return SketchHolder.COMPARATOR;
   }
@@ -90,8 +94,7 @@ public class SketchConstantPostAggregator implements PostAggregator
   @Override
   public String toString()
   {
-    return "SketchConstantPostAggregator{name='" + name + "', value='"
-        + Base64.encodeBase64String(sketchValue.getSketch().toByteArray()) + "'}";
+    return "SketchConstantPostAggregator{name='" + name + "', value='" + value + "'}";
   }
 
   @Override
@@ -103,17 +106,13 @@ public class SketchConstantPostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     SketchConstantPostAggregator that = (SketchConstantPostAggregator) o;
-
     if (!this.sketchValue.equals(that.sketchValue)) {
       return false;
     }
-
     if (name != null ? !name.equals(that.name) : that.name != null) {
       return false;
     }
-
     return true;
   }
 
@@ -128,6 +127,7 @@ public class SketchConstantPostAggregator implements PostAggregator
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.THETA_SKETCH_CONSTANT).appendInt(hashCode()).build();
+    return new CacheKeyBuilder(PostAggregatorIds.THETA_SKETCH_CONSTANT)
+        .appendString(DigestUtils.sha1Hex(value)).build();
   }
 }
