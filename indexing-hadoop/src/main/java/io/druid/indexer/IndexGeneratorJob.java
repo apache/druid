@@ -361,15 +361,13 @@ public class IndexGeneratorJob implements Jobby
                                                  InputRowSerde.toBytes(
                                                      typeHelperMap,
                                                      inputRow,
-                                                     aggsForSerializingSegmentInputRow,
-                                                     reportParseExceptions
+                                                     aggsForSerializingSegmentInputRow
                                                  )
                                                                                      :
                                                  InputRowSerde.toBytes(
                                                      typeHelperMap,
                                                      inputRow,
-                                                     aggregators,
-                                                     reportParseExceptions
+                                                     aggregators
                                                  );
 
       context.write(
@@ -468,7 +466,7 @@ public class IndexGeneratorJob implements Jobby
         InputRow inputRow = getInputRowFromRow(row, dimensions);
 
         // reportParseExceptions is true as any unparseable data is already handled by the mapper.
-        InputRowSerde.SerializeResult serializeResult = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, true);
+        InputRowSerde.SerializeResult serializeResult = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs);
 
         context.write(
             key,

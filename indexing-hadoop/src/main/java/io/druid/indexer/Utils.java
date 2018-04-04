@@ -145,7 +145,7 @@ public class Utils
       return jsonMapper.writeValueAsString(taskDiagsMap);
     }
     catch (IOException | InterruptedException ie) {
-      log.error("couldn't get failure cause for job.");
+      log.error(ie, "couldn't get failure cause for job [%s]", failedJob.getJobName());
       return null;
     }
   }

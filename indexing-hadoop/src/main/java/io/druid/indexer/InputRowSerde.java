@@ -45,7 +45,6 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
 
-import javax.annotation.Nullable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -67,8 +66,7 @@ public class InputRowSerde
   {
     ValueType getType();
 
-    @Nullable
-    String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions);
+    void serialize(ByteArrayDataOutput out, Object value);
 
     T deserialize(ByteArrayDataInput in);
   }
@@ -133,7 +131,7 @@ public class InputRowSerde
     }
 
     @Override
-    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
       List<String> values = Rows.objectToStrings(value);
       try {
@@ -142,7 +140,6 @@ public class InputRowSerde
       catch (IOException ioe) {
         throw new RuntimeException(ioe);
       }
-      return null;
     }
 
     @Override
@@ -166,15 +163,15 @@ public class InputRowSerde
     }
 
     @Override
-    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
-      String parseExceptionMessage = null;
+      ParseException exceptionToThrow = null;
       Long ret = null;
       try {
-        ret = DimensionHandlerUtils.convertObjectToLong(value, reportParseExceptions);
+        ret = DimensionHandlerUtils.convertObjectToLong(value, true);
       }
       catch (ParseException pe) {
-        parseExceptionMessage = pe.getMessage();
+        exceptionToThrow = pe;
       }
 
       if (ret == null) {
@@ -183,7 +180,10 @@ public class InputRowSerde
         ret = DimensionHandlerUtils.ZERO_LONG;
       }
       out.writeLong(ret);
-      return parseExceptionMessage;
+
+      if (exceptionToThrow != null) {
+        throw exceptionToThrow;
+      }
     }
 
     @Override
@@ -202,15 +202,15 @@ public class InputRowSerde
     }
 
     @Override
-    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
-      String parseExceptionMessage = null;
+      ParseException exceptionToThrow = null;
       Float ret = null;
       try {
-        ret = DimensionHandlerUtils.convertObjectToFloat(value, reportParseExceptions);
+        ret = DimensionHandlerUtils.convertObjectToFloat(value, true);
       }
       catch (ParseException pe) {
-        parseExceptionMessage = pe.getMessage();
+        exceptionToThrow = pe;
       }
 
       if (ret == null) {
@@ -219,7 +219,10 @@ public class InputRowSerde
         ret = DimensionHandlerUtils.ZERO_FLOAT;
       }
       out.writeFloat(ret);
-      return parseExceptionMessage;
+
+      if (exceptionToThrow != null) {
+        throw exceptionToThrow;
+      }
     }
 
     @Override
@@ -238,15 +241,15 @@ public class InputRowSerde
     }
 
     @Override
-    public String serialize(ByteArrayDataOutput out, Object value, boolean reportParseExceptions)
+    public void serialize(ByteArrayDataOutput out, Object value)
     {
-      String parseExceptionMessage = null;
+      ParseException exceptionToThrow = null;
       Double ret = null;
       try {
-        ret = DimensionHandlerUtils.convertObjectToDouble(value, reportParseExceptions);
+        ret = DimensionHandlerUtils.convertObjectToDouble(value, true);
       }
       catch (ParseException pe) {
-        parseExceptionMessage = pe.getMessage();
+        exceptionToThrow = pe;
       }
 
       if (ret == null) {
@@ -255,7 +258,10 @@ public class InputRowSerde
         ret = DimensionHandlerUtils.ZERO_DOUBLE;
       }
       out.writeDouble(ret);
-      return parseExceptionMessage;
+
+      if (exceptionToThrow != null) {
+        throw exceptionToThrow;
+      }
     }
 
     @Override
@@ -268,8 +274,7 @@ public class InputRowSerde
   public static final SerializeResult toBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       final InputRow row,
-      AggregatorFactory[] aggs,
-      boolean reportParseExceptions
+      AggregatorFactory[] aggs
   )
   {
     try {
@@ -290,9 +295,12 @@ public class InputRowSerde
             typeHelper = STRING_HELPER;
           }
           writeString(dim, out);
-          String parseExceptionMessage = typeHelper.serialize(out, row.getRaw(dim), true);
-          if (parseExceptionMessage != null) {
-            parseExceptionMessages.add(parseExceptionMessage);
+
+          try {
+            typeHelper.serialize(out, row.getRaw(dim));
+          }
+          catch (ParseException pe) {
+            parseExceptionMessages.add(pe.getMessage());
           }
         }
       }

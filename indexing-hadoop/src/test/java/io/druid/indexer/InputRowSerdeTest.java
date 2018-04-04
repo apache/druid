@@ -123,7 +123,7 @@ public class InputRowSerdeTest
         null
     );
 
-    byte[] data = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, false)
+    byte[] data = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories)
                                .getSerializedRow(); // Ignore Unparseable aggregator
     InputRow out = InputRowSerde.fromBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), data, aggregatorFactories);
 
@@ -176,8 +176,7 @@ public class InputRowSerdeTest
     InputRowSerde.SerializeResult result = InputRowSerde.toBytes(
         InputRowSerde.getTypeHelperMap(dimensionsSpec),
         in,
-        aggregatorFactories,
-        true
+        aggregatorFactories
     );
     Assert.assertEquals(
         Arrays.asList("Unable to parse value[m3v] for field[m3]"),
@@ -205,7 +204,7 @@ public class InputRowSerdeTest
         null,
         null
     );
-    result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
+    result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
         Arrays.asList("could not convert value [d1v] to long"),
         result.getParseExceptionMessages()
@@ -218,7 +217,7 @@ public class InputRowSerdeTest
         null,
         null
     );
-    result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
+    result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
         Arrays.asList("could not convert value [d1v] to float"),
         result.getParseExceptionMessages()
@@ -231,7 +230,7 @@ public class InputRowSerdeTest
         null,
         null
     );
-    result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories, true);
+    result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
         Arrays.asList("could not convert value [d1v] to double"),
         result.getParseExceptionMessages()

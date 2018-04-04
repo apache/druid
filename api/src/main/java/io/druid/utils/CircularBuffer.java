@@ -21,6 +21,11 @@ package io.druid.utils;
 
 import com.google.common.base.Preconditions;
 
+/**
+ * A circular buffer that supports random bidirectional access.
+ *
+ * @param <E> Type of object to be stored in the buffer
+ */
 public class CircularBuffer<E>
 {
   public E[] getBuffer()
@@ -52,8 +57,13 @@ public class CircularBuffer<E>
     }
   }
 
+  /**
+   * Access object at a given index, starting from the latest entry added and moving backwards.
+   */
   public E getLatest(int index)
   {
+    Preconditions.checkArgument(index >= 0 && index < size, "invalid index");
+
     int bufferIndex = start - index - 1;
     if (bufferIndex < 0) {
       bufferIndex = buffer.length + bufferIndex;
@@ -61,6 +71,9 @@ public class CircularBuffer<E>
     return buffer[bufferIndex];
   }
 
+  /**
+   * Access object at a given index, starting from the earliest entry added and moving forward.
+   */
   public E get(int index)
   {
     Preconditions.checkArgument(index >= 0 && index < size, "invalid index");
