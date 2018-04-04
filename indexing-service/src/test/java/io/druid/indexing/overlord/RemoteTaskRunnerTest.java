@@ -447,6 +447,33 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getWorker().getVersion());
   }
 
+  @Test
+  public void testRestartRemoteTaskRunner() throws Exception
+  {
+    doSetup();
+    remoteTaskRunner.run(task);
+
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+    Assert.assertTrue(workerRunningTask(task.getId()));
+
+    remoteTaskRunner.stop();
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
+    final RemoteTaskRunnerWorkItem newWorkItem = remoteTaskRunner
+        .getKnownTasks()
+        .stream()
+        .filter(workItem -> workItem.getTaskId().equals(task.getId()))
+        .findFirst()
+        .orElse(null);
+    final ListenableFuture<TaskStatus> result = newWorkItem.getResult();
+
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+
+    Assert.assertEquals(task.getId(), result.get().getId());
+    Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
+  }
+
   private void doSetup() throws Exception
   {
     makeWorker();

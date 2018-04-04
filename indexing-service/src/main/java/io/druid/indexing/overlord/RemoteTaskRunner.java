@@ -968,7 +968,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                             announcement.getTaskType(),
                             zkWorker.getWorker(),
                             TaskLocation.unknown(),
-                            runningTasks.get(taskId).getDataSource()
+                            announcement.getTaskDataSource()
                         );
                         final RemoteTaskRunnerWorkItem existingItem = runningTasks.putIfAbsent(
                             taskId,
