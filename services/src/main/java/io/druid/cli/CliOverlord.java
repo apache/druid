@@ -118,7 +118,7 @@ public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
 
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+  protected static List<String> UNSECURED_PATHS = Lists.newArrayList(
       "/",
       "/console.html",
       "/old-console/*",
