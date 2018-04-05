@@ -21,7 +21,6 @@ package io.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
@@ -229,7 +228,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -271,7 +270,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -450,7 +449,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -502,7 +501,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(counter.getAndIncrement())),
                     jsonMapper.writeValueAsString(events.get(counter.getAndIncrement()))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -561,7 +560,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                baos.toString(Charsets.UTF_8.name())
+                baos.toString(StandardCharsets.UTF_8.name())
             );
 
             return GoHandlers.immediateFuture(okResponse());

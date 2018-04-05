@@ -19,13 +19,12 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import org.apache.commons.codec.binary.Base64;
-
-import com.google.common.base.Charsets;
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.quantiles.DoublesSketch;
-
 import io.druid.java.util.common.ISE;
+import org.apache.commons.codec.binary.Base64;
+
+import java.nio.charset.StandardCharsets;
 
 public class DoublesSketchOperations
 {
@@ -48,7 +47,7 @@ public class DoublesSketchOperations
 
   public static DoublesSketch deserializeFromBase64EncodedString(final String str)
   {
-    return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(Charsets.UTF_8)));
+    return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static DoublesSketch deserializeFromByteArray(final byte[] data)

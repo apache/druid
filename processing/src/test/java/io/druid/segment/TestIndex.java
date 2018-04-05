@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
@@ -37,7 +36,6 @@ import io.druid.hll.HyperLogLogHash;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -53,11 +51,13 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -261,7 +261,7 @@ public class TestIndex
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
-    CharSource stream = Resources.asByteSource(resource).asCharSource(Charsets.UTF_8);
+    CharSource stream = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
     return makeRealtimeIndex(stream, rollup);
   }
 

@@ -86,7 +86,7 @@ public class JavaScriptWorkerSelectStrategyTest
         STRATEGY,
         mapper.readValue(
             mapper.writeValueAsString(STRATEGY),
-            JavaScriptWorkerSelectStrategy.class
+            WorkerSelectStrategy.class
         )
     );
   }
@@ -108,7 +108,7 @@ public class JavaScriptWorkerSelectStrategyTest
     expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
-    mapper.readValue(strategyString, JavaScriptWorkerSelectStrategy.class);
+    mapper.readValue(strategyString, WorkerSelectStrategy.class);
   }
 
   @Test

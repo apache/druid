@@ -136,7 +136,8 @@ public class WorkerTaskMonitor extends WorkerTaskManager
                     announcement.getTaskType(),
                     announcement.getTaskResource(),
                     completionStatus,
-                    TaskLocation.unknown()
+                    TaskLocation.unknown(),
+                    announcement.getTaskDataSource()
                 )
             );
           }

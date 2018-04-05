@@ -46,6 +46,7 @@ import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -325,6 +326,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
     }
 
     log.info("Job done!");
+    toolbox.getTaskReportFileWriter().write(null);
     return TaskStatus.success(getId());
   }
 
@@ -388,9 +390,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
   /**
    * Is a firehose from this factory drainable by closing it? If so, we should drain on stopGracefully rather than
    * abruptly stopping.
-   *
+   * <p>
    * This is a hack to get around the fact that the Firehose and FirehoseFactory interfaces do not help us do this.
-   *
+   * <p>
    * Protected for tests.
    */
   protected boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
@@ -431,19 +433,16 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask
       String sequenceName
   )
   {
-    ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
         publisher,
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-
-    ListenableFuture<SegmentsAndMetadata> handoffFuture = Futures.transform(publishFuture, driver::registerHandoff);
-
-    pendingHandoffs.add(handoffFuture);
+    pendingHandoffs.add(ListenableFutures.transformAsync(publishFuture, driver::registerHandoff));
   }
 
   private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,
-                                                                 TimeoutException
+                                                                    TimeoutException
   {
     if (!pendingHandoffs.isEmpty()) {
       ListenableFuture<?> allHandoffs = Futures.allAsList(pendingHandoffs);

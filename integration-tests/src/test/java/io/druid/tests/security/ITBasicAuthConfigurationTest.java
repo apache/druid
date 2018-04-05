@@ -21,19 +21,18 @@ package io.druid.tests.security;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import io.druid.guice.annotations.Client;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.http.client.CredentialedHttpClient;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
 import io.druid.java.util.http.client.auth.BasicCredentials;
 import io.druid.java.util.http.client.response.StatusResponseHandler;
 import io.druid.java.util.http.client.response.StatusResponseHolder;
-import io.druid.guice.annotations.Client;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import io.druid.server.security.Action;
 import io.druid.server.security.Resource;
@@ -51,6 +50,7 @@ import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -80,7 +80,7 @@ public class ITBasicAuthConfigurationTest
   @Client
   HttpClient httpClient;
 
-  StatusResponseHandler responseHandler = new StatusResponseHandler(Charsets.UTF_8);
+  StatusResponseHandler responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   @Test
   public void testAuthConfiguration() throws Exception

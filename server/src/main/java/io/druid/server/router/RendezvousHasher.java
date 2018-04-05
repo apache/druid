@@ -19,12 +19,12 @@
 
 package io.druid.server.router;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 
@@ -47,7 +47,7 @@ public class RendezvousHasher
     String maxNode = null;
 
     for (String nodeId : nodeIds) {
-      HashCode nodeHash = HASH_FN.hashString(nodeId, Charsets.UTF_8);
+      HashCode nodeHash = HASH_FN.hashString(nodeId, StandardCharsets.UTF_8);
       List<HashCode> hashes = Lists.newArrayList(nodeHash, keyHash);
       long combinedHash = Hashing.combineOrdered(hashes).asLong();
       if (maxNode == null) {

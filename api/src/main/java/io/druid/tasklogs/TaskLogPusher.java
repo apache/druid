@@ -31,4 +31,8 @@ import java.io.IOException;
 public interface TaskLogPusher
 {
   void pushTaskLog(String taskid, File logFile) throws IOException;
+
+  default void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+  }
 }

@@ -262,8 +262,10 @@ public class IndexTask extends AbstractTask
     }
 
     if (generateAndPublishSegments(toolbox, dataSchema, shardSpecs, versions, firehoseFactory, firehoseTempDir)) {
+      toolbox.getTaskReportFileWriter().write(null);
       return TaskStatus.success(getId());
     } else {
+      toolbox.getTaskReportFileWriter().write(null);
       return TaskStatus.failure(getId());
     }
   }

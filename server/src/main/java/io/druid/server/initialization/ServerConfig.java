@@ -60,6 +60,14 @@ public class ServerConfig
   @JsonProperty
   private int maxRequestHeaderSize = 8 * 1024;
 
+  @JsonProperty
+  @NotNull
+  private Period gracefulShutdownTimeout = Period.ZERO;
+
+  @JsonProperty
+  @NotNull
+  private Period unannouncePropogationDelay = Period.ZERO;
+
   public int getNumThreads()
   {
     return numThreads;
@@ -100,6 +108,16 @@ public class ServerConfig
     return maxRequestHeaderSize;
   }
 
+  public Period getGracefulShutdownTimeout()
+  {
+    return gracefulShutdownTimeout;
+  }
+
+  public Period getUnannouncePropogationDelay()
+  {
+    return unannouncePropogationDelay;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -115,13 +133,17 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           maxQueryTimeout == that.maxQueryTimeout &&
+           maxRequestHeaderSize == that.maxRequestHeaderSize &&
            Objects.equals(maxIdleTime, that.maxIdleTime) &&
-           maxQueryTimeout == that.maxQueryTimeout;
+           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
+           Objects.equals(unannouncePropogationDelay, that.unannouncePropogationDelay);
   }
 
   @Override
   public int hashCode()
   {
+
     return Objects.hash(
         numThreads,
         queueSize,
@@ -129,7 +151,27 @@ public class ServerConfig
         maxIdleTime,
         defaultQueryTimeout,
         maxScatterGatherBytes,
-        maxQueryTimeout
+        maxQueryTimeout,
+        maxRequestHeaderSize,
+        gracefulShutdownTimeout,
+        unannouncePropogationDelay
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ServerConfig{" +
+           "numThreads=" + numThreads +
+           ", queueSize=" + queueSize +
+           ", enableRequestLimit=" + enableRequestLimit +
+           ", maxIdleTime=" + maxIdleTime +
+           ", defaultQueryTimeout=" + defaultQueryTimeout +
+           ", maxScatterGatherBytes=" + maxScatterGatherBytes +
+           ", maxQueryTimeout=" + maxQueryTimeout +
+           ", maxRequestHeaderSize=" + maxRequestHeaderSize +
+           ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
+           ", unannouncePropogationDelay=" + unannouncePropogationDelay +
+           '}';
   }
 }

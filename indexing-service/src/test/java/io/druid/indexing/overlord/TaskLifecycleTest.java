@@ -63,6 +63,7 @@ import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.common.task.KillTask;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -605,7 +606,8 @@ public class TaskLifecycleTest
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new NoopTestTaskFileWriter()
     );
   }
 
