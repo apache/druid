@@ -699,7 +699,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       truncated = gran.bucketStart(row.getTimestamp()).getMillis();
     }
 
-    TimeAndDims timeAndDims = new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
+    TimeAndDims timeAndDims = new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList, dimsKeySize);
     return new TimeAndDimsResult(timeAndDims, parseExceptionMessages);
   }
 
