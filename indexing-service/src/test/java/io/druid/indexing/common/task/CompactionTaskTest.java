@@ -231,6 +231,7 @@ public class CompactionTaskTest
         1000000L,
         null,
         null,
+        null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
             CompressionStrategy.LZ4,

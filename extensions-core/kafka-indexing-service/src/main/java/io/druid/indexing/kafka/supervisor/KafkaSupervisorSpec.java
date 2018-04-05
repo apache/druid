@@ -90,6 +90,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
                             null,
                             null,
                             null,
+                            null,
                             null
                         );
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");

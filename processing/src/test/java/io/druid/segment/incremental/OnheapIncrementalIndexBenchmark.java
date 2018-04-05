@@ -76,6 +76,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Extending AbstractBenchmark means only runs if explicitly called
@@ -118,7 +119,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean reportParseExceptions,
         boolean concurrentEventAdd,
         boolean sortFacts,
-        int maxRowCount
+        int maxRowCount,
+        long maxBytesInMemory
     )
     {
       super(
@@ -127,7 +129,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
-          maxRowCount
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -135,20 +138,22 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         long minTimestamp,
         Granularity gran,
         AggregatorFactory[] metrics,
-        int maxRowCount
+        int maxRowCount,
+        long maxBytesInMemory
     )
     {
       super(
           new IncrementalIndexSchema.Builder()
-            .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(gran)
-            .withMetrics(metrics)
-            .build(),
-        true,
-        true,
-        false,
-        true,
-        maxRowCount
+              .withMinTimestamp(minTimestamp)
+              .withQueryGranularity(gran)
+              .withMetrics(metrics)
+              .build(),
+          true,
+          true,
+          false,
+          true,
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -172,6 +177,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean reportParseExceptions,
         InputRow row,
         AtomicInteger numEntries,
+        AtomicLong sizeInBytes,
         TimeAndDims key,
         ThreadLocal<InputRow> rowContainer,
         Supplier<InputRow> rowSupplier,

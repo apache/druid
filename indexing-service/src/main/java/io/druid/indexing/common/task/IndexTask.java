@@ -927,6 +927,7 @@ public class IndexTask extends AbstractTask
   {
     private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
     private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
+    private static final long DEFAULT_MAX_BYTES_IN_MEMORY = Runtime.getRuntime().maxMemory() / 3;
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
     private static final boolean DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS = false;
@@ -938,6 +939,7 @@ public class IndexTask extends AbstractTask
 
     private final Integer targetPartitionSize;
     private final int maxRowsInMemory;
+    private final long maxBytesInMemory;
     private final Long maxTotalRows;
     private final Integer numShards;
     private final IndexSpec indexSpec;
@@ -954,6 +956,7 @@ public class IndexTask extends AbstractTask
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
         @JsonProperty("rowFlushBoundary") @Nullable Integer rowFlushBoundary_forBackCompatibility, // DEPRECATED
         @JsonProperty("numShards") @Nullable Integer numShards,
@@ -972,6 +975,7 @@ public class IndexTask extends AbstractTask
       this(
           targetPartitionSize,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
+          maxBytesInMemory != null ? maxBytesInMemory : DEFAULT_MAX_BYTES_IN_MEMORY,
           maxTotalRows,
           numShards,
           indexSpec,
@@ -987,12 +991,13 @@ public class IndexTask extends AbstractTask
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
         @Nullable Integer targetPartitionSize,
         @Nullable Integer maxRowsInMemory,
+        @Nullable Long maxBytesInMemory,
         @Nullable Long maxTotalRows,
         @Nullable Integer numShards,
         @Nullable IndexSpec indexSpec,
@@ -1012,6 +1017,7 @@ public class IndexTask extends AbstractTask
 
       this.targetPartitionSize = initializeTargetPartitionSize(numShards, targetPartitionSize);
       this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+      this.maxBytesInMemory = maxBytesInMemory == null ? DEFAULT_MAX_BYTES_IN_MEMORY : maxBytesInMemory;
       this.maxTotalRows = initializeMaxTotalRows(numShards, maxTotalRows);
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -1059,6 +1065,7 @@ public class IndexTask extends AbstractTask
       return new IndexTuningConfig(
           targetPartitionSize,
           maxRowsInMemory,
+          maxBytesInMemory,
           maxTotalRows,
           numShards,
           indexSpec,
@@ -1083,6 +1090,13 @@ public class IndexTask extends AbstractTask
     public int getMaxRowsInMemory()
     {
       return maxRowsInMemory;
+    }
+
+    @JsonProperty
+    @Override
+    public long getMaxBytesInMemory()
+    {
+      return maxBytesInMemory;
     }
 
     @JsonProperty

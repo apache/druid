@@ -61,6 +61,7 @@ public class SinkTest
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         100,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -83,6 +84,7 @@ public class SinkTest
         tuningConfig.getShardSpec(),
         version,
         tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isReportParseExceptions()
     );
 

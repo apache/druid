@@ -50,6 +50,12 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   }
 
   @Override
+  public long estimateEncodedKeyComponentSize(Double key)
+  {
+    return Double.BYTES;
+  }
+
+  @Override
   public Double getUnsortedEncodedValueFromSorted(Double sortedIntermediateValue)
   {
     return sortedIntermediateValue;

@@ -37,21 +37,30 @@ import io.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
 public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
   private static final Logger log = new Logger(OnheapIncrementalIndex.class);
-
+  /**
+   *  overhead per Map$Entry object
+   *  KeyHash + next pointer + key pointer + value pointer + safe extra
+   */
+  private static final int ROUGH_OVERHEAD_PER_MAP_ENTRY = Long.BYTES * 5 + Integer.BYTES;
+  private static final long defaultMaxBytesInMemory = Runtime.getRuntime().maxMemory() / 3;
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
+  private long maxBytesPerRowForAggregators = 0;
   protected final int maxRowCount;
+  protected final long maxBytesInMemory;
   private volatile Map<String, ColumnSelectorFactory> selectors;
 
   private String outOfRowsReason = null;
@@ -62,14 +71,30 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean reportParseExceptions,
       boolean concurrentEventAdd,
       boolean sortFacts,
-      int maxRowCount
+      int maxRowCount,
+      long maxBytesInMemory
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
-
+    this.maxBytesInMemory = maxBytesInMemory == 0 ? defaultMaxBytesInMemory : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts);
+    if (maxBytesInMemory != -1) {
+      maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
+    }
+  }
+
+  private long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema)
+  {
+    long maxAggregatorIntermediateSize = Integer.BYTES * incrementalIndexSchema.getMetrics().length;
+    maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
+                                           .reduce(
+                                               0,
+                                               (sum, aggregator) -> sum += aggregator.getMaxIntermediateSize(),
+                                               (sum1, sum2) -> sum1 + sum2
+                                           );
+    return maxAggregatorIntermediateSize;
   }
 
   @Override
@@ -107,6 +132,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
+      AtomicLong sizeInBytes,
       TimeAndDims key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -130,13 +156,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
       // Last ditch sanity checks
       if (numEntries.get() >= maxRowCount
-          && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX
-          && !skipMaxRowsInMemoryCheck) {
-        throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
+          || maxBytesInMemory != -1 && sizeInBytes.get() >= maxBytesInMemory
+             && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX
+             && !skipMaxRowsInMemoryCheck) {
+        throw new IndexSizeExceededException("Maximum number of rows [%d] or max size in bytes [%d] reached", maxRowCount, maxBytesInMemory);
       }
       final int prev = facts.putIfAbsent(key, rowIndex);
       if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
+        if (maxBytesInMemory != -1) {
+          long estimatedRowSize = estimateRowSizeInBytes(key) + maxBytesPerRowForAggregators;
+          sizeInBytes.addAndGet(estimatedRowSize);
+        }
       } else {
         // We lost a race
         aggs = concurrentGet(prev);
@@ -148,6 +179,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     return numEntries.get();
+  }
+
+  private long estimateRowSizeInBytes(TimeAndDims key)
+  {
+    return ROUGH_OVERHEAD_PER_MAP_ENTRY + key.estimateBytesInMemory();
   }
 
   @Override
@@ -237,9 +273,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   @Override
   public boolean canAppendRow()
   {
-    final boolean canAdd = size() < maxRowCount;
-    if (!canAdd) {
+    final boolean countCheck = size() < maxRowCount;
+    boolean sizeCheck = true;
+    if (maxBytesInMemory != -1) {
+      sizeCheck = sizeInBytes() < maxBytesInMemory;
+    }
+    final boolean canAdd = countCheck && sizeCheck;
+    if (!countCheck) {
       outOfRowsReason = StringUtils.format("Maximum number of rows [%d] reached", maxRowCount);
+    }
+    if (!sizeCheck) {
+      outOfRowsReason = StringUtils.format("Maximum size in bytes [%d] reached", maxBytesInMemory);
     }
     return canAdd;
   }

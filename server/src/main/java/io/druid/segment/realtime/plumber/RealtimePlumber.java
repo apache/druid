@@ -251,6 +251,7 @@ public class RealtimePlumber implements Plumber
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
+          config.getMaxBytesInMemory(),
           config.isReportParseExceptions()
       );
       addSink(retVal);
@@ -732,6 +733,7 @@ public class RealtimePlumber implements Plumber
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
+          config.getMaxBytesInMemory(),
           config.isReportParseExceptions(),
           hydrants
       );

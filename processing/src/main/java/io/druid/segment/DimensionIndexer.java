@@ -127,6 +127,14 @@ public interface DimensionIndexer
    */
   EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions);
 
+  /**
+   * Gives the estimated size in bytes for the given key
+   *
+   * @param key dimension value array from a TimeAndDims key
+   *
+   * @return the estimated size in bytes of the key
+   */
+  long estimateEncodedKeyComponentSize(EncodedKeyComponentType key);
 
   /**
    * Given an encoded value that was ordered by associated actual value, return the equivalent

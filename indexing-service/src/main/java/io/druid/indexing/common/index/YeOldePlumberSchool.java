@@ -105,6 +105,7 @@ public class YeOldePlumberSchool implements PlumberSchool
         config.getShardSpec(),
         version,
         config.getMaxRowsInMemory(),
+        config.getMaxBytesInMemory(),
         config.isReportParseExceptions()
     );
 

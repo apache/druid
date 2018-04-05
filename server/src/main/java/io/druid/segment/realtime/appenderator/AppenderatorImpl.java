@@ -283,6 +283,18 @@ public class AppenderatorImpl implements Appenderator
     return rowsCurrentlyInMemory.get();
   }
 
+  @VisibleForTesting
+  long getRowSizeInMemory(SegmentIdentifier identifier)
+  {
+    final Sink sink = sinks.get(identifier);
+
+    if (sink == null) {
+      throw new ISE("No such sink: %s", identifier);
+    } else {
+      return sink.getBytesInMemory();
+    }
+  }
+
   private Sink getOrCreateSink(final SegmentIdentifier identifier)
   {
     Sink retVal = sinks.get(identifier);
@@ -294,6 +306,7 @@ public class AppenderatorImpl implements Appenderator
           identifier.getShardSpec(),
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
+          tuningConfig.getMaxBytesInMemory(),
           tuningConfig.isReportParseExceptions()
       );
 
@@ -559,7 +572,7 @@ public class AppenderatorImpl implements Appenderator
   /**
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
    * be run in the single-threaded pushExecutor.
-   *
+   * <p>
    * Note that this calls DataSegmentPusher.push() with replaceExisting == true which is appropriate for the indexing
    * tasks it is currently being used for (local indexing and Kafka indexing). If this is going to be used by an
    * indexing task type that requires replaceExisting == false, this setting will need to be pushed to the caller.
@@ -975,6 +988,7 @@ public class AppenderatorImpl implements Appenderator
             identifier.getShardSpec(),
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
+            tuningConfig.getMaxBytesInMemory(),
             tuningConfig.isReportParseExceptions(),
             hydrants
         );

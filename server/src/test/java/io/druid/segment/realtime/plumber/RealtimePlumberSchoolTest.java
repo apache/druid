@@ -199,6 +199,7 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         null,
+        null,
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,
@@ -269,6 +270,7 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isReportParseExceptions()
     );
     plumber.getSinks().put(0L, sink);
@@ -313,6 +315,7 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isReportParseExceptions()
     );
     plumber.getSinks().put(0L, sink);
@@ -367,6 +370,7 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isReportParseExceptions()
     );
     plumber2.getSinks().put(0L, sink);

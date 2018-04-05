@@ -95,6 +95,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -239,6 +240,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final List<DimensionDesc> dimensionDescsList;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
+  private final AtomicLong sizeInBytes = new AtomicLong();
 
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
@@ -247,7 +249,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
-   *
+   * <p>
    * Set concurrentEventAdd to true to indicate that adding of input row should be thread-safe (for example, groupBy
    * where the multiple threads can add concurrently to the IncrementalIndex).
    *
@@ -333,6 +335,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private boolean concurrentEventAdd;
     private boolean sortFacts;
     private int maxRowCount;
+    private long maxBytesInMemory;
 
     public Builder()
     {
@@ -342,6 +345,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       concurrentEventAdd = false;
       sortFacts = true;
       maxRowCount = 0;
+      maxBytesInMemory = 0;
     }
 
     public Builder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
@@ -398,6 +402,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
+    public Builder setMaxBytesInMemory(final long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
     public IncrementalIndex buildOnheap()
     {
       if (maxRowCount <= 0) {
@@ -410,7 +420,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
-          maxRowCount
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -457,6 +468,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
+      AtomicLong sizeInBytes,
       TimeAndDims key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -528,6 +540,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         reportParseExceptions,
         row,
         numEntries,
+        sizeInBytes,
         key,
         in,
         rowSupplier,
@@ -549,6 +562,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     Object[] dims;
     List<Object> overflow = null;
+    long dimsKeySize = 0;
     synchronized (dimensionDescs) {
       dims = new Object[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
@@ -580,6 +594,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             row.getRaw(dimension),
             reportParseExceptions
         );
+        dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
 
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
@@ -622,7 +637,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (row.getTimestamp() != null) {
       truncated = gran.bucketStart(row.getTimestamp()).getMillis();
     }
-    return new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
+    return new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList, dimsKeySize);
   }
 
   private synchronized void updateMaxIngestedTime(DateTime eventTime)
@@ -640,6 +655,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   public int size()
   {
     return numEntries.get();
+  }
+
+  public long sizeInBytes()
+  {
+    return sizeInBytes.get();
   }
 
   private long getMinTimeMillis()
@@ -1002,6 +1022,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
      * {@link RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
      */
     private int rowIndex;
+    private long dimsKeySize;
 
     TimeAndDims(
         long timestamp,
@@ -1025,6 +1046,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.rowIndex = rowIndex;
     }
 
+    TimeAndDims(
+        long timestamp,
+        Object[] dims,
+        List<DimensionDesc> dimensionDescsList,
+        long dimsKeySize
+    )
+    {
+      this.timestamp = timestamp;
+      this.dims = dims;
+      this.dimensionDescsList = dimensionDescsList;
+      this.dimsKeySize = dimsKeySize;
+    }
+
     public long getTimestamp()
     {
       return timestamp;
@@ -1043,6 +1077,14 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private void setRowIndex(int rowIndex)
     {
       this.rowIndex = rowIndex;
+    }
+
+    public long estimateBytesInMemory()
+    {
+      //timestamp + dims length + dimensionDescsList shared pointer
+      long sizeInBytes = Long.BYTES + Integer.BYTES * dims.length + Long.BYTES + Long.BYTES;
+      sizeInBytes += dimsKeySize;
+      return sizeInBytes;
     }
 
     @Override

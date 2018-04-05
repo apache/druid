@@ -1038,6 +1038,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         null,
         null,
+        null,
         reportParseExceptions,
         handoffTimeout,
         null,

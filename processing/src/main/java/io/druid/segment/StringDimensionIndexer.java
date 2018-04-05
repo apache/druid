@@ -265,6 +265,17 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     return encodedDimensionValues;
   }
 
+  @Override
+  public long estimateEncodedKeyComponentSize(int[] key)
+  {
+    // the size is calculated conservatively, first key may be accounted for twice
+    long estimatedSize = (key.length * Integer.BYTES);
+    estimatedSize += Arrays.stream(key)
+                           .filter(element -> dimLookup.getValue(element) != null)
+                           .mapToLong(element -> dimLookup.getValue(element).length() * Character.BYTES).sum();
+    return estimatedSize;
+  }
+
   public Integer getSortedEncodedValueFromUnsorted(Integer unsortedIntermediateValue)
   {
     return sortedLookup().getSortedIdFromUnsortedId(unsortedIntermediateValue);

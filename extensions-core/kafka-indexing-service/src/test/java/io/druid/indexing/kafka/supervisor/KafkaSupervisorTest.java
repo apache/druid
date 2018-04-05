@@ -184,7 +184,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskQueue = createMock(TaskQueue.class);
 
     tuningConfig = new KafkaSupervisorTuningConfig(
-        1000,
+        1000, null,
         50000,
         new Period("P1Y"),
         new File("/test"),

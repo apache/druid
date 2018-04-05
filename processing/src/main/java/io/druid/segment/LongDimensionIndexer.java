@@ -51,6 +51,12 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
+  public long estimateEncodedKeyComponentSize(Long key)
+  {
+    return Long.BYTES;
+  }
+
+  @Override
   public Long getUnsortedEncodedValueFromSorted(Long sortedIntermediateValue)
   {
     return sortedIntermediateValue;
