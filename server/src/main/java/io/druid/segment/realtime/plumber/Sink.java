@@ -177,8 +177,6 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
-  //add methods for byte mem checks
-
   public boolean isWritable()
   {
     return writable;
