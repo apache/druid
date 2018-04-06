@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class FireDepartmentMetrics
 {
   private final AtomicLong processedCount = new AtomicLong(0);
+  private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
   private final AtomicLong unparseableCount = new AtomicLong(0);
   private final AtomicLong rowOutputCount = new AtomicLong(0);
@@ -47,6 +48,11 @@ public class FireDepartmentMetrics
   public void incrementProcessed()
   {
     processedCount.incrementAndGet();
+  }
+
+  public void incrementProcessedWithErrors()
+  {
+    processedWithErrorsCount.incrementAndGet();
   }
 
   public void incrementThrownAway()
@@ -122,6 +128,11 @@ public class FireDepartmentMetrics
   public long processed()
   {
     return processedCount.get();
+  }
+
+  public long processedWithErrors()
+  {
+    return processedWithErrorsCount.get();
   }
 
   public long thrownAway()
@@ -203,6 +214,7 @@ public class FireDepartmentMetrics
   {
     final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
     retVal.processedCount.set(processedCount.get());
+    retVal.processedWithErrorsCount.set(processedWithErrorsCount.get());
     retVal.thrownAwayCount.set(thrownAwayCount.get());
     retVal.unparseableCount.set(unparseableCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
@@ -231,6 +243,7 @@ public class FireDepartmentMetrics
     Preconditions.checkNotNull(other, "Cannot merge a null FireDepartmentMetrics");
     FireDepartmentMetrics otherSnapshot = other.snapshot();
     processedCount.addAndGet(otherSnapshot.processed());
+    processedWithErrorsCount.addAndGet(otherSnapshot.processedWithErrors());
     thrownAwayCount.addAndGet(otherSnapshot.thrownAway());
     rowOutputCount.addAndGet(otherSnapshot.rowOutput());
     unparseableCount.addAndGet(otherSnapshot.unparseable());
@@ -248,5 +261,4 @@ public class FireDepartmentMetrics
     messageGap.set(Math.max(messageGap(), otherSnapshot.messageGap()));
     return this;
   }
-
 }

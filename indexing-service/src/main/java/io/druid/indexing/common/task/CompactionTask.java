@@ -65,6 +65,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -102,6 +103,9 @@ public class CompactionTask extends AbstractTask
   @JsonIgnore
   private IndexTask indexTaskSpec;
 
+  @JsonIgnore
+  private final AuthorizerMapper authorizerMapper;
+
   @JsonCreator
   public CompactionTask(
       @JsonProperty("id") final String id,
@@ -112,7 +116,8 @@ public class CompactionTask extends AbstractTask
       @Nullable @JsonProperty("dimensions") final DimensionsSpec dimensionsSpec,
       @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
       @Nullable @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject ObjectMapper jsonMapper
+      @JacksonInject ObjectMapper jsonMapper,
+      @JacksonInject AuthorizerMapper authorizerMapper
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
@@ -125,6 +130,7 @@ public class CompactionTask extends AbstractTask
     this.tuningConfig = tuningConfig;
     this.jsonMapper = jsonMapper;
     this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
+    this.authorizerMapper = authorizerMapper;
   }
 
   @JsonProperty
@@ -195,7 +201,9 @@ public class CompactionTask extends AbstractTask
           getTaskResource(),
           getDataSource(),
           ingestionSpec,
-          getContext()
+          getContext(),
+          authorizerMapper,
+          null
       );
     }
 
