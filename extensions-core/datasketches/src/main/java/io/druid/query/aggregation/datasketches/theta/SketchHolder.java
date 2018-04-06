@@ -36,6 +36,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 
+import java.util.Arrays;
 import java.util.Comparator;
 
 /**
@@ -286,6 +287,11 @@ public class SketchHolder
     }
   }
 
+  /**
+   *  Ideally make use of Sketch's equals and hashCode methods but which are not value based implementations.
+   *  And yet need value based equals and hashCode implementations for SketchHolder. 
+   *  Hence using Arrays.equals() and Arrays.hashCode().
+   */
   @Override
   public boolean equals(Object o)
   {
@@ -295,6 +301,12 @@ public class SketchHolder
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    return this.getSketch().equals(((SketchHolder) o).getSketch());
+    return Arrays.equals(this.getSketch().toByteArray(), ((SketchHolder) o).getSketch().toByteArray());
+  }
+  
+  @Override
+  public int hashCode()
+  {
+    return 31 * Arrays.hashCode(this.getSketch().toByteArray());
   }
 }

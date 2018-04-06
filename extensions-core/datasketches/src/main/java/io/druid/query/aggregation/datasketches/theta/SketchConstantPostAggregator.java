@@ -17,54 +17,59 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.post;
+package io.druid.query.aggregation.datasketches.theta;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
-import io.druid.java.util.common.guava.Comparators;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.cache.CacheKeyBuilder;
-
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.codec.digest.DigestUtils;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.post.PostAggregatorIds;
+import io.druid.query.cache.CacheKeyBuilder;
+
 /**
  */
-public class ConstantPostAggregator implements PostAggregator
+public class SketchConstantPostAggregator implements PostAggregator
 {
+
   private final String name;
-  private final Number constantValue;
+  private final String value;
+  private final SketchHolder sketchValue;
 
   @JsonCreator
-  public ConstantPostAggregator(
-      @JsonProperty("name") String name,
-      @JsonProperty("value") Number constantValue
-  )
+  public SketchConstantPostAggregator(@JsonProperty("name") String name, @JsonProperty("value") String value)
   {
     this.name = name;
-    this.constantValue = Preconditions.checkNotNull(constantValue, "Constant value cannot be null");
+    Preconditions.checkArgument(value != null && !value.isEmpty(),
+        "Constant value cannot be null or empty, expecting base64 encoded sketch string");
+    this.value = value;
+    this.sketchValue = SketchHolder.deserialize(value);
   }
 
   @Override
   public Set<String> getDependentFields()
   {
-    return Sets.newHashSet();
+    return Collections.emptySet();
   }
 
   @Override
-  public Comparator getComparator()
+  public Comparator<Object> getComparator()
   {
-    return Comparators.alwaysEqual();
+    return SketchHolder.COMPARATOR;
   }
 
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    return constantValue;
+    return sketchValue;
   }
 
   @Override
@@ -75,24 +80,21 @@ public class ConstantPostAggregator implements PostAggregator
   }
 
   @Override
-  public ConstantPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
+  public SketchConstantPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
     return this;
   }
 
   @JsonProperty("value")
-  public Number getConstantValue()
+  public SketchHolder getSketchValue()
   {
-    return constantValue;
+    return sketchValue;
   }
 
   @Override
   public String toString()
   {
-    return "ConstantPostAggregator{" +
-           "name='" + name + '\'' +
-           ", constantValue=" + constantValue +
-           '}';
+    return "SketchConstantPostAggregator{name='" + name + "', value='" + value + "'}";
   }
 
   @Override
@@ -104,17 +106,13 @@ public class ConstantPostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    ConstantPostAggregator that = (ConstantPostAggregator) o;
-
-    if (constantValue.doubleValue() != that.constantValue.doubleValue()) {
+    SketchConstantPostAggregator that = (SketchConstantPostAggregator) o;
+    if (!this.sketchValue.equals(that.sketchValue)) {
       return false;
     }
-
     if (name != null ? !name.equals(that.name) : that.name != null) {
       return false;
     }
-
     return true;
   }
 
@@ -122,15 +120,14 @@ public class ConstantPostAggregator implements PostAggregator
   public int hashCode()
   {
     int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + constantValue.hashCode();
+    result = 37 * result + sketchValue.hashCode();
     return result;
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(PostAggregatorIds.CONSTANT)
-        .appendDouble(constantValue.doubleValue())
-        .build();
+    return new CacheKeyBuilder(PostAggregatorIds.THETA_SKETCH_CONSTANT)
+        .appendString(DigestUtils.sha1Hex(value)).build();
   }
 }
