@@ -283,6 +283,9 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
             null,
             null,
             null,
+            null,
+            null,
+            null,
             null
         )
     );
@@ -405,6 +408,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
                     taskStatus.getStatusCode(),
                     taskStatus.getDuration(),
                     TaskLocation.unknown(),
+                    null,
                     null
                 )
             );
@@ -419,6 +423,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
                     TaskState.RUNNING,
                     -1L,
                     TaskLocation.unknown(),
+                    null,
                     null
                 )
             );
@@ -438,6 +443,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
                   TaskState.FAILED,
                   -1L,
                   TaskLocation.unknown(),
+                  null,
                   null
               )
           );
@@ -498,6 +504,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
         null,
         null,
         getIndexMerger(),
+        null,
         null,
         null,
         null,

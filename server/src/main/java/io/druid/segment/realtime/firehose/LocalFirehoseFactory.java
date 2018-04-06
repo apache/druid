@@ -99,7 +99,7 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   @Override
   protected InputStream wrapObjectStream(File object, InputStream stream) throws IOException
   {
-    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return CompressionUtils.decompress(stream, object.getPath());
   }
 
   @Override

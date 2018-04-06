@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
+import com.google.common.collect.TreeRangeSet;
 import io.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -113,8 +114,10 @@ public class DimFilterUtilsTest
   private static ShardSpec shardSpec(String dimension, Range<String> range)
   {
     ShardSpec shard = EasyMock.createMock(ShardSpec.class);
+    RangeSet<String> rangeSet = TreeRangeSet.create();
+    rangeSet.add(range);
     EasyMock.expect(shard.getDomain())
-            .andReturn(ImmutableMap.of(dimension, range))
+            .andReturn(ImmutableMap.of(dimension, rangeSet))
             .anyTimes();
     return shard;
   }

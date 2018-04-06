@@ -138,6 +138,9 @@ public class SinglePhaseParallelIndexSupervisorTaskSerdeTest
             null,
             null,
             null,
+            null,
+            null,
+            null,
             null
         )
     );

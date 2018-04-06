@@ -385,7 +385,8 @@ public class OverlordResourceTest
                 TaskState.RUNNING,
                 -1L,
                 TaskLocation.unknown(),
-                "mydatasource"
+                "mydatasource",
+                null
             )
         ),
         taskStatusResponse1

@@ -65,6 +65,9 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
+        null,
+        null,
         null
     );
   }
@@ -85,7 +88,10 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxRetry") @Nullable Integer maxRetry,
       @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs,
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
-      @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries
+      @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
+      @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
+      @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     super(
@@ -102,7 +108,10 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
         reportParseExceptions,
         null,
         pushTimeout,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions
     );
 
     this.maxNumBatchTasks = maxNumBatchTasks == null ? DEFAULT_MAX_NUM_BATCH_TASKS : maxNumBatchTasks;

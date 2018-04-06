@@ -264,7 +264,8 @@ public class OverlordResource
                   taskStatus.getStatusCode(),
                   taskStatus.getDuration(),
                   workItem.getLocation(),
-                  createdDateAndDataSource.rhs
+                  createdDateAndDataSource.rhs,
+                  null
               )
           );
         } else {
@@ -278,7 +279,8 @@ public class OverlordResource
                   taskStatus.getStatusCode(),
                   taskStatus.getDuration(),
                   TaskLocation.unknown(),
-                  createdDateAndDataSource.rhs
+                  createdDateAndDataSource.rhs,
+                  null
               )
           );
         }
@@ -668,7 +670,9 @@ public class OverlordResource
               status.getStatusCode(),
               status.getDuration(),
               TaskLocation.unknown(),
-              pair.rhs);
+              pair.rhs,
+              status.getErrorMsg()
+          );
         }));
 
     return Response.ok(completeTasks).build();
@@ -780,6 +784,33 @@ public class OverlordResource
   }
 
   @GET
+  @Path("/task/{taskid}/reports")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(TaskResourceFilter.class)
+  public Response doGetReports(
+      @PathParam("taskid") final String taskid
+  )
+  {
+    try {
+      final Optional<ByteSource> stream = taskLogStreamer.streamTaskReports(taskid);
+      if (stream.isPresent()) {
+        return Response.ok(stream.get().openStream()).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(
+                           "No task reports were found for this task. "
+                           + "The task may not exist, or it may not have completed yet."
+                       )
+                       .build();
+      }
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to stream task reports for task %s", taskid);
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  @GET
   @Path("/dataSources/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningTasksByDataSource(@PathParam("dataSource") String dataSource,
@@ -824,7 +855,8 @@ public class OverlordResource
                             null,
                             null,
                             workItem.getLocation(),
-                            workItem.getDataSource()
+                            workItem.getDataSource(),
+                            null
                         );
                       }
                     }

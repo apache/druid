@@ -31,6 +31,7 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.indexer.IngestionState;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.appenderator.CountingActionBasedSegmentAllocator;
@@ -46,7 +47,9 @@ import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.common.task.IndexTask.ShardSpecs;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -68,6 +71,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
+import io.druid.utils.CircularBuffer;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.Interval;
 
@@ -101,6 +105,10 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient> taskClientFactory;
+  private final CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
+  private final CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
+
+  private IngestionState ingestionState;
 
   @JsonCreator
   public SinglePhaseParallelIndexSubTask(
@@ -133,6 +141,15 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
+
+    determinePartitionsSavedParseExceptions = new CircularBuffer<>(
+        ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+    );
+    buildSegmentsSavedParseExceptions = new CircularBuffer<>(
+        ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+    );
+
+    this.ingestionState = IngestionState.NOT_STARTED;
   }
 
   @Override
@@ -206,6 +223,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     // Firehose temporary directory is automatically removed when this IndexTask completes.
     FileUtils.forceMkdir(firehoseTempDir);
 
+    ingestionState = IngestionState.DETERMINE_PARTITIONS;
     final IndexTask.ShardSpecs shardSpecs = determineShardSpecs(firehoseFactory, firehoseTempDir);
 
     final DataSchema dataSchema;
@@ -233,6 +251,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
       dataSchema = ingestionSchema.getDataSchema();
     }
 
+    ingestionState = IngestionState.BUILD_SEGMENTS;
     final List<DataSegment> pushedSegments = generateAndPushSegments(
         toolbox,
         dataSchema,
@@ -250,6 +269,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     );
     taskClient.report(supervisorTaskId, pushedSegments);
 
+    ingestionState = IngestionState.COMPLETED;
     return TaskStatus.success(getId());
   }
 
@@ -494,6 +514,14 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
             continue;
           }
 
+          if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {
+            final String errorMsg = StringUtils.format(
+                "Encountered row with timestamp that cannot be represented as a long: [%s]",
+                inputRow
+            );
+            throw new ParseException(errorMsg);
+          }
+
           final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
           if (!optInterval.isPresent()) {
             fireDepartmentMetrics.incrementThrownAway();
@@ -519,14 +547,14 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
           }
 
-          fireDepartmentMetrics.incrementProcessed();
+          if (addResult.getParseException() != null) {
+            handleParseException(fireDepartmentMetrics, addResult.getParseException());
+          } else {
+            fireDepartmentMetrics.incrementProcessed();
+          }
         }
         catch (ParseException e) {
-          if (tuningConfig.isReportParseExceptions()) {
-            throw e;
-          } else {
-            fireDepartmentMetrics.incrementUnparseable();
-          }
+          handleParseException(fireDepartmentMetrics, e);
         }
       }
 
@@ -538,6 +566,29 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     }
     catch (TimeoutException | ExecutionException e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  private void handleParseException(FireDepartmentMetrics fireDepartmentMetrics, ParseException e)
+  {
+    if (e.isFromPartiallyValidRow()) {
+      fireDepartmentMetrics.incrementProcessedWithErrors();
+    } else {
+      fireDepartmentMetrics.incrementUnparseable();
+    }
+
+    if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
+      log.error(e, "Encountered parse exception:");
+    }
+
+    if (buildSegmentsSavedParseExceptions != null) {
+      buildSegmentsSavedParseExceptions.add(e);
+    }
+
+    if (fireDepartmentMetrics.unparseable()
+        + fireDepartmentMetrics.processedWithErrors() > ingestionSchema.getTuningConfig().getMaxParseExceptions()) {
+      log.error("Max parse exceptions exceeded, terminating task...");
+      throw new RuntimeException("Max parse exceptions exceeded, terminating task...", e);
     }
   }
 

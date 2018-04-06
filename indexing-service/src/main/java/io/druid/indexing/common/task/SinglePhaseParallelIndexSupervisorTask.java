@@ -331,7 +331,9 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
             getIngestionSchema().getIOConfig(),
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
-        getContext()
+        getContext(),
+        authorizerMapper,
+        chatHandlerProvider
     ).run(toolbox);
   }
 
@@ -372,7 +374,10 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
         tuningConfig.isReportParseExceptions(),
         null,
         tuningConfig.getPushTimeout(),
-        tuningConfig.getSegmentWriteOutMediumFactory()
+        tuningConfig.getSegmentWriteOutMediumFactory(),
+        tuningConfig.isLogParseExceptions(),
+        tuningConfig.getMaxParseExceptions(),
+        tuningConfig.getMaxSavedParseExceptions()
     );
   }
 

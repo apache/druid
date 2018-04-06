@@ -36,6 +36,7 @@ import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
@@ -190,7 +191,8 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                null
+                null,
+                new NoopTestTaskFileWriter()
             ),
             taskConfig,
             new NoopServiceEmitter(),

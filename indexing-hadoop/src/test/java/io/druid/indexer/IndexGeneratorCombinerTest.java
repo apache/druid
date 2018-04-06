@@ -175,8 +175,8 @@ public class IndexGeneratorCombinerTest
         )
     );
     List<BytesWritable> rows = Lists.newArrayList(
-        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators, true)),
-        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators, true))
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators).getSerializedRow()),
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators).getSerializedRow())
     );
 
     Reducer.Context context = EasyMock.createNiceMock(Reducer.Context.class);
@@ -253,8 +253,8 @@ public class IndexGeneratorCombinerTest
     Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap = InputRowSerde.getTypeHelperMap(dimensionsSpec);
 
     List<BytesWritable> rows = Lists.newArrayList(
-        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators, true)),
-        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators, true))
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row1, aggregators).getSerializedRow()),
+        new BytesWritable(InputRowSerde.toBytes(typeHelperMap, row2, aggregators).getSerializedRow())
     );
 
     Reducer.Context context = EasyMock.createNiceMock(Reducer.Context.class);

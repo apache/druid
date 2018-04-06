@@ -185,7 +185,8 @@ public class TaskMonitorTest
               tasks.get(taskId),
               -1L,
               TaskLocation.unknown(),
-              "testDataSource"
+              "testDataSource",
+              null
           )
       );
     }

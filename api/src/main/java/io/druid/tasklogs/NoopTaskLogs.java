@@ -24,6 +24,7 @@ import com.google.common.io.ByteSource;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
+import java.io.IOException;
 
 public class NoopTaskLogs implements TaskLogs
 {
@@ -39,6 +40,12 @@ public class NoopTaskLogs implements TaskLogs
   public void pushTaskLog(String taskid, File logFile)
   {
     log.info("Not pushing logs for task: %s", taskid);
+  }
+
+  @Override
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    log.info("Not pushing reports for task: %s", taskid);
   }
 
   @Override
