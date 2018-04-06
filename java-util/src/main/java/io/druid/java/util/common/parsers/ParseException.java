@@ -25,6 +25,8 @@ import io.druid.java.util.common.StringUtils;
  */
 public class ParseException extends RuntimeException
 {
+  private boolean fromPartiallyValidRow = false;
+
   public ParseException(String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments));
@@ -33,5 +35,15 @@ public class ParseException extends RuntimeException
   public ParseException(Throwable cause, String formatText, Object... arguments)
   {
     super(StringUtils.nonStrictFormat(formatText, arguments), cause);
+  }
+
+  public boolean isFromPartiallyValidRow()
+  {
+    return fromPartiallyValidRow;
+  }
+
+  public void setFromPartiallyValidRow(boolean fromPartiallyValidRow)
+  {
+    this.fromPartiallyValidRow = fromPartiallyValidRow;
   }
 }

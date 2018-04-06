@@ -621,7 +621,9 @@ public class OverlordResource
               status.getStatusCode(),
               status.getDuration(),
               TaskLocation.unknown(),
-              pair.rhs);
+              pair.rhs,
+              status.getErrorMsg()
+          );
         }));
 
     return Response.ok(completeTasks).build();
@@ -804,7 +806,8 @@ public class OverlordResource
                             null,
                             null,
                             workItem.getLocation(),
-                            workItem.getDataSource()
+                            workItem.getDataSource(),
+                            null
                         );
                       }
                     }

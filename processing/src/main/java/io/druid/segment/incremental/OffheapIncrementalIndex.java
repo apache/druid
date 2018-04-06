@@ -138,7 +138,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected Integer addToFacts(
+  protected AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -238,7 +238,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
     rowContainer.set(null);
-    return numEntries.get();
+    return new AddToFactsResult(numEntries.get(), new ArrayList<>());
   }
 
   @Override

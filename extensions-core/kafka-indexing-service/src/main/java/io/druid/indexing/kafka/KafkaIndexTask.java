@@ -49,8 +49,13 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
+import io.druid.indexer.IngestionState;
+import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
@@ -58,6 +63,7 @@ import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
+import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.common.task.Tasks;
@@ -80,6 +86,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -92,13 +99,9 @@ import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.Action;
-import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.ForbiddenException;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceAction;
-import io.druid.server.security.ResourceType;
 import io.druid.timeline.DataSegment;
+import io.druid.utils.CircularBuffer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -246,6 +249,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private volatile CopyOnWriteArrayList<SequenceMetadata> sequences;
   private ListeningExecutorService publishExecService;
   private final boolean useLegacy;
+  private CircularBuffer<Throwable> savedParseExceptions;
+  private IngestionState ingestionState;
+
+  private TaskMetricsGetter metricsGetter;
+  private String errorMsg;
 
   @JsonCreator
   public KafkaIndexTask(
@@ -276,12 +284,16 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
     this.topic = ioConfig.getStartPartitions().getTopic();
     this.sequences = new CopyOnWriteArrayList<>();
+    this.ingestionState = IngestionState.NOT_STARTED;
 
     if (context != null && context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
       useLegacy = false;
     } else {
       useLegacy = true;
+    }
+    if (tuningConfig.getMaxSavedParseExceptions() > 0) {
+      savedParseExceptions = new CircularBuffer<Throwable>(tuningConfig.getMaxSavedParseExceptions());
     }
     resetNextCheckpointTime();
   }
@@ -414,11 +426,27 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
-    // for backwards compatibility, should be remove from versions greater than 0.12.x
-    if (useLegacy) {
-      return runLegacy(toolbox);
+    try {
+      // for backwards compatibility, should be remove from versions greater than 0.12.x
+      if (useLegacy) {
+        return runInternalLegacy(toolbox);
+      } else {
+        return runInternal(toolbox);
+      }
     }
+    catch (Exception e) {
+      log.error(e, "Encountered exception while running task.");
+      errorMsg = Throwables.getStackTraceAsString(e);
+      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+      return TaskStatus.failure(
+          getId(),
+          errorMsg
+      );
+    }
+  }
 
+  private TaskStatus runInternal(final TaskToolbox toolbox) throws Exception
+  {
     log.info("Starting up!");
 
     startTime = DateTimes.nowUtc();
@@ -484,6 +512,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
     toolbox.getMonitorScheduler().addMonitor(
         new RealtimeMetricsMonitor(
             ImmutableList.of(fireDepartmentForMetrics),
@@ -594,6 +623,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       maybePersistAndPublishSequences(committerSupplier);
 
       Set<Integer> assignment = assignPartitionsAndSeekToNext(consumer, topic);
+
+      ingestionState = IngestionState.BUILD_SEGMENTS;
 
       // Main loop.
       // Could eventually support leader/follower mode (for keeping replicas more in sync)
@@ -730,7 +761,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                       throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
                     }
 
-                    fireDepartmentMetrics.incrementProcessed();
+                    if (addResult.getParseException() != null) {
+                      handleParseException(addResult.getParseException(), record);
+                    } else {
+                      fireDepartmentMetrics.incrementProcessed();
+                    }
                   } else {
                     fireDepartmentMetrics.incrementThrownAway();
                   }
@@ -757,18 +792,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 }
               }
               catch (ParseException e) {
-                if (tuningConfig.isReportParseExceptions()) {
-                  throw e;
-                } else {
-                  log.debug(
-                      e,
-                      "Dropping unparseable row from partition[%d] offset[%,d].",
-                      record.partition(),
-                      record.offset()
-                  );
-
-                  fireDepartmentMetrics.incrementUnparseable();
-                }
+                handleParseException(e, record);
               }
 
               nextOffsets.put(record.partition(), record.offset() + 1);
@@ -806,6 +830,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             }
           }
         }
+        ingestionState = IngestionState.COMPLETED;
       }
       catch (Exception e) {
         log.error(e, "Encountered exception in run() before persisting.");
@@ -904,11 +929,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
-    toolbox.getTaskReportFileWriter().write(null);
+    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
     return success();
   }
 
-  private TaskStatus runLegacy(final TaskToolbox toolbox) throws Exception
+  private TaskStatus runInternalLegacy(final TaskToolbox toolbox) throws Exception
   {
     log.info("Starting up!");
     startTime = DateTimes.nowUtc();
@@ -931,6 +956,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
     toolbox.getMonitorScheduler().addMonitor(
         new RealtimeMetricsMonitor(
             ImmutableList.of(fireDepartmentForMetrics),
@@ -949,6 +975,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             lookupNodeService.getName(), lookupNodeService
         )
     );
+
+    ingestionState = IngestionState.BUILD_SEGMENTS;
 
     try (
             final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
@@ -1127,11 +1155,17 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                       // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
                       throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
                     }
-                    fireDepartmentMetrics.incrementProcessed();
+
+                    if (addResult.getParseException() != null) {
+                      handleParseException(addResult.getParseException(), record);
+                    } else {
+                      fireDepartmentMetrics.incrementProcessed();
+                    }
                   } else {
                     fireDepartmentMetrics.incrementThrownAway();
                   }
                 }
+
                 if (isPersistRequired) {
                   driver.persist(committerSupplier.get());
                 }
@@ -1141,18 +1175,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 ));
               }
               catch (ParseException e) {
-                if (tuningConfig.isReportParseExceptions()) {
-                  throw e;
-                } else {
-                  log.debug(
-                      e,
-                      "Dropping unparseable row from partition[%d] offset[%,d].",
-                      record.partition(),
-                      record.offset()
-                  );
-
-                  fireDepartmentMetrics.incrementUnparseable();
-                }
+                handleParseException(e, record);
               }
 
               nextOffsets.put(record.partition(), record.offset() + 1);
@@ -1166,6 +1189,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             }
           }
         }
+        ingestionState = IngestionState.COMPLETED;
       }
       catch (Exception e) {
         log.error(e, "Encountered exception in runLegacy() before persisting.");
@@ -1273,8 +1297,76 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       toolbox.getDataSegmentServerAnnouncer().unannounce();
     }
 
-    toolbox.getTaskReportFileWriter().write(null);
-    return success();
+    toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+    return TaskStatus.success(
+        getId(),
+        null
+    );
+  }
+
+  private void handleParseException(ParseException pe, ConsumerRecord<byte[], byte[]> record)
+  {
+    if (pe.isFromPartiallyValidRow()) {
+      fireDepartmentMetrics.incrementProcessedWithErrors();
+    } else {
+      fireDepartmentMetrics.incrementUnparseable();
+    }
+
+    if (tuningConfig.isLogParseExceptions()) {
+      log.error(
+          pe,
+          "Encountered parse exception on row from partition[%d] offset[%d]",
+          record.partition(),
+          record.offset()
+      );
+    }
+
+    if (savedParseExceptions != null) {
+      savedParseExceptions.add(pe);
+    }
+
+    if (fireDepartmentMetrics.unparseable() + fireDepartmentMetrics.processedWithErrors()
+        > tuningConfig.getMaxParseExceptions()) {
+      log.error("Max parse exceptions exceeded, terminating task...");
+      throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
+    }
+  }
+
+  private Map<String, TaskReport> getTaskCompletionReports()
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                ingestionState,
+                getTaskCompletionUnparseableEvents(),
+                getTaskCompletionRowStats(),
+                errorMsg
+            )
+        )
+    );
+  }
+
+  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  {
+    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    if (buildSegmentsParseExceptionMessages != null) {
+      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+    }
+    return unparseableEventsMap;
+  }
+
+  private Map<String, Object> getTaskCompletionRowStats()
+  {
+    Map<String, Object> metrics = Maps.newHashMap();
+    if (metricsGetter != null) {
+      metrics.put(
+          "buildSegments",
+          metricsGetter.getTotalMetrics()
+      );
+    }
+    return metrics;
   }
 
   private void checkAndMaybeThrowException()
@@ -1342,17 +1434,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
    */
   private Access authorizationCheck(final HttpServletRequest req, Action action)
   {
-    ResourceAction resourceAction = new ResourceAction(
-        new Resource(dataSchema.getDataSource(), ResourceType.DATASOURCE),
-        action
-    );
-
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
-    }
-
-    return access;
+    return IndexTaskUtils.datasourceAuthorizationCheck(req, action, getDataSource(), authorizerMapper);
   }
 
   @VisibleForTesting
@@ -1491,6 +1573,40 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   {
     authorizationCheck(req, Action.WRITE);
     return setEndOffsets(offsets, resume, finish);
+  }
+
+  @GET
+  @Path("/rowStats")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRowStats(
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.READ);
+    Map<String, Object> returnMap = Maps.newHashMap();
+    Map<String, Object> totalsMap = Maps.newHashMap();
+
+    if (metricsGetter != null) {
+      totalsMap.put(
+          "buildSegments",
+          metricsGetter.getTotalMetrics()
+      );
+    }
+
+    returnMap.put("totals", totalsMap);
+    return Response.ok(returnMap).build();
+  }
+
+  @GET
+  @Path("/unparseableEvents")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getUnparseableEvents(
+      @Context final HttpServletRequest req
+  )
+  {
+    authorizationCheck(req, Action.READ);
+    List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    return Response.ok(events).build();
   }
 
   public Response setEndOffsets(
@@ -2039,12 +2155,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           "Encountered row with timestamp that cannot be represented as a long: [%s]",
           row
       );
-      log.debug(errorMsg);
-      if (tuningConfig.isReportParseExceptions()) {
-        throw new ParseException(errorMsg);
-      } else {
-        return false;
-      }
+      throw new ParseException(errorMsg);
     }
 
     if (log.isDebugEnabled()) {

@@ -119,7 +119,7 @@ public class IndexIngestionBenchmark
   {
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = rows.get(i);
-      int rv = incIndex.add(row);
+      int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }

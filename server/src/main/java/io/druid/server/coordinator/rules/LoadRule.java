@@ -19,8 +19,9 @@
 
 package io.druid.server.coordinator.rules;
 
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -209,7 +211,7 @@ public abstract class LoadRule implements Rule
   }
 
   /**
-   * @param stats {@link CoordinatorStats} to accumulate assignment statistics.
+   * @param stats      {@link CoordinatorStats} to accumulate assignment statistics.
    * @param tierToSkip if not null, this tier will be skipped from doing assignment, use when primary replica was
    *                   assigned.
    */
@@ -320,7 +322,7 @@ public abstract class LoadRule implements Rule
       } else {
         final int currentReplicantsInTier = entry.getIntValue();
         final int numToDrop = currentReplicantsInTier - targetReplicants.getOrDefault(tier, 0);
-        numDropped = dropForTier(numToDrop, holders, segment);
+        numDropped = dropForTier(numToDrop, holders, segment, params.getBalancerStrategy());
       }
 
       stats.addToTieredStat(DROPPED_COUNT, tier, numDropped);
@@ -346,13 +348,17 @@ public abstract class LoadRule implements Rule
   private static int dropForTier(
       final int numToDrop,
       final NavigableSet<ServerHolder> holdersInTier,
-      final DataSegment segment
+      final DataSegment segment,
+      final BalancerStrategy balancerStrategy
   )
   {
     int numDropped = 0;
 
-    // Use the reverse order to get the holders with least available size first.
-    final Iterator<ServerHolder> iterator = holdersInTier.descendingIterator();
+    final NavigableSet<ServerHolder> isServingSubset =
+        holdersInTier.stream().filter(s -> s.isServingSegment(segment)).collect(Collectors.toCollection(TreeSet::new));
+
+    final Iterator<ServerHolder> iterator = balancerStrategy.pickServersToDrop(segment, isServingSubset);
+
     while (numDropped < numToDrop) {
       if (!iterator.hasNext()) {
         log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
@@ -364,6 +370,12 @@ public abstract class LoadRule implements Rule
       if (holder.isServingSegment(segment)) {
         holder.getPeon().dropSegment(segment, null);
         ++numDropped;
+      } else {
+        log.warn(
+            "Server [%s] is no longer serving segment [%s], skipping drop.",
+            holder.getServer().getName(),
+            segment.getIdentifier()
+        );
       }
     }
 
