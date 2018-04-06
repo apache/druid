@@ -318,8 +318,10 @@ public class CompressionUtils
    * @param in The raw input stream
    *
    * @return A GZIPInputStream that can handle concatenated gzip streams in the input
+   *
+   * @see #decompress(InputStream, String) which should be used instead for streams coming from files
    */
-  private static GZIPInputStream gzipInputStream(final InputStream in) throws IOException
+  public static GZIPInputStream gzipInputStream(final InputStream in) throws IOException
   {
     return new GZIPInputStream(
         new FilterInputStream(in)
