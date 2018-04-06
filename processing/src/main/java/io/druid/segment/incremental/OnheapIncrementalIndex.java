@@ -37,7 +37,6 @@ import io.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -296,7 +295,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     final boolean countCheck = size() < maxRowCount;
     boolean sizeCheck = true;
-    if (maxBytesInMemory  > 0 ) {
+    if (maxBytesInMemory > 0) {
       sizeCheck = sizeInBytes() < maxBytesInMemory;
     }
     final boolean canAdd = countCheck && sizeCheck;

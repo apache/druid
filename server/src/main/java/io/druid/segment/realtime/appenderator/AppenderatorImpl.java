@@ -223,7 +223,7 @@ public class AppenderatorImpl implements Appenderator
     final int sinkRowsInMemoryAfterAdd;
     final long bytesInMemoryBeforeAdd = sink.getBytesInMemory();
     final long bytesInMemoryAfterAdd;
-    final  IncrementalIndexAddResult addResult;
+    final IncrementalIndexAddResult addResult;
 
     try {
       addResult = sink.add(row, !allowIncrementalPersists);
