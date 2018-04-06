@@ -86,23 +86,26 @@ In a simple case where only one [tier](../../querying/lookups.html#dynamic-confi
 {
   "realtime_customer2": {
     "country_code": {
-      "type": "cachedNamespace",
-      "extractionNamespace": {
-         "type": "jdbc",
-         "connectorConfig": {
-           "createTables": true,
-           "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
-           "user": "druid",
-           "password": "diurd"
-         },
-         "table": "lookupValues",
-         "keyColumn": "value_id",
-         "valueColumn": "value_text",
-         "filter": "value_type='country'",
-         "tsColumn": "timeColumn"
-      },
-      "firstCacheTimeout": 120000,
-      "injective":true
+      "version": "v0",
+      "lookupExtractorFactory": {
+        "type": "cachedNamespace",
+        "extractionNamespace": {
+          "type": "jdbc",
+          "connectorConfig": {
+            "createTables": true,
+            "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+            "user": "druid",
+            "password": "diurd"
+          },
+          "table": "lookupValues",
+          "keyColumn": "value_id",
+          "valueColumn": "value_text",
+          "filter": "value_type='country'",
+          "tsColumn": "timeColumn"
+        },
+        "firstCacheTimeout": 120000,
+        "injective": true
+      }
     }
   }
 }
@@ -112,22 +115,26 @@ Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2
 
 ```json
 {
-  "type": "cachedNamespace",
-  "extractionNamespace": {
-    "type": "jdbc",
-    "connectorConfig": {
-      "createTables": true,
-      "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
-      "user": "druid",
-      "password": "diurd"
+  "version": "v0",
+  "lookupExtractorFactory": {
+    "type": "cachedNamespace",
+    "extractionNamespace": {
+      "type": "jdbc",
+      "connectorConfig": {
+        "createTables": true,
+        "connectURI": "jdbc:mysql://localhost:3306/druid",
+        "user": "druid",
+        "password": "diurd"
+      },
+      "table": "lookupValues",
+      "keyColumn": "value_id",
+      "valueColumn": "value_text",
+      "filter": "value_type='country'",
+      "tsColumn": "timeColumn"
     },
-    "table": "lookupTable",
-    "keyColumn": "country_id",
-    "valueColumn": "country_name",
-    "tsColumn": "timeColumn"
-  },
-  "firstCacheTimeout": 120000,
-  "injective":true
+    "firstCacheTimeout": 120000,
+    "injective": true
+  }
 }
 ```
 
