@@ -28,14 +28,18 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import io.druid.java.util.common.io.NativeIO;
 import io.druid.java.util.common.logger.Logger;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -48,7 +52,9 @@ public class CompressionUtils
 {
   private static final Logger log = new Logger(CompressionUtils.class);
   private static final int DEFAULT_RETRY_COUNT = 3;
+  private static final String BZ2_SUFFIX = ".bz2";
   private static final String GZ_SUFFIX = ".gz";
+  private static final String XZ_SUFFIX = ".xz";
   private static final String ZIP_SUFFIX = ".zip";
 
   /**
@@ -313,7 +319,7 @@ public class CompressionUtils
    *
    * @return A GZIPInputStream that can handle concatenated gzip streams in the input
    */
-  public static GZIPInputStream gzipInputStream(final InputStream in) throws IOException
+  private static GZIPInputStream gzipInputStream(final InputStream in) throws IOException
   {
     return new GZIPInputStream(
         new FilterInputStream(in)
@@ -515,5 +521,43 @@ public class CompressionUtils
       return reducedFname;
     }
     throw new IAE("[%s] is not a valid gz file name", fname);
+  }
+
+  /**
+   * Decompress an input stream from a file, based on the filename.
+   */
+  public static InputStream decompress(final InputStream in, final String fileName) throws IOException
+  {
+    if (fileName.endsWith(GZ_SUFFIX)) {
+      return gzipInputStream(in);
+    } else if (fileName.endsWith(BZ2_SUFFIX)) {
+      return new BZip2CompressorInputStream(in, true);
+    } else if (fileName.endsWith(XZ_SUFFIX)) {
+      return new XZCompressorInputStream(in, true);
+    } else if (fileName.endsWith(ZIP_SUFFIX)) {
+      // This reads the first file in the archive.
+      final ZipInputStream zipIn = new ZipInputStream(in, StandardCharsets.UTF_8);
+      try {
+        final ZipEntry nextEntry = zipIn.getNextEntry();
+        if (nextEntry == null) {
+          zipIn.close();
+
+          // No files in the archive - return an empty stream.
+          return new ByteArrayInputStream(new byte[0]);
+        }
+        return zipIn;
+      }
+      catch (IOException e) {
+        try {
+          zipIn.close();
+        }
+        catch (IOException e2) {
+          e.addSuppressed(e2);
+        }
+        throw e;
+      }
+    } else {
+      return in;
+    }
   }
 }
