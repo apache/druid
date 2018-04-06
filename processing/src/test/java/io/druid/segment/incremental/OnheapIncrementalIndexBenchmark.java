@@ -166,7 +166,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected Integer addToFacts(
+    protected AddToFactsResult addToFacts(
         AggregatorFactory[] metrics,
         boolean deserializeComplexMetrics,
         boolean reportParseExceptions,
@@ -235,8 +235,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       rowContainer.set(null);
 
-
-      return numEntries.get();
+      return new AddToFactsResult(numEntries.get(), new ArrayList<>());
     }
 
     @Override

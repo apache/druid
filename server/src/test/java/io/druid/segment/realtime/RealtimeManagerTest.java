@@ -1040,7 +1040,7 @@ public class RealtimeManagerTest
         return -1;
       }
 
-      return sink.add(row, false);
+      return sink.add(row, false).getRowCount();
     }
 
     public Sink getSink(long timestamp)

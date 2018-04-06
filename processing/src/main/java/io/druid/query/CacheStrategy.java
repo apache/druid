@@ -26,7 +26,7 @@ import io.druid.guice.annotations.ExtensionPoint;
 import java.util.concurrent.ExecutorService;
 
 /**
-*/
+ */
 @ExtensionPoint
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
@@ -37,6 +37,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    * @param query            the query to be cached
    * @param willMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(ExecutorService, Iterable)} will be
    *                         called on the cached by-segment results
+   *
    * @return true if the query is cacheable, otherwise false.
    */
   boolean isCacheable(QueryType query, boolean willMergeRunners);
@@ -45,6 +46,7 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    * Computes the cache key for the given query
    *
    * @param query the query to compute a cache key for
+   *
    * @return the cache key
    */
   byte[] computeCacheKey(QueryType query);
@@ -58,17 +60,32 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 
   /**
    * Returns a function that converts from the QueryType's result type to something cacheable.
-   *
+   * <p>
    * The resulting function must be thread-safe.
+   *
+   * @param isResultLevelCache indicates whether the function is invoked for result-level caching or segment-level caching
    *
    * @return a thread-safe function that converts the QueryType's result type into something cacheable
    */
-  Function<T, CacheType> prepareForCache();
+  Function<T, CacheType> prepareForCache(boolean isResultLevelCache);
 
   /**
    * A function that does the inverse of the operation that the function prepareForCache returns
    *
+   * @param isResultLevelCache indicates whether the function is invoked for result-level caching or segment-level caching
+   *
    * @return A function that does the inverse of the operation that the function prepareForCache returns
    */
-  Function<CacheType, T> pullFromCache();
+  Function<CacheType, T> pullFromCache(boolean isResultLevelCache);
+
+
+  default Function<T, CacheType> prepareForSegmentLevelCache()
+  {
+    return prepareForCache(false);
+  }
+
+  default Function<CacheType, T> pullFromSegmentLevelCache()
+  {
+    return pullFromCache(false);
+  }
 }

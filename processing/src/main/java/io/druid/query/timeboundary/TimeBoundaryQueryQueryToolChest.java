@@ -171,7 +171,7 @@ public class TimeBoundaryQueryQueryToolChest
       }
 
       @Override
-      public Function<Result<TimeBoundaryResultValue>, Object> prepareForCache()
+      public Function<Result<TimeBoundaryResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<TimeBoundaryResultValue>, Object>()
         {
@@ -184,7 +184,7 @@ public class TimeBoundaryQueryQueryToolChest
       }
 
       @Override
-      public Function<Object, Result<TimeBoundaryResultValue>> pullFromCache()
+      public Function<Object, Result<TimeBoundaryResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<TimeBoundaryResultValue>>()
         {

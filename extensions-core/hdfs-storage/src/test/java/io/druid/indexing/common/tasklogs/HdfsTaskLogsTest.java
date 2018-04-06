@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.tasklogs;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
@@ -37,6 +36,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class HdfsTaskLogsTest
@@ -50,7 +50,7 @@ public class HdfsTaskLogsTest
     final File tmpDir = tempFolder.newFolder();
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
-    Files.write("blah", logFile, Charsets.UTF_8);
+    Files.write("blah", logFile, StandardCharsets.UTF_8);
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
     taskLogs.pushTaskLog("foo", logFile);
 
@@ -69,11 +69,11 @@ public class HdfsTaskLogsTest
     final File logFile = new File(tmpDir, "log");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
-    Files.write("blah", logFile, Charsets.UTF_8);
+    Files.write("blah", logFile, StandardCharsets.UTF_8);
     taskLogs.pushTaskLog("foo", logFile);
     Assert.assertEquals("blah", readLog(taskLogs, "foo", 0));
 
-    Files.write("blah blah", logFile, Charsets.UTF_8);
+    Files.write("blah blah", logFile, StandardCharsets.UTF_8);
     taskLogs.pushTaskLog("foo", logFile);
     Assert.assertEquals("blah blah", readLog(taskLogs, "foo", 0));
   }
@@ -90,7 +90,7 @@ public class HdfsTaskLogsTest
 
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
-    Files.write("log1content", logFile, Charsets.UTF_8);
+    Files.write("log1content", logFile, StandardCharsets.UTF_8);
     taskLogs.pushTaskLog("log1", logFile);
     Assert.assertEquals("log1content", readLog(taskLogs, "log1", 0));
 
@@ -101,7 +101,7 @@ public class HdfsTaskLogsTest
     long time = (System.currentTimeMillis() / 1000) * 1000;
     Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log1")).getModificationTime() < time);
 
-    Files.write("log2content", logFile, Charsets.UTF_8);
+    Files.write("log2content", logFile, StandardCharsets.UTF_8);
     taskLogs.pushTaskLog("log2", logFile);
     Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
     Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log2")).getModificationTime() >= time);

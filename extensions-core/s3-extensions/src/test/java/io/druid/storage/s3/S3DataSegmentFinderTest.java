@@ -19,6 +19,15 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Predicate;
@@ -31,17 +40,13 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.TestHelper;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.StorageObjectsChunk;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
-import org.jets3t.service.model.StorageObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -50,8 +55,12 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -105,7 +114,7 @@ public class S3DataSegmentFinderTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  RestS3Service mockS3Client;
+  MockAmazonS3Client mockS3Client;
   S3DataSegmentPusherConfig config;
 
   private String bucket;
@@ -121,8 +130,6 @@ public class S3DataSegmentFinderTest
   private String indexZip3;
   private String indexZip4_0;
   private String indexZip4_1;
-
-
 
   @BeforeClass
   public static void setUpStatic()
@@ -140,7 +147,7 @@ public class S3DataSegmentFinderTest
     config.setBucket(bucket);
     config.setBaseKey(baseKey);
 
-    mockS3Client = new MockStorageService(temporaryFolder.newFolder());
+    mockS3Client = new MockAmazonS3Client(temporaryFolder.newFolder());
 
 
     descriptor1 = S3Utils.descriptorPathForSegmentPath(baseKey + "/interval1/v1/0/");
@@ -154,17 +161,17 @@ public class S3DataSegmentFinderTest
     indexZip4_0 = S3Utils.indexZipForSegmentPath(descriptor4_0);
     indexZip4_1 = S3Utils.indexZipForSegmentPath(descriptor4_1);
 
-    mockS3Client.putObject(bucket, new S3Object(descriptor1, mapper.writeValueAsString(SEGMENT_1)));
-    mockS3Client.putObject(bucket, new S3Object(descriptor2, mapper.writeValueAsString(SEGMENT_2)));
-    mockS3Client.putObject(bucket, new S3Object(descriptor3, mapper.writeValueAsString(SEGMENT_3)));
-    mockS3Client.putObject(bucket, new S3Object(descriptor4_0, mapper.writeValueAsString(SEGMENT_4_0)));
-    mockS3Client.putObject(bucket, new S3Object(descriptor4_1, mapper.writeValueAsString(SEGMENT_4_1)));
+    mockS3Client.putObject(bucket, descriptor1, mapper.writeValueAsString(SEGMENT_1));
+    mockS3Client.putObject(bucket, descriptor2, mapper.writeValueAsString(SEGMENT_2));
+    mockS3Client.putObject(bucket, descriptor3, mapper.writeValueAsString(SEGMENT_3));
+    mockS3Client.putObject(bucket, descriptor4_0, mapper.writeValueAsString(SEGMENT_4_0));
+    mockS3Client.putObject(bucket, descriptor4_1, mapper.writeValueAsString(SEGMENT_4_1));
 
-    mockS3Client.putObject(bucket, new S3Object(indexZip1, "dummy"));
-    mockS3Client.putObject(bucket, new S3Object(indexZip2, "dummy"));
-    mockS3Client.putObject(bucket, new S3Object(indexZip3, "dummy"));
-    mockS3Client.putObject(bucket, new S3Object(indexZip4_0, "dummy"));
-    mockS3Client.putObject(bucket, new S3Object(indexZip4_1, "dummy"));
+    mockS3Client.putObject(bucket, indexZip1, "dummy");
+    mockS3Client.putObject(bucket, indexZip2, "dummy");
+    mockS3Client.putObject(bucket, indexZip3, "dummy");
+    mockS3Client.putObject(bucket, indexZip4_0, "dummy");
+    mockS3Client.putObject(bucket, indexZip4_1, "dummy");
   }
 
   @Test
@@ -210,34 +217,34 @@ public class S3DataSegmentFinderTest
     final String serializedSegment4_1 = mapper.writeValueAsString(updatedSegment4_1);
 
     Assert.assertNotEquals(serializedSegment1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getObjectContent()));
     Assert.assertNotEquals(serializedSegment2,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getObjectContent()));
     Assert.assertNotEquals(serializedSegment3,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getObjectContent()));
     Assert.assertNotEquals(serializedSegment4_0,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getObjectContent()));
     Assert.assertNotEquals(serializedSegment4_1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getObjectContent()));
 
     final Set<DataSegment> segments2 = s3DataSegmentFinder.findSegments("", true);
 
     Assert.assertEquals(segments, segments2);
 
     Assert.assertEquals(serializedSegment1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getObjectContent()));
     Assert.assertEquals(serializedSegment2,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getObjectContent()));
     Assert.assertEquals(serializedSegment3,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getObjectContent()));
     Assert.assertEquals(serializedSegment4_0,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getObjectContent()));
     Assert.assertEquals(serializedSegment4_1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getDataInputStream()));
+                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getObjectContent()));
   }
 
   @Test(expected = SegmentLoadingException.class)
-  public void testFindSegmentsFail() throws SegmentLoadingException, ServiceException
+  public void testFindSegmentsFail() throws SegmentLoadingException
   {
     mockS3Client.deleteObject(bucket, indexZip4_1);
 
@@ -275,21 +282,8 @@ public class S3DataSegmentFinderTest
     final String descriptorPath = S3Utils.descriptorPathForSegmentPath(segmentPath);
     final String indexPath = S3Utils.indexZipForSegmentPath(segmentPath);
 
-    mockS3Client.putObject(
-        config.getBucket(),
-        new S3Object(
-            descriptorPath,
-            mapper.writeValueAsString(segmentMissingLoadSpec)
-        )
-    );
-
-    mockS3Client.putObject(
-        config.getBucket(),
-        new S3Object(
-            indexPath,
-            "dummy"
-        )
-    );
+    mockS3Client.putObject(config.getBucket(), descriptorPath, mapper.writeValueAsString(segmentMissingLoadSpec));
+    mockS3Client.putObject(config.getBucket(), indexPath, "dummy");
 
     Set<DataSegment> segments = s3DataSegmentFinder.findSegments(segmentPath, false);
     Assert.assertEquals(1, segments.size());
@@ -308,24 +302,34 @@ public class S3DataSegmentFinderTest
     return S3Utils.descriptorPathForSegmentPath(String.valueOf(segment.getLoadSpec().get("key")));
   }
 
-  private static class MockStorageService extends RestS3Service
+  private static class MockAmazonS3Client extends AmazonS3Client
   {
     private final File baseDir;
     private final Map<String, Set<String>> storage = Maps.newHashMap();
 
-    public MockStorageService(File baseDir)
+    public MockAmazonS3Client(File baseDir)
     {
-      super(null);
+      super();
       this.baseDir = baseDir;
     }
 
     @Override
-    public StorageObjectsChunk listObjectsChunked(
-        final String bucketName, final String prefix, final String delimiter,
-        final long maxListingLength, final String priorLastKey
-    ) throws ServiceException
+    public boolean doesObjectExist(String bucketName, String objectName)
     {
-      List<String> keysOrigin = Lists.newArrayList(storage.get(bucketName));
+      final Set<String> keys = storage.get(bucketName);
+      if (keys != null) {
+        return keys.contains(objectName);
+      }
+      return false;
+    }
+
+    @Override
+    public ListObjectsV2Result listObjectsV2(ListObjectsV2Request listObjectsV2Request)
+    {
+      final String bucketName = listObjectsV2Request.getBucketName();
+      final String prefix = listObjectsV2Request.getPrefix();
+
+      final List<String> keysOrigin = Lists.newArrayList(storage.get(bucketName));
 
       Predicate<String> prefixFilter = new Predicate<String>()
       {
@@ -341,11 +345,11 @@ public class S3DataSegmentFinderTest
       );
 
       int startOffset = 0;
-      if (priorLastKey != null) {
-        startOffset = keys.indexOf(priorLastKey) + 1;
+      if (listObjectsV2Request.getContinuationToken() != null) {
+        startOffset = keys.indexOf(listObjectsV2Request.getContinuationToken()) + 1;
       }
 
-      int endOffset = startOffset + (int) maxListingLength; // exclusive
+      int endOffset = startOffset + listObjectsV2Request.getMaxKeys(); // exclusive
       if (endOffset > keys.size()) {
         endOffset = keys.size();
       }
@@ -355,64 +359,73 @@ public class S3DataSegmentFinderTest
         newPriorLastkey = null;
       }
 
-      List<StorageObject> objects = Lists.newArrayList();
+      List<S3ObjectSummary> objects = new ArrayList<>();
       for (String objectKey : keys.subList(startOffset, endOffset)) {
-        objects.add(getObjectDetails(bucketName, objectKey));
+        final S3ObjectSummary objectSummary = new S3ObjectSummary();
+        objectSummary.setBucketName(bucketName);
+        objectSummary.setKey(objectKey);
+        objects.add(objectSummary);
       }
 
-      return new StorageObjectsChunk(
-          prefix, delimiter, objects.toArray(new StorageObject[]{}), null, newPriorLastkey);
-    }
+      final ListObjectsV2Result result = new ListObjectsV2Result();
+      result.setBucketName(bucketName);
+      result.setKeyCount(objects.size());
+      result.getObjectSummaries().addAll(objects);
+      result.setContinuationToken(newPriorLastkey);
+      result.setTruncated(newPriorLastkey != null);
 
-    @Override
-    public StorageObject getObjectDetails(String bucketName, String objectKey) throws ServiceException
-    {
-
-      if (!storage.containsKey(bucketName)) {
-        ServiceException ex = new ServiceException();
-        ex.setResponseCode(404);
-        ex.setErrorCode("NoSuchBucket");
-        throw ex;
-      }
-
-      if (!storage.get(bucketName).contains(objectKey)) {
-        ServiceException ex = new ServiceException();
-        ex.setResponseCode(404);
-        ex.setErrorCode("NoSuchKey");
-        throw ex;
-      }
-
-      final File objectPath = new File(baseDir, objectKey);
-      StorageObject storageObject = new StorageObject();
-      storageObject.setBucketName(bucketName);
-      storageObject.setKey(objectKey);
-      storageObject.setDataInputFile(objectPath);
-
-      return storageObject;
+      return result;
     }
 
     @Override
     public S3Object getObject(String bucketName, String objectKey)
     {
+      if (!storage.containsKey(bucketName)) {
+        AmazonServiceException ex = new AmazonS3Exception("S3DataSegmentFinderTest");
+        ex.setStatusCode(404);
+        ex.setErrorCode("NoSuchBucket");
+        throw ex;
+      }
+
+      if (!storage.get(bucketName).contains(objectKey)) {
+        AmazonServiceException ex = new AmazonS3Exception("S3DataSegmentFinderTest");
+        ex.setStatusCode(404);
+        ex.setErrorCode("NoSuchKey");
+        throw ex;
+      }
+
       final File objectPath = new File(baseDir, objectKey);
-      S3Object s3Object = new S3Object();
-      s3Object.setBucketName(bucketName);
-      s3Object.setKey(objectKey);
-      s3Object.setDataInputFile(objectPath);
+      S3Object storageObject = new S3Object();
+      storageObject.setBucketName(bucketName);
+      storageObject.setKey(objectKey);
+      try {
+        storageObject.setObjectContent(new FileInputStream(objectPath));
+      }
+      catch (FileNotFoundException e) {
+        AmazonServiceException ex = new AmazonS3Exception("S3DataSegmentFinderTest", e);
+        ex.setStatusCode(500);
+        ex.setErrorCode("InternalError");
+        throw ex;
+      }
 
-      return s3Object;
-
+      return storageObject;
     }
 
     @Override
-    public S3Object putObject(final String bucketName, final S3Object object)
+    public PutObjectResult putObject(String bucketName, String key, String data)
+    {
+      return putObject(bucketName, key, new ByteArrayInputStream(StringUtils.toUtf8(data)), null);
+    }
+
+    @Override
+    public PutObjectResult putObject(String bucketName, String key, InputStream input, ObjectMetadata metadata)
     {
       if (!storage.containsKey(bucketName)) {
-        storage.put(bucketName, Sets.<String>newHashSet());
+        storage.put(bucketName, Sets.newHashSet());
       }
-      storage.get(bucketName).add(object.getKey());
+      storage.get(bucketName).add(key);
 
-      final File objectPath = new File(baseDir, object.getKey());
+      final File objectPath = new File(baseDir, key);
 
       if (!objectPath.getParentFile().exists()) {
         objectPath.getParentFile().mkdirs();
@@ -420,7 +433,7 @@ public class S3DataSegmentFinderTest
 
       try {
         try (
-            InputStream in = object.getDataInputStream()
+            InputStream in = input
         ) {
           FileUtils.copyInputStreamToFile(in, objectPath);
         }
@@ -429,7 +442,7 @@ public class S3DataSegmentFinderTest
         throw Throwables.propagate(e);
       }
 
-      return object;
+      return new PutObjectResult();
     }
 
     @Override

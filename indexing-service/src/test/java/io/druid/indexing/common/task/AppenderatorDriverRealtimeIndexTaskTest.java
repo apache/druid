@@ -19,6 +19,7 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -34,15 +35,23 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.LookupNodeService;
+import io.druid.indexer.IngestionState;
+import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.SegmentLoaderFactory;
+import io.druid.indexing.common.TaskReport;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -117,12 +126,12 @@ import io.druid.segment.transform.TransformSpec;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.ServerType;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
@@ -130,8 +139,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
@@ -149,7 +156,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -161,6 +167,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       "host",
       new NoopEmitter()
   );
+  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
 
   private static final String FAIL_DIM = "__fail__";
 
@@ -261,6 +268,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private TaskLockbox taskLockbox;
   private TaskToolboxFactory taskToolboxFactory;
   private File baseDir;
+  private File reportsFile;
 
   @Before
   public void setUp() throws IOException
@@ -277,6 +285,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     derbyConnector.createPendingSegmentsTable();
 
     baseDir = tempFolder.newFolder();
+    reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     makeToolboxFactory(baseDir);
   }
 
@@ -284,6 +293,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   public void tearDown()
   {
     taskExec.shutdownNow();
+    reportsFile.delete();
   }
 
   @Test(timeout = 60_000L)
@@ -294,11 +304,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   }
 
 
-  @Test(timeout = 60_000L, expected = ExecutionException.class)
+  @Test(timeout = 60_000L)
   public void testHandoffTimeout() throws Exception
   {
     expectPublishedSegments(1);
-    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, true, 100L);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, true, 100L, true, 0, 1);
     final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
@@ -318,7 +328,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     firehose.close();
 
     // handoff would timeout, resulting in exception
-    statusFuture.get();
+    TaskStatus status = statusFuture.get();
+    Assert.assertTrue(status.getErrorMsg().contains("java.util.concurrent.TimeoutException: Timeout waiting for task."));
   }
 
   @Test(timeout = 60_000L)
@@ -520,7 +531,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
             new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
         )
     );
-    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0, true, 0, 1);
     final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
@@ -595,10 +606,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     firehose.addRows(
         ImmutableList.of(
-            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1"),
-            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "foo"),
+            ImmutableMap.of("t", 2000000L, "dim1", "foo", "met1", "1"),
+            ImmutableMap.of("t", 3000000L, "dim1", "foo", "met1", "foo"),
             ImmutableMap.of("t", now.minus(new Period("P1D")).getMillis(), "dim1", "foo", "met1", "foo"),
-            ImmutableMap.of("t", now.getMillis(), "dim2", "bar", "met1", 2.0)
+            ImmutableMap.of("t", 4000000L, "dim2", "bar", "met1", 2.0)
         )
     );
 
@@ -606,26 +617,19 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     firehose.close();
 
     // Wait for the task to finish.
-    expectedException.expect(ExecutionException.class);
-    expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(ParseException.class));
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Encountered parse error for aggregator[met1]")
+    TaskStatus status = statusFuture.get();
+    Assert.assertTrue(status.getErrorMsg().contains("java.lang.RuntimeException: Max parse exceptions exceeded, terminating task..."));
+
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+
+    Map<String, Object> expectedUnparseables = ImmutableMap.of(
+        "buildSegments",
+        Arrays.asList(
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:50:00.000Z, event={t=3000000, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]"
         )
     );
-    expectedException.expect(
-        ThrowableCauseMatcher.hasCause(
-            ThrowableCauseMatcher.hasCause(
-                CoreMatchers.allOf(
-                    CoreMatchers.<Throwable>instanceOf(ParseException.class),
-                    ThrowableMessageMatcher.hasMessage(
-                        CoreMatchers.containsString("Unable to parse value[foo] for field[met1]")
-                    )
-                )
-            )
-        )
-    );
-    statusFuture.get();
+
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
 
   @Test(timeout = 60_000L)
@@ -633,7 +637,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(1);
 
-    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, false);
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, false, 0, true, null, 1);
     final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
@@ -671,7 +675,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
-    Assert.assertEquals(3, task.getMetrics().processed());
+    Assert.assertEquals(2, task.getMetrics().processed());
+    Assert.assertEquals(1, task.getMetrics().processedWithErrors());
     Assert.assertEquals(0, task.getMetrics().thrownAway());
     Assert.assertEquals(2, task.getMetrics().unparseable());
 
@@ -696,9 +701,195 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     }
     handOffCallbacks.clear();
 
+    Map<String, Object> expectedMetrics = ImmutableMap.of(
+        "buildSegments",
+        ImmutableMap.of(
+            TaskMetricsUtils.ROWS_PROCESSED, 2,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 1,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+        )
+    );
+
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testMultipleParseExceptionsSuccess() throws Exception
+  {
+    expectPublishedSegments(1);
+
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, false, 0, true, 10, 10);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    firehose.addRows(
+        Arrays.asList(
+            // Good row- will be processed.
+            ImmutableMap.of("t", 1521251960729L, "dim1", "foo", "met1", "1"),
+
+            // Null row- will be thrown away.
+            null,
+
+            // Bad metric- will count as processed, but that particular metric won't update.
+            ImmutableMap.of("t", 1521251960729L, "dim1", "foo", "met1", "foo"),
+
+            // Bad long dim- will count as processed, but bad dims will get default values
+            ImmutableMap.of("t", 1521251960729L, "dim1", "foo", "dimLong", "notnumber", "dimFloat", "notnumber", "met1", "foo"),
+
+            // Bad row- will be unparseable.
+            ImmutableMap.of("dim1", "foo", "met1", 2.0, FAIL_DIM, "x"),
+
+            // Good row- will be processed.
+            ImmutableMap.of("t", 1521251960729L, "dim2", "bar", "met1", 2.0)
+        )
+    );
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    Collection<DataSegment> publishedSegments = awaitSegments();
+
+    DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
+
+    // Check metrics.
+    Assert.assertEquals(2, task.getMetrics().processed());
+    Assert.assertEquals(2, task.getMetrics().processedWithErrors());
+    Assert.assertEquals(0, task.getMetrics().thrownAway());
+    Assert.assertEquals(2, task.getMetrics().unparseable());
+
+    // Do some queries.
+    Assert.assertEquals(4, sumMetric(task, null, "rows"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
+
+    awaitHandoffs();
+
+    // Simulate handoff.
+    for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
+      final Pair<Executor, Runnable> executorRunnablePair = entry.getValue();
+      Assert.assertEquals(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          ),
+          entry.getKey()
+      );
+      executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
+    }
+    handOffCallbacks.clear();
+
+    Map<String, Object> expectedMetrics = ImmutableMap.of(
+        "buildSegments",
+        ImmutableMap.of(
+            TaskMetricsUtils.ROWS_PROCESSED, 2,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+        )
+    );
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+    Map<String, Object> expectedUnparseables = ImmutableMap.of(
+        "buildSegments",
+        Arrays.asList(
+            "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]",
+            "Unparseable timestamp found! Event: null"
+        )
+    );
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testMultipleParseExceptionsFailure() throws Exception
+  {
+    expectPublishedSegments(1);
+
+    final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, false, 0, true, 3, 10);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    firehose.addRows(
+        Arrays.asList(
+            // Good row- will be processed.
+            ImmutableMap.of("t", 1521251960729L, "dim1", "foo", "met1", "1"),
+
+            // Null row- will be thrown away.
+            null,
+
+            // Bad metric- will count as processed, but that particular metric won't update.
+            ImmutableMap.of("t", 1521251960729L, "dim1", "foo", "met1", "foo"),
+
+            // Bad long dim- will count as processed, but bad dims will get default values
+            ImmutableMap.of("t", 1521251960729L, "dim1", "foo", "dimLong", "notnumber", "dimFloat", "notnumber", "met1", "foo"),
+
+            // Bad row- will be unparseable.
+            ImmutableMap.of("dim1", "foo", "met1", 2.0, FAIL_DIM, "x"),
+
+            // Good row- will be processed.
+            ImmutableMap.of("t", 1521251960729L, "dim2", "bar", "met1", 2.0)
+        )
+    );
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskState.FAILED, taskStatus.getStatusCode());
+    Assert.assertTrue(taskStatus.getErrorMsg().contains("Max parse exceptions exceeded, terminating task..."));
+
+    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+
+    Map<String, Object> expectedMetrics = ImmutableMap.of(
+        "buildSegments",
+        ImmutableMap.of(
+            TaskMetricsUtils.ROWS_PROCESSED, 1,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+        )
+    );
+    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+    Map<String, Object> expectedUnparseables = ImmutableMap.of(
+        "buildSegments",
+        Arrays.asList(
+            "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
+            "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]",
+            "Unparseable timestamp found! Event: null"
+        )
+    );
+    Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
+    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
   }
 
   @Test(timeout = 60_000L)
@@ -929,14 +1120,21 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       final ListenableFuture<TaskStatus> statusFuture = runTask(task2);
 
       // Wait for the task to finish.
-      boolean caught = false;
-      try {
-        statusFuture.get();
-      }
-      catch (Exception expected) {
-        caught = true;
-      }
-      Assert.assertTrue("expected exception", caught);
+      TaskStatus status = statusFuture.get();
+
+      IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+
+      Map<String, Object> expectedMetrics = ImmutableMap.of(
+          "buildSegments",
+          ImmutableMap.of(
+              TaskMetricsUtils.ROWS_PROCESSED, 0,
+              TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
+              TaskMetricsUtils.ROWS_UNPARSEABLE, 0,
+              TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+          )
+      );
+      Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+      Assert.assertTrue(status.getErrorMsg().contains("java.lang.IllegalArgumentException\n\tat java.nio.Buffer.position"));
     }
   }
 
@@ -989,19 +1187,22 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
   private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(final String taskId)
   {
-    return makeRealtimeTask(taskId, TransformSpec.NONE, true, 0);
+    return makeRealtimeTask(taskId, TransformSpec.NONE, true, 0, true, 0, 1);
   }
 
   private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions)
   {
-    return makeRealtimeTask(taskId, TransformSpec.NONE, reportParseExceptions, 0);
+    return makeRealtimeTask(taskId, TransformSpec.NONE, reportParseExceptions, 0, true, null, 1);
   }
 
   private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
       final String taskId,
       final TransformSpec transformSpec,
       final boolean reportParseExceptions,
-      final long handoffTimeout
+      final long handoffTimeout,
+      final Boolean logParseExceptions,
+      final Integer maxParseExceptions,
+      final Integer maxSavedParseExceptions
   )
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -1012,7 +1213,13 @@ public class AppenderatorDriverRealtimeIndexTaskTest
                 new TimeAndDimsParseSpec(
                     new TimestampSpec("t", "auto", null),
                     new DimensionsSpec(
-                        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim1t")),
+                        ImmutableList.of(
+                            new StringDimensionSchema("dim1"),
+                            new StringDimensionSchema("dim2"),
+                            new StringDimensionSchema("dim1t"),
+                            new LongDimensionSchema("dimLong"),
+                            new FloatDimensionSchema("dimFloat")
+                        ),
                         null,
                         null
                     )
@@ -1041,13 +1248,18 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         reportParseExceptions,
         handoffTimeout,
         null,
-        null
+        null,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions
     );
     return new AppenderatorDriverRealtimeIndexTask(
         taskId,
         null,
         new RealtimeAppenderatorIngestionSpec(dataSchema, realtimeIOConfig, tuningConfig),
-        null
+        null,
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     )
     {
       @Override
@@ -1243,7 +1455,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new TaskReportFileWriter(reportsFile)
     );
   }
 
@@ -1264,5 +1477,18 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     List<Result<TimeseriesResultValue>> results =
         task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
     return results.isEmpty() ? 0 : results.get(0).getValue().getLongMetric(metric);
+  }
+
+  private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
+  {
+    Map<String, TaskReport> taskReports = objectMapper.readValue(
+        reportsFile,
+        new TypeReference<Map<String, TaskReport>>()
+        {
+        }
+    );
+    return IngestionStatsAndErrorsTaskReportData.getPayloadFromTaskReports(
+        taskReports
+    );
   }
 }

@@ -21,7 +21,6 @@ package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import io.druid.data.input.ByteBufferInputRowParser;
@@ -36,6 +35,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +43,7 @@ import java.util.Map;
  */
 public class StringInputRowParser implements ByteBufferInputRowParser
 {
-  private static final Charset DEFAULT_CHARSET = Charsets.UTF_8;
+  private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
   private final ParseSpec parseSpec;
   private final MapInputRowParser mapParser;

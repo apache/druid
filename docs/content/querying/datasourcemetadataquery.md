@@ -29,7 +29,7 @@ The format of the result is:
 [ {
   "timestamp" : "2013-05-09T18:24:00.000Z",
   "result" : {
-    "maxIngestedEventTime" : "2013-05-09T18:24:09.007Z",
+    "maxIngestedEventTime" : "2013-05-09T18:24:09.007Z"
   }
 } ]
 ```

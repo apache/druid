@@ -19,7 +19,6 @@
 
 package io.druid.data.input.impl.prefetch;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
@@ -82,7 +81,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           false,
           0
       ),
-      Charsets.UTF_8.name()
+      StandardCharsets.UTF_8.name()
   );
 
   @Rule

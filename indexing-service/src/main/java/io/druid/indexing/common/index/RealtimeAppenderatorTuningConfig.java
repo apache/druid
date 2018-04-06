@@ -65,6 +65,10 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
+  private final boolean logParseExceptions;
+  private final int maxParseExceptions;
+  private final int maxSavedParseExceptions;
+
   @JsonCreator
   public RealtimeAppenderatorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
@@ -77,7 +81,10 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("publishAndHandoffTimeout") Long publishAndHandoffTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
-      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
+      @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -100,6 +107,17 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+
+    if (this.reportParseExceptions) {
+      this.maxParseExceptions = 0;
+      this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
+    } else {
+      this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+      this.maxSavedParseExceptions = maxSavedParseExceptions == null
+                                     ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                     : maxSavedParseExceptions;
+    }
+    this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
   }
 
   @Override
@@ -176,6 +194,24 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return segmentWriteOutMediumFactory;
   }
 
+  @JsonProperty
+  public boolean isLogParseExceptions()
+  {
+    return logParseExceptions;
+  }
+
+  @JsonProperty
+  public int getMaxParseExceptions()
+  {
+    return maxParseExceptions;
+  }
+
+  @JsonProperty
+  public int getMaxSavedParseExceptions()
+  {
+    return maxSavedParseExceptions;
+  }
+
   public RealtimeAppenderatorTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeAppenderatorTuningConfig(
@@ -189,7 +225,10 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
         reportParseExceptions,
         publishAndHandoffTimeout,
         alertTimeout,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions
     );
   }
 }

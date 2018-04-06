@@ -42,11 +42,15 @@ import io.druid.segment.transform.TransformSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -144,6 +148,8 @@ public class HadoopDruidIndexerMapperTest
     );
     final Mapper.Context mapContext = EasyMock.mock(Mapper.Context.class);
     EasyMock.expect(mapContext.getConfiguration()).andReturn(hadoopConfig).once();
+    EasyMock.expect(mapContext.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER))
+            .andReturn(getTestCounter());
     EasyMock.replay(mapContext);
     mapper.setup(mapContext);
     final List<Map<String, Object>> rows = ImmutableList.of(
@@ -187,6 +193,66 @@ public class HadoopDruidIndexerMapperTest
     // other, non-dimension fields are not self describing so much be specified individually
     builder.put("m1", row.getRaw("m1"));
     return builder.build();
+  }
+
+  private static Counter getTestCounter()
+  {
+    return new Counter()
+    {
+      @Override
+      public void setDisplayName(String displayName)
+      {
+
+      }
+
+      @Override
+      public String getName()
+      {
+        return null;
+      }
+
+      @Override
+      public String getDisplayName()
+      {
+        return null;
+      }
+
+      @Override
+      public long getValue()
+      {
+        return 0;
+      }
+
+      @Override
+      public void setValue(long value)
+      {
+
+      }
+
+      @Override
+      public void increment(long incr)
+      {
+
+      }
+
+      @Override
+      public Counter getUnderlyingCounter()
+      {
+        return null;
+      }
+
+      @Override
+      public void write(DataOutput out) throws IOException
+      {
+
+      }
+
+      @Override
+      public void readFields(DataInput in) throws IOException
+      {
+
+      }
+    };
   }
 
   public static class MyMapper extends HadoopDruidIndexerMapper

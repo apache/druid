@@ -220,7 +220,7 @@ Druid does not support all SQL features, including:
 Additionally, some Druid features are not supported by the SQL language. Some unsupported Druid features include:
 
 - [Multi-value dimensions](multi-value-dimensions.html).
-- [DataSketches aggregators](../development/extensions-core/datasketches-aggregators.html).
+- [DataSketches aggregators](../development/extensions-core/datasketches-extension.html).
 - [Spatial filters](../development/geo.html).
 - [Query cancellation](querying.html#query-cancellation).
 
@@ -382,7 +382,7 @@ Properties connectionProperties = new Properties();
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   try (
-      final Statement statement = client.createStatement();
+      final Statement statement = connection.createStatement();
       final ResultSet resultSet = statement.executeQuery(query)
   ) {
     while (resultSet.next()) {

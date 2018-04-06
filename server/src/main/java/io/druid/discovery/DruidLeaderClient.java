@@ -19,14 +19,8 @@
 
 package io.druid.discovery;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.FullResponseHandler;
-import io.druid.java.util.http.client.response.FullResponseHolder;
-import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.client.selector.Server;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.discovery.ServerDiscoverySelector;
@@ -37,6 +31,11 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHandler;
+import io.druid.java.util.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -45,6 +44,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -130,7 +130,7 @@ public class DruidLeaderClient
 
   public FullResponseHolder go(Request request) throws IOException, InterruptedException
   {
-    return go(request, new FullResponseHandler(Charsets.UTF_8));
+    return go(request, new FullResponseHandler(StandardCharsets.UTF_8));
   }
 
   /**

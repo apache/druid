@@ -260,6 +260,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             final File taskFile = new File(taskDir, "task.json");
                             final File statusFile = new File(attemptDir, "status.json");
                             final File logFile = new File(taskDir, "log");
+                            final File reportsFile = new File(attemptDir, "report.json");
 
                             // time to adjust process holders
                             synchronized (tasks) {
@@ -408,6 +409,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("peon");
                               command.add(taskFile.toString());
                               command.add(statusFile.toString());
+                              command.add(reportsFile.toString());
                               String nodeType = task.getNodeType();
                               if (nodeType != null) {
                                 command.add("--nodeType");
@@ -459,6 +461,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               Thread.currentThread().setName(priorThreadName);
                               // Upload task logs
                               taskLogPusher.pushTaskLog(task.getId(), logFile);
+                              if (reportsFile.exists()) {
+                                taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+                              }
                             }
 
                             TaskStatus status;

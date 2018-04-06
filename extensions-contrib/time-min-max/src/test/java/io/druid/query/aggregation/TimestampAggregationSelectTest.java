@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -41,6 +40,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.zip.ZipFile;
@@ -147,7 +147,7 @@ public class TimestampAggregationSelectTest
         0,
         Granularities.MONTH,
         100,
-        Resources.toString(Resources.getResource("select.json"), Charsets.UTF_8)
+        Resources.toString(Resources.getResource("select.json"), StandardCharsets.UTF_8)
     );
 
     Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(seq.toList());

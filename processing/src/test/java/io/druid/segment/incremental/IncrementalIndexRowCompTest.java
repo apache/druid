@@ -43,35 +43,35 @@ public class IncrementalIndexRowCompTest
         .buildOnheap();
 
     long time = System.currentTimeMillis();
-    IncrementalIndexRow td1 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));
-    IncrementalIndexRow td2 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
-    IncrementalIndexRow td3 = index.toTimeAndDims(toMapRow(time, "billy", "A"));
+    IncrementalIndexRow ir1 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B")).getIncrementalIndexRow();
+    IncrementalIndexRow ir2 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "A")).getIncrementalIndexRow();
+    IncrementalIndexRow ir3 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A")).getIncrementalIndexRow();
 
-    IncrementalIndexRow td4 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
-    IncrementalIndexRow td5 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
-    IncrementalIndexRow td6 = index.toTimeAndDims(toMapRow(time + 1));
+    IncrementalIndexRow ir4 = index.toIncrementalIndexRow(toMapRow(time + 1, "billy", "A", "joe", "B")).getIncrementalIndexRow();
+    IncrementalIndexRow ir5 = index.toIncrementalIndexRow(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B"))).getIncrementalIndexRow();
+    IncrementalIndexRow ir6 = index.toIncrementalIndexRow(toMapRow(time + 1)).getIncrementalIndexRow();
 
     Comparator<IncrementalIndexRow> comparator = index.dimsComparator();
 
-    Assert.assertEquals(0, comparator.compare(td1, td1));
-    Assert.assertEquals(0, comparator.compare(td2, td2));
-    Assert.assertEquals(0, comparator.compare(td3, td3));
+    Assert.assertEquals(0, comparator.compare(ir1, ir1));
+    Assert.assertEquals(0, comparator.compare(ir2, ir2));
+    Assert.assertEquals(0, comparator.compare(ir3, ir3));
 
-    Assert.assertTrue(comparator.compare(td1, td2) > 0);
-    Assert.assertTrue(comparator.compare(td2, td1) < 0);
-    Assert.assertTrue(comparator.compare(td2, td3) > 0);
-    Assert.assertTrue(comparator.compare(td3, td2) < 0);
-    Assert.assertTrue(comparator.compare(td1, td3) > 0);
-    Assert.assertTrue(comparator.compare(td3, td1) < 0);
+    Assert.assertTrue(comparator.compare(ir1, ir2) > 0);
+    Assert.assertTrue(comparator.compare(ir2, ir1) < 0);
+    Assert.assertTrue(comparator.compare(ir2, ir3) > 0);
+    Assert.assertTrue(comparator.compare(ir3, ir2) < 0);
+    Assert.assertTrue(comparator.compare(ir1, ir3) > 0);
+    Assert.assertTrue(comparator.compare(ir3, ir1) < 0);
 
-    Assert.assertTrue(comparator.compare(td6, td1) > 0);
-    Assert.assertTrue(comparator.compare(td6, td2) > 0);
-    Assert.assertTrue(comparator.compare(td6, td3) > 0);
+    Assert.assertTrue(comparator.compare(ir6, ir1) > 0);
+    Assert.assertTrue(comparator.compare(ir6, ir2) > 0);
+    Assert.assertTrue(comparator.compare(ir6, ir3) > 0);
 
-    Assert.assertTrue(comparator.compare(td4, td6) > 0);
-    Assert.assertTrue(comparator.compare(td5, td6) > 0);
-    Assert.assertTrue(comparator.compare(td4, td5) < 0);
-    Assert.assertTrue(comparator.compare(td5, td4) > 0);
+    Assert.assertTrue(comparator.compare(ir4, ir6) > 0);
+    Assert.assertTrue(comparator.compare(ir5, ir6) > 0);
+    Assert.assertTrue(comparator.compare(ir4, ir5) < 0);
+    Assert.assertTrue(comparator.compare(ir5, ir4) > 0);
   }
 
   private MapBasedInputRow toMapRow(long time, Object... dimAndVal)

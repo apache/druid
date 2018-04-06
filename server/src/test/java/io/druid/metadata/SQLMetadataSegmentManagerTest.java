@@ -41,7 +41,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 
-public class MetadataSegmentManagerTest
+public class SQLMetadataSegmentManagerTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
@@ -229,5 +229,15 @@ public class MetadataSegmentManagerTest
 
     Assert.assertNull(manager.getInventoryValue(newDataSource));
     Assert.assertTrue(manager.removeSegment(newDataSource, newSegment.getIdentifier()));
+  }
+
+  @Test
+  public void testStopAndStart()
+  {
+    // Simulate successive losing and getting the coordinator leadership
+    manager.start();
+    manager.stop();
+    manager.start();
+    manager.stop();
   }
 }

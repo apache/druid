@@ -104,8 +104,8 @@ public class AlphaNumericTopNMetricSpecTest
                        + "    \"previousStop\": \"test\"\n"
                        + "}";
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
-    TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), AlphaNumericTopNMetricSpec.class);
+    TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), TopNMetricSpec.class);
+    TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), TopNMetricSpec.class);
     Assert.assertEquals(expectedMetricSpec, actualMetricSpec);
     Assert.assertEquals(expectedMetricSpec1, actualMetricSpec1);
   }

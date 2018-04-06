@@ -44,6 +44,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -448,7 +449,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   );
 
   // Note: This method needs to be thread safe.
-  protected abstract Integer addToFacts(
+  protected abstract AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -476,6 +477,49 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract boolean isNull(int rowOffset, int aggOffset);
 
+  static class IncrementalIndexRowResult
+  {
+    private IncrementalIndexRow incrementalIndexRow;
+    private List<String> parseExceptionMessages;
+
+    IncrementalIndexRowResult(IncrementalIndexRow incrementalIndexRow, List<String> parseExceptionMessages)
+    {
+      this.incrementalIndexRow = incrementalIndexRow;
+      this.parseExceptionMessages = parseExceptionMessages;
+    }
+
+    IncrementalIndexRow getIncrementalIndexRow()
+    {
+      return incrementalIndexRow;
+    }
+
+    List<String> getParseExceptionMessages()
+    {
+      return parseExceptionMessages;
+    }
+  }
+
+  static class AddToFactsResult
+  {
+    private int rowCount;
+    private List<String> parseExceptionMessages;
+
+    AddToFactsResult(int rowCount, List<String> parseExceptionMessages)
+    {
+      this.rowCount = rowCount;
+      this.parseExceptionMessages = parseExceptionMessages;
+    }
+
+    int getRowCount()
+    {
+      return rowCount;
+    }
+
+    List<String> getParseExceptionMessages()
+    {
+      return parseExceptionMessages;
+    }
+  }
 
   @Override
   public void close()
@@ -511,31 +555,36 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    *
    * @return the number of rows in the data set after adding the InputRow
    */
-  public int add(InputRow row) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
     return add(row, false);
   }
 
-  public int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
   {
-    IncrementalIndexRow key = toTimeAndDims(row);
-    final int rv = addToFacts(
+    IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
+    final AddToFactsResult addToFactsResult = addToFacts(
         metrics,
         deserializeComplexMetrics,
         reportParseExceptions,
         row,
         numEntries,
-        key,
+        incrementalIndexRowResult.getIncrementalIndexRow(),
         in,
         rowSupplier,
         skipMaxRowsInMemoryCheck
     );
     updateMaxIngestedTime(row.getTimestamp());
-    return rv;
+    ParseException parseException = getCombinedParseException(
+        row,
+        incrementalIndexRowResult.getParseExceptionMessages(),
+        addToFactsResult.getParseExceptionMessages()
+    );
+    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), parseException);
   }
 
   @VisibleForTesting
-  IncrementalIndexRow toTimeAndDims(InputRow row)
+  IncrementalIndexRowResult toIncrementalIndexRow(InputRow row)
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
@@ -546,6 +595,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     Object[] dims;
     List<Object> overflow = null;
+    List<String> parseExceptionMessages = new ArrayList<>();
     synchronized (dimensionDescs) {
       dims = new Object[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
@@ -573,10 +623,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         }
         DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
-            row.getRaw(dimension),
-            reportParseExceptions
-        );
+        Object dimsKey = null;
+        try {
+          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
+              row.getRaw(dimension),
+              true
+          );
+        }
+        catch (ParseException pe) {
+          parseExceptionMessages.add(pe.getMessage());
+        }
 
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() &&
@@ -621,7 +677,48 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (row.getTimestamp() != null) {
       truncated = gran.bucketStart(row.getTimestamp()).getMillis();
     }
-    return new IncrementalIndexRow(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
+    IncrementalIndexRow incrementalIndexRow = new IncrementalIndexRow(
+        Math.max(truncated, minTimestamp),
+        dims,
+        dimensionDescsList
+    );
+    return new IncrementalIndexRowResult(incrementalIndexRow, parseExceptionMessages);
+  }
+
+  public static ParseException getCombinedParseException(
+      InputRow row,
+      @Nullable List<String> dimParseExceptionMessages,
+      @Nullable List<String> aggParseExceptionMessages
+  )
+  {
+    int numAdded = 0;
+    StringBuilder stringBuilder = new StringBuilder();
+
+    if (dimParseExceptionMessages != null) {
+      for (String parseExceptionMessage : dimParseExceptionMessages) {
+        stringBuilder.append(parseExceptionMessage);
+        stringBuilder.append(",");
+        numAdded++;
+      }
+    }
+    if (aggParseExceptionMessages != null) {
+      for (String parseExceptionMessage : aggParseExceptionMessages) {
+        stringBuilder.append(parseExceptionMessage);
+        stringBuilder.append(",");
+        numAdded++;
+      }
+    }
+
+    if (numAdded == 0) {
+      return null;
+    }
+    ParseException pe = new ParseException(
+        "Found unparseable columns in row: [%s], exceptions: [%s]",
+        row,
+        stringBuilder.toString()
+    );
+    pe.setFromPartiallyValidRow(true);
+    return pe;
   }
 
   private synchronized void updateMaxIngestedTime(DateTime eventTime)
@@ -839,10 +936,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
         return Iterators.transform(
             getFacts().iterator(descending),
-            timeAndDims -> {
-              final int rowOffset = timeAndDims.getRowIndex();
+            incrementalIndexRow -> {
+              final int rowOffset = incrementalIndexRow.getRowIndex();
 
-              Object[] theDims = timeAndDims.getDims();
+              Object[] theDims = incrementalIndexRow.getDims();
 
               Map<String, Object> theVals = Maps.newLinkedHashMap();
               for (int i = 0; i < theDims.length; ++i) {
@@ -873,7 +970,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                 }
               }
 
-              return new MapBasedRow(timeAndDims.getTimestamp(), theVals);
+              return new MapBasedRow(incrementalIndexRow.getTimestamp(), theVals);
             }
         );
       }
@@ -989,15 +1086,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()
   {
-    return new TimeAndDimsComp(dimensionDescsList);
+    return new IncrementalIndexRowComparator(dimensionDescsList);
   }
 
   @VisibleForTesting
-  static final class TimeAndDimsComp implements Comparator<IncrementalIndexRow>
+  static final class IncrementalIndexRowComparator implements Comparator<IncrementalIndexRow>
   {
     private List<DimensionDesc> dimensionDescs;
 
-    public TimeAndDimsComp(List<DimensionDesc> dimDescs)
+    public IncrementalIndexRowComparator(List<DimensionDesc> dimDescs)
     {
       this.dimensionDescs = dimDescs;
     }
@@ -1087,11 +1184,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private final ConcurrentMap<IncrementalIndexRow, IncrementalIndexRow> facts;
     private final List<DimensionDesc> dimensionDescsList;
 
-    public RollupFactsHolder(boolean sortFacts, Comparator<IncrementalIndexRow> timeAndDimsComparator, List<DimensionDesc> dimensionDescsList)
+    RollupFactsHolder(
+        boolean sortFacts,
+        Comparator<IncrementalIndexRow> incrementalIndexRowComparator,
+        List<DimensionDesc> dimensionDescsList
+    )
     {
       this.sortFacts = sortFacts;
       if (sortFacts) {
-        this.facts = new ConcurrentSkipListMap<>(timeAndDimsComparator);
+        this.facts = new ConcurrentSkipListMap<>(incrementalIndexRowComparator);
       } else {
         this.facts = new ConcurrentHashMap<>();
       }
