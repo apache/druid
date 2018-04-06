@@ -21,7 +21,7 @@ package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
@@ -50,5 +50,5 @@ public interface ShardSpec
    *
    * @return map of dimensions to its possible range. Dimensions with unknown possible range are not mapped
    */
-  Map<String, Range<String>> getDomain();
+  Map<String, RangeSet<String>> getDomain();
 }

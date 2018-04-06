@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 
@@ -102,35 +104,30 @@ public class SingleDimensionShardSpec implements ShardSpec
   @Override
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
-    return new ShardSpecLookup()
-    {
-      @Override
-      public ShardSpec getShardSpec(long timestamp, InputRow row)
-      {
-        for (ShardSpec spec : shardSpecs) {
-          if (spec.isInChunk(timestamp, row)) {
-            return spec;
-          }
+    return (long timestamp, InputRow row) -> {
+      for (ShardSpec spec : shardSpecs) {
+        if (spec.isInChunk(timestamp, row)) {
+          return spec;
         }
-        throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
       }
+      throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
     };
   }
 
   @Override
-  public Map<String, Range<String>> getDomain()
+  public Map<String, RangeSet<String>> getDomain()
   {
-    Range<String> range;
+    RangeSet<String> rangeSet = TreeRangeSet.create();
     if (start == null && end == null) {
-      range = Range.all();
+      rangeSet.add(Range.all());
     } else if (start == null) {
-      range = Range.atMost(end);
+      rangeSet.add(Range.atMost(end));
     } else if (end == null) {
-      range = Range.atLeast(start);
+      rangeSet.add(Range.atLeast(start));
     } else {
-      range = Range.closed(start, end);
+      rangeSet.add(Range.closed(start, end));
     }
-    return ImmutableMap.of(dimension, range);
+    return ImmutableMap.of(dimension, rangeSet);
   }
 
   public void setPartitionNum(int partitionNum)

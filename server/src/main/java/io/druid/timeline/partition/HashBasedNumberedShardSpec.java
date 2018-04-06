@@ -25,12 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
@@ -90,14 +89,10 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     if (partitionDimensions.isEmpty()) {
       return Rows.toGroupKey(timestamp, inputRow);
     } else {
-      return Lists.transform(partitionDimensions, new Function<String, Object>()
-      {
-        @Override
-        public Object apply(final String dim)
-        {
-          return inputRow.getDimension(dim);
-        }
-      });
+      return Lists.transform(
+          partitionDimensions,
+          dim -> inputRow.getDimension(dim)
+      );
     }
   }
 
@@ -114,19 +109,14 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
-    return new ShardSpecLookup()
-    {
-      @Override
-      public ShardSpec getShardSpec(long timestamp, InputRow row)
-      {
-        int index = Math.abs(hash(timestamp, row) % getPartitions());
-        return shardSpecs.get(index);
-      }
+    return (long timestamp, InputRow row) -> {
+      int index = Math.abs(hash(timestamp, row) % getPartitions());
+      return shardSpecs.get(index);
     };
   }
 
   @Override
-  public Map<String, Range<String>> getDomain()
+  public Map<String, RangeSet<String>> getDomain()
   {
     return ImmutableMap.of();
   }
