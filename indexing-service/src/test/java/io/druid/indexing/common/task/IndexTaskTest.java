@@ -191,7 +191,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfig(2, null, true, false),
+            createTuningConfig(2, null, true, true),
             false
         ),
         null
