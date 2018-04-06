@@ -37,7 +37,7 @@ import java.io.File;
 @JsonTypeName("realtime_appenderator")
 public class RealtimeAppenderatorTuningConfig implements TuningConfig, AppenderatorConfig
 {
-  private static final int defaultMaxRowsInMemory = 75000;
+  private static final int defaultMaxRowsInMemory = 1000000;
   private static final int defaultMaxRowsPerSegment = 5_000_000;
   private static final long defaultMaxBytesInMemory = getDefaultMaxBytesInMemory();
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");

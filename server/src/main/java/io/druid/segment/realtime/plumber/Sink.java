@@ -283,7 +283,8 @@ public class Sink implements Iterable<FireHydrant>
     final IncrementalIndex newIndex = new IncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
         .setReportParseExceptions(reportParseExceptions)
-        .setMaxRowCount(maxRowsInMemory).setMaxBytesInMemory(maxBytesInMemory)
+        .setMaxRowCount(maxRowsInMemory)
+        .setMaxBytesInMemory(maxBytesInMemory)
         .buildOnheap();
 
     final FireHydrant old;

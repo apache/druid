@@ -281,7 +281,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     KafkaTuningConfig that = (KafkaTuningConfig) o;
     return maxRowsInMemory == that.maxRowsInMemory &&
            maxRowsPerSegment == that.maxRowsPerSegment &&
-           maxBytesInMemory == this.maxBytesInMemory &&
+           maxBytesInMemory == that.maxBytesInMemory &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
@@ -324,7 +324,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return "KafkaTuningConfig{" +
            "maxRowsInMemory=" + maxRowsInMemory +
            ", maxRowsPerSegment=" + maxRowsPerSegment +
-           ",maxBytesInMemory=" + maxBytesInMemory +
+           ", maxBytesInMemory=" + maxBytesInMemory +
            ", intermediatePersistPeriod=" + intermediatePersistPeriod +
            ", basePersistDirectory=" + basePersistDirectory +
            ", maxPendingPersists=" + maxPendingPersists +

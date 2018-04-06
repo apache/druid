@@ -145,7 +145,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
-      AtomicLong sizeInBytes,
+      AtomicLong sizeInBytes, // ignored, added to make abstract class method impl happy
       TimeAndDims key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,

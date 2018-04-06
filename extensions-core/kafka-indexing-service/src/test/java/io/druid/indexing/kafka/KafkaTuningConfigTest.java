@@ -102,7 +102,8 @@ public class KafkaTuningConfigTest
   public void testCopyOf()
   {
     KafkaTuningConfig original = new KafkaTuningConfig(
-        1, null,
+        1,
+        null,
         2,
         new Period("PT3S"),
         new File("/tmp/xxx"),

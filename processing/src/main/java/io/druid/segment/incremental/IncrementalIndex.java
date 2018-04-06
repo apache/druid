@@ -250,7 +250,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
-   * <p>
+   *
    * Set concurrentEventAdd to true to indicate that adding of input row should be thread-safe (for example, groupBy
    * where the multiple threads can add concurrently to the IncrementalIndex).
    *
@@ -1178,9 +1178,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.rowIndex = rowIndex;
     }
 
+    /**
+     * sizeInBytes estimates the size of TimeAndDims key, it takes into account the timestamp(long),
+     * dims(Object Array) and dimensionDescsList(List). Each of these are calculated as follows:
+     * <ul>
+     * <li> timestamp : Long.BYTES
+     * <li> dims array : Integer.BYTES * array length + Long.BYTES (dims object) + dimsKeySize(passed via constructor)
+     * <li> dimensionDescList : Long.BYTES (shared pointer)
+     * </ul>
+     *
+     * @return long estimated sizeInBytes
+     */
     public long estimateBytesInMemory()
     {
-      //timestamp + dims length + dimensionDescsList shared pointer
       long sizeInBytes = Long.BYTES + Integer.BYTES * dims.length + Long.BYTES + Long.BYTES;
       sizeInBytes += dimsKeySize;
       return sizeInBytes;

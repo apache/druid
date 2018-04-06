@@ -287,7 +287,7 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @VisibleForTesting
-  long getRowSizeInMemory(SegmentIdentifier identifier)
+  long getBytesInMemory(SegmentIdentifier identifier)
   {
     final Sink sink = sinks.get(identifier);
 
