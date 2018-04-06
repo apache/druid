@@ -523,6 +523,8 @@ public class IndexGeneratorJobTest
                 null,
                 forceExtendableShardSpecs,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -580,7 +582,7 @@ public class IndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {

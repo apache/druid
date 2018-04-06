@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.incremental.IndexSizeExceededException;
 
@@ -228,11 +229,20 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
     private final int numRowsInSegment;
     private final boolean isPersistRequired;
 
-    AppenderatorAddResult(SegmentIdentifier identifier, int numRowsInSegment, boolean isPersistRequired)
+    @Nullable
+    private final ParseException parseException;
+
+    AppenderatorAddResult(
+        SegmentIdentifier identifier,
+        int numRowsInSegment,
+        boolean isPersistRequired,
+        @Nullable ParseException parseException
+    )
     {
       this.segmentIdentifier = identifier;
       this.numRowsInSegment = numRowsInSegment;
       this.isPersistRequired = isPersistRequired;
+      this.parseException = parseException;
     }
 
     SegmentIdentifier getSegmentIdentifier()
@@ -248,6 +258,12 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
     boolean isPersistRequired()
     {
       return isPersistRequired;
+    }
+
+    @Nullable
+    public ParseException getParseException()
+    {
+      return parseException;
     }
   }
 }

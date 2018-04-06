@@ -22,13 +22,13 @@ package io.druid.server.coordination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.utils.CircularBuffer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -325,48 +325,6 @@ public class ChangeRequestHistory<T>
         waitingFutures.remove(this);
       }
       return true;
-    }
-  }
-
-  static class CircularBuffer<E>
-  {
-    private final E[] buffer;
-
-    private int start = 0;
-    private int size = 0;
-
-    CircularBuffer(int capacity)
-    {
-      buffer = (E[]) new Object[capacity];
-    }
-
-    void add(E item)
-    {
-      buffer[start++] = item;
-
-      if (start >= buffer.length) {
-        start = 0;
-      }
-
-      if (size < buffer.length) {
-        size++;
-      }
-    }
-
-    E get(int index)
-    {
-      Preconditions.checkArgument(index >= 0 && index < size, "invalid index");
-
-      int bufferIndex = (start - size + index) % buffer.length;
-      if (bufferIndex < 0) {
-        bufferIndex += buffer.length;
-      }
-      return buffer[bufferIndex];
-    }
-
-    int size()
-    {
-      return size;
     }
   }
 }

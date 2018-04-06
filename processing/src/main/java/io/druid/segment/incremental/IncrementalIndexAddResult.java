@@ -17,33 +17,36 @@
  * under the License.
  */
 
-package io.druid.java.util.common.parsers;
+package io.druid.segment.incremental;
 
-import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.parsers.ParseException;
 
-/**
- */
-public class ParseException extends RuntimeException
+import javax.annotation.Nullable;
+
+public class IncrementalIndexAddResult
 {
-  private boolean fromPartiallyValidRow = false;
+  private final int rowCount;
 
-  public ParseException(String formatText, Object... arguments)
+  @Nullable
+  private final ParseException parseException;
+
+  public IncrementalIndexAddResult(
+      int rowCount,
+      @Nullable ParseException parseException
+  )
   {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
+    this.rowCount = rowCount;
+    this.parseException = parseException;
   }
 
-  public ParseException(Throwable cause, String formatText, Object... arguments)
+  public int getRowCount()
   {
-    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
+    return rowCount;
   }
 
-  public boolean isFromPartiallyValidRow()
+  @Nullable
+  public ParseException getParseException()
   {
-    return fromPartiallyValidRow;
-  }
-
-  public void setFromPartiallyValidRow(boolean fromPartiallyValidRow)
-  {
-    this.fromPartiallyValidRow = fromPartiallyValidRow;
+    return parseException;
   }
 }

@@ -131,7 +131,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           return -1;
         }
 
-        final int numRows = sink.add(row, false);
+        final int numRows = sink.add(row, false).getRowCount();
 
         if (!sink.canAppendRow()) {
           persist(committerSupplier.get());

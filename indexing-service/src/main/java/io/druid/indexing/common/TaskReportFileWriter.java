@@ -24,6 +24,7 @@ import io.druid.java.util.common.logger.Logger;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.util.Map;
 
 public class TaskReportFileWriter
 {
@@ -37,14 +38,14 @@ public class TaskReportFileWriter
     this.reportsFile = reportFile;
   }
 
-  public void write(TaskReport report)
+  public void write(Map<String, TaskReport> reports)
   {
     try {
       final File reportsFileParent = reportsFile.getParentFile();
       if (reportsFileParent != null) {
         FileUtils.forceMkdir(reportsFileParent);
       }
-      objectMapper.writeValue(reportsFile, report);
+      objectMapper.writeValue(reportsFile, reports);
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in write().");

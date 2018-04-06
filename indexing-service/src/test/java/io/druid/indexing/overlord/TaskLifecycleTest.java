@@ -115,6 +115,7 @@ import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -682,9 +683,14 @@ public class TaskLifecycleTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null
     );
 
@@ -756,9 +762,14 @@ public class TaskLifecycleTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null
     );
 
@@ -1137,9 +1148,14 @@ public class TaskLifecycleTest
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
             )
         ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null
     );
 

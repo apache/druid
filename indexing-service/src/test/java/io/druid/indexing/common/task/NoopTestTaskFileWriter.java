@@ -22,6 +22,8 @@ package io.druid.indexing.common.task;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskReportFileWriter;
 
+import java.util.Map;
+
 public class NoopTestTaskFileWriter extends TaskReportFileWriter
 {
   public NoopTestTaskFileWriter()
@@ -30,7 +32,7 @@ public class NoopTestTaskFileWriter extends TaskReportFileWriter
   }
 
   @Override
-  public void write(TaskReport report)
+  public void write(Map<String, TaskReport> reports)
   {
   }
 }

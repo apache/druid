@@ -17,33 +17,12 @@
  * under the License.
  */
 
-package io.druid.java.util.common.parsers;
+package io.druid.indexer;
 
-import io.druid.java.util.common.StringUtils;
-
-/**
- */
-public class ParseException extends RuntimeException
+public enum IngestionState
 {
-  private boolean fromPartiallyValidRow = false;
-
-  public ParseException(String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments));
-  }
-
-  public ParseException(Throwable cause, String formatText, Object... arguments)
-  {
-    super(StringUtils.nonStrictFormat(formatText, arguments), cause);
-  }
-
-  public boolean isFromPartiallyValidRow()
-  {
-    return fromPartiallyValidRow;
-  }
-
-  public void setFromPartiallyValidRow(boolean fromPartiallyValidRow)
-  {
-    this.fromPartiallyValidRow = fromPartiallyValidRow;
-  }
+  NOT_STARTED,
+  DETERMINE_PARTITIONS,
+  BUILD_SEGMENTS,
+  COMPLETED
 }

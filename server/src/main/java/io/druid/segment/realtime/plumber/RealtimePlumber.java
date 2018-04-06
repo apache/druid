@@ -61,6 +61,7 @@ import io.druid.segment.Metadata;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -216,13 +217,16 @@ public class RealtimePlumber implements Plumber
       return -1;
     }
 
-    final int numRows = sink.add(row, false);
+    final IncrementalIndexAddResult addResult = sink.add(row, false);
+    if (config.isReportParseExceptions() && addResult.getParseException() != null) {
+      throw addResult.getParseException();
+    }
 
     if (!sink.canAppendRow() || System.currentTimeMillis() > nextFlush) {
       persist(committerSupplier.get());
     }
 
-    return numRows;
+    return addResult.getRowCount();
   }
 
   private Sink getSink(long timestamp)

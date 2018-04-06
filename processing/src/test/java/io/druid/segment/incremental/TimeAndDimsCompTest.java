@@ -45,13 +45,13 @@ public class TimeAndDimsCompTest
         .buildOnheap();
 
     long time = System.currentTimeMillis();
-    TimeAndDims td1 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));
-    TimeAndDims td2 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A"));
-    TimeAndDims td3 = index.toTimeAndDims(toMapRow(time, "billy", "A"));
+    TimeAndDims td1 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B")).getTimeAndDims();
+    TimeAndDims td2 = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "A")).getTimeAndDims();
+    TimeAndDims td3 = index.toTimeAndDims(toMapRow(time, "billy", "A")).getTimeAndDims();
 
-    TimeAndDims td4 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B"));
-    TimeAndDims td5 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B")));
-    TimeAndDims td6 = index.toTimeAndDims(toMapRow(time + 1));
+    TimeAndDims td4 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", "B")).getTimeAndDims();
+    TimeAndDims td5 = index.toTimeAndDims(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B"))).getTimeAndDims();
+    TimeAndDims td6 = index.toTimeAndDims(toMapRow(time + 1)).getTimeAndDims();
 
     Comparator<IncrementalIndex.TimeAndDims> comparator = index.dimsComparator();
 
