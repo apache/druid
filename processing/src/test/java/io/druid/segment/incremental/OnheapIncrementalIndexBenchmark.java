@@ -208,12 +208,13 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
-          throw new IndexSizeExceededException("Maximum number of rows reached");
+        if (numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory && getFacts().getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
+          throw new IndexSizeExceededException("Maximum number of rows or max bytes reached");
         }
         final int prev = getFacts().putIfAbsent(key, rowIndex);
         if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
+          sizeInBytes.incrementAndGet();
         } else {
           // We lost a race
           aggs = indexedMap.get(prev);
@@ -241,7 +242,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       rowContainer.set(null);
 
-      return new AddToFactsResult(numEntries.get(), new ArrayList<>());
+      return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
     }
 
     @Override

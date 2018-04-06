@@ -893,6 +893,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         indexSpec,
         null,
         true,
@@ -1011,6 +1012,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         indexSpec,
         null,
         true,
@@ -1112,6 +1114,7 @@ public class IndexTaskTest
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         2,
+        null,
         null,
         null,
         null,

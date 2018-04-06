@@ -36,6 +36,8 @@ import java.util.List;
 
 public class IndexTaskUtils
 {
+  public static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
+  public static final long DEFAULT_MAX_BYTES_IN_MEMORY = Runtime.getRuntime().maxMemory() / 3;
   @Nullable
   public static List<String> getMessagesFromSavedParseExceptions(CircularBuffer<Throwable> savedParseExceptions)
   {

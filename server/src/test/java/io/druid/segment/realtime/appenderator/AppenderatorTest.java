@@ -181,6 +181,42 @@ public class AppenderatorTest
   }
 
   @Test
+  public void testMaxBytesInMemoryInMultipleSinks() throws Exception
+  {
+    try (final AppenderatorTester tester = new AppenderatorTester(100, 1024, true)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      final AtomicInteger eventCount = new AtomicInteger(0);
+      final Supplier<Committer> committerSupplier = () -> {
+        final Object metadata = ImmutableMap.of(eventCount, eventCount.get());
+
+        return new Committer()
+        {
+          @Override
+          public Object getMetadata()
+          {
+            return metadata;
+          }
+
+          @Override
+          public void run()
+          {
+            //Do nothing
+          }
+        };
+      };
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
+      //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 10 (dimsKeySize) = 138
+      Assert.assertEquals(138, ((AppenderatorImpl) appenderator).getCurrentBytesInMemory());
+      appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
+      Assert.assertEquals(276, ((AppenderatorImpl) appenderator).getCurrentBytesInMemory());
+      appenderator.close();
+      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+    }
+  }
+
+  @Test
   public void testIgnoreMaxBytesInMemory() throws Exception
   {
     try (final AppenderatorTester tester = new AppenderatorTester(100, -1, true)) {
@@ -209,10 +245,11 @@ public class AppenderatorTest
       appenderator.startJob();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "foo", 1), committerSupplier);
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0)));
+      //we still calculate the size even when ignoring it to make persist decision
+      Assert.assertEquals(138, ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(0)));
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(1), IR("2000", "bar", 1), committerSupplier);
-      Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getBytesInMemory(IDENTIFIERS.get(1)));
+      Assert.assertEquals(276, ((AppenderatorImpl) appenderator).getCurrentBytesInMemory());
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.close();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());

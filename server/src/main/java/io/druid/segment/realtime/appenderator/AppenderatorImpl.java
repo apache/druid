@@ -97,6 +97,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -128,6 +129,7 @@ public class AppenderatorImpl implements Appenderator
   // This variable updated in add(), persist(), and drop()
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
+  private final AtomicLong currentBytesInMemory = new AtomicLong();
   // Synchronize persisting commitMetadata so that multiple persist threads (if present)
   // and abandon threads do not step over each other
   private final Lock commitLock = new ReentrantLock();
@@ -219,11 +221,14 @@ public class AppenderatorImpl implements Appenderator
     metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
     final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
     final int sinkRowsInMemoryAfterAdd;
-    final IncrementalIndexAddResult addResult;
+    final long bytesInMemoryBeforeAdd = sink.getBytesInMemory();
+    final long bytesInMemoryAfterAdd;
+    final  IncrementalIndexAddResult addResult;
 
     try {
       addResult = sink.add(row, !allowIncrementalPersists);
       sinkRowsInMemoryAfterAdd = addResult.getRowCount();
+      bytesInMemoryAfterAdd = addResult.getBytesInMemory();
     }
     catch (IndexSizeExceededException e) {
       // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
@@ -240,11 +245,13 @@ public class AppenderatorImpl implements Appenderator
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     totalRows.addAndGet(numAddedRows);
+    currentBytesInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
 
     boolean isPersistRequired = false;
     if (!sink.canAppendRow()
         || System.currentTimeMillis() > nextFlush
-        || rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
+        || rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()
+        || (tuningConfig.getMaxBytesInMemory() > 0 && currentBytesInMemory.get() >= tuningConfig.getMaxBytesInMemory())) {
       if (allowIncrementalPersists) {
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
         persistAll(committerSupplier == null ? null : committerSupplier.get());
@@ -284,6 +291,12 @@ public class AppenderatorImpl implements Appenderator
   int getRowsInMemory()
   {
     return rowsCurrentlyInMemory.get();
+  }
+
+  @VisibleForTesting
+  long getCurrentBytesInMemory()
+  {
+    return currentBytesInMemory.get();
   }
 
   @VisibleForTesting
@@ -410,6 +423,7 @@ public class AppenderatorImpl implements Appenderator
     final Map<String, Integer> currentHydrants = Maps.newHashMap();
     final List<Pair<FireHydrant, SegmentIdentifier>> indexesToPersist = Lists.newArrayList();
     int numPersistedRows = 0;
+    long bytesPersisted = 0L;
     for (SegmentIdentifier identifier : identifiers) {
       final Sink sink = sinks.get(identifier);
       if (sink == null) {
@@ -418,6 +432,7 @@ public class AppenderatorImpl implements Appenderator
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       currentHydrants.put(identifier.getIdentifierAsString(), hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
+      bytesPersisted += sink.getBytesInMemory();
 
       final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
 
@@ -508,7 +523,7 @@ public class AppenderatorImpl implements Appenderator
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
-
+    currentBytesInMemory.addAndGet(-bytesPersisted);
     return future;
   }
 
@@ -1048,6 +1063,7 @@ public class AppenderatorImpl implements Appenderator
     // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
     rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
     totalRows.addAndGet(-sink.getNumRows());
+    currentBytesInMemory.addAndGet(-sink.getBytesInMemory());
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(

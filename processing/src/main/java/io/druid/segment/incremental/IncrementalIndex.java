@@ -520,6 +520,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   public static class AddToFactsResult
   {
     private int rowCount;
+    private long bytesInMemory;
     private List<String> parseExceptionMessages;
 
     public AddToFactsResult(
@@ -531,9 +532,25 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.parseExceptionMessages = parseExceptionMessages;
     }
 
+    public AddToFactsResult(
+        int rowCount,
+        long bytesInMemory,
+        List<String> parseExceptionMessages
+    )
+    {
+      this.rowCount = rowCount;
+      this.bytesInMemory = bytesInMemory;
+      this.parseExceptionMessages = parseExceptionMessages;
+    }
+
     public int getRowCount()
     {
       return rowCount;
+    }
+
+    public long getBytesInMemory()
+    {
+      return bytesInMemory;
     }
 
     public List<String> getParseExceptionMessages()
@@ -602,7 +619,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         timeAndDimsResult.getParseExceptionMessages(),
         addToFactsResult.getParseExceptionMessages()
     );
-    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), parseException);
+    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), addToFactsResult.getBytesInMemory(), parseException);
   }
 
   @VisibleForTesting

@@ -79,12 +79,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
-    this.maxBytesInMemory =  maxBytesInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts);
-    if (maxBytesInMemory != -1) {
-      maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
-    }
+    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
+
   }
 
   /**
@@ -177,10 +176,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       final int prev = facts.putIfAbsent(key, rowIndex);
       if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
-        if (maxBytesInMemory != -1) {
-          long estimatedRowSize = estimateRowSizeInBytes(key, maxBytesPerRowForAggregators);
-          sizeInBytes.addAndGet(estimatedRowSize);
-        }
+        long estimatedRowSize = estimateRowSizeInBytes(key, maxBytesPerRowForAggregators);
+        sizeInBytes.addAndGet(estimatedRowSize);
       } else {
         // We lost a race
         aggs = concurrentGet(prev);
@@ -191,7 +188,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    return new AddToFactsResult(numEntries.get(), parseExceptionMessages);
+    return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), parseExceptionMessages);
   }
 
   /**
