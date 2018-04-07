@@ -28,6 +28,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
 import org.junit.Assert;
@@ -60,7 +61,8 @@ public class DoublesSketchAggregatorTest
         module.getJacksonModules(), config, tempFolder);
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         module.getJacksonModules(),
-        tempFolder);
+        tempFolder
+    );
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -68,7 +70,7 @@ public class DoublesSketchAggregatorTest
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      constructors.add(new Object[] {config});
+      constructors.add(new Object[]{config});
     }
     return constructors;
   }
@@ -78,11 +80,29 @@ public class DoublesSketchAggregatorTest
   public void serializeDeserializeFactoryWithFieldName() throws Exception
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
+    new DoublesSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
     DoublesSketchAggregatorFactory factory = new DoublesSketchAggregatorFactory("name", "filedName", 128);
 
-    DoublesSketchAggregatorFactory other = objectMapper.readValue(
+    AggregatorFactory other = objectMapper.readValue(
         objectMapper.writeValueAsString(factory),
-        DoublesSketchAggregatorFactory.class);
+        AggregatorFactory.class
+    );
+
+    Assert.assertEquals(factory, other);
+  }
+
+  // this is to test Json properties and equals for the combining factory
+  @Test
+  public void serializeDeserializeCombiningFactoryWithFieldName() throws Exception
+  {
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    new DoublesSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
+    DoublesSketchAggregatorFactory factory = new DoublesSketchMergeAggregatorFactory("name", 128);
+
+    AggregatorFactory other = objectMapper.readValue(
+        objectMapper.writeValueAsString(factory),
+        AggregatorFactory.class
+    );
 
     Assert.assertEquals(factory, other);
   }
@@ -92,7 +112,8 @@ public class DoublesSketchAggregatorTest
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_sketch_data.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -105,16 +126,20 @@ public class DoublesSketchAggregatorTest
             "    },",
             "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
             "  }",
-            "}"),
-        String.join("\n",
+            "}"
+        ),
+        String.join(
+            "\n",
             "[",
             "  {\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"k\": 128},",
             "  {\"type\": \"quantilesDoublesSketch\", \"name\": \"non_existent_sketch\", \"fieldName\": \"non_existent_sketch\", \"k\": 128}",
-            "]"),
+            "]"
+        ),
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -129,8 +154,10 @@ public class DoublesSketchAggregatorTest
             "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+            "}"
+        )
+    );
+    List<Row> results = Sequences.toList(seq, new ArrayList<>());
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -156,9 +183,9 @@ public class DoublesSketchAggregatorTest
     Object histogramObject = row.getRaw("histogram");
     Assert.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    for (final double bin: histogram) {
-      Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
-                                                // distributed into 4 bins
+    for (final double bin : histogram) {
+      // 400 items uniformly distributed into 4 bins
+      Assert.assertEquals(100, bin, 100 * 0.2);
     }
   }
 
@@ -167,7 +194,8 @@ public class DoublesSketchAggregatorTest
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -180,12 +208,14 @@ public class DoublesSketchAggregatorTest
             "    },",
             "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
             "  }",
-            "}"),
+            "}"
+        ),
         "[{\"type\": \"quantilesDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 128}]",
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -200,8 +230,10 @@ public class DoublesSketchAggregatorTest
             "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+            "}"
+        )
+    );
+    List<Row> results = Sequences.toList(seq, new ArrayList<>());
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -225,7 +257,7 @@ public class DoublesSketchAggregatorTest
     Assert.assertEquals(4, histogram.length);
     for (final double bin: histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
-                                                // distributed into 4 bins
+      // distributed into 4 bins
     }
   }
 
@@ -234,7 +266,8 @@ public class DoublesSketchAggregatorTest
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"type\": \"string\",",
             "  \"parseSpec\": {",
@@ -247,12 +280,14 @@ public class DoublesSketchAggregatorTest
             "    },",
             "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
             "  }",
-            "}"),
+            "}"
+        ),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
         0, // minTimestamp
         Granularities.NONE,
         10, // maxRowCount
-        String.join("\n",
+        String.join(
+            "\n",
             "{",
             "  \"queryType\": \"groupBy\",",
             "  \"dataSource\": \"test_datasource\",",
@@ -267,8 +302,10 @@ public class DoublesSketchAggregatorTest
             "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+            "}"
+        )
+    );
+    List<Row> results = Sequences.toList(seq, new ArrayList<>());
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -296,7 +333,7 @@ public class DoublesSketchAggregatorTest
     double[] histogram = (double[]) histogramObject;
     for (final double bin: histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
-                                                // distributed into 4 bins
+      // distributed into 4 bins
     }
   }
 
@@ -319,7 +356,8 @@ public class DoublesSketchAggregatorTest
             "    },",
             "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
             "  }",
-            "}"),
+            "}"
+        ),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
         0, // minTimestamp
         Granularities.NONE,
@@ -340,8 +378,10 @@ public class DoublesSketchAggregatorTest
             "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+            "}"
+        )
+    );
+    List<Row> results = Sequences.toList(seq, new ArrayList<>());
     Assert.assertEquals(1, results.size());
     Row row = results.get(0);
 
@@ -369,7 +409,7 @@ public class DoublesSketchAggregatorTest
     double[] histogram = (double[]) histogramObject;
     for (final double bin: histogram) {
       Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
-                                                // distributed into 4 bins
+      // distributed into 4 bins
     }
   }
 
@@ -392,7 +432,8 @@ public class DoublesSketchAggregatorTest
             "    },",
             "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
             "  }",
-            "}"),
+            "}"
+        ),
         "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
         0, // minTimestamp
         Granularities.NONE,
@@ -412,8 +453,10 @@ public class DoublesSketchAggregatorTest
             "    {\"type\": \"quantilesDoublesSketchToHistogram\", \"name\": \"histogram1\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-            "}"));
-    List<Row> results = Sequences.toList(seq, new ArrayList<Row>());
+            "}"
+        )
+    );
+    List<Row> results = Sequences.toList(seq, new ArrayList<>());
     Assert.assertEquals(1, results.size());
   }
 }
