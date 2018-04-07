@@ -103,8 +103,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 {
   private volatile DateTime maxIngestedEventTime;
 
-  // Used to discover ValueType based on the class of values in a row
-  // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
+  /**
+   * Used to discover ValueType based on the class of values in a row
+   * TODO remove when {@link ValueType} is merged with {@link DimensionSchema.ValueType}
+   */
   public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
       .put(Long.class, ValueType.LONG)
       .put(Double.class, ValueType.DOUBLE)
