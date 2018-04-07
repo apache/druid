@@ -52,13 +52,9 @@ public abstract class DimensionSchema
   public static final String DOUBLE_TYPE_NAME = "double";
   private static final EmittingLogger log = new EmittingLogger(DimensionSchema.class);
 
-
-  // main druid and druid-api should really use the same ValueType enum.
-  // merge them when druid-api is merged back into the main repo
-
   /**
    * Should be the same as {@code io.druid.segment.column.ValueType}.
-   * TODO merge them when druid-api is merged back into the main repo
+   * TODO merge them when java-util is merged with druid-processing into a single druid-core module.
    */
   public enum ValueType
   {

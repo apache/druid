@@ -28,5 +28,8 @@
     <Root level="debug">
       <AppenderRef ref="Console"/>
     </Root>
+    <Logger level="debug" name="io.druid" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
   </Loggers>
 </Configuration>
