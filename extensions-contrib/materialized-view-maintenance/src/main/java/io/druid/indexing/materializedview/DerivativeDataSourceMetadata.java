@@ -21,7 +21,6 @@ package io.druid.indexing.materializedview;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.indexing.overlord.DataSourceMetadata;
@@ -29,7 +28,6 @@ import io.druid.indexing.overlord.DataSourceMetadata;
 import java.util.Objects;
 import java.util.Set;
 
-@JsonTypeName("view")
 public class DerivativeDataSourceMetadata implements DataSourceMetadata 
 {
   private final String baseDataSource;
@@ -43,12 +41,9 @@ public class DerivativeDataSourceMetadata implements DataSourceMetadata
       @JsonProperty("metrics") Set<String> metrics
   )
   {
-    Preconditions.checkNotNull(baseDataSource, "baseDataSource cannot be null. This is not a valid DerivativeDataSourceMetadata.");
-    Preconditions.checkNotNull(dimensions, "dimensions cannot be null. This is not a valid DerivativeDataSourceMetadata.");
-    Preconditions.checkNotNull(metrics, "metrics cannot be null. This is not a valid DerivativeDataSourceMetadata.");
-    this.baseDataSource = baseDataSource;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
+    this.baseDataSource = Preconditions.checkNotNull(baseDataSource, "baseDataSource cannot be null. This is not a valid DerivativeDataSourceMetadata.");
+    this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions cannot be null. This is not a valid DerivativeDataSourceMetadata.");
+    this.metrics = Preconditions.checkNotNull(metrics, "metrics cannot be null. This is not a valid DerivativeDataSourceMetadata.");
   }
 
   @JsonProperty("baseDataSource")
@@ -78,29 +73,21 @@ public class DerivativeDataSourceMetadata implements DataSourceMetadata
   @Override
   public boolean matches(DataSourceMetadata other) 
   {
-    if (getClass() != other.getClass()) {
-      return false;
-    }
-    DerivativeDataSourceMetadata that = (DerivativeDataSourceMetadata) other;
-    if (!baseDataSource.equals(that.getBaseDataSource()) || !metrics.equals(that.getMetrics())) {
-      return false;
-    }
-    return dimensions.equals(that.getDimensions());
+    return equals(other);
   }
 
   @Override
   public DataSourceMetadata plus(DataSourceMetadata other)
   {
-    // DerivedDataSourceMetadata is not allowed to change
-    return this;
+    throw new UnsupportedOperationException("Derivative dataSource metadata is not allowed to plus");
   }
 
   @Override
   public DataSourceMetadata minus(DataSourceMetadata other) 
   {
-    // DerivedDataSourceMetadata is not allowed to change
-    return this;
+    throw new UnsupportedOperationException("Derivative dataSource metadata is not allowed to minus");
   }
+  
   @Override
   public boolean equals(Object o)
   {
@@ -120,15 +107,16 @@ public class DerivativeDataSourceMetadata implements DataSourceMetadata
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDataSource + dimensions + metrics);
+    return Objects.hash(baseDataSource, dimensions, metrics);
   }
 
-  public Set<String> getFileds()
+  public Set<String> getColumns()
   {
     Set<String> fields = Sets.newHashSet(dimensions);
     fields.addAll(metrics);
     return fields;
   }
+  
   @Override
   public String toString()
   {

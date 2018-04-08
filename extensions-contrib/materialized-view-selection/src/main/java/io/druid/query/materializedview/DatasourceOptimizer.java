@@ -102,7 +102,7 @@ public class DatasourceOptimizer
       Set<Derivative> derivativesWithRequiredFields = Sets.newHashSet();
       for (Derivative derivative : derivatives) {
         derivativesHitCount.putIfAbsent(derivative, new AtomicLong(0));
-        if (derivative.getFields().containsAll(requiredFields)) {
+        if (derivative.getColumns().containsAll(requiredFields)) {
           derivativesWithRequiredFields.add(derivative);
         }
       }

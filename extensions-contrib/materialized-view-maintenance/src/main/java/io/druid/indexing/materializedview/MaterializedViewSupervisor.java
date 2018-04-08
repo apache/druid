@@ -21,7 +21,6 @@ package io.druid.indexing.materializedview;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
@@ -67,7 +66,6 @@ public class MaterializedViewSupervisor implements Supervisor
   private static final int MAX_TASK_COUNT = 1;
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final MaterializedViewMetadataCoordinator materializedViewMetadataCoordinator;
   private final SQLMetadataSegmentManager segmentManager;
   private final MaterializedViewSupervisorSpec spec;
   private final TaskMaster taskMaster;
@@ -88,7 +86,6 @@ public class MaterializedViewSupervisor implements Supervisor
   public MaterializedViewSupervisor(
       TaskMaster taskMaster,
       TaskStorage taskStorage,
-      MaterializedViewMetadataCoordinator materializedViewMetadataCoordinator,
       MetadataSupervisorManager metadataSupervisorManager,
       SQLMetadataSegmentManager segmentManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
@@ -98,7 +95,6 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     this.taskMaster = taskMaster;
     this.taskStorage = taskStorage;
-    this.materializedViewMetadataCoordinator = materializedViewMetadataCoordinator;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.segmentManager = segmentManager;
     this.metadataSupervisorManager = metadataSupervisorManager;
@@ -108,6 +104,7 @@ public class MaterializedViewSupervisor implements Supervisor
     this.supervisorId = StringUtils.format("MaterializedViewSupervisor-%s", dataSource);
     this.maxTaskCount = spec.getContext().containsKey("maxTaskCount") ? Integer.parseInt(String.valueOf(spec.getContext().get("maxTaskCount"))) : MAX_TASK_COUNT;
   }
+  
   @Override
   public void start() 
   {
@@ -116,7 +113,7 @@ public class MaterializedViewSupervisor implements Supervisor
       
       DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
       if (null == metadata) {
-        materializedViewMetadataCoordinator.insertDataSourceMetadata(
+        metadataStorageCoordinator.insertDataSourceMetadata(
             dataSource, 
             new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
         );
@@ -239,7 +236,7 @@ public class MaterializedViewSupervisor implements Supervisor
         }
       }
       if (runningTasks.size() == maxTaskCount) {
-        log.info("reach the max task count %s", runningTasks.size());
+        //if the number of running tasks reach the max task count, supervisor won't submit new tasks.
         return;
       }
       Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = checkSegments();
@@ -256,7 +253,7 @@ public class MaterializedViewSupervisor implements Supervisor
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> derivativeSegmentsSnapshot =
         getVersionAndBaseSegments(metadataStorageCoordinator.getUsedSegmentsForInterval(dataSource, ALL_INTERVAL));
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
-        getMaxCreateDateAndBaseSegments(materializedViewMetadataCoordinator.getSegmentAndCreatedDate(spec.getBaseDataSource(), ALL_INTERVAL));
+        getMaxCreateDateAndBaseSegments(metadataStorageCoordinator.getUsedSegmentAndCreatedDateForInterval(spec.getBaseDataSource(), ALL_INTERVAL));
     // baseSegments are used to create HadoopIndexTask
     Map<Interval, List<DataSegment>> baseSegments = baseSegmentsSnapshot.rhs;
     Map<Interval, List<DataSegment>> derivativeSegments = derivativeSegmentsSnapshot.rhs;
@@ -309,7 +306,7 @@ public class MaterializedViewSupervisor implements Supervisor
           log.error("task %s already exsits", task);
         }
         catch (Exception e) {
-          Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     }
@@ -328,13 +325,13 @@ public class MaterializedViewSupervisor implements Supervisor
     return new Pair<>(versions, segments);
   }
   
-  private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(Map<DataSegment, String> snapshot)
+  private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(List<Pair<DataSegment, String>> snapshot)
   {
     Map<Interval, String> maxCreatedDate = Maps.newHashMap();
     Map<Interval, List<DataSegment>> segments = Maps.newHashMap();
-    for (Map.Entry<DataSegment, String> entry : snapshot.entrySet()) {
-      DataSegment segment = entry.getKey();
-      String createDate = entry.getValue();
+    for (Pair<DataSegment, String> entry : snapshot) {
+      DataSegment segment = entry.lhs;
+      String createDate = entry.rhs;
       Interval interval = segment.getInterval();
       maxCreatedDate.put(
           interval, 
@@ -370,21 +367,15 @@ public class MaterializedViewSupervisor implements Supervisor
   
   private void commitDataSourceMetadata(DataSourceMetadata dataSourceMetadata)
   {
-    DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
-    if (null == metadata) {
-      materializedViewMetadataCoordinator.insertDataSourceMetadata(
-          dataSource,
-          new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
-      );
-    } else {
+    if (!metadataStorageCoordinator.insertDataSourceMetadata(dataSource, dataSourceMetadata)) {
       try {
         metadataStorageCoordinator.resetDataSourceMetadata(
             dataSource,
-            new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
+            dataSourceMetadata
         );
       } 
       catch (IOException e) {
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.Pair;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -65,11 +66,23 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata)
+  {
+    return false;
+  }
+  
+  @Override
   public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
   {
     return ImmutableList.of();
   }
 
+  @Override
+  public List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval)
+  {
+    return ImmutableList.of();
+  }
+  
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
       String dataSource, List<Interval> intervals

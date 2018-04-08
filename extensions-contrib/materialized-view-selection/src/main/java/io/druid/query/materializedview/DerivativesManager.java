@@ -21,7 +21,6 @@ package io.druid.query.materializedview;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
@@ -157,49 +156,45 @@ public class DerivativesManager
   private void updateDerivatives()
   {
     List<Pair<String, Derivative>> derivativesInDatabase = connector.retryWithHandle(
-        new HandleCallback<List<Pair<String, Derivative>>>() 
-        {
-          @Override 
-          public List<Pair<String, Derivative>> withHandle(Handle handle) throws Exception 
-          {
-            return handle.createQuery(
-                StringUtils.format("SELECT DISTINCT dataSource,commit_metadata_payload FROM %1$s", dbTables.get().getDataSourceTable()
-                )
-            )
-                .map(new ResultSetMapper<Pair<String, Derivative>>() 
+        handle ->
+          handle.createQuery(
+              StringUtils.format("SELECT DISTINCT dataSource,commit_metadata_payload FROM %1$s", dbTables.get().getDataSourceTable())
+          )
+              .map(new ResultSetMapper<Pair<String, Derivative>>() 
+              {
+                @Override 
+                public Pair<String, Derivative> map(int index, ResultSet r, StatementContext ctx) throws SQLException 
                 {
-                  @Override 
-                  public Pair<String, Derivative> map(int index, ResultSet r, StatementContext ctx) throws SQLException 
-                  {
-                    String datasourceName = r.getString("dataSource");
-                    try {
-                      DataSourceMetadata payload = objectMapper.readValue(
-                          r.getBytes("commit_metadata_payload"),
-                          DataSourceMetadata.class);
-                      if (!(payload instanceof DerivativeDataSourceMetadata)) {
-                        return null;
-                      }
-                      DerivativeDataSourceMetadata metadata = (DerivativeDataSourceMetadata) payload;
-                      long avgSizePerGranularity = getAvgSizePerGranularity(datasourceName);
-                      String baseDataSource = metadata.getBaseDataSource();
-                      log.info("find derivatives: {bases=%s, derivative=%s, dimensions=%s, metrics=%s, avgSize=%s}", baseDataSource, 
-                          datasourceName, metadata.getDimensions(), metadata.getMetrics(), avgSizePerGranularity);
-                      if (avgSizePerGranularity > 0) {
-                        return new Pair<String, Derivative>(baseDataSource, new Derivative(datasourceName, metadata.getFileds(), avgSizePerGranularity));
-                      }
+                  String datasourceName = r.getString("dataSource");
+                  try {
+                    DataSourceMetadata payload = objectMapper.readValue(
+                        r.getBytes("commit_metadata_payload"),
+                        DataSourceMetadata.class);
+                    if (!(payload instanceof DerivativeDataSourceMetadata)) {
+                      return null;
                     }
-                    catch (IOException e) {
-                      throw Throwables.propagate(e);
+                    DerivativeDataSourceMetadata metadata = (DerivativeDataSourceMetadata) payload;
+                    long avgSizePerGranularity = getAvgSizePerGranularity(datasourceName);
+                    String baseDataSource = metadata.getBaseDataSource();
+                    log.info("find derivatives: {bases=%s, derivative=%s, dimensions=%s, metrics=%s, avgSize=%s}", baseDataSource, 
+                        datasourceName, metadata.getDimensions(), metadata.getMetrics(), avgSizePerGranularity);
+                    if (avgSizePerGranularity > 0) {
+                      return new Pair<>(baseDataSource, new Derivative(datasourceName, metadata.getColumns(), avgSizePerGranularity));
                     }
-                    return null;
                   }
-                })
-                .list();
-          }
-        }
+                  catch (IOException e) {
+                    throw new RuntimeException(e);
+                  }
+                  return null;
+                }
+              })
+              .list()
     );
     ConcurrentHashMap<String, SortedSet<Derivative>> newDerivatives = new ConcurrentHashMap<>();
     for (Pair<String, Derivative> derivativesPair : derivativesInDatabase) {
+      if (derivativesPair == null) {
+        continue;
+      }
       newDerivatives.putIfAbsent(derivativesPair.lhs, Sets.newTreeSet());
       newDerivatives.get(derivativesPair.lhs).add(derivativesPair.rhs);
     }
@@ -216,7 +211,7 @@ public class DerivativesManager
           Set<Interval> intervals = Sets.newHashSet();
           long totalSize = 0;
           @Override
-          public Long withHandle(Handle handle) throws Exception 
+          public Long withHandle(Handle handle)
           {
             handle.createQuery(
                 StringUtils.format("SELECT start,%1$send%1$s,payload FROM %2$s WHERE used = true AND dataSource = :dataSource",
@@ -236,7 +231,7 @@ public class DerivativesManager
                           totalSize += segment.getSize();
                         } 
                         catch (IOException e) {
-                          throw Throwables.propagate(e);
+                          throw new RuntimeException(e);
                         }
                         return null;
                       }

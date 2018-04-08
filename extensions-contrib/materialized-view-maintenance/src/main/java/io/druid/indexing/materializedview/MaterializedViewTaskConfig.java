@@ -26,6 +26,7 @@ public class MaterializedViewTaskConfig
 {
   @JsonProperty
   private Period taskCheckDuration = new Period("PT1M");
+  
   public Period getTaskCheckDuration()
   {
     return taskCheckDuration;

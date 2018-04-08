@@ -25,13 +25,13 @@ import java.util.Set;
 public class Derivative implements Comparable<Derivative>
 {
   private final String name;
-  private final Set<String> fields;
+  private final Set<String> columns;
   private final long avgSizeBasedGranularity;
 
-  public Derivative(String name, Set<String> fields, long size)
+  public Derivative(String name, Set<String> columns, long size)
   {
     this.name = name;
-    this.fields = fields;
+    this.columns = columns;
     this.avgSizeBasedGranularity = size;
   }
 
@@ -40,9 +40,9 @@ public class Derivative implements Comparable<Derivative>
     return name;
   }
 
-  public Set<String> getFields()
+  public Set<String> getColumns()
   {
-    return fields;
+    return columns;
   }
 
   public long getAvgSizeBasedGranularity()
@@ -72,12 +72,12 @@ public class Derivative implements Comparable<Derivative>
       return false;
     }
     Derivative that = (Derivative) o;
-    return this.name.equals(that.getName()) && this.fields.equals(that.getFields());
+    return name.equals(that.getName()) && columns.equals(that.getColumns());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(name) + Objects.hashCode(fields);
+    return Objects.hashCode(name) + Objects.hashCode(columns);
   }
 }

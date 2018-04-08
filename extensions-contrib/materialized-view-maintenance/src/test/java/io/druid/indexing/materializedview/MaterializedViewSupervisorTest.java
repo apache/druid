@@ -74,13 +74,13 @@ public class MaterializedViewSupervisorTest
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private MaterializedViewMetadataCoordinator materializedViewMetadataCoordinator;
   private MetadataSupervisorManager metadataSupervisorManager;
   private SQLMetadataSegmentManager sqlMetadataSegmentManager;
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
   private MaterializedViewSupervisorSpec spec;
   private ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  
   @Before
   public void setUp() throws IOException 
   {
@@ -92,11 +92,6 @@ public class MaterializedViewSupervisorTest
     indexerMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnector
-    );
-    materializedViewMetadataCoordinator = new MaterializedViewMetadataCoordinator(
-        objectMapper,
-        derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnector
     );
     metadataSupervisorManager = createMock(MetadataSupervisorManager.class);
@@ -117,7 +112,6 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         taskMaster,
         taskStorage,
-        materializedViewMetadataCoordinator,
         metadataSupervisorManager,
         sqlMetadataSegmentManager,
         indexerMetadataStorageCoordinator,

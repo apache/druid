@@ -36,7 +36,7 @@ public class MaterializedViewQueryRunnerFactory implements QueryRunnerFactory
   {
     // never used
     // TODO This method may be used in sql in the next version
-    return null;
+    throw new UnsupportedOperationException("MaterializedViewQueryRunnerFactory does not support creating runner");
   }
 
   @Override
@@ -44,7 +44,7 @@ public class MaterializedViewQueryRunnerFactory implements QueryRunnerFactory
   {
     // never used
     // TODO This method may be used in sql in the next version
-    return null;
+    throw new UnsupportedOperationException("MaterializedViewQueryRunnerFactory does not support getting Toolchest");
   }
 
   @Override
@@ -52,6 +52,6 @@ public class MaterializedViewQueryRunnerFactory implements QueryRunnerFactory
   {
     // never used
     // TODO This method may be used in sql in the next version
-    return null;
+    throw new UnsupportedOperationException("MaterializedViewQueryRunnerFactory does not support merging Runners");
   }
 }

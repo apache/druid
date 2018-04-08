@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
-import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -36,10 +35,8 @@ import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.RandomServerSelectorStrategy;
 import io.druid.curator.CuratorTestBase;
 import io.druid.indexing.materializedview.DerivativeDataSourceMetadata;
-import io.druid.indexing.materializedview.MaterializedViewMetadataCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.Pair;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.TestDerbyConnector;
@@ -83,10 +80,10 @@ public class DatasourceOptimizerTest extends CuratorTestBase
   private ZkPathsConfig zkPathsConfig;
   private DatasourceOptimizer optimizer;
   private MaterializedViewConfig viewConfig;
-  private MaterializedViewMetadataCoordinator materializedViewMetadataCoordinator;
   private IndexerSQLMetadataStorageCoordinator metadataStorageCoordinator;
   private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
+  
   @Before
   public void setUp() throws Exception
   {
@@ -96,17 +93,11 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     viewConfig = new MaterializedViewConfig();
     jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(new NamedType(DerivativeDataSourceMetadata.class, "view"));
-    materializedViewMetadataCoordinator = EasyMock.createMock(MaterializedViewMetadataCoordinator.class);
     metadataStorageCoordinator = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
     derivativesManager = new DerivativesManager(
         viewConfig, 
         derbyConnectorRule.metadataTablesConfigSupplier(), 
         jsonMapper, 
-        derbyConnector
-    );
-    materializedViewMetadataCoordinator = new MaterializedViewMetadataCoordinator(
-        jsonMapper,
-        derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnector
     );
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
@@ -151,7 +142,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     Set<String> dims = Sets.newHashSet("dim1", "dim2", "dim3");
     Set<String> metrics = Sets.newHashSet("cost");
     DerivativeDataSourceMetadata metadata = new DerivativeDataSourceMetadata(baseDataSource, dims, metrics);
-    materializedViewMetadataCoordinator.insertDataSourceMetadata(dataSource, metadata);
+    metadataStorageCoordinator.insertDataSourceMetadata(dataSource, metadata);
     // insert base datasource segments 
     List<Boolean> baseResult = Lists.transform(
         ImmutableList.<String>of(
@@ -161,53 +152,41 @@ public class DatasourceOptimizerTest extends CuratorTestBase
             "2011-04-04/2011-04-05",
             "2011-04-05/2011-04-06"
         ),
-        new Function<String, Boolean>()
-        {
-          @Override
-          public Boolean apply(String interval)
-          {
-            final DataSegment segment = createDataSegment(
-                "base", 
-                interval, 
-                "v1",
-                Lists.newArrayList("dim1", "dim2", "dim3", "dim4"), 
-                1024 * 1024
-            );
-            try {
-              metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
-              announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-            }
-            catch (Exception e) {
-              e.printStackTrace();
-              return false;
-            }
-            return true;
+        interval -> {
+          final DataSegment segment = createDataSegment(
+              "base", 
+              interval, 
+              "v1",
+              Lists.newArrayList("dim1", "dim2", "dim3", "dim4"), 
+              1024 * 1024
+          );
+          try {
+            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
+            announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
+          catch (IOException e) {
+            return false;
+          }
+          return true;
         }
     );
-    // insert derivative-1 segments
+    // insert derivative segments
     List<Boolean> derivativeResult = Lists.transform(
         ImmutableList.<String>of(
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-03/2011-04-04"
         ),
-        new Function<String, Boolean>()
-        {
-          @Override
-          public Boolean apply(String interval)
-          {
-            final DataSegment segment = createDataSegment("derivative", interval, "v1", Lists.newArrayList("dim1", "dim2", "dim3"), 1024);
-            try {
-              metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
-              announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-            }
-            catch (Exception e) {
-              e.printStackTrace();
-              return false;
-            }
-            return true;
+        interval -> {
+          final DataSegment segment = createDataSegment("derivative", interval, "v1", Lists.newArrayList("dim1", "dim2", "dim3"), 1024);
+          try {
+            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
+            announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
+          catch (IOException e) {
+            return false;
+          }
+          return true;
         }
     );
     Assert.assertFalse(baseResult.contains(false));
@@ -291,7 +270,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
+        Predicates.alwaysTrue()
     )
     {
       @Override

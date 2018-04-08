@@ -70,7 +70,6 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   private final ObjectMapper objectMapper;
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final MaterializedViewMetadataCoordinator metadataCoordinator;
   private final SQLMetadataSegmentManager segmentManager;
   private final TaskMaster taskMaster;
   private final TaskStorage taskStorage;
@@ -89,22 +88,17 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject TaskStorage taskStorage,
-      @JacksonInject MaterializedViewMetadataCoordinator metadataCoordinator,
       @JacksonInject MetadataSupervisorManager metadataSupervisorManager,
       @JacksonInject SQLMetadataSegmentManager segmentManager,
       @JacksonInject IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       @JacksonInject MaterializedViewTaskConfig config
   )
   {
-    Preconditions.checkNotNull(baseDataSource, "baseDataSource cannot be null. Please provide a baseDataSource.");
-    Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec cannot be null. Please provide a dimensionsSpec");
-    Preconditions.checkNotNull(aggregators, "metricsSpec cannot be null. Please provide a metricsSpec");
-    Preconditions.checkNotNull(tuningConfig, "tuningConfig cannot be null. Please provide tuningConfig");
+    this.baseDataSource = Preconditions.checkNotNull(baseDataSource, "baseDataSource cannot be null. Please provide a baseDataSource.");
+    this.dimensionsSpec = Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec cannot be null. Please provide a dimensionsSpec");
+    this.aggregators = Preconditions.checkNotNull(aggregators, "metricsSpec cannot be null. Please provide a metricsSpec");
+    this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig cannot be null. Please provide tuningConfig");
     
-    this.baseDataSource = baseDataSource;
-    this.dimensionsSpec = dimensionsSpec;
-    this.aggregators = aggregators;
-    this.tuningConfig = tuningConfig;
     this.dataSourceName = dataSourceName == null ? 
         StringUtils.format("%s-%s", baseDataSource, DigestUtils.sha1Hex(dimensionsSpec.toString()).substring(0, 8)) :
         dataSourceName;
@@ -115,7 +109,6 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.objectMapper = objectMapper;
     this.taskMaster = taskMaster;
     this.taskStorage = taskStorage;
-    this.metadataCoordinator = metadataCoordinator;
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.segmentManager = segmentManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
@@ -274,7 +267,6 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     return new MaterializedViewSupervisor(
         taskMaster,
         taskStorage,
-        metadataCoordinator,
         metadataSupervisorManager,
         segmentManager,
         metadataStorageCoordinator,

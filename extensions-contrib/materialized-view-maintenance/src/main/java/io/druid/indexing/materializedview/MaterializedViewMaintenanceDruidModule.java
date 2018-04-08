@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
 
 import java.util.List;
@@ -38,8 +37,8 @@ public class MaterializedViewMaintenanceDruidModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
-                new NamedType(MaterializedViewSupervisorSpec.class, "view"),
-                new NamedType(DerivativeDataSourceMetadata.class, "view")
+                new NamedType(MaterializedViewSupervisorSpec.class, "derivativeDataSource"),
+                new NamedType(DerivativeDataSourceMetadata.class, "derivativeDataSource")
                 )
     );
   }
@@ -48,6 +47,5 @@ public class MaterializedViewMaintenanceDruidModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.materialized.view.task", MaterializedViewTaskConfig.class);
-    binder.bind(MaterializedViewMetadataCoordinator.class).in(LazySingleton.class);
   }
 }

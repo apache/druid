@@ -42,6 +42,7 @@ public class MaterializedViewQuery<T> implements Query<T>
 {
   public static final String VIEW = "view";
   private final Query query;
+  
   @JsonCreator
   public MaterializedViewQuery(
       @JsonProperty("query") Query query

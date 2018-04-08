@@ -31,6 +31,7 @@ public class DatasourceOptimizerStats
   private final long optimizerCost;
   private final Map<Set<String>, AtomicLong> missFields;
   private final Map<String, Long> derivativesHitCount;
+  
   public DatasourceOptimizerStats(
       String base,
       long hitcount,
