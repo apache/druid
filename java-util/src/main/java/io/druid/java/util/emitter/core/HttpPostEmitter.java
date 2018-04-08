@@ -178,7 +178,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       throw new ISE(e, "Bad URL: %s", config.getRecipientBaseUrl());
     }
     emittingThread = new EmittingThread(config);
-    concurrentBatch.set(new Batch(this, acquireBuffer(), 0));
+    long firstBatchNumber = 1;
+    concurrentBatch.set(new Batch(this, acquireBuffer(), firstBatchNumber));
     // lastFillTimeMillis must not be 0, minHttpTimeoutMillis could be.
     lastFillTimeMillis = Math.max(config.minHttpTimeoutMillis, 1);
   }

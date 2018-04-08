@@ -512,11 +512,11 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     Assert.assertEquals(2, emitter.getTotalEmittedEvents());
 
     emitter.flush();
-    waitForEmission(emitter, 1);
+    waitForEmission(emitter, 2);
     Assert.assertEquals(4, emitter.getTotalEmittedEvents());
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());

@@ -19,9 +19,11 @@
 
 package io.druid.concurrent;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class ConcurrentAwaitableCounterTest
 {
@@ -61,5 +63,27 @@ public class ConcurrentAwaitableCounterTest
     }
     start.countDown();
     finish.await();
+  }
+
+  @Test
+  public void testAwaitFirstUpdate() throws InterruptedException
+  {
+    int[] value = new int[1];
+    ConcurrentAwaitableCounter counter = new ConcurrentAwaitableCounter();
+    Thread t = new Thread(() -> {
+      try {
+        Assert.assertTrue(counter.awaitFirstIncrement(10, TimeUnit.SECONDS));
+        Assert.assertEquals(1, value[0]);
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+
+    });
+    t.start();
+    Thread.sleep(2_000);
+    value[0] = 1;
+    counter.increment();
+    t.join();
   }
 }

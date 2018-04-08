@@ -106,11 +106,13 @@ public final class CacheScheduler
       return impl.updaterFuture;
     }
 
+    @VisibleForTesting
     public void awaitTotalUpdates(int totalUpdates) throws InterruptedException
     {
       impl.updateCounter.awaitCount(totalUpdates);
     }
 
+    @VisibleForTesting
     void awaitNextUpdates(int nextUpdates) throws InterruptedException
     {
       impl.updateCounter.awaitNextIncrements(nextUpdates);

@@ -47,10 +47,10 @@ public final class ConcurrentAwaitableCounter
   private static class Sync extends AbstractQueuedLongSynchronizer
   {
     @Override
-    protected long tryAcquireShared(long awaitedCount)
+    protected long tryAcquireShared(long countWhenWaitStarted)
     {
       long currentCount = getState();
-      return compareCounts(currentCount, awaitedCount) > 0 ? 1 : -1;
+      return compareCounts(currentCount, countWhenWaitStarted) > 0 ? 1 : -1;
     }
 
     @Override
@@ -134,6 +134,12 @@ public final class ConcurrentAwaitableCounter
     awaitCount(sync.getCount() + nextIncrements);
   }
 
+  /**
+   * The difference between this method and {@link #awaitCount(long, long, TimeUnit)} with argument 1 is that {@code
+   * awaitFirstIncrement()} returns boolean designating whether the count was await (while waiting for no longer than
+   * for the specified period of time), while {@code awaitCount()} throws {@link TimeoutException} if the count was not
+   * awaited.
+   */
   public boolean awaitFirstIncrement(long timeout, TimeUnit unit) throws InterruptedException
   {
     return sync.tryAcquireSharedNanos(0, unit.toNanos(timeout));
