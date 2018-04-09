@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
@@ -67,18 +67,11 @@ public class NumberedShardSpec implements ShardSpec
   @Override
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
-    return new ShardSpecLookup()
-    {
-      @Override
-      public ShardSpec getShardSpec(long timestamp, InputRow row)
-      {
-        return shardSpecs.get(0);
-      }
-    };
+    return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
 
   @Override
-  public Map<String, Range<String>> getDomain()
+  public Map<String, RangeSet<String>> getDomain()
   {
     return ImmutableMap.of();
   }

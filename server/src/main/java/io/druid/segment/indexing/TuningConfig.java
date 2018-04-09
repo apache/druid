@@ -30,4 +30,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface TuningConfig
 {
+  boolean DEFAULT_LOG_PARSE_EXCEPTIONS = false;
+  int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
+  int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
 }

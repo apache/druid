@@ -22,10 +22,10 @@ package io.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
@@ -97,6 +97,6 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   @Override
   protected InputStream wrapObjectStream(File object, InputStream stream) throws IOException
   {
-    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return CompressionUtils.decompress(stream, object.getPath());
   }
 }

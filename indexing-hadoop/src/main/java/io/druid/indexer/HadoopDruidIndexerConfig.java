@@ -126,7 +126,11 @@ public class HadoopDruidIndexerConfig
 
   public enum IndexJobCounters
   {
-    INVALID_ROW_COUNTER
+    INVALID_ROW_COUNTER,
+    ROWS_PROCESSED_COUNTER,
+    ROWS_PROCESSED_WITH_ERRORS_COUNTER,
+    ROWS_UNPARSEABLE_COUNTER,
+    ROWS_THROWN_AWAY_COUNTER
   }
 
   public static HadoopDruidIndexerConfig fromSpec(HadoopIngestionSpec spec)
@@ -368,6 +372,16 @@ public class HadoopDruidIndexerConfig
   public int getShardSpecCount(Bucket bucket)
   {
     return schema.getTuningConfig().getShardSpecs().get(bucket.time.getMillis()).size();
+  }
+
+  public boolean isLogParseExceptions()
+  {
+    return schema.getTuningConfig().isLogParseExceptions();
+  }
+
+  public int getMaxParseExceptions()
+  {
+    return schema.getTuningConfig().getMaxParseExceptions();
   }
 
   /**

@@ -21,7 +21,6 @@ package io.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -29,6 +28,7 @@ import com.google.common.collect.Sets;
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -65,7 +65,7 @@ public class JSONToLowerParser implements Parser<String, Object>
         return node.asDouble();
       }
       final String s = node.asText();
-      final CharsetEncoder enc = Charsets.UTF_8.newEncoder();
+      final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
       if (s != null && !enc.canEncode(s)) {
         // Some whacky characters are in this string (e.g. \uD900). These are problematic because they are decodeable
         // by new String(...) but will not encode into the same character. This dance here will replace these

@@ -24,14 +24,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.server.ServerTestHelper;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentLoadDropHandler;
@@ -57,40 +57,55 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class HttpLoadQueuePeonTest
 {
+  final DataSegment segment1 = new DataSegment(
+      "test1", Intervals.of("2014/2015"), "v1",
+      null, null, null, null, 0, 0
+  );
+
+  final DataSegment segment2 = new DataSegment(
+      "test2", Intervals.of("2014/2015"), "v1",
+      null, null, null, null, 0, 0
+  );
+
+  final DataSegment segment3 = new DataSegment(
+      "test3", Intervals.of("2014/2015"), "v1",
+      null, null, null, null, 0, 0
+  );
+
+  final DataSegment segment4 = new DataSegment(
+      "test4", Intervals.of("2014/2015"), "v1",
+      null, null, null, null, 0, 0
+  );
+
+  final TestDruidCoordinatorConfig config = new TestDruidCoordinatorConfig(
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      10,
+      null,
+      false,
+      false,
+      Duration.ZERO
+  )
+  {
+    @Override
+    public int getHttpLoadQueuePeonBatchSize()
+    {
+      return 2;
+    }
+  };
+
   @Test(timeout = 10000)
   public void testSimple() throws Exception
   {
-    final DataSegment segment1 = new DataSegment(
-        "test1", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    final DataSegment segment2 = new DataSegment(
-        "test2", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    final DataSegment segment3 = new DataSegment(
-        "test3", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    final DataSegment segment4 = new DataSegment(
-        "test4", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
     HttpLoadQueuePeon httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
         ServerTestHelper.MAPPER,
         new TestHttpClient(),
-        new TestDruidCoordinatorConfig(null, null, null, null, null, null, 10, null, false, false, Duration.ZERO) {
-          @Override
-          public int getHttpLoadQueuePeonBatchSize()
-          {
-            return 2;
-          }
-        },
+        config,
         Executors.newScheduledThreadPool(
             2,
             Execs.makeThreadFactory("HttpLoadQueuePeonTest-%s")
@@ -107,41 +122,10 @@ public class HttpLoadQueuePeonTest
         segment4.getIdentifier(), new CountDownLatch(1)
     );
 
-    httpLoadQueuePeon.dropSegment(segment1, new LoadPeonCallback()
-    {
-      @Override
-      public void execute()
-      {
-        latches.get(segment1.getIdentifier()).countDown();
-      }
-    });
-
-    httpLoadQueuePeon.loadSegment(segment2, new LoadPeonCallback()
-    {
-      @Override
-      public void execute()
-      {
-        latches.get(segment2.getIdentifier()).countDown();
-      }
-    });
-
-    httpLoadQueuePeon.dropSegment(segment3, new LoadPeonCallback()
-    {
-      @Override
-      public void execute()
-      {
-        latches.get(segment3.getIdentifier()).countDown();
-      }
-    });
-
-    httpLoadQueuePeon.loadSegment(segment4, new LoadPeonCallback()
-    {
-      @Override
-      public void execute()
-      {
-        latches.get(segment4.getIdentifier()).countDown();
-      }
-    });
+    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getIdentifier()).countDown());
+    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getIdentifier()).countDown());
+    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getIdentifier()).countDown());
+    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getIdentifier()).countDown());
 
     latches.get(segment1.getIdentifier()).await();
     latches.get(segment2.getIdentifier()).await();
@@ -149,6 +133,42 @@ public class HttpLoadQueuePeonTest
     latches.get(segment4.getIdentifier()).await();
 
     httpLoadQueuePeon.stop();
+  }
+
+  @Test(timeout = 10000)
+  public void testLoadDropAfterStop() throws Exception
+  {
+    HttpLoadQueuePeon httpLoadQueuePeon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        ServerTestHelper.MAPPER,
+        new TestHttpClient(),
+        config,
+        Executors.newScheduledThreadPool(
+            2,
+            Execs.makeThreadFactory("HttpLoadQueuePeonTest-%s")
+        ),
+        Execs.singleThreaded("HttpLoadQueuePeonTest")
+    );
+
+    httpLoadQueuePeon.start();
+
+    Map<String, CountDownLatch> latches = ImmutableMap.of(
+        segment1.getIdentifier(), new CountDownLatch(1),
+        segment2.getIdentifier(), new CountDownLatch(1),
+        segment3.getIdentifier(), new CountDownLatch(1),
+        segment4.getIdentifier(), new CountDownLatch(1)
+    );
+
+    httpLoadQueuePeon.dropSegment(segment1, () -> latches.get(segment1.getIdentifier()).countDown());
+    httpLoadQueuePeon.loadSegment(segment2, () -> latches.get(segment2.getIdentifier()).countDown());
+    latches.get(segment1.getIdentifier()).await();
+    latches.get(segment2.getIdentifier()).await();
+    httpLoadQueuePeon.stop();
+    httpLoadQueuePeon.dropSegment(segment3, () -> latches.get(segment3.getIdentifier()).countDown());
+    httpLoadQueuePeon.loadSegment(segment4, () -> latches.get(segment4.getIdentifier()).countDown());
+    latches.get(segment3.getIdentifier()).await();
+    latches.get(segment4.getIdentifier()).await();
+
   }
 
   private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
@@ -191,12 +211,17 @@ public class HttpLoadQueuePeonTest
       httpResponseHandler.handleResponse(httpResponse);
       try {
         List<DataSegmentChangeRequest> changeRequests = ServerTestHelper.MAPPER.readValue(
-            request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>() {}
+            request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>()
+            {
+            }
         );
 
         List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {
-          statuses.add(new SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus(cr, SegmentLoadDropHandler.Status.SUCCESS));
+          statuses.add(new SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus(
+              cr,
+              SegmentLoadDropHandler.Status.SUCCESS
+          ));
         }
         return (ListenableFuture) Futures.immediateFuture(
             new ByteArrayInputStream(

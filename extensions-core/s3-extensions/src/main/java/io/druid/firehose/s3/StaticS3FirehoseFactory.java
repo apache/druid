@@ -114,14 +114,14 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     // Getting data is deferred until openObjectStream() is called for each object.
     if (!uris.isEmpty()) {
       return uris.stream()
-          .map(
-              uri -> {
-                final String s3Bucket = uri.getAuthority();
-                final String key = S3Utils.extractS3Key(uri);
-                return S3Utils.getSingleObjectSummary(s3Client, s3Bucket, key);
-              }
-          )
-          .collect(Collectors.toList());
+                 .map(
+                     uri -> {
+                       final String s3Bucket = uri.getAuthority();
+                       final String key = S3Utils.extractS3Key(uri);
+                       return S3Utils.getSingleObjectSummary(s3Client, s3Bucket, key);
+                     }
+                 )
+                 .collect(Collectors.toList());
     } else {
       final List<S3ObjectSummary> objects = new ArrayList<>();
       for (URI uri : prefixes) {
@@ -212,7 +212,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   @Override
   protected InputStream wrapObjectStream(S3ObjectSummary object, InputStream stream) throws IOException
   {
-    return object.getKey().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return CompressionUtils.decompress(stream, object.getKey());
   }
 
   @Override

@@ -19,7 +19,6 @@
 
 package io.druid.java.util.http.client;
 
-import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -41,6 +40,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -153,7 +153,7 @@ public class JankyServersTest
       final ListenableFuture<StatusResponseHolder> future = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", silentServerSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
       Throwable e = null;
@@ -181,7 +181,7 @@ public class JankyServersTest
       final ListenableFuture<StatusResponseHolder> future = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", silentServerSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8),
+              new StatusResponseHandler(StandardCharsets.UTF_8),
               new Duration(100L)
           );
 
@@ -214,7 +214,7 @@ public class JankyServersTest
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", silentServerSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
       Throwable e = null;
@@ -242,7 +242,7 @@ public class JankyServersTest
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", closingServerSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           );
       Throwable e = null;
       try {
@@ -271,7 +271,7 @@ public class JankyServersTest
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", closingServerSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
       Throwable e = null;
@@ -306,7 +306,7 @@ public class JankyServersTest
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", echoServerSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
       Throwable e = null;
@@ -336,7 +336,7 @@ public class JankyServersTest
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", echoServerSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           );
 
       Throwable e = null;

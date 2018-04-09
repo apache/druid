@@ -19,7 +19,6 @@
 
 package io.druid.storage.azure;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
@@ -34,6 +33,7 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
@@ -88,7 +88,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
     expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
     expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8)));
+        new ByteArrayInputStream(testLog.getBytes(StandardCharsets.UTF_8)));
 
 
     replayAll();
@@ -111,7 +111,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     expect(azureStorage.getBlobExists(container, blobPath)).andReturn(true);
     expect(azureStorage.getBlobLength(container, blobPath)).andReturn((long) testLog.length());
     expect(azureStorage.getBlobInputStream(container, blobPath)).andReturn(
-        new ByteArrayInputStream(testLog.getBytes(Charsets.UTF_8)));
+        new ByteArrayInputStream(testLog.getBytes(StandardCharsets.UTF_8)));
 
 
     replayAll();

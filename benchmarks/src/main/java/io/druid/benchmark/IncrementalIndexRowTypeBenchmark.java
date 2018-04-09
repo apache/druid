@@ -160,7 +160,7 @@ public class IncrementalIndexRowTypeBenchmark
   {
     for (int i = 0; i < maxRows; i++) {
       InputRow row = longRows.get(i);
-      int rv = incIndex.add(row);
+      int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -173,7 +173,7 @@ public class IncrementalIndexRowTypeBenchmark
   {
     for (int i = 0; i < maxRows; i++) {
       InputRow row = floatRows.get(i);
-      int rv = incFloatIndex.add(row);
+      int rv = incFloatIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -186,7 +186,7 @@ public class IncrementalIndexRowTypeBenchmark
   {
     for (int i = 0; i < maxRows; i++) {
       InputRow row = stringRows.get(i);
-      int rv = incStrIndex.add(row);
+      int rv = incStrIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }

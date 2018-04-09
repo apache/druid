@@ -21,7 +21,6 @@ package io.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -34,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -104,7 +104,7 @@ public class ParametrizedUriEmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -138,7 +138,7 @@ public class ParametrizedUriEmitterTest
           {
             results.put(
                 request.getUrl().toString(),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
             return GoHandlers.immediateFuture(okResponse());
           }
@@ -178,7 +178,7 @@ public class ParametrizedUriEmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());

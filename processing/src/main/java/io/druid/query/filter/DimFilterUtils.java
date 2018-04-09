@@ -122,12 +122,13 @@ public class DimFilterUtils
       boolean include = true;
 
       if (dimFilter != null && shard != null) {
-        Map<String, Range<String>> domain = shard.getDomain();
-        for (Map.Entry<String, Range<String>> entry : domain.entrySet()) {
+        Map<String, RangeSet<String>> domain = shard.getDomain();
+        for (Map.Entry<String, RangeSet<String>> entry : domain.entrySet()) {
           String dimension = entry.getKey();
           Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
               .computeIfAbsent(dimension, d -> Optional.fromNullable(dimFilter.getDimensionRangeSet(d)));
-          if (optFilterRangeSet.isPresent() && optFilterRangeSet.get().subRangeSet(entry.getValue()).isEmpty()) {
+
+          if (optFilterRangeSet.isPresent() && hasEmptyIntersection(optFilterRangeSet.get(), entry.getValue())) {
             include = false;
           }
         }
@@ -138,5 +139,16 @@ public class DimFilterUtils
       }
     }
     return retSet;
+  }
+
+  private static boolean hasEmptyIntersection(RangeSet<String> r1, RangeSet<String> r2)
+  {
+    for (Range<String> range : r2.asRanges()) {
+      if (!r1.subRangeSet(range).isEmpty()) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

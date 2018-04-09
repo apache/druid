@@ -22,7 +22,6 @@ package io.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
@@ -50,6 +49,7 @@ import org.joda.time.DateTime;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +73,7 @@ public class WorkerHolder
   {
   };
 
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
+  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(StandardCharsets.UTF_8);
 
   private final Worker worker;
   private Worker disabledWorker;
@@ -387,7 +387,8 @@ public class WorkerHolder
                 announcement.getTaskType(),
                 announcement.getTaskResource(),
                 TaskStatus.failure(announcement.getTaskId()),
-                announcement.getTaskLocation()
+                announcement.getTaskLocation(),
+                announcement.getTaskDataSource()
             ));
           }
         }
@@ -423,7 +424,8 @@ public class WorkerHolder
                   announcement.getTaskType(),
                   announcement.getTaskResource(),
                   TaskStatus.failure(announcement.getTaskId()),
-                  announcement.getTaskLocation()
+                  announcement.getTaskLocation(),
+                  announcement.getTaskDataSource()
               ));
             }
           } else if (change instanceof WorkerHistoryItem.Metadata) {

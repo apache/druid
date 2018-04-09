@@ -46,8 +46,7 @@ public class ConstantPostAggregator implements PostAggregator
   )
   {
     this.name = name;
-    this.constantValue = constantValue;
-    Preconditions.checkNotNull(this.constantValue);
+    this.constantValue = Preconditions.checkNotNull(constantValue, "Constant value cannot be null");
   }
 
   @Override
