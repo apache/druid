@@ -230,12 +230,6 @@ public class KerberosAuthenticator implements Authenticator
 
         String path = ((HttpServletRequest) request).getRequestURI();
         if (isExcluded(path)) {
-          // For excluded paths that does NOT need to be autheticated.
-          // set authenticated username as Anonymous
-          request.setAttribute(
-              AuthConfig.DRUID_AUTHENTICATION_RESULT,
-              new AuthenticationResult(AuthenticationToken.ANONYMOUS.getName(), authorizerName, null)
-          );
           filterChain.doFilter(request, response);
         } else {
           String clientPrincipal = null;
