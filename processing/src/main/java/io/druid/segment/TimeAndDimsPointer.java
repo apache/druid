@@ -69,8 +69,9 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
   /**
    * TimeAndDimsPointer constructor intentionally takes dimensionSelectors and metricSelectors as arrays and doesn't
    * copy them "defensively", to allow to reuse arrays during transformations of TimeAndDimsPointers and {@link
-   * RowPointer}s in some cases, particularly in {@link RowCombiningTimeAndDimsIterator#initCombinedCurrentPointer},
-   * in order to reduce the number of array objects tapped on each iteration during index merge process.
+   * RowPointer}s in some cases, particularly in {@link
+   * RowCombiningTimeAndDimsIterator#RowCombiningTimeAndDimsIterator}, in order to reduce the number of array objects
+   * tapped on each iteration during index merge process.
    */
   TimeAndDimsPointer(
       ColumnValueSelector timestampSelector,
