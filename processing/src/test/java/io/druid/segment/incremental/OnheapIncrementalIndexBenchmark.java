@@ -242,7 +242,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       rowContainer.set(null);
 
+<<<<<<< HEAD
       return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
+=======
+      return new AddToFactsResult(numEntries.get(), new ArrayList<>());
+>>>>>>> 685f4063d4e63fba5f9ae11bf496c4c2575a8ebf
     }
 
     @Override
