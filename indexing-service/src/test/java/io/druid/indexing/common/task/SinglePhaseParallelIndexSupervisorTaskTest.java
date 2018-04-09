@@ -508,7 +508,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
         null,
         null,
         null,
-        null
+        new NoopTestTaskFileWriter()
     );
   }
 

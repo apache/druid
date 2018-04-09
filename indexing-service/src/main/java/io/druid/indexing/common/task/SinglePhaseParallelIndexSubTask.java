@@ -105,8 +105,12 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
   private final IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient> taskClientFactory;
+  @Nullable
   private final CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
+  @Nullable
   private final CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
+
+  private final FireDepartment fireDepartmentForMetrics;
 
   private IngestionState ingestionState;
 
@@ -142,11 +146,22 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
 
-    determinePartitionsSavedParseExceptions = new CircularBuffer<>(
-        ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
-    );
-    buildSegmentsSavedParseExceptions = new CircularBuffer<>(
-        ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+    if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
+      determinePartitionsSavedParseExceptions = new CircularBuffer<>(
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+      );
+      buildSegmentsSavedParseExceptions = new CircularBuffer<>(
+          ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+      );
+    } else {
+      determinePartitionsSavedParseExceptions = null;
+      buildSegmentsSavedParseExceptions = null;
+    }
+
+    this.fireDepartmentForMetrics = new FireDepartment(
+        ingestionSchema.getDataSchema(),
+        new RealtimeIOConfig(null, null, null),
+        null
     );
 
     this.ingestionState = IngestionState.NOT_STARTED;
@@ -224,7 +239,11 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     FileUtils.forceMkdir(firehoseTempDir);
 
     ingestionState = IngestionState.DETERMINE_PARTITIONS;
-    final IndexTask.ShardSpecs shardSpecs = determineShardSpecs(firehoseFactory, firehoseTempDir);
+    final IndexTask.ShardSpecs shardSpecs = determineShardSpecs(
+        firehoseFactory,
+        firehoseTempDir,
+        fireDepartmentForMetrics.getMetrics()
+    );
 
     final DataSchema dataSchema;
     final Map<Interval, String> versions;
@@ -307,7 +326,8 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
    */
   private IndexTask.ShardSpecs determineShardSpecs(
       final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir
+      final File firehoseTempDir,
+      FireDepartmentMetrics fireDepartmentMetrics
   ) throws IOException
   {
     final IndexTask.IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -331,7 +351,9 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
           firehoseFactory,
           firehoseTempDir,
           granularitySpec,
-          determineIntervals
+          determineIntervals,
+          determinePartitionsSavedParseExceptions,
+          fireDepartmentMetrics
       );
     }
   }
@@ -353,7 +375,9 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
       FirehoseFactory firehoseFactory,
       File firehoseTempDir,
       GranularitySpec granularitySpec,
-      boolean determineIntervals
+      boolean determineIntervals,
+      CircularBuffer<Throwable> determinePartitionsSavedParseExceptions,
+      FireDepartmentMetrics fireDepartmentMetrics
   ) throws IOException
   {
     log.info("Determining intervals");
@@ -364,7 +388,9 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
         firehoseFactory,
         firehoseTempDir,
         granularitySpec,
-        determineIntervals
+        determineIntervals,
+        determinePartitionsSavedParseExceptions,
+        fireDepartmentMetrics
     );
 
     final Map<Interval, List<ShardSpec>> intervalToShardSpecs = intervals
@@ -380,7 +406,9 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
       FirehoseFactory firehoseFactory,
       File firehoseTempDir,
       GranularitySpec granularitySpec,
-      boolean determineIntervals
+      boolean determineIntervals,
+      CircularBuffer<Throwable> determinePartitionsSavedParseExceptions,
+      FireDepartmentMetrics fireDepartmentMetrics
   ) throws IOException
   {
     final List<Interval> intervals = new ArrayList<>();
@@ -416,10 +444,17 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
           }
         }
         catch (ParseException e) {
-          if (ingestionSchema.getTuningConfig().isReportParseExceptions()) {
-            throw e;
-          } else {
-            unparseable++;
+          if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
+            log.error(e, "Encountered parse exception: ");
+          }
+
+          if (determinePartitionsSavedParseExceptions != null) {
+            determinePartitionsSavedParseExceptions.add(e);
+          }
+
+          fireDepartmentMetrics.incrementUnparseable();
+          if (fireDepartmentMetrics.unparseable() > ingestionSchema.getTuningConfig().getMaxParseExceptions()) {
+            throw new RuntimeException("Max parse exceptions exceeded, terminating task...", e);
           }
         }
       }
@@ -465,10 +500,6 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
   ) throws IOException, InterruptedException
   {
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    final FireDepartment fireDepartmentForMetrics = new FireDepartment(
-        dataSchema, new RealtimeIOConfig(null, null, null), null
-    );
-    final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
     if (toolbox.getMonitorScheduler() != null) {
       toolbox.getMonitorScheduler().addMonitor(
@@ -495,6 +526,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
           versions
       );
     }
+    final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
     try (
         final Appenderator appenderator = newAppenderator(fireDepartmentMetrics, toolbox, dataSchema, tuningConfig);
