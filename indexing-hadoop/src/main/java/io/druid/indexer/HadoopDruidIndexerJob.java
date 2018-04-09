@@ -26,7 +26,9 @@ import com.google.inject.Inject;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -92,8 +94,28 @@ public class HadoopDruidIndexerJob implements Jobby
     );
 
 
-    JobHelper.runJobs(jobs, config);
-    return true;
+    return JobHelper.runJobs(jobs, config);
+  }
+
+  @Override
+  public Map<String, Object> getStats()
+  {
+    if (indexJob == null) {
+      return null;
+    }
+
+    return indexJob.getStats();
+  }
+
+  @Nullable
+  @Override
+  public String getErrorMessage()
+  {
+    if (indexJob == null) {
+      return null;
+    }
+
+    return indexJob.getErrorMessage();
   }
 
   public List<DataSegment> getPublishedSegments()

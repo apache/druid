@@ -19,7 +19,6 @@
 
 package io.druid.java.util.metrics.cgroups;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
@@ -28,6 +27,7 @@ import io.druid.java.util.metrics.CgroupUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -76,7 +76,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
   {
     final List<String> lines;
     try {
-      lines = Files.readLines(procCgroup, Charsets.UTF_8);
+      lines = Files.readLines(procCgroup, StandardCharsets.UTF_8);
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -97,7 +97,7 @@ public class ProcCgroupDiscoverer implements CgroupDiscoverer
   {
     final List<String> lines;
     try {
-      lines = Files.readLines(procMounts, Charsets.UTF_8);
+      lines = Files.readLines(procMounts, StandardCharsets.UTF_8);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

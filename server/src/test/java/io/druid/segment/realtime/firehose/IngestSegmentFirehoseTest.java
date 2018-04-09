@@ -19,7 +19,6 @@
 
 package io.druid.segment.realtime.firehose;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.spatial.search.RadiusBound;
@@ -59,6 +58,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 
@@ -212,7 +212,7 @@ public class IngestSegmentFirehoseTest
             false,
             0
         ),
-        Charsets.UTF_8.toString()
+        StandardCharsets.UTF_8.toString()
     );
 
     try (

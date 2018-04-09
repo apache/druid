@@ -53,7 +53,7 @@ public class FileTaskLogs implements TaskLogs
   public void pushTaskLog(final String taskid, File file) throws IOException
   {
     if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
-      final File outputFile = fileForTask(taskid);
+      final File outputFile = fileForTask(taskid, file.getName());
       Files.copy(file, outputFile);
       log.info("Wrote task log to: %s", outputFile);
     } else {
@@ -62,9 +62,21 @@ public class FileTaskLogs implements TaskLogs
   }
 
   @Override
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
+      final File outputFile = fileForTask(taskid, reportFile.getName());
+      Files.copy(reportFile, outputFile);
+      log.info("Wrote task report to: %s", outputFile);
+    } else {
+      throw new IOE("Unable to create task report dir[%s]", config.getDirectory());
+    }
+  }
+
+  @Override
   public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
   {
-    final File file = fileForTask(taskid);
+    final File file = fileForTask(taskid, "log");
     if (file.exists()) {
       return Optional.<ByteSource>of(
           new ByteSource()
@@ -81,9 +93,29 @@ public class FileTaskLogs implements TaskLogs
     }
   }
 
-  private File fileForTask(final String taskid)
+  @Override
+  public Optional<ByteSource> streamTaskReports(final String taskid)
   {
-    return new File(config.getDirectory(), StringUtils.format("%s.log", taskid));
+    final File file = fileForTask(taskid, "report.json");
+    if (file.exists()) {
+      return Optional.<ByteSource>of(
+          new ByteSource()
+          {
+            @Override
+            public InputStream openStream() throws IOException
+            {
+              return LogUtils.streamFile(file, 0);
+            }
+          }
+      );
+    } else {
+      return Optional.absent();
+    }
+  }
+
+  private File fileForTask(final String taskid, String filename)
+  {
+    return new File(config.getDirectory(), StringUtils.format("%s.%s", taskid, filename));
   }
 
   @Override

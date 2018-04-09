@@ -28,16 +28,16 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
 import io.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import io.druid.java.util.http.client.response.ClientResponse;
 import io.druid.java.util.http.client.response.InputStreamResponseHandler;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.server.coordination.DataSegmentChangeCallback;
 import io.druid.server.coordination.DataSegmentChangeHandler;
 import io.druid.server.coordination.DataSegmentChangeRequest;
@@ -61,7 +61,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
@@ -261,6 +260,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             public void onFailure(Throwable t)
             {
               try {
+                responseHandler.description = t.toString();
                 logRequestFailure(t);
               }
               finally {
@@ -333,20 +333,15 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       ScheduledExecutors.scheduleAtFixedRate(
           processingExecutor,
           new Duration(config.getHttpLoadQueuePeonRepeatDelay()),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call()
-            {
-              if (!stopped) {
-                doSegmentManagement();
-              }
+          () -> {
+            if (!stopped) {
+              doSegmentManagement();
+            }
 
-              if (stopped) {
-                return ScheduledExecutors.Signal.STOP;
-              } else {
-                return ScheduledExecutors.Signal.REPEAT;
-              }
+            if (stopped) {
+              return ScheduledExecutors.Signal.STOP;
+            } else {
+              return ScheduledExecutors.Signal.REPEAT;
             }
           }
       );
@@ -364,11 +359,11 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       stopped = true;
 
       for (SegmentHolder holder : segmentsToDrop.values()) {
-        holder.requestSucceeded();
+        holder.requestFailed("Stopping load queue peon.");
       }
 
       for (SegmentHolder holder : segmentsToLoad.values()) {
-        holder.requestSucceeded();
+        holder.requestFailed("Stopping load queue peon.");
       }
 
       segmentsToDrop.clear();
@@ -382,6 +377,16 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   public void loadSegment(DataSegment segment, LoadPeonCallback callback)
   {
     synchronized (lock) {
+      if (stopped) {
+        log.warn(
+            "Server[%s] cannot load segment[%s] because load queue peon is stopped.",
+            serverId,
+            segment.getIdentifier()
+        );
+        callback.execute();
+        return;
+      }
+
       SegmentHolder holder = segmentsToLoad.get(segment);
 
       if (holder == null) {
@@ -398,6 +403,15 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   public void dropSegment(DataSegment segment, LoadPeonCallback callback)
   {
     synchronized (lock) {
+      if (stopped) {
+        log.warn(
+            "Server[%s] cannot drop segment[%s] because load queue peon is stopped.",
+            serverId,
+            segment.getIdentifier()
+        );
+        callback.execute();
+        return;
+      }
       SegmentHolder holder = segmentsToDrop.get(segment);
 
       if (holder == null) {

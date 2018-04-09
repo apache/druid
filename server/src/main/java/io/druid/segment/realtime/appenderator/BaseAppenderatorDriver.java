@@ -300,7 +300,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
             identifier,
             result.getNumRowsInSegment(),
             appenderator.getTotalRowCount(),
-            result.isPersistRequired()
+            result.isPersistRequired(),
+            result.getParseException()
         );
       }
       catch (SegmentNotWritableException e) {

@@ -190,7 +190,7 @@ public class ObjectFlatteners
                                  };
                                }
                            )
-                           .collect(Collectors.toSet());
+                           .collect(Collectors.toCollection(LinkedHashSet::new));
           }
         };
       }

@@ -277,6 +277,14 @@ public class SketchAggregationTest
             2
         )
     );
+    
+    assertPostAggregatorSerde(
+        new SketchEstimatePostAggregator(
+            "name",
+            new SketchConstantPostAggregator("name", "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI="),
+            null
+        )
+    );
   }
 
   @Test
@@ -290,6 +298,18 @@ public class SketchAggregationTest
             Lists.<PostAggregator>newArrayList(
                 new FieldAccessPostAggregator("name1", "fieldName1"),
                 new FieldAccessPostAggregator("name2", "fieldName2")
+            )
+        )
+    );
+    
+    assertPostAggregatorSerde(
+        new SketchSetPostAggregator(
+            "name",
+            "INTERSECT",
+            null,
+            Lists.<PostAggregator>newArrayList(
+                new FieldAccessPostAggregator("name1", "fieldName1"),
+                new SketchConstantPostAggregator("name2", "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=")
             )
         )
     );
