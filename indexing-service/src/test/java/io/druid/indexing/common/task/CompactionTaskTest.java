@@ -625,8 +625,13 @@ public class CompactionTaskTest
           }
         }
 
-        final Metadata metadata = new Metadata();
-        metadata.setAggregators(aggregatorFactories.toArray(new AggregatorFactory[aggregatorFactories.size()]));
+        final Metadata metadata = new Metadata(
+            null,
+            aggregatorFactories.toArray(new AggregatorFactory[0]),
+            null,
+            null,
+            null
+        );
 
         queryableIndexMap.put(
             entry.getValue(),

@@ -274,13 +274,13 @@ public class IndexMergerTestBase
     assertDimCompression(index, indexSpec.getDimensionCompression());
 
     Assert.assertEquals(
-        new Metadata()
-            .setAggregators(
-                IncrementalIndexTest.getDefaultCombiningAggregatorFactories()
-            )
-            .setQueryGranularity(Granularities.NONE)
-            .setRollup(Boolean.TRUE)
-            .putAll(metadataElems),
+        new Metadata(
+            metadataElems,
+            IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+            null,
+            Granularities.NONE,
+            Boolean.TRUE
+        ),
         index.getMetadata()
     );
   }

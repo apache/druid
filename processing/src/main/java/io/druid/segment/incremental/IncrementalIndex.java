@@ -276,11 +276,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.reportParseExceptions = reportParseExceptions;
 
     this.columnCapabilities = Maps.newHashMap();
-    this.metadata = new Metadata()
-        .setAggregators(getCombiningAggregators(metrics))
-        .setTimestampSpec(incrementalIndexSchema.getTimestampSpec())
-        .setQueryGranularity(this.gran)
-        .setRollup(this.rollup);
+    this.metadata = new Metadata(
+        null,
+        getCombiningAggregators(metrics),
+        incrementalIndexSchema.getTimestampSpec(),
+        this.gran,
+        this.rollup
+    );
 
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
