@@ -31,6 +31,7 @@ import java.util.Map;
 
 /**
  */
+@PublicApi
 public class AlertEvent implements Event
 {
   private final ImmutableMap<String, String> serviceDimensions;
@@ -111,7 +112,6 @@ public class AlertEvent implements Event
   /*
    * This method is used in certain proprietary emitter extensions
    */
-  @PublicApi
   @SuppressWarnings("unused")
   public String getService()
   {
@@ -121,7 +121,6 @@ public class AlertEvent implements Event
   /*
    * This method is used in certain proprietary emitter extensions
    */
-  @PublicApi
   @SuppressWarnings("unused")
   public String getHost()
   {
@@ -141,7 +140,6 @@ public class AlertEvent implements Event
   /*
    * This method is used in certain proprietary emitter extensions
    */
-  @PublicApi
   @SuppressWarnings("unused")
   public Map<String, Object> getDataMap()
   {
