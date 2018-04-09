@@ -21,15 +21,12 @@ package io.druid.segment;
 
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.AggregatorFactory;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.IntStream;
 
 /**
  * RowCombiningTimeAndDimsIterator takes some {@link RowIterator}s, assuming that they are "sorted" (see javadoc of
@@ -39,12 +36,18 @@ import java.util.stream.IntStream;
  */
 final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
 {
+  private static final int MIN_CURRENTLY_COMBINED_ROW_NUM_UNSET_VALUE = -1;
+
   private final MergingRowIterator mergingIterator;
 
   /**
    * Those pointers are used as {@link #currentTimeAndDimsPointer} (and therefore returned from {@link #getPointer()}),
-   * until no points are actually combined. It's an optimization to reduce data movements from pointers of original
-   * iterators to {@link #combinedTimeAndDimsPointersByOriginalIteratorIndex} on each iteration.
+   * until there is just one point in the "equivalence class" to be combined. It's an optimization: alternative was to
+   * start to "combine" right away for each point, and thus use only {@link
+   * #combinedTimeAndDimsPointersByOriginalIteratorIndex}. This optimization aims to reduce data movements from pointers
+   * of original iterators to {@link #combinedTimeAndDimsPointersByOriginalIteratorIndex} on each iteration.
+   *
+   * @see #soleCurrentPointSourceOriginalIteratorIndex
    */
   private final TimeAndDimsPointer[] markedRowPointersOfOriginalIterators;
 
@@ -54,21 +57,38 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
 
   /**
    * We preserve as many "combined time and dims pointers" as there were original iterators. Each of them is a composite
-   * of time and dimension selector from the original iterator by the corresponding index (see {@link
-   * #makeCombinedPointer}), and the same metric selectors {@link #combinedMetricSelectors}. It allows to be
-   * allocation-free during iteration, and also to reduce the number of any field writes during iteration.
+   * of time and dimension selectors from the original iterator by the corresponding index, and the same metric
+   * selectors ({@link #combinedMetricSelectors}). It allows to be allocation-free during iteration, and also to reduce
+   * the number of field writes during iteration.
    */
   private final TimeAndDimsPointer[] combinedTimeAndDimsPointersByOriginalIteratorIndex;
 
-  private final BitSet currentIndexes = new BitSet();
-  private final IntList[] rowsByIndex;
+  /**
+   * This bitset has set bits that correspond to the indexes of the original iterators, that participate the current
+   * combination of all points from the current "equivalence class", resulting in the current {@link #getPointer()}
+   * point.
+   *
+   * If there are less than 64 iterators combined, this field could be optimized to be just a single primitive long.
+   * This optimization could be done in the future.
+   */
+  private final BitSet indexesOfCurrentlyCombinedOriginalIterators = new BitSet();
+
+  /**
+   * This field and {@link #maxCurrentlyCombinedRowNumByOriginalIteratorIndex} designate "row num range" in each
+   * original iterator, points from which are currently combined (see {@link
+   * #indexesOfCurrentlyCombinedOriginalIterators}). It could have been a single row number, if original iterators were
+   * guaranteed to have no duplicate rows themselves, but they are not.
+   */
+  private final int[] minCurrentlyCombinedRowNumByOriginalIteratorIndex;
+  private final int[] maxCurrentlyCombinedRowNumByOriginalIteratorIndex;
 
   @Nullable
   private TimeAndDimsPointer currentTimeAndDimsPointer;
+
   /**
-   * If this field is soleCurrentPointSourceOriginalIteratorIndex >= 0, it means that no combines are done yet at the
-   * current point, {@link #currentTimeAndDimsPointer} is one of {@link #markedRowPointersOfOriginalIterators}, and the
-   * value of this field is the index of the original iterator which is the source of the sole (uncombined) point.
+   * If soleCurrentPointSourceOriginalIteratorIndex >= 0, it means that no combines are done yet at the current point,
+   * {@link #currentTimeAndDimsPointer} is one of {@link #markedRowPointersOfOriginalIterators}, and the value of this
+   * field is the index of the original iterator which is the source of the sole (uncombined) point.
    *
    * If the value of this field is less than 0, it means that some combines are done at the current point, and {@link
    * #currentTimeAndDimsPointer} is one of {@link #combinedTimeAndDimsPointersByOriginalIteratorIndex}.
@@ -84,14 +104,14 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
       List<String> metricNames
   )
   {
-    int numIndexes = originalIterators.size();
+    int numCombinedIterators = originalIterators.size();
     mergingIterator = new MergingRowIterator(originalIterators);
 
-    markedRowPointersOfOriginalIterators = new TimeAndDimsPointer[numIndexes];
+    markedRowPointersOfOriginalIterators = new TimeAndDimsPointer[numCombinedIterators];
     Arrays.setAll(
         markedRowPointersOfOriginalIterators,
-        i -> {
-          TransformableRowIterator originalIterator = mergingIterator.getOriginalIterator(i);
+        originalIteratorIndex -> {
+          TransformableRowIterator originalIterator = mergingIterator.getOriginalIterator(originalIteratorIndex);
           return originalIterator != null ? originalIterator.getMarkedPointer() : null;
         }
     );
@@ -99,37 +119,73 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
     combinedMetricSelectors = new AggregateCombiner[metricAggs.length];
     Arrays.setAll(combinedMetricSelectors, metricIndex -> metricAggs[metricIndex].makeAggregateCombiner());
     combinedMetricNames = metricNames;
-    combinedTimeAndDimsPointersByOriginalIteratorIndex = new TimeAndDimsPointer[numIndexes];
 
-    rowsByIndex = IntStream.range(0, numIndexes).mapToObj(i -> new IntArrayList()).toArray(IntList[]::new);
+    combinedTimeAndDimsPointersByOriginalIteratorIndex = new TimeAndDimsPointer[numCombinedIterators];
+    Arrays.setAll(
+        combinedTimeAndDimsPointersByOriginalIteratorIndex,
+        originalIteratorIndex -> {
+          TimeAndDimsPointer markedRowPointer = markedRowPointersOfOriginalIterators[originalIteratorIndex];
+          if (markedRowPointer != null) {
+            return new TimeAndDimsPointer(
+                markedRowPointer.timestampSelector,
+                markedRowPointer.dimensionSelectors,
+                markedRowPointer.getDimensionHandlers(),
+                combinedMetricSelectors,
+                combinedMetricNames
+            );
+          } else {
+            return null;
+          }
+        }
+    );
+
+    minCurrentlyCombinedRowNumByOriginalIteratorIndex = new int[numCombinedIterators];
+    Arrays.fill(minCurrentlyCombinedRowNumByOriginalIteratorIndex, MIN_CURRENTLY_COMBINED_ROW_NUM_UNSET_VALUE);
+    maxCurrentlyCombinedRowNumByOriginalIteratorIndex = new int[numCombinedIterators];
 
     if (mergingIterator.moveToNext()) {
       nextRowPointer = mergingIterator.getPointer();
     }
   }
 
-  private void clear()
+  /**
+   * Clear the info about which rows (in which original iterators and which row nums within them) were combined on
+   * the previous step.
+   */
+  private void clearCombinedRowsInfo()
   {
-    for (int i = currentIndexes.nextSetBit(0); i >= 0; i = currentIndexes.nextSetBit(i + 1)) {
-      rowsByIndex[i].clear();
+    for (int originalIteratorIndex = indexesOfCurrentlyCombinedOriginalIterators.nextSetBit(0);
+         originalIteratorIndex >= 0;
+         originalIteratorIndex = indexesOfCurrentlyCombinedOriginalIterators.nextSetBit(originalIteratorIndex + 1)) {
+      minCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex] =
+          MIN_CURRENTLY_COMBINED_ROW_NUM_UNSET_VALUE;
     }
-    currentIndexes.clear();
+    indexesOfCurrentlyCombinedOriginalIterators.clear();
   }
 
+  /**
+   * Warning: this method and {@link #startNewTimeAndDims} have just ~25 lines of code, but their logic is very
+   * convoluted and hard to understand. It could be especially confusing to try to understand it via debug.
+   */
   @Override
   public boolean moveToNext()
   {
-    clear();
+    clearCombinedRowsInfo();
     if (nextRowPointer == null) {
       currentTimeAndDimsPointer = null;
       return false;
     }
+    // This line implicitly uses the property of RowIterator.getPointer() (see [*] below), that it's still valid after
+    // RowPointer.moveToNext() returns false. mergingIterator.moveToNext() could have returned false during the previous
+    // call to this method, RowCombiningTimeAndDimsIterator.moveToNext().
     startNewTimeAndDims(nextRowPointer);
     nextRowPointer = null;
+    // [1] -- see comment in startNewTimeAndDims()
     mergingIterator.mark();
+    // [2] -- see comment in startNewTimeAndDims()
     while (mergingIterator.moveToNext()) {
       if (mergingIterator.hasTimeAndDimsChangedSinceMark()) {
-        nextRowPointer = mergingIterator.getPointer();
+        nextRowPointer = mergingIterator.getPointer(); // [*]
         return true;
       } else {
         combineToCurrentTimeAndDims(mergingIterator.getPointer());
@@ -143,22 +199,25 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
   /**
    * This method doesn't assign one of {@link #combinedTimeAndDimsPointersByOriginalIteratorIndex} into {@link
    * #currentTimeAndDimsPointer}, instead it uses one of {@link #markedRowPointersOfOriginalIterators}, see the javadoc
-   * of the latter for explanation.
+   * of this field for explanation.
    */
   private void startNewTimeAndDims(RowPointer rowPointer)
   {
-    int indexNum = rowPointer.getIndexNum();
-    // Note: at the moment when this operation is performed, markedRowPointersOfOriginalIterators[indexNum] doesn't yet
-    // contain the values that it should. startNewTimeAndDims() is called from moveToNext(), see above. Later in the
-    // code of moveToNext(), mergingIterator.mark() is called, and then mergingIterator.moveToNext(). This will make
-    // MergingRowIterator.moveToNext() implementation (see it's code) to call mark() on the current head iteratator,
-    // and only after that markedRowPointersOfOriginalIterators[indexNum] will have correct values. So by the time
-    // when moveToNext() (from where this method is called) exits, and before getPointer() could be called by the user
-    // of this class, it will have correct values.
-    currentTimeAndDimsPointer = markedRowPointersOfOriginalIterators[indexNum];
-    soleCurrentPointSourceOriginalIteratorIndex = indexNum;
-    currentIndexes.set(indexNum);
-    rowsByIndex[indexNum].add(rowPointer.getRowNum());
+    int originalIteratorIndex = rowPointer.getIndexNum();
+    // Note: at the moment when this operation is performed, markedRowPointersOfOriginalIterators[originalIteratorIndex]
+    // doesn't yet contain actual current dimension and metric values. startNewTimeAndDims() is called from
+    // moveToNext(), see above. Later in the code of moveToNext(), mergingIterator.mark() [1] is called, and then
+    // mergingIterator.moveToNext() [2]. This will make MergingRowIterator.moveToNext() implementation (see it's code)
+    // to call mark() on the current head iteratator, and only after that
+    // markedRowPointersOfOriginalIterators[originalIteratorIndex] will have correct values. So by the time when
+    // moveToNext() (from where this method is called) exits, and before getPointer() could be called by the user of
+    // this class, it will have correct values.
+    currentTimeAndDimsPointer = markedRowPointersOfOriginalIterators[originalIteratorIndex];
+    soleCurrentPointSourceOriginalIteratorIndex = originalIteratorIndex;
+    indexesOfCurrentlyCombinedOriginalIterators.set(originalIteratorIndex);
+    int rowNum = rowPointer.getRowNum();
+    minCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex] = rowNum;
+    maxCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex] = rowNum;
   }
 
   private void combineToCurrentTimeAndDims(RowPointer rowPointer)
@@ -166,34 +225,22 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
     int soleCurrentPointSourceOriginalIteratorIndex = this.soleCurrentPointSourceOriginalIteratorIndex;
     if (soleCurrentPointSourceOriginalIteratorIndex >= 0) {
       TimeAndDimsPointer currentRowPointer = this.currentTimeAndDimsPointer;
-      initCombinedCurrentPointer(currentRowPointer, soleCurrentPointSourceOriginalIteratorIndex);
+      assert currentRowPointer != null;
       resetCombinedMetrics(currentRowPointer);
+      currentTimeAndDimsPointer =
+          combinedTimeAndDimsPointersByOriginalIteratorIndex[soleCurrentPointSourceOriginalIteratorIndex];
       this.soleCurrentPointSourceOriginalIteratorIndex = -1;
     }
-    int indexNum = rowPointer.getIndexNum();
-    currentIndexes.set(indexNum);
-    rowsByIndex[indexNum].add(rowPointer.getRowNum());
-    foldMetrics(rowPointer);
-  }
 
-  private void initCombinedCurrentPointer(TimeAndDimsPointer currentRowPointer, int indexNum)
-  {
-    currentTimeAndDimsPointer = combinedTimeAndDimsPointersByOriginalIteratorIndex[indexNum];
-    if (currentTimeAndDimsPointer == null) {
-      currentTimeAndDimsPointer = makeCombinedPointer(currentRowPointer, indexNum);
-      combinedTimeAndDimsPointersByOriginalIteratorIndex[indexNum] = currentTimeAndDimsPointer;
+    int originalIteratorIndex = rowPointer.getIndexNum();
+    indexesOfCurrentlyCombinedOriginalIterators.set(originalIteratorIndex);
+    int rowNum = rowPointer.getRowNum();
+    if (minCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex] < 0) {
+      minCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex] = rowNum;
     }
-  }
+    maxCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex] = rowNum;
 
-  private TimeAndDimsPointer makeCombinedPointer(TimeAndDimsPointer currentRowPointer, int indexNum)
-  {
-    return new TimeAndDimsPointer(
-        markedRowPointersOfOriginalIterators[indexNum].timestampSelector,
-        markedRowPointersOfOriginalIterators[indexNum].dimensionSelectors,
-        currentRowPointer.getDimensionHandlers(),
-        combinedMetricSelectors,
-        combinedMetricNames
-    );
+    foldMetrics(rowPointer);
   }
 
   private void resetCombinedMetrics(TimeAndDimsPointer currentRowPointer)
@@ -221,24 +268,31 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
    * that was the source of one or more points, that are combined to produce the current {@link #getPointer()} point.
    *
    * Should be used a-la {@link BitSet} iteration:
-   * for (int origItIndex = nextCurrentlyCombinedOriginalIteratorIndex(0);
-   *     origItIndex >= 0;
-   *     origItIndex = nextCurrentlyCombinedOriginalIteratorIndex(origItIndex + 1)) {
+   * for (int originalIteratorIndex = nextCurrentlyCombinedOriginalIteratorIndex(0);
+   *     originalIteratorIndex >= 0;
+   *     originalIteratorIndex = nextCurrentlyCombinedOriginalIteratorIndex(originalIteratorIndex + 1)) {
    *   ...
    * }
    */
   int nextCurrentlyCombinedOriginalIteratorIndex(int fromIndex)
   {
-    return currentIndexes.nextSetBit(fromIndex);
+    return indexesOfCurrentlyCombinedOriginalIterators.nextSetBit(fromIndex);
   }
 
   /**
-   * Gets the numbers of rows in the original iterator with the given index, that are combined to produce the current
-   * {@link #getPointer()} point.
+   * See Javadoc of {@link #minCurrentlyCombinedRowNumByOriginalIteratorIndex} for explanation.
    */
-  IntList getCurrentlyCombinedRowNumsByOriginalIteratorIndex(int originalIteratorIndex)
+  int getMinCurrentlyCombinedRowNumByOriginalIteratorIndex(int originalIteratorIndex)
   {
-    return rowsByIndex[originalIteratorIndex];
+    return minCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex];
+  }
+
+  /**
+   * See Javadoc of {@link #minCurrentlyCombinedRowNumByOriginalIteratorIndex} for explanation.
+   */
+  int getMaxCurrentlyCombinedRowNumByOriginalIteratorIndex(int originalIteratorIndex)
+  {
+    return maxCurrentlyCombinedRowNumByOriginalIteratorIndex[originalIteratorIndex];
   }
 
   @Override

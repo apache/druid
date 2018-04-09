@@ -164,6 +164,7 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
     return 0;
   }
 
+  @SuppressWarnings("Contract")
   @Override
   public boolean equals(Object obj)
   {

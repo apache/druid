@@ -62,7 +62,6 @@ import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerdeV2;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -508,19 +507,25 @@ public class IndexMergerV9 implements IndexMerger
 
       if (timeAndDimsIterator instanceof RowCombiningTimeAndDimsIterator) {
         RowCombiningTimeAndDimsIterator comprisedRows = (RowCombiningTimeAndDimsIterator) timeAndDimsIterator;
-        for (int origItIndex = comprisedRows.nextCurrentlyCombinedOriginalIteratorIndex(0);
-             origItIndex >= 0;
-             origItIndex = comprisedRows.nextCurrentlyCombinedOriginalIteratorIndex(origItIndex + 1)) {
-          IntBuffer conversionBuffer = rowNumConversions.get(origItIndex);
-          IntList rowNums = comprisedRows.getCurrentlyCombinedRowNumsByOriginalIteratorIndex(origItIndex);
-          for (int i = 0; i < rowNums.size(); i++) {
-            int rowNum = rowNums.getInt(i);
+
+        for (int originalIteratorIndex = comprisedRows.nextCurrentlyCombinedOriginalIteratorIndex(0);
+             originalIteratorIndex >= 0;
+             originalIteratorIndex =
+                 comprisedRows.nextCurrentlyCombinedOriginalIteratorIndex(originalIteratorIndex + 1)) {
+
+          IntBuffer conversionBuffer = rowNumConversions.get(originalIteratorIndex);
+          int minRowNum = comprisedRows.getMinCurrentlyCombinedRowNumByOriginalIteratorIndex(originalIteratorIndex);
+          int maxRowNum = comprisedRows.getMaxCurrentlyCombinedRowNumByOriginalIteratorIndex(originalIteratorIndex);
+
+          for (int rowNum = minRowNum; rowNum <= maxRowNum; rowNum++) {
             while (conversionBuffer.position() < rowNum) {
               conversionBuffer.put(INVALID_ROW);
             }
             conversionBuffer.put(rowCount);
           }
+
         }
+
       } else if (timeAndDimsIterator instanceof MergingRowIterator) {
         RowPointer rowPointer = (RowPointer) timeAndDims;
         IntBuffer conversionBuffer = rowNumConversions.get(rowPointer.getIndexNum());

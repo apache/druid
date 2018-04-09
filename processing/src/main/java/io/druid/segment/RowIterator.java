@@ -57,9 +57,11 @@ public interface RowIterator extends TimeAndDimsIterator
    * #moveToNext()} returned {@code false}, the behaviour of this method is undefined (it may return a "wrong" pointer,
    * null, throw an exception, etc.).
    *
-   * If {@link #moveToNext()} returned {@code true} one or more times, and then
-   * returned {@code false}, {@code getPointer()} should return a pointer pointing to the last row, as it was before the
-   * last call to {@link #moveToNext()}. This property is used in {@link RowCombiningTimeAndDimsIterator}.
+   * If {@link #moveToNext()} returned {@code true} one or more times, and then eventually returned {@code false},
+   * calling {@code getPointer()} after that should return a pointer pointing to the last valid row, as if {@code
+   * getPointer()} was called before the last (unsuccessful) call to {@link #moveToNext()}. In other words, unsuccessful
+   * {@link #moveToNext()} call doesn't "corrupt" the pointer. This property is used in {@link
+   * RowCombiningTimeAndDimsIterator#moveToNext}.
    */
   @Override
   RowPointer getPointer();

@@ -178,17 +178,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
   /**
    * On {@link #moveToNext()} and {@link #mark()}, this class copies all column values into a set of {@link
-   * SettableColumnValueSelector} instances. Alternative approach was to save only offset in column and use they same
-   * column value selectors as in {@link QueryableIndexStorageAdapter}. The approach with "caching" is chosen for two
-   * reasons:
+   * SettableColumnValueSelector} instances. Alternative approach was to save only offset in column and use the same
+   * column value selectors as in {@link QueryableIndexStorageAdapter}. The approach with "caching" in {@link
+   * SettableColumnValueSelector}s is chosen for two reasons:
    *  1) Avoid re-reading column values from serialized format multiple times (because they are accessed multiple times)
-   *     For comparison, it's not a factor for {@link QueryableIndexStorageAdapter} because column values are not
-   *     accessed multiple times, if aggregator or query runner is writter sanely. It's especially important for object
-   *     columns, because object deserialization is potentially expensive.
-   *  2) Because we need to support {@link #mark()}, it is "lookbehind" in compressed columnar format, that causes
+   *     For comparison, it's not a factor for {@link QueryableIndexStorageAdapter} because during query processing,
+   *     column values are usually accessed just once per offset, if aggregator or query runner are written sanely.
+   *     Avoiding re-reads is especially important for object columns, because object deserialization is potentially
+   *     expensive.
+   *  2) {@link #mark()} is a "lookbehind" style functionality, in compressed columnar format, that would cause
    *     repetitive excessive decompressions on the block boundaries. E. g. see {@link
-   *     io.druid.segment.data.BlockLayoutColumnarDoublesSupplier} and similar classes. A special support for
-   *     "lookbehind" could be added to those classes, but why to do this if complexity could be avoided.
+   *     io.druid.segment.data.BlockLayoutColumnarDoublesSupplier} and similar classes. Some special support for
+   *     "lookbehind" could be added to these classes, but it's significant extra complexity.
    */
   class RowIteratorImpl implements TransformableRowIterator
   {
@@ -196,7 +197,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     private final Map<String, BaseColumn> columnCache = new HashMap<>();
 
     private final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
-    private final int lastOffset = numRows - 1;
+    private final int maxValidOffset = numRows - 1;
 
     private final ColumnValueSelector offsetTimestampSelector;
     private final ColumnValueSelector[] offsetDimensionValueSelectors;
@@ -317,14 +318,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           return false;
         }
       } else {
-        // >= to cover the case when numRows is 0
-        if (offset.getOffset() >= lastOffset) {
-          // Do NOT change the offset here, to conform to the RowIterator.getPointer() specification.
-          return false;
-        } else {
+        if (offset.getOffset() < maxValidOffset) {
           offset.increment();
           setRowPointerValues();
           return true;
+        } else {
+          // Don't update rowPointer's values here, to conform to the RowIterator.getPointer() specification.
+          return false;
         }
       }
     }

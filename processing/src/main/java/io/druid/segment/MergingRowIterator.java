@@ -29,25 +29,25 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 /**
- * MergingRowIterator merges some {@link RowIterator}s, assuming that they are "sorted" (i. e. as {@link
- * RowIterator#moveToNext()} is called, the pointer returned from {@link RowIterator#getPointer()} is "greater" than
- * the previous, in terms of {@link TimeAndDimsPointer#compareTo}), and itself acts as a "sorted" iterator. Equivalent
- * points from different input iterators are not de-duplicated.
+ * MergingRowIterator sort-merges rows of several {@link RowIterator}s, assuming that each of them is already sorted
+ * (i. e. as {@link RowIterator#moveToNext()} is called, the pointer returned from {@link RowIterator#getPointer()} is
+ * "greater" than the previous, in terms of {@link TimeAndDimsPointer#compareTo}). Equivalent points from different
+ * input iterators are _not_ deduplicated.
  *
- * In other words, MergingRowIterator is an equivalent to {@link com.google.common.collect.Iterators#mergeSorted}, but
- * for {@link RowIterator}s rather than simple {@link java.util.Iterator}s.
+ * Conceptually MergingRowIterator is an equivalent to {@link com.google.common.collect.Iterators#mergeSorted}, but for
+ * {@link RowIterator}s rather than simple {@link java.util.Iterator}s.
  *
- * Implementation detail: this class uses binary heap priority queue algorithm to sort pointers, but it also momoizes
- * and keeps some extra info along the heap slots ({@link #equalToChild}, see javadoc of this field), that is essential
- * to impelement {@link #hasTimeAndDimsChangedSinceMark()}, while {@link TransformableRowIterator#getPointer()} of the
- * input iterators are mutable pointers, and you can never "look back" to compare with some point that is already
- * passed.
+ * Implementation detail: this class uses binary heap priority queue algorithm to sort pointers, but it also memoizes
+ * and keeps some extra info along the heap slots (see javadoc of {@link #equalToChild} field), that is essential for
+ * impelementing {@link #hasTimeAndDimsChangedSinceMark()}, while {@link TransformableRowIterator#getPointer()} of the
+ * input iterators are mutable pointers, and you cannot "look back" to compare with some past point.
  */
 final class MergingRowIterator implements RowIterator
 {
   private static final Comparator<RowIterator> ROW_ITERATOR_COMPARATOR =
       Comparator.comparing(RowIterator::getPointer);
 
+  /** Used to close {@link #originalIterators} */
   private final Closer closer = Closer.create();
 
   private final TransformableRowIterator[] originalIterators;
@@ -127,7 +127,7 @@ final class MergingRowIterator implements RowIterator
     if (!changedSinceMark) {
       // lastMarkedHead field allows small optimization: avoiding many re-marks of the rows of the head iterator,
       // if it has many elements with equal dimensions.
-      //noinspection ObjectEquality checking specifically if lastMarkedHead and head is the same object
+      //noinspection ObjectEquality: checking specifically if lastMarkedHead and head is the same object
       if (lastMarkedHead != head) {
         head.mark();
         lastMarkedHead = head;
