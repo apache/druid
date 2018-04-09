@@ -47,12 +47,14 @@ import java.util.Map;
  */
 public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
 {
-  public final ColumnValueSelector timestampSelector;
+  final ColumnValueSelector timestampSelector;
   /**
-   * Stored as array, instead of list, for minimum indirection in hot spots, in particular in {@link #compareTo}.
-   * Similar for {@link #dimensionSelectorComparators} and {@link #metricSelectors}.
+   * This collection of dimension selectors is stored as array rather than List in order to minimize indirection in hot
+   * spots, in particular in {@link #compareTo}.
+   *
+   * The same reasoning is applied to {@link #dimensionSelectorComparators} and {@link #metricSelectors}.
    */
-  public final ColumnValueSelector[] dimensionSelectors;
+  final ColumnValueSelector[] dimensionSelectors;
   private final List<DimensionHandler> dimensionHandlers;
   /**
    * Because of polymorphic nature of {@link ColumnValueSelector}, a priori there are many ways to compare two arbitrary
