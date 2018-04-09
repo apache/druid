@@ -56,6 +56,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    *  KeyHash + next pointer + key pointer + value pointer + safe extra
    */
   private static final int ROUGH_OVERHEAD_PER_MAP_ENTRY = Long.BYTES * 5 + Integer.BYTES;
+  private static final long defaultMaxBytesInMemory = Runtime.getRuntime().maxMemory() / 3;
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
@@ -78,7 +79,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
-    this.maxBytesInMemory = maxBytesInMemory;
+    this.maxBytesInMemory = maxBytesInMemory == 0 ? defaultMaxBytesInMemory : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts);
     maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
