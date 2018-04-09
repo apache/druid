@@ -181,7 +181,7 @@ public class LongFirstAggregatorFactory extends NullableAggregatorFactory
   @Nullable
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null ? object : ((SerializablePair<Long, Long>) object).rhs;
+    return object == null ? null : ((SerializablePair<Long, Long>) object).rhs;
   }
 
   @Override

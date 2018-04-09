@@ -26,7 +26,7 @@ import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 
 /**
- * if performance of this class appears to be a bottleneck for somebody,
+ * If performance of this class appears to be a bottleneck for somebody,
  * one simple way to improve it is to split it into two different classes,
  * one that is used when {@link NullHandling#replaceWithDefault()} is false,
  * and one - when it's true, moving this computation out of the tight loop

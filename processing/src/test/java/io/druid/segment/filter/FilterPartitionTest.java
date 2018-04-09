@@ -21,7 +21,6 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.common.config.NullHandling;
@@ -33,6 +32,7 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
@@ -117,9 +117,7 @@ public class FilterPartitionTest extends BaseFilterTest
       if (extractionFn == null) {
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
-        //CHECKSTYLE.OFF: Regexp
-        final String valueOrNull = Strings.emptyToNull(value);
-        //CHECKSTYLE.ON: Regexp
+        final String valueOrNull = StringUtils.emptyToNullNonDruidDataString(value);
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override

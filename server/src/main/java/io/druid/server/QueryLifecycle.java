@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import io.druid.client.DirectDruidClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
@@ -289,15 +290,12 @@ public class QueryLifecycle
     try {
       final long queryTimeNs = System.nanoTime() - startNs;
 
-      //CHECKSTYLE.OFF: Regexp
-      // String.nullToEmpty usage here is irrelevant to null handling of the data.
       QueryMetrics queryMetrics = DruidMetrics.makeRequestMetrics(
           queryMetricsFactory,
           toolChest,
           baseQuery,
-          Strings.nullToEmpty(remoteAddress)
+          StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
-      //CHECKSTYLE.ON: Regexp
       queryMetrics.success(success);
       queryMetrics.reportQueryTime(queryTimeNs);
 
@@ -330,17 +328,14 @@ public class QueryLifecycle
           statsMap.put("reason", e.toString());
         }
       }
-      //CHECKSTYLE.OFF: Regexp
-      // String.nullToEmpty usage here is irrelevant to null handling of the data.
       requestLogger.log(
           new RequestLogLine(
               DateTimes.utc(startMs),
-              Strings.nullToEmpty(remoteAddress),
+              StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
               baseQuery,
               new QueryStats(statsMap)
           )
       );
-      //CHECKSTYLE.ON: Regexp
     }
     catch (Exception ex) {
       log.error(ex, "Unable to log query [%s]!", baseQuery);

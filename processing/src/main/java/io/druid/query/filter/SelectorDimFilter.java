@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -190,9 +189,7 @@ public class SelectorDimFilter implements DimFilter
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    //CHECKSTYLE.OFF: Regexp
-    retSet.add(Range.singleton(Strings.nullToEmpty(value)));
-    //CHECKSTYLE.ON: Regexp
+    retSet.add(Range.singleton(StringUtils.nullToEmptyNonDruidDataString(value)));
     return retSet;
   }
 

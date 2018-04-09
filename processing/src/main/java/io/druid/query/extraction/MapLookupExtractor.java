@@ -76,9 +76,7 @@ public class MapLookupExtractor extends LookupExtractor
     {
       @Override public boolean apply(@Nullable String key)
       {
-        //CHECKSTYLE.OFF: Regexp
-        return map.get(key).equals(Strings.nullToEmpty(value));
-        //CHECKSTYLE.ON: Regexp
+        return map.get(key).equals(StringUtils.nullToEmptyNonDruidDataString(value));
       }
     }).keySet());
 

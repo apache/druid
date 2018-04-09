@@ -20,7 +20,6 @@
 package io.druid.java.util.http.client;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -140,10 +139,7 @@ public class NettyHttpClient extends AbstractHttpClient
     } else {
       channel = channelFuture.getChannel();
     }
-    //CHECKSTYLE.OFF: Regexp
-    // String.nullToEmpty usage here is irrelevant to null handling of the data.
-    final String urlFile = Strings.nullToEmpty(url.getFile());
-    //CHECKSTYLE.ON: Regexp
+    final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
     final HttpRequest httpRequest = new DefaultHttpRequest(
         HttpVersion.HTTP_1_1,
         method,

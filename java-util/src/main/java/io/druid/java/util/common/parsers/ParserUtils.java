@@ -21,8 +21,8 @@ package io.druid.java.util.common.parsers;
 
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.DateTimeZone;
 
@@ -58,17 +58,13 @@ public class ParserUtils
   )
   {
     return (input) -> {
-      //CHECKSTYLE.OFF: Regexp
-      // TODO: java-util does not depen on druid-common.NullHandling is not accessible here.
-      // Fix null semantics for CSV and TSV parsers.
       if (input != null && input.contains(listDelimiter)) {
         return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
-                            .map(Strings::emptyToNull)
+                            .map(NullHandling::emptyToNullIfNeeded)
                             .collect(Collectors.toList());
       } else {
-        return Strings.emptyToNull(input);
+        return NullHandling.emptyToNullIfNeeded(input);
       }
-      //CHECKSTYLE.ON: Regexp
     };
   }
 

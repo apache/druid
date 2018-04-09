@@ -21,7 +21,6 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Strings;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 
@@ -73,9 +72,7 @@ public class UpperExtractionFn extends DimExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    //CHECKSTYLE.OFF: Regexp
-    byte[] localeBytes = StringUtils.toUtf8(Strings.nullToEmpty(localeString));
-    //CHECKSTYLE.ON: Regexp
+    byte[] localeBytes = StringUtils.toUtf8(StringUtils.nullToEmptyNonDruidDataString(localeString));
     return ByteBuffer.allocate(2 + localeBytes.length)
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_UPPER)
                      .put((byte) 0XFF)

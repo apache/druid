@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
@@ -26,7 +27,7 @@ import javax.annotation.Nullable;
 /**
  * The result of a NullableAggregateCombiner will be null if all the values to be combined are null values or no values are combined at all.
  * If any of the value is non-null, the result would be the value of the delegate combiner.
- * Note that the delegate combiner is not required to perform check for {@link NullableAggregateCombiner#isNull} on the columnValueSelector as only non-null values
+ * Note that the delegate combiner is not required to perform check for {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values
  * will be passed to the delegate combiner.
  */
 public class NullableAggregateCombiner implements AggregateCombiner
@@ -54,10 +55,14 @@ public class NullableAggregateCombiner implements AggregateCombiner
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    if (isNullResult) {
-      reset(selector);
-    } else {
-      delegate.fold(selector);
+    boolean isNotNull = !selector.isNull();
+    if (isNotNull) {
+      if (isNullResult) {
+        isNullResult = false;
+        delegate.reset(selector);
+      } else {
+        delegate.fold(selector);
+      }
     }
   }
 

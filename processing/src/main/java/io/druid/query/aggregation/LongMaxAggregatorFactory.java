@@ -74,7 +74,13 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory
   @Override
   protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    return getLongColumnSelector(metricFactory);
+    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+        metricFactory,
+        macroTable,
+        fieldName,
+        expression,
+        Long.MIN_VALUE
+    );
   }
 
   @Override
@@ -87,17 +93,6 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory
   protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
     return new LongMaxBufferAggregator(selector);
-  }
-
-  private ColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
-  {
-    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
-        metricFactory,
-        macroTable,
-        fieldName,
-        expression,
-        Long.MIN_VALUE
-    );
   }
 
   @Override

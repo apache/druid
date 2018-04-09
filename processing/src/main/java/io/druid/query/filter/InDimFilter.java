@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
@@ -118,9 +117,7 @@ public class InDimFilter implements DimFilter
       if (value == null) {
         hasNull = true;
       }
-      //CHECKSTYLE.OFF: Regexp
-      valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
-      //CHECKSTYLE.ON: Regexp
+      valuesBytes[index] = StringUtils.toUtf8(StringUtils.nullToEmptyNonDruidDataString(value));
       valuesBytesSize += valuesBytes[index].length + 1;
       ++index;
     }
@@ -167,9 +164,7 @@ public class InDimFilter implements DimFilter
         // We cannot do an unapply()-based optimization if the selector value
         // and the replaceMissingValuesWith value are the same, since we have to match on
         // all values that are not present in the lookup.
-        //CHECKSTYLE.OFF: Regexp
-        final String convertedValue = Strings.emptyToNull(value);
-        //CHECKSTYLE.ON: Regexp
+        final String convertedValue = NullHandling.emptyToNullIfNeeded(value);
         if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
           return this;
         }
@@ -214,9 +209,7 @@ public class InDimFilter implements DimFilter
     }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (String value : values) {
-      //CHECKSTYLE.OFF: Regexp
-      retSet.add(Range.singleton(Strings.nullToEmpty(value)));
-      //CHECKSTYLE.ON: Regexp
+      retSet.add(Range.singleton(StringUtils.nullToEmptyNonDruidDataString(value)));
     }
     return retSet;
   }
@@ -266,11 +259,10 @@ public class InDimFilter implements DimFilter
     if (extractionFn != null) {
       builder.append(")");
     }
-    //CHECKSTYLE.OFF: Regexp
+
     builder.append(" IN (")
-           .append(Joiner.on(", ").join(Iterables.transform(values, input -> Strings.nullToEmpty(input))))
+           .append(Joiner.on(", ").join(Iterables.transform(values, input -> StringUtils.nullToEmptyNonDruidDataString(input))))
            .append(")");
-    //CHECKSTYLE.ON: Regexp
     return builder.toString();
   }
 

@@ -34,7 +34,6 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.virtual.ExpressionSelectors;
 
-import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -139,7 +138,7 @@ public class AggregatorUtil
       final ExprMacroTable macroTable,
       final String fieldName,
       final String fieldExpression,
-      @Nullable final Float nullValue
+      final float nullValue
   )
   {
     if (fieldName != null && fieldExpression == null) {

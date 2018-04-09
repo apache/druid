@@ -173,11 +173,7 @@ public class LookupDimensionSpec implements DimensionSpec
                                   ? getLookup().getCacheKey()
                                   : StringUtils.toUtf8(name);
     byte[] outputNameBytes = StringUtils.toUtf8(outputName);
-    //CHECKSTYLE.OFF: Regexp
-    // String.nullToEmpty usage here is irrelevant to null handling of the data.
-    byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingValueWith));
-    //CHECKSTYLE.ON: Regexp
-
+    byte[] replaceWithBytes = StringUtils.toUtf8(StringUtils.nullToEmptyNonDruidDataString(replaceMissingValueWith));
 
     return ByteBuffer.allocate(6
                                + dimensionBytes.length

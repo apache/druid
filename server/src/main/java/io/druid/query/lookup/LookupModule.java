@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
@@ -48,6 +47,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.dimension.LookupDimensionSpec;
 import io.druid.query.expression.LookupExprMacro;
@@ -260,14 +260,11 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
     );
     final String lookupTier = lookupTierIsDatasource ? dataSourceTaskIdHolder.getDataSource() : this.lookupTier;
 
-    //CHECKSTYLE.OFF: Regexp
-    // String.emptytoNull usage here is irrelevant to null handling of the data.
     return Preconditions.checkNotNull(
-        lookupTier == null ? DEFAULT_TIER : Strings.emptyToNull(lookupTier),
+        lookupTier == null ? DEFAULT_TIER : StringUtils.emptyToNullNonDruidDataString(lookupTier),
         "Cannot have empty lookup tier from %s",
         lookupTierIsDatasource ? "bound value" : LookupModule.PROPERTY_BASE
     );
-    //CHECKSTYLE.ON: Regexp
   }
 
   public String getLookupKey()

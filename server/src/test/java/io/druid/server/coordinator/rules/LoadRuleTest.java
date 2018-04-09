@@ -64,9 +64,6 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-//CHECKSTYLE.OFF: Regexp
-//CHECKSTYLE.ON: Regexp
-
 /**
  */
 public class LoadRuleTest

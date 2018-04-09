@@ -37,7 +37,7 @@ import java.util.Map;
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
- * to extend {@link io.druid.query.aggregation.NullableAggregatorFactory}.
+ * to extend {@link NullableAggregatorFactory}.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import io.druid.common.config.NullHandling;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.Queries;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -39,7 +38,7 @@ import java.util.Set;
 
 public class LongGreatestPostAggregator implements PostAggregator
 {
-  private static final Comparator COMPARATOR = Comparators.naturalNullsFirst();
+  private static final Comparator COMPARATOR = Comparator.nullsFirst(Comparator.comparingLong(Number::longValue));
 
   private final String name;
   private final List<PostAggregator> fields;
@@ -80,7 +79,7 @@ public class LongGreatestPostAggregator implements PostAggregator
     while (fieldsIter.hasNext()) {
       Number nextVal = ((Number) fieldsIter.next().compute(values));
       // Ignore NULL values and return the greatest out of non-null values.
-      if (nextVal != null && COMPARATOR.compare(nextVal.longValue(), retVal) > 0) {
+      if (nextVal != null && COMPARATOR.compare(nextVal, retVal) > 0) {
         retVal = nextVal.longValue();
       }
     }

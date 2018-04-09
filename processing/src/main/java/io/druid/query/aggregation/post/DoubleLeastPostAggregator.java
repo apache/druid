@@ -22,7 +22,6 @@ package io.druid.query.aggregation.post;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.common.config.NullHandling;
 import io.druid.query.Queries;
@@ -39,7 +38,7 @@ import java.util.Set;
 
 public class DoubleLeastPostAggregator implements PostAggregator
 {
-  private static final Comparator COMPARATOR = Ordering.<Double>natural().nullsLast();
+  private static final Comparator COMPARATOR = Comparator.nullsLast(Comparator.comparingDouble(Number::doubleValue));
 
   private final String name;
   private final List<PostAggregator> fields;
@@ -80,7 +79,7 @@ public class DoubleLeastPostAggregator implements PostAggregator
     while (fieldsIter.hasNext()) {
       Number nextVal = ((Number) fieldsIter.next().compute(values));
       // Ignore NULL values and return the greatest out of non-null values.
-      if (nextVal != null && COMPARATOR.compare(nextVal.doubleValue(), retVal) < 0) {
+      if (nextVal != null && COMPARATOR.compare(nextVal, retVal) < 0) {
         retVal = nextVal.doubleValue();
       }
     }

@@ -107,9 +107,7 @@ public class StringFormatExtractionFn extends DimExtractionFn
         value = "";
       }
     }
-    //CHECKSTYLE.OFF: Regexp
-    return Strings.emptyToNull(StringUtils.format(format, value));
-    //CHECKSTYLE.ON: Regexp
+    return StringUtils.emptyToNullNonDruidDataString(StringUtils.format(format, value));
   }
 
   @Override
