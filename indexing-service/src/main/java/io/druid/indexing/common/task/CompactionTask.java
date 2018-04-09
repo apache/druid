@@ -196,28 +196,37 @@ public class CompactionTask extends AbstractTask
           jsonMapper
       );
 
-      indexTaskSpec = new IndexTask(
-          getId(),
-          getGroupId(),
-          getTaskResource(),
-          getDataSource(),
-          ingestionSpec,
-          getContext(),
-          authorizerMapper,
-          null
-      );
+      if (ingestionSpec != null) {
+        indexTaskSpec = new IndexTask(
+            getId(),
+            getGroupId(),
+            getTaskResource(),
+            getDataSource(),
+            ingestionSpec,
+            getContext(),
+            authorizerMapper,
+            null
+        );
+      }
     }
 
-    if (indexTaskSpec.getIngestionSchema() == null) {
-      log.info("Cannot find segments for interval");
+    if (indexTaskSpec == null) {
+      log.warn("Failed to generate compaction spec");
+      return TaskStatus.failure(getId());
+    } else {
+      final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(indexTaskSpec);
+      log.info("Generated compaction task details: " + json);
+
+      return indexTaskSpec.run(toolbox);
     }
-
-    final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(indexTaskSpec);
-    log.info("Generated compaction task details: " + json);
-
-    return indexTaskSpec.run(toolbox);
   }
 
+  /**
+   * Generate {@link IndexIngestionSpec} from input segments.
+
+   * @return null if input segments don't exist. Otherwise, a generated ingestionSpec.
+   */
+  @Nullable
   @VisibleForTesting
   static IndexIngestionSpec createIngestionSchema(
       TaskToolbox toolbox,
