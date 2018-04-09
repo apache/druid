@@ -51,6 +51,7 @@ import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.granularity.NoneGranularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.jackson.JacksonUtils;
@@ -292,9 +293,14 @@ public class CompactionTask extends AbstractTask
     final List<QueryableIndex> queryableIndices = loadSegments(timelineSegments, segmentFileMap, indexIO);
 
     // find merged aggregators
+    for (QueryableIndex index : queryableIndices) {
+      if (index.getMetadata() == null) {
+        throw new RE("Index metadata doesn't exist for interval[%s]", index.getDataInterval());
+      }
+    }
     final List<AggregatorFactory[]> aggregatorFactories = queryableIndices
         .stream()
-        .map(index -> index.getMetadata().getAggregators())
+        .map(index -> index.getMetadata().getAggregators()) // We have already done null check
         .collect(Collectors.toList());
     final AggregatorFactory[] mergedAggregators = AggregatorFactory.mergeAggregators(aggregatorFactories);
 
@@ -304,7 +310,10 @@ public class CompactionTask extends AbstractTask
 
     // find granularity spec
     // set rollup only if rollup is set for all segments
-    final boolean rollup = queryableIndices.stream().allMatch(index -> index.getMetadata().isRollup());
+    final boolean rollup = queryableIndices.stream().allMatch(index -> {
+      final Boolean isRollup = index.getMetadata().isRollup(); // We have already done null check
+      return isRollup != null && isRollup;
+    });
     final GranularitySpec granularitySpec = new ArbitraryGranularitySpec(
         new NoneGranularity(),
         rollup,

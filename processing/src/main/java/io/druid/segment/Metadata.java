@@ -25,6 +25,7 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -52,6 +53,7 @@ public class Metadata
   private Granularity queryGranularity;
 
   @JsonProperty
+  @Nullable
   private Boolean rollup;
 
   public Metadata()
@@ -92,6 +94,7 @@ public class Metadata
     return this;
   }
 
+  @Nullable
   public Boolean isRollup()
   {
     return rollup;
