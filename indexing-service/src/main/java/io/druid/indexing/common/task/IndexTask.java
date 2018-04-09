@@ -460,59 +460,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
       }
-<<<<<<< HEAD
     }
-  }
-
-  private Map<String, TaskReport> getTaskCompletionReports()
-  {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMsg
-            )
-        )
-    );
-  }
-
-  private Map<String, Object> getTaskCompletionUnparseableEvents()
-  {
-    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
-    List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        determinePartitionsSavedParseExceptions);
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        buildSegmentsSavedParseExceptions);
-
-    if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("determinePartitions", determinePartitionsParseExceptionMessages);
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
-    }
-
-    return unparseableEventsMap;
-  }
-
-  private Map<String, Object> getTaskCompletionRowStats()
-  {
-    Map<String, Object> metrics = Maps.newHashMap();
-    if (determinePartitionsMetricsGetter != null) {
-      metrics.put(
-          "determinePartitions",
-          determinePartitionsMetricsGetter.getTotalMetrics()
-      );
-    }
-    if (buildSegmentsMetricsGetter != null) {
-      metrics.put(
-          "buildSegments",
-          buildSegmentsMetricsGetter.getTotalMetrics()
-      );
-=======
->>>>>>> 685f4063d4e63fba5f9ae11bf496c4c2575a8ebf
-    }
-    return metrics;
   }
 
   private Map<String, TaskReport> getTaskCompletionReports()
@@ -1368,11 +1316,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-<<<<<<< HEAD
       this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-=======
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
->>>>>>> 685f4063d4e63fba5f9ae11bf496c4c2575a8ebf
     }
 
     private IndexTuningConfig(
