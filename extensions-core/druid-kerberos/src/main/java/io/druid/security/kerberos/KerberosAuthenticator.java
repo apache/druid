@@ -95,8 +95,6 @@ public class KerberosAuthenticator implements Authenticator
   private final DruidNode node;
   private final String serverPrincipal;
   private final String serverKeytab;
-  private final String internalClientPrincipal;
-  private final String internalClientKeytab;
   private final String authToLocal;
   private final List<String> excludedPaths;
   private final String cookieSignatureSecret;
@@ -107,8 +105,6 @@ public class KerberosAuthenticator implements Authenticator
   public KerberosAuthenticator(
       @JsonProperty("serverPrincipal") String serverPrincipal,
       @JsonProperty("serverKeytab") String serverKeytab,
-      @JsonProperty("internalClientPrincipal") String internalClientPrincipal,
-      @JsonProperty("internalClientKeytab") String internalClientKeytab,
       @JsonProperty("authToLocal") String authToLocal,
       @JsonProperty("excludedPaths") List<String> excludedPaths,
       @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret,
@@ -119,8 +115,6 @@ public class KerberosAuthenticator implements Authenticator
     this.node = node;
     this.serverPrincipal = serverPrincipal;
     this.serverKeytab = serverKeytab;
-    this.internalClientPrincipal = internalClientPrincipal;
-    this.internalClientKeytab = internalClientKeytab;
     this.authToLocal = authToLocal == null ? "DEFAULT" : authToLocal;
     this.excludedPaths = excludedPaths == null ? DEFAULT_EXCLUDED_PATHS : excludedPaths;
     this.cookieSignatureSecret = cookieSignatureSecret;
@@ -334,6 +328,11 @@ public class KerberosAuthenticator implements Authenticator
                                  getCookiePath(), token.getExpires(), isHttps
                 );
               }
+              // Since this request is validated also set DRUID_AUTHENTICATION_RESULT
+              request.setAttribute(
+                  AuthConfig.DRUID_AUTHENTICATION_RESULT,
+                  new AuthenticationResult(token.getName(), authorizerName, null)
+              );
               doFilter(filterChain, httpRequest, httpResponse);
             }
           } else {
