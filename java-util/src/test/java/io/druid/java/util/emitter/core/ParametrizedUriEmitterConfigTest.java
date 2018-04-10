@@ -20,6 +20,7 @@
 package io.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.java.util.common.Pair;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,7 +42,11 @@ public class ParametrizedUriEmitterConfigTest
     Assert.assertEquals("http://example.com/topic", config.getRecipientBaseUrl());
     Assert.assertEquals(null, config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Assert.assertEquals(5 * 1024 * 1024, config.getMaxBatchSize());
+    Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
+        Runtime.getRuntime().maxMemory()
+    );
+    Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
+    Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
   }
 

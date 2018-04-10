@@ -292,6 +292,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       );
     } else {
       largeEventsToEmit.add(eventBytes);
+      approximateBuffersToEmitCount.incrementAndGet();
       approximateLargeEventsToEmitCount.incrementAndGet();
       approximateEventsToEmitCount.incrementAndGet();
     }
@@ -609,6 +610,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       largeEventsToEmit.add(LARGE_EVENTS_STOP);
       for (byte[] largeEvent; (largeEvent = largeEventsToEmit.poll()) != LARGE_EVENTS_STOP; ) {
         emitLargeEvent(largeEvent);
+        approximateBuffersToEmitCount.decrementAndGet();
         approximateLargeEventsToEmitCount.decrementAndGet();
         approximateEventsToEmitCount.decrementAndGet();
       }
