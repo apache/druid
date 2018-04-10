@@ -97,7 +97,9 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
 
             LifecycleModule.register(binder, WorkerTaskMonitor.class);
-            binder.bind(JettyServerInitializer.class).toInstance(new MiddleManagerJettyServerInitializer());
+            binder.bind(JettyServerInitializer.class)
+                  .to(MiddleManagerJettyServerInitializer.class)
+                  .in(LazySingleton.class);
             Jerseys.addResource(binder, WorkerResource.class);
             Jerseys.addResource(binder, TaskManagementResource.class);
 

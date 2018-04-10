@@ -22,7 +22,9 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class AuthConfig
 {
@@ -36,21 +38,25 @@ public class AuthConfig
    */
   public static final String DRUID_AUTHORIZATION_CHECKED = "Druid-Authorization-Checked";
 
+  public static final String DRUID_ALLOW_UNSECURED_PATH = "Druid-Allow-Unsecured-Path";
+
   public static final String ALLOW_ALL_NAME = "allowAll";
 
   public AuthConfig()
   {
-    this(null, null);
+    this(null, null, null);
   }
 
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
-      @JsonProperty("authorizers") List<String> authorizers
+      @JsonProperty("authorizers") List<String> authorizers,
+      @JsonProperty("unsecuredPaths") List<String> unsecuredPaths
   )
   {
     this.authenticatorChain = authenticationChain;
     this.authorizers = authorizers;
+    this.unsecuredPaths = unsecuredPaths == null ? Collections.emptyList() : unsecuredPaths;
   }
 
   @JsonProperty
@@ -58,6 +64,9 @@ public class AuthConfig
 
   @JsonProperty
   private List<String> authorizers;
+
+  @JsonProperty
+  private final List<String> unsecuredPaths;
 
   public List<String> getAuthenticatorChain()
   {
@@ -69,12 +78,18 @@ public class AuthConfig
     return authorizers;
   }
 
+  public List<String> getUnsecuredPaths()
+  {
+    return unsecuredPaths;
+  }
+
   @Override
   public String toString()
   {
     return "AuthConfig{" +
            "authenticatorChain='" + authenticatorChain + '\'' +
            ", authorizers='" + authorizers + '\'' +
+           ", unsecuredPaths='" + unsecuredPaths + '\'' +
            '}';
   }
 
@@ -87,23 +102,15 @@ public class AuthConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     AuthConfig that = (AuthConfig) o;
-
-    if (getAuthenticatorChain() != null
-        ? !getAuthenticatorChain().equals(that.getAuthenticatorChain())
-        : that.getAuthenticatorChain() != null) {
-      return false;
-    }
-    return getAuthorizers() != null ? getAuthorizers().equals(that.getAuthorizers()) : that.getAuthorizers() == null;
-
+    return Objects.equals(authenticatorChain, that.authenticatorChain) &&
+           Objects.equals(authorizers, that.authorizers) &&
+           Objects.equals(unsecuredPaths, that.unsecuredPaths);
   }
 
   @Override
   public int hashCode()
   {
-    int result = getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0;
-    result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
-    return result;
+    return Objects.hash(authenticatorChain, authorizers, unsecuredPaths);
   }
 }

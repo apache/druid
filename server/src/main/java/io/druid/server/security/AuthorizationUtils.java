@@ -155,6 +155,10 @@ public class AuthorizationUtils
       final AuthorizerMapper authorizerMapper
   )
   {
+    if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
+      return Access.OK;
+    }
+
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
       throw new ISE("Request already had authorization check.");
     }

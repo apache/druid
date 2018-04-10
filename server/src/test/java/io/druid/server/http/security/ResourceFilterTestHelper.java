@@ -182,7 +182,7 @@ public class ResourceFilterTestHelper
             for (Key<?> key : mockableKeys) {
               binder.bind((Key<Object>) key).toInstance(EasyMock.createNiceMock(key.getTypeLiteral().getRawType()));
             }
-            binder.bind(AuthConfig.class).toInstance(new AuthConfig(null, null));
+            binder.bind(AuthConfig.class).toInstance(new AuthConfig());
           }
         }
     );
