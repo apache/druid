@@ -29,13 +29,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupExtractor;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -64,22 +65,32 @@ public class MapLookupExtractor extends LookupExtractor
 
   @Nullable
   @Override
-  public String apply(@NotNull String val)
+  public String apply(@Nullable String key)
   {
-    return map.get(val);
+    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
+    if (keyEquivalent == null) {
+      // keyEquivalent is null for SQL Compatible Null Behavior
+      return null;
+    }
+    return NullHandling.emptyToNullIfNeeded(map.get(keyEquivalent));
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<String> unapply(@Nullable final String value)
   {
+    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueEquivalent == null) {
+      // valueEquivalent is null for SQL Compatible Null Behavior
+      // null value maps to empty list when SQL Compatible
+      return Collections.EMPTY_LIST;
+    }
     return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
     {
       @Override public boolean apply(@Nullable String key)
       {
-        return map.get(key).equals(StringUtils.nullToEmptyNonDruidDataString(value));
+        return map.get(key).equals(valueEquivalent);
       }
     }).keySet());
-
   }
 
   @Override

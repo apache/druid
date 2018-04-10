@@ -126,7 +126,9 @@ public class StaticPathSpec implements PathSpec
   private static void addInputPath(Job job, Iterable<String> pathStrings, Class<? extends InputFormat> inputFormatClass)
   {
     Configuration conf = job.getConfiguration();
-    StringBuilder inputFormats = new StringBuilder(StringUtils.nullToEmptyNonDruidDataString(conf.get(MultipleInputs.DIR_FORMATS)));
+    StringBuilder inputFormats = new StringBuilder(
+        StringUtils.nullToEmptyNonDruidDataString(conf.get(MultipleInputs.DIR_FORMATS))
+    );
 
     String[] paths = Iterables.toArray(pathStrings, String.class);
     for (int i = 0; i < paths.length - 1; i++) {

@@ -21,7 +21,6 @@ package io.druid.server.lookup;
 
 
 import com.google.common.base.Preconditions;
-
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractor;
@@ -64,15 +63,17 @@ public class LoadingLookup extends LookupExtractor
 
 
   @Override
-  @Nullable
-  public String apply(final String key)
+  public String apply(@Nullable final String key)
   {
-    if (key == null) {
+    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
+    if (keyEquivalent == null) {
+      // keyEquivalent is null for SQL Compatible Null Behavior
       return null;
     }
+
     final String presentVal;
     try {
-      presentVal = loadingCache.get(key, new ApplyCallable(key));
+      presentVal = loadingCache.get(keyEquivalent, new ApplyCallable(keyEquivalent));
       return NullHandling.emptyToNullIfNeeded(presentVal);
     }
     catch (ExecutionException e) {
@@ -82,15 +83,17 @@ public class LoadingLookup extends LookupExtractor
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<String> unapply(@Nullable final String value)
   {
-    // null value maps to empty list
-    if (value == null) {
+    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueEquivalent == null) {
+      // valueEquivalent is null for SQL Compatible Null Behavior
+      // null value maps to empty list when SQL Compatible
       return Collections.EMPTY_LIST;
     }
     final List<String> retList;
     try {
-      retList = reverseLoadingCache.get(value, new UnapplyCallable(value));
+      retList = reverseLoadingCache.get(valueEquivalent, new UnapplyCallable(valueEquivalent));
       return retList;
     }
     catch (ExecutionException e) {

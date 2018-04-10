@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.LookupExtractor;
@@ -162,7 +162,7 @@ public class LookupDimensionSpecTest
   public void testApply(DimensionSpec dimensionSpec, Map<String, String> map)
   {
     for (Map.Entry<String, String> entry : map.entrySet()) {
-      Assert.assertEquals(StringUtils.emptyToNullNonDruidDataString(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
+      Assert.assertEquals(NullHandling.emptyToNullIfNeeded(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
     }
   }
 

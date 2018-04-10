@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
@@ -117,7 +118,10 @@ public class InDimFilter implements DimFilter
       if (value == null) {
         hasNull = true;
       }
-      valuesBytes[index] = StringUtils.toUtf8(StringUtils.nullToEmptyNonDruidDataString(value));
+      //CHECKSTYLE.OFF: Regexp
+      // Strings.nullToEmpty is safe to use here as we have encoded nullability in hasNull flag.
+      valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
+      //CHECKSTYLE.ON: Regexp
       valuesBytesSize += valuesBytes[index].length + 1;
       ++index;
     }

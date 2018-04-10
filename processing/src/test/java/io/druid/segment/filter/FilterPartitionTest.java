@@ -32,7 +32,6 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
@@ -117,7 +116,7 @@ public class FilterPartitionTest extends BaseFilterTest
       if (extractionFn == null) {
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
-        final String valueOrNull = StringUtils.emptyToNullNonDruidDataString(value);
+        final String valueOrNull = NullHandling.emptyToNullIfNeeded(value);
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override

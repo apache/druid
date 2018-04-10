@@ -34,7 +34,7 @@ import io.druid.server.lookup.cache.polling.PollingCache;
 import io.druid.server.lookup.cache.polling.PollingCacheFactory;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -109,8 +109,13 @@ public class PollingLookup extends LookupExtractor
 
   @Override
   @Nullable
-  public String apply(@NotNull String key)
+  public String apply(@Nullable String key)
   {
+    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
+    if (keyEquivalent == null) {
+      // keyEquivalent is null for SQL Compatible Null Behavior
+      return null;
+    }
     final CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
     if (cacheRefKeeper == null) {
       throw new ISE("Cache reference is null WTF");
@@ -119,9 +124,9 @@ public class PollingLookup extends LookupExtractor
     try {
       if (cache == null) {
         // it must've been closed after swapping while I was getting it.  Try again.
-        return this.apply(key);
+        return this.apply(keyEquivalent);
       }
-      return NullHandling.emptyToNullIfNeeded((String) cache.get(key));
+      return NullHandling.emptyToNullIfNeeded((String) cache.get(keyEquivalent));
     }
     finally {
       if (cacheRefKeeper != null && cache != null) {
@@ -131,8 +136,15 @@ public class PollingLookup extends LookupExtractor
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<String> unapply(@Nullable final String value)
   {
+    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueEquivalent == null) {
+      // valueEquivalent is null for SQL Compatible Null Behavior
+      // null value maps to empty list when SQL Compatible
+      return Collections.EMPTY_LIST;
+    }
+
     CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
     if (cacheRefKeeper == null) {
       throw new ISE("pollingLookup id [%s] is closed", id);
@@ -141,9 +153,9 @@ public class PollingLookup extends LookupExtractor
     try {
       if (cache == null) {
         // it must've been closed after swapping while I was getting it.  Try again.
-        return this.unapply(value);
+        return this.unapply(valueEquivalent);
       }
-      return cache.getKeys(value);
+      return cache.getKeys(valueEquivalent);
     }
     finally {
       if (cacheRefKeeper != null && cache != null) {
