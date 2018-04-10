@@ -141,6 +141,16 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
     this.indexingServiceClient = indexingServiceClient;
     this.chatHandlerProvider = chatHandlerProvider;
     this.authorizerMapper = authorizerMapper;
+
+    if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
+      log.warn("maxSavedParseExceptions is not supported yet");
+    }
+    if (ingestionSchema.getTuningConfig().getMaxParseExceptions() > 0) {
+      log.warn("maxParseExceptions is not supported yet");
+    }
+    if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
+      log.warn("logParseExceptions is not supported yet");
+    }
   }
 
   @Override
