@@ -280,16 +280,15 @@ public class IndexTask extends AbstractTask
   private static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
     Preconditions.checkState(
-        !(tuningConfig.isForceGuaranteedRollup() &&
-          (tuningConfig.isForceExtendableShardSpecs() || ioConfig.isAppendToExisting())),
-        "Perfect rollup cannot be guaranteed with extendable shardSpecs"
+        !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
+        "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
   }
 
   private static boolean isExtendableShardSpecs(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
-    return !isGuaranteedRollup(ioConfig, tuningConfig);
+    return tuningConfig.isForceExtendableShardSpecs() || ioConfig.isAppendToExisting();
   }
 
   /**
@@ -936,7 +935,19 @@ public class IndexTask extends AbstractTask
     private final IndexSpec indexSpec;
     private final File basePersistDirectory;
     private final int maxPendingPersists;
+
+    /**
+     * This flag is to force to always use an extendableShardSpec (like {@link NumberedShardSpec} even if
+     * {@link #forceGuaranteedRollup} is set.
+     */
     private final boolean forceExtendableShardSpecs;
+
+    /**
+     * This flag is to force _perfect rollup mode_. {@link IndexTask} will scan the whole input data twice to 1) figure
+     * out proper shard specs for each segment and 2) generate segments. Note that perfect rollup mode basically assumes
+     * that no more data will be appended in the future. As a result, in perfect rollup mode, {@link NoneShardSpec} and
+     * {@link HashBasedNumberedShardSpec} are used for a single shard and two or shards, respectively.
+     */
     private final boolean forceGuaranteedRollup;
     private final boolean reportParseExceptions;
     private final long pushTimeout;
@@ -1018,11 +1029,6 @@ public class IndexTask extends AbstractTask
                                    : reportParseExceptions;
       this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
       this.basePersistDirectory = basePersistDirectory;
-
-      Preconditions.checkArgument(
-          !(this.forceExtendableShardSpecs && this.forceGuaranteedRollup),
-          "Perfect rollup cannot be guaranteed with extendable shardSpecs"
-      );
 
       this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     }
