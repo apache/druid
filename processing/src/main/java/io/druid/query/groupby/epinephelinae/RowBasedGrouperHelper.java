@@ -1549,13 +1549,13 @@ public class RowBasedGrouperHelper
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Longs.compare(
-              lhsBuffer.getLong(lhsPosition + keyBufferPosition),
-              rhsBuffer.getLong(rhsPosition + keyBufferPosition)
+              lhsBuffer.getLong(lhsPosition + keyBufferPosition + Byte.BYTES),
+              rhsBuffer.getLong(rhsPosition + keyBufferPosition + Byte.BYTES)
           );
         } else {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            long lhs = lhsBuffer.getLong(lhsPosition + keyBufferPosition);
-            long rhs = rhsBuffer.getLong(rhsPosition + keyBufferPosition);
+            long lhs = lhsBuffer.getLong(lhsPosition + keyBufferPosition + Byte.BYTES);
+            long rhs = rhsBuffer.getLong(rhsPosition + keyBufferPosition + Byte.BYTES);
 
             return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
           };
@@ -1618,13 +1618,13 @@ public class RowBasedGrouperHelper
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Float.compare(
-              lhsBuffer.getFloat(lhsPosition + keyBufferPosition),
-              rhsBuffer.getFloat(rhsPosition + keyBufferPosition)
+              lhsBuffer.getFloat(lhsPosition + keyBufferPosition + Byte.BYTES),
+              rhsBuffer.getFloat(rhsPosition + keyBufferPosition + Byte.BYTES)
           );
         } else {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            float lhs = lhsBuffer.getFloat(lhsPosition + keyBufferPosition);
-            float rhs = rhsBuffer.getFloat(rhsPosition + keyBufferPosition);
+            float lhs = lhsBuffer.getFloat(lhsPosition + keyBufferPosition + Byte.BYTES);
+            float rhs = rhsBuffer.getFloat(rhsPosition + keyBufferPosition + Byte.BYTES);
             return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
           };
         }
@@ -1686,13 +1686,13 @@ public class RowBasedGrouperHelper
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Double.compare(
-              lhsBuffer.getDouble(lhsPosition + keyBufferPosition),
-              rhsBuffer.getDouble(rhsPosition + keyBufferPosition)
+              lhsBuffer.getDouble(lhsPosition + keyBufferPosition + Byte.BYTES),
+              rhsBuffer.getDouble(rhsPosition + keyBufferPosition + Byte.BYTES)
           );
         } else {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            double lhs = lhsBuffer.getDouble(lhsPosition + keyBufferPosition);
-            double rhs = rhsBuffer.getDouble(rhsPosition + keyBufferPosition);
+            double lhs = lhsBuffer.getDouble(lhsPosition + keyBufferPosition + Byte.BYTES);
+            double rhs = rhsBuffer.getDouble(rhsPosition + keyBufferPosition + Byte.BYTES);
             return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
           };
         }

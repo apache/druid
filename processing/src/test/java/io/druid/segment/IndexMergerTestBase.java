@@ -2178,9 +2178,13 @@ public class IndexMergerTestBase
     Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(4, boatList.size());
 
-    Assert.assertArrayEquals(new Object[]{0L, 0.0f, new int[]{2}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(
+        new Object[]{
+            NullHandling.defaultLongValue(),
+            NullHandling.defaultFloatValue(),
+            new int[]{2}
+        }, boatList.get(0).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList.get(0).getMetrics());
-
     Assert.assertArrayEquals(new Object[]{72L, 60000.789f, new int[]{3}}, boatList.get(1).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList.get(0).getMetrics());
 

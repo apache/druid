@@ -7482,7 +7482,7 @@ public class GroupByQueryRunnerTest
     extractionMap.put(null, "EMPTY");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
-    LookupExtractionFn extractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+    LookupExtractionFn extractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, true);
     String jsFn = "function(x) { return(x === 'EMPTY') }";
 
     List<DimFilter> superFilterList = new ArrayList<>();

@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.common.config.NullHandling;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.GenericColumn;
@@ -99,6 +100,10 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   @Override
   public Float getEncodedKeyComponentFromColumn(Closeable column, int currRow)
   {
-    return ((GenericColumn) column).getFloatSingleValueRow(currRow);
+    GenericColumn genericColumn = (GenericColumn) column;
+    if (NullHandling.sqlCompatible() && genericColumn.isNull(currRow)) {
+      return null;
+    }
+    return genericColumn.getFloatSingleValueRow(currRow);
   }
 }

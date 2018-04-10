@@ -235,6 +235,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       context.put(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(fudgeTimestamp.getMillis()));
     }
     context.put(CTX_KEY_OUTERMOST, false);
+    // the having spec shouldn't be passed down, so we need to convey the existing limit push down status
     context.put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown());
 
     final GroupByQuery newQuery = new GroupByQuery(

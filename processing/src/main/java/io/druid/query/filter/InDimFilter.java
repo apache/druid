@@ -213,7 +213,15 @@ public class InDimFilter implements DimFilter
     }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (String value : values) {
-      retSet.add(Range.singleton(StringUtils.nullToEmptyNonDruidDataString(value)));
+      String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+      if (valueEquivalent == null) {
+        // Case when SQL compatible null handling is enabled
+        // Range.singleton(null) is invalid, so use the fact that
+        // only null values are less than empty string.
+        retSet.add(Range.lessThan(""));
+      } else {
+        retSet.add(Range.singleton(valueEquivalent));
+      }
     }
     return retSet;
   }
