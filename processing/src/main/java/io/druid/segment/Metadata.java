@@ -247,7 +247,7 @@ public class Metadata
   @Override
   public int hashCode()
   {
-    return Objects.hash(container, aggregators, timestampSpec, queryGranularity, rollup);
+    return Objects.hash(container, Arrays.hashCode(aggregators), timestampSpec, queryGranularity, rollup);
   }
 
   @Override
