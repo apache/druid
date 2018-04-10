@@ -26,9 +26,9 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 
 /**
- * abstract class with functionality to wrap {@link Aggregator}, {@link BufferAggregator} and {@link AggregateCombiner} to make them Nullable.
- * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
- * to extend this class.
+ * Abstract class with functionality to wrap {@link Aggregator}, {@link BufferAggregator} and {@link AggregateCombiner}
+ * to support nullable aggregations for SQL compatibility. Implementations of {@link AggregatorFactory} which need to
+ * Support Nullable Aggregations are encouraged to extend this class.
  */
 @ExtensionPoint
 public abstract class NullableAggregatorFactory extends AggregatorFactory
