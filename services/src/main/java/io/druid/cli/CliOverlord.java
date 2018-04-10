@@ -21,7 +21,6 @@ package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -116,7 +115,7 @@ public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
 
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+  protected static List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",
       "/console.html",
       "/old-console/*",
