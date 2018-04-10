@@ -83,7 +83,7 @@ public class TestHelper
     return mapper;
   }
 
-  public static ObjectMapper getSmileMapper()
+  public static ObjectMapper makeSmileMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(

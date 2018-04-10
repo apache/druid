@@ -156,7 +156,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
 {
-  public static final ObjectMapper DEFAULT_MAPPER = TestHelper.getSmileMapper();
+  public static final ObjectMapper DEFAULT_MAPPER = TestHelper.makeSmileMapper();
   public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override

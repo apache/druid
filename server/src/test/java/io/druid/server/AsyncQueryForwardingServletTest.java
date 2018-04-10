@@ -39,21 +39,24 @@ import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.DefaultGenericQueryMetricsFactory;
+import io.druid.query.Druids;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
-import io.druid.query.QueryToolChest;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.segment.TestHelper;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.log.RequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
+import org.easymock.EasyMock;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -66,16 +69,20 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.ReadListener;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
@@ -116,7 +123,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 binder.bind(AuthorizerMapper.class).toInstance(
-                    new AuthorizerMapper(null) {
+                    new AuthorizerMapper(null)
+                    {
 
                       @Override
                       public Authorizer getAuthorizer(String name)
@@ -173,6 +181,97 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     latch.await();
   }
 
+  @Test
+  public void testQueryProxy() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("foo")
+                                        .intervals("2000/P1D")
+                                        .granularity(Granularities.ALL)
+                                        .context(ImmutableMap.of("queryId", "dummy"))
+                                        .build();
+
+    final QueryHostFinder hostFinder = EasyMock.createMock(QueryHostFinder.class);
+    EasyMock.expect(hostFinder.pickServer(query)).andReturn(new TestServer("http", "1.2.3.4", 9999)).once();
+    EasyMock.replay(hostFinder);
+
+    final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
+    final ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonMapper.writeValueAsBytes(query));
+    final ServletInputStream servletInputStream = new ServletInputStream()
+    {
+      private boolean finished;
+
+      @Override
+      public boolean isFinished()
+      {
+        return finished;
+      }
+
+      @Override
+      public boolean isReady()
+      {
+        return true;
+      }
+
+      @Override
+      public void setReadListener(final ReadListener readListener)
+      {
+        // do nothing
+      }
+
+      @Override
+      public int read()
+      {
+        final int b = inputStream.read();
+        if (b < 0) {
+          finished = true;
+        }
+        return b;
+      }
+    };
+    EasyMock.expect(requestMock.getContentType()).andReturn("application/json").times(2);
+    requestMock.setAttribute("io.druid.proxy.objectMapper", jsonMapper);
+    EasyMock.expectLastCall();
+    EasyMock.expect(requestMock.getRequestURI()).andReturn("/druid/v2/");
+    EasyMock.expect(requestMock.getMethod()).andReturn("POST");
+    EasyMock.expect(requestMock.getInputStream()).andReturn(servletInputStream);
+    requestMock.setAttribute("io.druid.proxy.query", query);
+    requestMock.setAttribute("io.druid.proxy.to.host", "1.2.3.4:9999");
+    requestMock.setAttribute("io.druid.proxy.to.host.scheme", "http");
+    EasyMock.expectLastCall();
+    EasyMock.replay(requestMock);
+
+    final AtomicLong didService = new AtomicLong();
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        jsonMapper,
+        TestHelper.makeSmileMapper(),
+        hostFinder,
+        null,
+        null,
+        new NoopServiceEmitter(),
+        requestLogLine -> { /* noop */ },
+        new DefaultGenericQueryMetricsFactory(jsonMapper)
+    )
+    {
+      @Override
+      protected void doService(
+          final HttpServletRequest request,
+          final HttpServletResponse response
+      )
+      {
+        didService.incrementAndGet();
+      }
+    };
+
+    servlet.service(requestMock, null);
+
+    // This test is mostly about verifying that the servlet calls the right methods the right number of times.
+    EasyMock.verify(hostFinder, requestMock);
+    Assert.assertEquals(1, didService.get());
+  }
+
   private static Server makeTestDeleteServer(int port, final CountDownLatch latch)
   {
     Server server = new Server(port);
@@ -211,13 +310,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       final QueryHostFinder hostFinder = new QueryHostFinder(null, new RendezvousHashAvaticaConnectionBalancer())
       {
         @Override
-        public io.druid.client.selector.Server getServer(Query query)
+        public io.druid.client.selector.Server pickServer(Query query)
         {
           return new TestServer("http", "localhost", node.getPlaintextPort());
         }
 
         @Override
-        public io.druid.client.selector.Server getDefaultServer()
+        public io.druid.client.selector.Server pickDefaultServer()
         {
           return new TestServer("http", "localhost", node.getPlaintextPort());
         }
@@ -236,21 +335,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
       ServletHolder holder = new ServletHolder(
           new AsyncQueryForwardingServlet(
-              new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of()),
+              new MapQueryToolChestWarehouse(ImmutableMap.of()),
               jsonMapper,
               injector.getInstance(Key.get(ObjectMapper.class, Smile.class)),
               hostFinder,
               injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
-              new RequestLogger()
-              {
-                @Override
-                public void log(RequestLogLine requestLogLine) throws IOException
-                {
-                  // noop
-                }
-              },
+              requestLogLine -> { /* noop */ },
               new DefaultGenericQueryMetricsFactory(jsonMapper)
           )
           {
