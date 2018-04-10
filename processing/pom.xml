@@ -31,6 +31,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>oak</groupId>
+            <artifactId>oak</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-common</artifactId>
             <version>${project.parent.version}</version>

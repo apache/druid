@@ -92,7 +92,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
-  private volatile DateTime maxIngestedEventTime;
+  protected volatile DateTime maxIngestedEventTime;
 
   // Used to discover ValueType based on the class of values in a row
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
@@ -423,7 +423,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       );
     }
 
-    public IncrementalIndex buildOffheapOak()
+    public IncrementalIndex buildOffheapOak(final NonBlockingPool<ByteBuffer> bufferPool)
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
@@ -433,7 +433,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
               Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
               deserializeComplexMetrics,
               reportParseExceptions,
-              concurrentEventAdd
+              concurrentEventAdd,
+              Objects.requireNonNull(bufferPool, "bufferPool is null"),
+              maxRowCount
       );
     }
   }
@@ -632,7 +634,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
   }
 
-  private synchronized void updateMaxIngestedTime(DateTime eventTime)
+  protected synchronized void updateMaxIngestedTime(DateTime eventTime)
   {
     if (maxIngestedEventTime == null || maxIngestedEventTime.isBefore(eventTime)) {
       maxIngestedEventTime = eventTime;
@@ -950,7 +952,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
      * rowIndex is not checked in {@link #equals} and {@link #hashCode} on purpose. TimeAndDims acts as a Map key
      * and "entry" object (rowIndex is the "value") at the same time. This is done to reduce object indirection and
      * improve locality, and avoid boxing of rowIndex as Integer, when stored in JDK collection:
-     * {@link RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
+     * needs concurrent collections, that are not present in fastutil.
      */
     private int rowIndex;
 
