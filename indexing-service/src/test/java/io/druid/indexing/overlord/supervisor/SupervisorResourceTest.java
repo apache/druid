@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -295,6 +296,10 @@ public class SupervisorResourceTest extends EasyMockSupport
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id1", null, Arrays.asList("datasource1")),
             "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource1")),
+            "tombstone"
         )
     );
     List<VersionedSupervisorSpec> versions2 = ImmutableList.of(
@@ -305,11 +310,42 @@ public class SupervisorResourceTest extends EasyMockSupport
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
             "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource2")),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
+            "v3"
+        )
+    );
+    List<VersionedSupervisorSpec> versions3 = ImmutableList.of(
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource3")),
+            "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, null),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource3")),
+            "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, null),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource3")),
+            "v3"
         )
     );
     Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
     history.put("id1", versions1);
     history.put("id2", versions2);
+    history.put("id3", versions3);
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.getSupervisorHistory()).andReturn(history);
@@ -352,6 +388,10 @@ public class SupervisorResourceTest extends EasyMockSupport
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id1", null, Arrays.asList("datasource1")),
             "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource1")),
+            "tombstone"
         )
     );
     List<VersionedSupervisorSpec> versions2 = ImmutableList.of(
@@ -362,12 +402,62 @@ public class SupervisorResourceTest extends EasyMockSupport
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
             "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource2")),
+            "tombstone"
+        )
+    );
+    List<VersionedSupervisorSpec> versions3 = ImmutableList.of(
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
+            "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
+            "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource2")),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id3", null, Arrays.asList("datasource3")),
+            "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource3")),
+            "tombstone"
+        )
+    );
+    List<VersionedSupervisorSpec> versions4 = ImmutableList.of(
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
+            "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, null),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
+            "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, null),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
+            "v3"
         )
     );
 
     Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
     history.put("id1", versions1);
     history.put("id2", versions2);
+    history.put("id3", versions3);
+    history.put("id4", versions4);
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.getSupervisorHistory()).andReturn(history);
@@ -387,6 +477,32 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Map<String, List<VersionedSupervisorSpec>> filteredHistory = Maps.newHashMap();
     filteredHistory.put("id1", versions1);
+    filteredHistory.put(
+        "id3",
+        ImmutableList.of(
+            new VersionedSupervisorSpec(
+                new TestSupervisorSpec("id3", null, Arrays.asList("datasource3")),
+                "v1"
+            ),
+            new VersionedSupervisorSpec(
+                new NoopSupervisorSpec(null, Arrays.asList("datasource3")),
+                "tombstone"
+            )
+        )
+    );
+    filteredHistory.put(
+        "id4",
+        ImmutableList.of(
+            new VersionedSupervisorSpec(
+                new NoopSupervisorSpec(null, null),
+                "tombstone"
+            ),
+            new VersionedSupervisorSpec(
+                new NoopSupervisorSpec(null, null),
+                "tombstone"
+            )
+        )
+    );
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(filteredHistory, response.getEntity());
@@ -411,6 +527,10 @@ public class SupervisorResourceTest extends EasyMockSupport
             "v1"
         ),
         new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource1")),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
             new TestSupervisorSpec("id1", null, Arrays.asList("datasource1")),
             "v2"
         )
@@ -419,6 +539,10 @@ public class SupervisorResourceTest extends EasyMockSupport
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
             "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource2")),
+            "tombstone"
         ),
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
@@ -473,6 +597,10 @@ public class SupervisorResourceTest extends EasyMockSupport
             "v1"
         ),
         new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource3")),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
             new TestSupervisorSpec("id1", null, Arrays.asList("datasource1")),
             "v2"
         )
@@ -481,6 +609,10 @@ public class SupervisorResourceTest extends EasyMockSupport
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
             "v1"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource2")),
+            "tombstone"
         ),
         new VersionedSupervisorSpec(
             new TestSupervisorSpec("id2", null, Arrays.asList("datasource2")),
@@ -493,8 +625,24 @@ public class SupervisorResourceTest extends EasyMockSupport
             "v1"
         ),
         new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, null),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
             new TestSupervisorSpec("id3", null, Arrays.asList("datasource2")),
             "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, null),
+            "tombstone"
+        ),
+        new VersionedSupervisorSpec(
+            new TestSupervisorSpec("id3", null, Arrays.asList("datasource3")),
+            "v2"
+        ),
+        new VersionedSupervisorSpec(
+            new NoopSupervisorSpec(null, Arrays.asList("datasource3")),
+            "tombstone"
         )
     );
     Map<String, List<VersionedSupervisorSpec>> history = Maps.newHashMap();
@@ -529,6 +677,22 @@ public class SupervisorResourceTest extends EasyMockSupport
             new VersionedSupervisorSpec(
                 new TestSupervisorSpec("id3", null, Arrays.asList("datasource3")),
                 "v1"
+            ),
+            new VersionedSupervisorSpec(
+                new NoopSupervisorSpec(null, null),
+                "tombstone"
+            ),
+            new VersionedSupervisorSpec(
+                new NoopSupervisorSpec(null, null),
+                "tombstone"
+            ),
+            new VersionedSupervisorSpec(
+                new TestSupervisorSpec("id3", null, Arrays.asList("datasource3")),
+                "v2"
+            ),
+            new VersionedSupervisorSpec(
+                new NoopSupervisorSpec(null, Arrays.asList("datasource3")),
+                "tombstone"
             )
         ),
         response.getEntity()
@@ -580,6 +744,23 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Assert.assertEquals(503, response.getStatus());
     verifyAll();
+  }
+
+  @Test
+  public void testNoopSupervisorSpecSerde() throws Exception
+  {
+    ObjectMapper mapper = new ObjectMapper();
+    String oldSpec = "{\"type\":\"NoopSupervisorSpec\",\"id\":null,\"dataSources\":null}";
+    NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
+    NoopSupervisorSpec deserializedSpec = mapper.readValue(oldSpec, NoopSupervisorSpec.class);
+    Assert.assertEquals(expectedSpec, deserializedSpec);
+
+    NoopSupervisorSpec spec1 = new NoopSupervisorSpec("abcd", Lists.newArrayList("defg"));
+    NoopSupervisorSpec spec2 = mapper.readValue(
+        mapper.writeValueAsBytes(spec1),
+        NoopSupervisorSpec.class
+    );
+    Assert.assertEquals(spec1, spec2);
   }
 
   private static class TestSupervisorSpec implements SupervisorSpec
