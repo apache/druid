@@ -39,6 +39,11 @@ public final class ConcurrentAwaitableCounter
 {
   private static final long MAX_COUNT = Long.MAX_VALUE;
 
+  /**
+   * This method should be called to obtain the next total increment count to be passed to {@link #awaitCount} methods,
+   * instead of just adding 1 to the previous count, because the count must wrap around {@link Long#MAX_VALUE} and start
+   * from 0 again.
+   */
   public static long nextCount(long prevCount)
   {
     return (prevCount + 1) & MAX_COUNT;
@@ -87,21 +92,35 @@ public final class ConcurrentAwaitableCounter
    */
   public void awaitCount(long totalCount) throws InterruptedException
   {
-    totalCount &= MAX_COUNT;
-    long currentCount;
-    currentCount = sync.getCount();
+    checkTotalCount(totalCount);
+    long currentCount = sync.getCount();
     while (compareCounts(totalCount, currentCount) > 0) {
       sync.acquireSharedInterruptibly(currentCount);
       currentCount = sync.getCount();
     }
   }
 
+  private static void checkTotalCount(long totalCount)
+  {
+    if (totalCount < 0) {
+      throw new AssertionError(
+          "Total count must always be >= 0, even in the face of overflow. "
+          + "The next count should always be obtained by calling ConcurrentAwaitableCounter.nextCount(prevCount), "
+          + "not just +1"
+      );
+    }
+  }
+
+  /**
+   * Await until the {@link #increment} is called on this counter object the specified number of times from the creation
+   * of this counter object, for not longer than the specified period of time. If by this time the target increment
+   * count is not reached, {@link TimeoutException} is thrown.
+   */
   public void awaitCount(long totalCount, long timeout, TimeUnit unit) throws InterruptedException, TimeoutException
   {
+    checkTotalCount(totalCount);
     long nanos = unit.toNanos(timeout);
-    totalCount &= MAX_COUNT;
-    long currentCount;
-    currentCount = sync.getCount();
+    long currentCount = sync.getCount();
     while (compareCounts(totalCount, currentCount) > 0) {
       if (!sync.tryAcquireSharedNanos(currentCount, nanos)) {
         throw new TimeoutException();
@@ -131,7 +150,7 @@ public final class ConcurrentAwaitableCounter
     if (nextIncrements > MAX_COUNT / 4) {
       throw new UnsupportedOperationException("Couldn't wait for so many increments: " + nextIncrements);
     }
-    awaitCount(sync.getCount() + nextIncrements);
+    awaitCount((sync.getCount() + nextIncrements) & MAX_COUNT);
   }
 
   /**
