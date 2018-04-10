@@ -62,7 +62,7 @@ public class BufferArrayGrouper implements IntGrouper
   private ByteBuffer usedFlagBuffer;
   private ByteBuffer valBuffer;
 
-  static int requiredBufferCapacity(
+  static long requiredBufferCapacity(
       int cardinality,
       AggregatorFactory[] aggregatorFactories
   )
@@ -73,7 +73,7 @@ public class BufferArrayGrouper implements IntGrouper
                                  .sum();
 
     return getUsedFlagBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
-           cardinalityWithMissingValue * recordSize;                 // total values size
+        (long) cardinalityWithMissingValue * recordSize;                 // total values size
   }
 
   /**
