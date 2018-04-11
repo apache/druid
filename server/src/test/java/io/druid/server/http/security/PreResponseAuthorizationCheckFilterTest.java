@@ -58,8 +58,8 @@ public class PreResponseAuthorizationCheckFilterTest
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(true).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.replay(req, resp, filterChain, outputStream);
 
     PreResponseAuthorizationCheckFilter filter = new PreResponseAuthorizationCheckFilter(
@@ -112,8 +112,8 @@ public class PreResponseAuthorizationCheckFilterTest
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(resp.getStatus()).andReturn(200).once();
     EasyMock.expect(req.getRequestURI()).andReturn("uri").once();
     EasyMock.expect(req.getMethod()).andReturn("GET").once();
@@ -148,8 +148,8 @@ public class PreResponseAuthorizationCheckFilterTest
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(resp.getStatus()).andReturn(404).once();
     EasyMock.replay(req, resp, filterChain, outputStream);
 
