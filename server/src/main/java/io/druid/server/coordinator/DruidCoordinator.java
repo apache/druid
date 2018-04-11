@@ -297,7 +297,9 @@ public class DruidCoordinator
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
         if (loadedView != null) {
-          segments.removeAll(loadedView.getSegments());
+          for (DataSegment serverSegment : loadedView.getSegments()) {
+            segments.remove(serverSegment);
+          }
         }
       }
       final int unloadedSegmentSize = segments.size();
