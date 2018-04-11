@@ -251,45 +251,51 @@ public class OnheapIncrementalIndex extends ExternalDataIncrementalIndex<Aggrega
   }
 
   @Override
-  protected Aggregator[] getAggsForRow(int rowOffset)
+  protected Aggregator[] getAggsForRow(TimeAndDims timeAndDims)
   {
-    return concurrentGet(rowOffset);
+    int rowIndex = timeAndDims.getRowIndex();
+    return concurrentGet(rowIndex);
   }
 
   @Override
-  protected Object getAggVal(Aggregator agg, int rowOffset, int aggPosition)
+  protected Object getAggVal(Aggregator agg, TimeAndDims timeAndDims, int aggPosition)
   {
     return agg.get();
   }
 
   @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  public float getMetricFloatValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
+    int rowIndex = timeAndDims.getRowIndex();
+    return concurrentGet(rowIndex)[aggOffset].getFloat();
   }
 
   @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
+  public long getMetricLongValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
+    int rowIndex = timeAndDims.getRowIndex();
+    return concurrentGet(rowIndex)[aggOffset].getLong();
   }
 
   @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  public Object getMetricObjectValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].get();
+    int rowIndex = timeAndDims.getRowIndex();
+    return concurrentGet(rowIndex)[aggOffset].get();
   }
 
   @Override
-  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  protected double getMetricDoubleValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getDouble();
+    int rowIndex = timeAndDims.getRowIndex();
+    return concurrentGet(rowIndex)[aggOffset].getDouble();
   }
 
   @Override
-  public boolean isNull(int rowOffset, int aggOffset)
+  public boolean isNull(TimeAndDims timeAndDims, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].isNull();
+    int rowIndex = timeAndDims.getRowIndex();
+    return concurrentGet(rowIndex)[aggOffset].isNull();
   }
 
   /**

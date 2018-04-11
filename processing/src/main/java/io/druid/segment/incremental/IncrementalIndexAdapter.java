@@ -200,7 +200,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
                 Object[] metrics = new Object[index.getMetricAggs().length];
                 for (int i = 0; i < metrics.length; i++) {
-                  metrics[i] = index.getMetricObjectValue(rowOffset, i);
+                  metrics[i] = index.getMetricObjectValue(timeAndDims, i);
                 }
 
                 return new Rowboat(

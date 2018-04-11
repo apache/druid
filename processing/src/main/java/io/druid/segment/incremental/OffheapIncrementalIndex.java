@@ -264,60 +264,66 @@ public class OffheapIncrementalIndex extends ExternalDataIncrementalIndex<Buffer
   }
 
   @Override
-  protected BufferAggregator[] getAggsForRow(int rowOffset)
+  protected BufferAggregator[] getAggsForRow(TimeAndDims timeAndDims)
   {
     return getAggs();
   }
 
   @Override
-  protected Object getAggVal(BufferAggregator agg, int rowOffset, int aggPosition)
+  protected Object getAggVal(BufferAggregator agg, TimeAndDims timeAndDims, int aggPosition)
   {
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int rowIndex = timeAndDims.getRowIndex();
+    int[] indexAndOffset = indexAndOffsets.get(rowIndex);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggPosition]);
   }
 
   @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  public float getMetricFloatValue(TimeAndDims timeAndDims, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int rowIndex = timeAndDims.getRowIndex();
+    int[] indexAndOffset = indexAndOffsets.get(rowIndex);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.getFloat(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
+  public long getMetricLongValue(TimeAndDims timeAndDims, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int rowIndex = timeAndDims.getRowIndex();
+    int[] indexAndOffset = indexAndOffsets.get(rowIndex);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.getLong(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  public Object getMetricObjectValue(TimeAndDims timeAndDims, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int rowIndex = timeAndDims.getRowIndex();
+    int[] indexAndOffset = indexAndOffsets.get(rowIndex);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.get(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public double getMetricDoubleValue(int rowOffset, int aggOffset)
+  public double getMetricDoubleValue(TimeAndDims timeAndDims, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int rowIndex = timeAndDims.getRowIndex();
+    int[] indexAndOffset = indexAndOffsets.get(rowIndex);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
-  public boolean isNull(int rowOffset, int aggOffset)
+  public boolean isNull(TimeAndDims timeAndDims, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];
-    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    int rowIndex = timeAndDims.getRowIndex();
+    int[] indexAndOffset = indexAndOffsets.get(rowIndex);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.isNull(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }

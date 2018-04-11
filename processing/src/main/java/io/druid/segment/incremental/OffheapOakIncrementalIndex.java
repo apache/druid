@@ -169,51 +169,67 @@ public class OffheapOakIncrementalIndex extends
   }
 
   @Override
-  protected BufferAggregator[] getAggsForRow(int rowOffset)
+  protected BufferAggregator[] getAggsForRow(TimeAndDims timeAndDims)
   {
     return getAggs();
   }
 
-  // stub
   @Override
-  protected Object getAggVal(BufferAggregator agg, int rowOffset, int aggPosition)
+  protected Object getAggVal(BufferAggregator agg, TimeAndDims timeAndDims, int aggPosition)
   {
-    return null;
+    ByteBuffer serializedKey = timeAndDimsSerialization(timeAndDims);
+    WritableOakBufferImpl oakValue = (WritableOakBufferImpl) oak.get(serializedKey);
+    return getAggVal(agg, oakValue, aggPosition);
   }
 
-  // stub
-  @Override
-  protected float getMetricFloatValue(int rowOffset, int aggOffset)
+  private Object getAggVal(BufferAggregator agg, WritableOakBufferImpl oakValue, int aggPosition)
   {
-    return 0;
+    return agg.get(oakValue.getByteBuffer(), aggOffsetInBuffer[aggPosition]);
   }
 
-  // stub
   @Override
-  protected long getMetricLongValue(int rowOffset, int aggOffset)
+  protected float getMetricFloatValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return 0;
+    BufferAggregator agg = getAggs()[aggOffset];
+    ByteBuffer serializedKey = timeAndDimsSerialization(timeAndDims);
+    WritableOakBufferImpl oakValue = (WritableOakBufferImpl) oak.get(serializedKey);
+    return agg.getFloat(oakValue.getByteBuffer(), aggOffsetInBuffer[aggOffset]);
   }
 
-  // stub
   @Override
-  protected Object getMetricObjectValue(int rowOffset, int aggOffset)
+  protected long getMetricLongValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return null;
+    BufferAggregator agg = getAggs()[aggOffset];
+    ByteBuffer serializedKey = timeAndDimsSerialization(timeAndDims);
+    WritableOakBufferImpl oakValue = (WritableOakBufferImpl) oak.get(serializedKey);
+    return agg.getLong(oakValue.getByteBuffer(), aggOffsetInBuffer[aggOffset]);
   }
 
-  // stub
   @Override
-  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  protected Object getMetricObjectValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return 0;
+    BufferAggregator agg = getAggs()[aggOffset];
+    ByteBuffer serializedKey = timeAndDimsSerialization(timeAndDims);
+    WritableOakBufferImpl oakValue = (WritableOakBufferImpl) oak.get(serializedKey);
+    return agg.get(oakValue.getByteBuffer(), aggOffsetInBuffer[aggOffset]);
   }
 
-  // stub
   @Override
-  protected boolean isNull(int rowOffset, int aggOffset)
+  protected double getMetricDoubleValue(TimeAndDims timeAndDims, int aggOffset)
   {
-    return false;
+    BufferAggregator agg = getAggs()[aggOffset];
+    ByteBuffer serializedKey = timeAndDimsSerialization(timeAndDims);
+    WritableOakBufferImpl oakValue = (WritableOakBufferImpl) oak.get(serializedKey);
+    return agg.getDouble(oakValue.getByteBuffer(), aggOffsetInBuffer[aggOffset]);
+  }
+
+  @Override
+  protected boolean isNull(TimeAndDims timeAndDims, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    ByteBuffer serializedKey = timeAndDimsSerialization(timeAndDims);
+    WritableOakBufferImpl oakValue = (WritableOakBufferImpl) oak.get(serializedKey);
+    return agg.isNull(oakValue.getByteBuffer(), aggOffsetInBuffer[aggOffset]);
   }
 
   @Override
@@ -285,7 +301,7 @@ public class OffheapOakIncrementalIndex extends
     ByteBuffer value = getNewOakValue(metrics, reportParseExceptions, row, rowContainer);
     OffheapOakConsumer func = new OffheapOakConsumer(metrics, reportParseExceptions, row, rowContainer,
             aggOffsetInBuffer, getAggs());
-    if (numEntries.get() < maxRowCount) {
+    if (numEntries.get() < maxRowCount || skipMaxRowsInMemoryCheck) {
       oak.putIfAbsentComputeIfPresent(serializedKey, () -> value, func);
       if (func.executed() == false) { // a put operation was executed
         numEntries.incrementAndGet();
@@ -295,7 +311,6 @@ public class OffheapOakIncrementalIndex extends
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
     }
-    updateMaxIngestedTime(row.getTimestamp());
     return numEntries.get();
   }
 
@@ -641,10 +656,5 @@ public class OffheapOakIncrementalIndex extends
 
       return retVal;
     }
-  }
-
-  private Object getAggVal(BufferAggregator agg, WritableOakBufferImpl oakValue, int aggPosition)
-  {
-    return agg.get(oakValue.getByteBuffer(), aggOffsetInBuffer[aggPosition]);
   }
 }

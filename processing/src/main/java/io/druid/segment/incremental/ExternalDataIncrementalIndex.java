@@ -112,9 +112,9 @@ public abstract class ExternalDataIncrementalIndex<AggregatorType> extends Incre
                 theVals.put(dimensionName, rowVals);
               }
 
-              AggregatorType[] aggs = getAggsForRow(rowOffset);
+              AggregatorType[] aggs = getAggsForRow(timeAndDims);
               for (int i = 0; i < aggs.length; ++i) {
-                theVals.put(metrics[i].getName(), getAggVal(aggs[i], rowOffset, i));
+                theVals.put(metrics[i].getName(), getAggVal(aggs[i], timeAndDims, i));
               }
 
               if (postAggs != null) {
