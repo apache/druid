@@ -20,7 +20,6 @@
 package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.granularity.Granularity;
@@ -101,21 +100,23 @@ public class Metadata
     return rollup;
   }
 
-  public Metadata putAll(Map<String, Object> other)
+  public Metadata putAll(@Nullable Map<String, Object> other)
   {
-    container.putAll(Preconditions.checkNotNull(other, "other"));
+    if (other != null) {
+      container.putAll(other);
+    }
     return this;
   }
 
   public Object get(String key)
   {
-    return container.get(Preconditions.checkNotNull(key, "key"));
+    return container.get(key);
   }
 
   public Metadata put(String key, @Nullable Object value)
   {
     if (value != null) {
-      container.put(Preconditions.checkNotNull(key, "key"), value);
+      container.put(key, value);
     }
     return this;
   }
