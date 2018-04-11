@@ -27,10 +27,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.InputStreamResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -38,6 +34,10 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.InputStreamResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
@@ -53,12 +53,15 @@ import org.junit.Test;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Map;
@@ -67,6 +70,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class JettyTest extends BaseJettyTest
 {
@@ -129,6 +134,7 @@ public class JettyTest extends BaseJettyTest
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
+                Jerseys.addResource(binder, DirectlyReturnResource.class);
                 binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                 LifecycleModule.register(binder, Server.class);
               }
@@ -196,24 +202,28 @@ public class JettyTest extends BaseJettyTest
   }
 
   @Test
-  public void testGzipCompression() throws Exception
+  public void testGzipResponseCompression() throws Exception
   {
     final URL url = new URL("http://localhost:" + port + "/default");
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty("Accept-Encoding", "gzip");
     Assert.assertEquals("gzip", get.getContentEncoding());
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(new GZIPInputStream(get.getInputStream()), StandardCharsets.UTF_8));
 
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestProperty("Accept-Encoding", "gzip");
     post.setRequestMethod("POST");
     Assert.assertEquals("gzip", post.getContentEncoding());
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(new GZIPInputStream(post.getInputStream()), StandardCharsets.UTF_8));
 
     final HttpURLConnection getNoGzip = (HttpURLConnection) url.openConnection();
     Assert.assertNotEquals("gzip", getNoGzip.getContentEncoding());
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(getNoGzip.getInputStream(), StandardCharsets.UTF_8));
 
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(postNoGzip.getInputStream(), StandardCharsets.UTF_8));
   }
 
   // Tests that threads are not stuck when partial chunk is not finalized
@@ -282,5 +292,22 @@ public class JettyTest extends BaseJettyTest
     get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty(DummyAuthFilter.AUTH_HDR, "hacker");
     Assert.assertEquals(HttpServletResponse.SC_UNAUTHORIZED, get.getResponseCode());
+  }
+
+  @Test
+  public void testGzipRequestDecompression() throws Exception
+  {
+    String text = "hello";
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(out)) {
+      gzipOutputStream.write(text.getBytes(Charset.defaultCharset()));
+    }
+    Request request = new Request(HttpMethod.POST, new URL("http://localhost:" + port + "/return"));
+    request.setHeader("Content-Encoding", "gzip");
+    request.setContent(MediaType.TEXT_PLAIN, out.toByteArray());
+    Assert.assertEquals(text, new String(IOUtils.toByteArray(client.go(
+        request,
+        new InputStreamResponseHandler()
+    ).get()), Charset.defaultCharset()));
   }
 }

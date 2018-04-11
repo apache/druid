@@ -52,6 +52,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -66,6 +67,8 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class BaseJettyTest
 {
+  protected static final String DEFAULT_RESPONSE_CONTENT = "hello";
+
   protected Lifecycle lifecycle;
   protected HttpClient client;
   protected Server server;
@@ -142,7 +145,7 @@ public abstract class BaseJettyTest
       root.addFilter(GuiceFilter.class, "/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root)});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
       server.setHandler(handlerList);
     }
 
@@ -165,33 +168,46 @@ public abstract class BaseJettyTest
       catch (InterruptedException e) {
         //
       }
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
     }
   }
 
   @Path("/default")
   public static class DefaultResource
   {
+
     @DELETE
     @Path("{resource}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delete()
     {
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response get()
     {
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
     }
 
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     public Response post()
     {
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
+    }
+  }
+
+  @Path("/return")
+  public static class DirectlyReturnResource
+  {
+    @POST
+    @Consumes(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response postText(String text)
+    {
+      return Response.ok(text).build();
     }
   }
 
