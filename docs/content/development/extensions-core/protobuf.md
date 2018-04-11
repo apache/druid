@@ -18,7 +18,7 @@ This extension enables Druid to ingest and understand the Protobuf data format. 
 
 ## Example: Load Protobuf messages from Kafka
 
-This example demonstrates how to load Protobuf messages from Kafka.  Please read the [Load from Kafka tutorial](../../tutorial/tutorial-kafka.html) first.  This example will use the same "metrics" dataset.
+This example demonstrates how to load Protobuf messages from Kafka.  Please read the [Load from Kafka tutorial](../../tutorials/tutorial-kafka.html) first.  This example will use the same "metrics" dataset.
 
 Files used in this example are found at `./examples/quickstart/protobuf` in your Druid directory.
 

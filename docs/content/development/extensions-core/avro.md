@@ -16,7 +16,7 @@ This is for streaming/realtime ingestion.
 | avroBytesDecoder | JSON Object | Specifies how to decode bytes to Avro record. | yes |
 | parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be an "avro" parseSpec. | yes |
 
-An Avro parseSpec can contain a [flattenSpec](../../ingestion/flatten-spec.html) using either the "root" or "path"
+An Avro parseSpec can contain a [flattenSpec](../../ingestion/flatten-json.html) using either the "root" or "path"
 field types, which can be used to read nested Avro records. The "jq" field type is not currently supported for Avro.
 
 For example, using Avro stream parser with schema repo Avro bytes decoder:
