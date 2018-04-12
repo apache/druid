@@ -224,18 +224,6 @@ public class ITBasicAuthConfigurationTest
     
     LOG.info("Testing Avatica query on router with incorrect credentials.");
     testAvaticaAuthFailure(routerUrl);
-
-    LOG.info("Checking OPTIONS requests on services...");
-    testOptionsRequests(adminClient);
-  }
-
-  private void testOptionsRequests(HttpClient httpClient)
-  {
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getIndexerUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
-    makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
   }
 
   private void checkUnsecuredCoordinatorLoadQueuePath(HttpClient client)
