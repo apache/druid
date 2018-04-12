@@ -31,9 +31,7 @@ public class NullValueHandlingConfig
   @JsonCreator
   public NullValueHandlingConfig(@JsonProperty("useDefaultValueForNull") Boolean useDefaultValuesForNull)
   {
-    this.useDefaultValuesForNull = useDefaultValuesForNull == null
-                                   ? true
-                                   : useDefaultValuesForNull;
+    this.useDefaultValuesForNull = useDefaultValuesForNull;
   }
 
   public boolean isUseDefaultValuesForNull()

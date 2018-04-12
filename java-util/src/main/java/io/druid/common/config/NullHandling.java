@@ -50,7 +50,7 @@ public class NullHandling
    */
   @Inject
   private static NullValueHandlingConfig INSTANCE = new NullValueHandlingConfig(
-      false
+      Boolean.valueOf(System.getProperty(NULL_HANDLING_CONFIG_STRING, "true"))
   );
 
   public static boolean replaceWithDefault()
