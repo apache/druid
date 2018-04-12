@@ -22,6 +22,7 @@ package io.druid.benchmark;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -76,7 +77,7 @@ public class LoadStatusBenchmark
     for (int i = 0; i < totalSegmentsCount; i++) {
       DataSegment segment = new DataSegment(
           "benchmarkDatasource",
-          new Interval(StringUtils.format("%s-01-01/%s-12-31", i + 1970, i + 1970)),
+          Intervals.of(StringUtils.format("%s-01-01/%s-12-31", i + 1970, i + 1970)),
           "1",
           null,
           null,
