@@ -80,6 +80,8 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.transform.TransformingInputRowParser;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.security.AuthTestUtils;
@@ -211,6 +213,7 @@ public class CompactionTaskTest
                   public void configure(Binder binder)
                   {
                     binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+                    binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
                   }
                 }
             )
@@ -294,7 +297,8 @@ public class CompactionTaskTest
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
@@ -321,7 +325,8 @@ public class CompactionTaskTest
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);

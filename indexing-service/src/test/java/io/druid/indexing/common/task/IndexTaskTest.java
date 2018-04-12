@@ -36,7 +36,6 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
@@ -53,6 +52,7 @@ import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.overlord.SegmentPublishResult;
@@ -952,17 +952,18 @@ public class IndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "determinePartitions",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-            TaskMetricsUtils.ROWS_PROCESSED, 4,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 4,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 1
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 4,
+            RowIngestionMeters.UNPARSEABLE, 4,
+            RowIngestionMeters.THROWN_AWAY, 1
         ),
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 3,
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 4,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 1
+
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.UNPARSEABLE, 4,
+            RowIngestionMeters.THROWN_AWAY, 1
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1073,10 +1074,10 @@ public class IndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 2
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.UNPARSEABLE, 3,
+            RowIngestionMeters.THROWN_AWAY, 2
         )
     );
 
@@ -1179,10 +1180,10 @@ public class IndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "determinePartitions",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 2
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.UNPARSEABLE, 3,
+            RowIngestionMeters.THROWN_AWAY, 2
         )
     );
 

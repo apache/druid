@@ -46,7 +46,6 @@ import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.SegmentLoaderFactory;
@@ -63,6 +62,7 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
+import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.SegmentPublishResult;
@@ -360,9 +360,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -422,9 +422,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -487,9 +487,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2000, task.getMetrics().processed());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2000, task.getRowIngestionMeters().getProcessed().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
 
     // Do some queries.
     Assert.assertEquals(2000, sumMetric(task, null, "rows"));
@@ -555,9 +555,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(1, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
+    Assert.assertEquals(1, task.getRowIngestionMeters().getThrownAway().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -675,10 +675,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(1, task.getMetrics().processedWithErrors());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(2, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
+    Assert.assertEquals(1, task.getRowIngestionMeters().getProcessedWithError().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable().getCount());
 
     // Do some queries.
     Assert.assertEquals(3, sumMetric(task, null, "rows"));
@@ -704,10 +704,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 2,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+            RowIngestionMeters.PROCESSED, 2,
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 1,
+            RowIngestionMeters.UNPARSEABLE, 2,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
 
@@ -767,10 +767,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(2, task.getMetrics().processedWithErrors());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(2, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessedWithError().getCount());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable().getCount());
 
     // Do some queries.
     Assert.assertEquals(4, sumMetric(task, null, "rows"));
@@ -796,10 +796,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 2,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+            RowIngestionMeters.PROCESSED, 2,
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
+            RowIngestionMeters.UNPARSEABLE, 2,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
 
@@ -873,10 +873,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         "buildSegments",
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
+            RowIngestionMeters.UNPARSEABLE, 2,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
@@ -1124,17 +1124,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       TaskStatus status = statusFuture.get();
 
       IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
-
-      Map<String, Object> expectedMetrics = ImmutableMap.of(
-          "buildSegments",
-          ImmutableMap.of(
-              TaskMetricsUtils.ROWS_PROCESSED, 0,
-              TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-              TaskMetricsUtils.ROWS_UNPARSEABLE, 0,
-              TaskMetricsUtils.ROWS_THROWN_AWAY, 0
-          )
-      );
-      Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+      Assert.assertEquals(ImmutableMap.of(), reportData.getRowStats());
       Assert.assertTrue(status.getErrorMsg().contains("java.lang.IllegalArgumentException\n\tat java.nio.Buffer.position"));
     }
   }

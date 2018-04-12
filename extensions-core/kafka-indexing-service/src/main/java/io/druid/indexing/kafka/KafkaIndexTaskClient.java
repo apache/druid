@@ -254,6 +254,46 @@ public class KafkaIndexTaskClient
     }
   }
 
+  public Map<String, Object> getMovingAverages(final String id)
+  {
+    log.debug("GetMovingAverages task[%s]", id);
+
+    try {
+      final FullResponseHolder response = submitRequest(
+          id,
+          HttpMethod.GET,
+          "rowStats",
+          null,
+          true
+      );
+      return response.getContent() == null || response.getContent().isEmpty()
+             ? null
+             : jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, Object>>()
+             {
+             });
+    }
+    catch (NoTaskLocationException e) {
+      return null;
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id)
+  {
+    return executorService.submit(
+        new Callable<Map<String, Object>>()
+        {
+          @Override
+          public Map<String, Object> call()
+          {
+            return getMovingAverages(id);
+          }
+        }
+    );
+  }
+
   public Map<Integer, Long> getCurrentOffsets(final String id, final boolean retry)
   {
     log.debug("GetCurrentOffsets task[%s] retry[%s]", id, retry);
