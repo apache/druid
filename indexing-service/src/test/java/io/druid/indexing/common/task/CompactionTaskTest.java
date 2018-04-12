@@ -427,7 +427,7 @@ public class CompactionTaskTest
   public void testMissingMetadata() throws IOException, SegmentLoadingException
   {
     expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(CoreMatchers.startsWith("Index metadata doesn't exist for interval"));
+    expectedException.expectMessage(CoreMatchers.startsWith("Index metadata doesn't exist for segment"));
 
     final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));

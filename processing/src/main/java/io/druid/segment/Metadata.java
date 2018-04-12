@@ -223,26 +223,12 @@ public class Metadata
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    Metadata metadata = (Metadata) o;
-
-    if (!container.equals(metadata.container)) {
-      return false;
-    }
-    // Probably incorrect - comparing Object[] arrays with Arrays.equals
-    if (!Arrays.equals(aggregators, metadata.aggregators)) {
-      return false;
-    }
-    if (timestampSpec != null ? !timestampSpec.equals(metadata.timestampSpec) : metadata.timestampSpec != null) {
-      return false;
-    }
-    if (rollup != null ? !rollup.equals(metadata.rollup) : metadata.rollup != null) {
-      return false;
-    }
-    return queryGranularity != null
-           ? queryGranularity.equals(metadata.queryGranularity)
-           : metadata.queryGranularity == null;
-
+    final Metadata metadata = (Metadata) o;
+    return Objects.equals(container, metadata.container) &&
+           Arrays.equals(aggregators, metadata.aggregators) &&
+           Objects.equals(timestampSpec, metadata.timestampSpec) &&
+           Objects.equals(queryGranularity, metadata.queryGranularity) &&
+           Objects.equals(rollup, metadata.rollup);
   }
 
   @Override
