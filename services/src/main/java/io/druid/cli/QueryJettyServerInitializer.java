@@ -33,6 +33,7 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.LimitRequestsFilter;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -61,11 +62,14 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
   private final ServerConfig serverConfig;
 
+  private final AuthConfig authConfig;
+
   @Inject
-  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig)
+  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig, AuthConfig authConfig)
   {
     this.extensionHandlers = ImmutableList.copyOf(extensionHandlers);
     this.serverConfig = serverConfig;
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -96,6 +100,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);

@@ -126,7 +126,7 @@ public class OverlordResourceTest
   public void expectAuthorizationTokenCheck()
   {
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
-
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
