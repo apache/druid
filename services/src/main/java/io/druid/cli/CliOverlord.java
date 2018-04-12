@@ -344,6 +344,8 @@ public class CliOverlord extends ServerRunnable
       AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
       AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
+      AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isDisableHttpOptionsAuthentication());
+
       authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 

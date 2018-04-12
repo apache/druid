@@ -10,6 +10,7 @@ layout: doc_page
 |`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
+|`druid.auth.disableHttpOptionsAuthentication`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid, and this may leak sensitive information (for example, the `/druid/indexer/v1//task/{taskid}` endpoint on the Overlord and `/druid/coordinator/v1/datasources` endpoints on the Coordinator contain resource names), so the authentication checks should not be disabled unless truly necessary. |false|no|
 
 ## Enabling Authentication/Authorization
 

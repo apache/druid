@@ -111,6 +111,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
     AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isDisableHttpOptionsAuthentication());
+
     final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
