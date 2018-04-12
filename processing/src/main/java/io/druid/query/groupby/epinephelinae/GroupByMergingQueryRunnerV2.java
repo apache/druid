@@ -46,6 +46,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.ChainedExecutionQueryRunner;
+import io.druid.query.InsufficientResourcesException;
 import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryPlus;
@@ -319,12 +320,21 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   )
   {
     try {
+      if (numBuffers > mergeBufferPool.maxSize()) {
+        throw new ResourceLimitExceededException(
+            "Query needs " + numBuffers + " merge buffers, but only "
+            + mergeBufferPool.maxSize() + " merge buffers were configured"
+        );
+      }
       final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolder;
       // This will potentially block if there are no merge buffers left in the pool.
       if (hasTimeout) {
         final long timeout = timeoutAt - System.currentTimeMillis();
-        if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
+        if (timeout <= 0) {
           throw new TimeoutException();
+        }
+        if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
+          throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         }
       } else {
         mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);

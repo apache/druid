@@ -136,7 +136,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
         throw new ResourceLimitExceededException(
             "Query needs " + requiredMergeBufferNum + " merge buffers, but only "
-            + mergeBufferPool.maxSize() + " merge buffers are configured"
+            + mergeBufferPool.maxSize() + " merge buffers were configured"
         );
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();

@@ -177,7 +177,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   {
     checkInitialized();
     try {
-      return pollObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
+      return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       throw Throwables.propagate(e);
@@ -258,25 +258,6 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     try {
       if (objects.size() < maxSize) {
         objects.push(theObject);
-        notEnough.signal();
-      } else {
-        throw new ISE("Cannot exceed pre-configured maximum size");
-      }
-    }
-    finally {
-      lock.unlock();
-    }
-  }
-
-  private void offerBatch(List<T> offers)
-  {
-    final ReentrantLock lock = this.lock;
-    lock.lock();
-    try {
-      if (objects.size() + offers.size() <= maxSize) {
-        for (T offer : offers) {
-          objects.push(offer);
-        }
         notEnough.signal();
       } else {
         throw new ISE("Cannot exceed pre-configured maximum size");

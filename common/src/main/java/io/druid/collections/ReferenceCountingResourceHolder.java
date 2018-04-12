@@ -65,7 +65,8 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   }
 
   /**
-   * Returns the resource. {@link #increment()} should be called carefully before using the returned resource.
+   * Returns the resource. If multiple threads are supposed to call this method for the same holder,
+   * {@link #increment()} should be called before using the returned resource.
    */
   @Override
   public T get()
@@ -111,8 +112,7 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   }
 
   /**
-   * Closes this holder and decrements the reference count by 1. This method should be called after all
-   * {@link Releaser}s are closed.
+   * Decrements the reference count by 1. If it reaches to 0, then closes {@link #closer}.
    */
   @Override
   public void close()
