@@ -31,13 +31,13 @@ import java.io.IOException;
 
 public class AllowOptionsResourceFilter implements Filter
 {
-  private final boolean requireAuthentication;
+  private final boolean disableAuthentication;
 
   public AllowOptionsResourceFilter(
-      boolean requireAuthentication
+      boolean disableAuthentication
   )
   {
-    this.requireAuthentication = requireAuthentication;
+    this.disableAuthentication = disableAuthentication;
   }
 
   @Override
@@ -56,7 +56,7 @@ public class AllowOptionsResourceFilter implements Filter
     // Druid itself doesn't explictly handle OPTIONS requests, no resource handler will authorize such requests.
     // so this filter catches all OPTIONS requests and authorizes them.
     if (HttpMethod.OPTIONS.equals(httpReq.getMethod())) {
-      if (!requireAuthentication) {
+      if (disableAuthentication) {
         httpReq.setAttribute(
             AuthConfig.DRUID_AUTHENTICATION_RESULT,
             new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)

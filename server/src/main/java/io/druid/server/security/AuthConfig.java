@@ -52,15 +52,15 @@ public class AuthConfig
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
       @JsonProperty("authorizers") List<String> authorizers,
       @JsonProperty("unsecuredPaths") List<String> unsecuredPaths,
-      @JsonProperty("requireHttpOptionsAuthentication") Boolean requireHttpOptionsAuthentication
+      @JsonProperty("disableHttpOptionsAuthentication") Boolean disableHttpOptionsAuthentication
   )
   {
     this.authenticatorChain = authenticationChain;
     this.authorizers = authorizers;
     this.unsecuredPaths = unsecuredPaths == null ? Collections.emptyList() : unsecuredPaths;
-    this.requireHttpOptionsAuthentication = requireHttpOptionsAuthentication == null
-                                            ? true
-                                            : requireHttpOptionsAuthentication;
+    this.disableHttpOptionsAuthentication = disableHttpOptionsAuthentication == null
+                                            ? false
+                                            : disableHttpOptionsAuthentication;
   }
 
   @JsonProperty
@@ -73,7 +73,7 @@ public class AuthConfig
   private final List<String> unsecuredPaths;
 
   @JsonProperty
-  private final boolean requireHttpOptionsAuthentication;
+  private final boolean disableHttpOptionsAuthentication;
 
   public List<String> getAuthenticatorChain()
   {
@@ -90,9 +90,9 @@ public class AuthConfig
     return unsecuredPaths;
   }
 
-  public boolean isRequireHttpOptionsAuthentication()
+  public boolean isDisableHttpOptionsAuthentication()
   {
-    return requireHttpOptionsAuthentication;
+    return disableHttpOptionsAuthentication;
   }
 
   @Override
@@ -105,7 +105,7 @@ public class AuthConfig
       return false;
     }
     AuthConfig that = (AuthConfig) o;
-    return isRequireHttpOptionsAuthentication() == that.isRequireHttpOptionsAuthentication() &&
+    return isDisableHttpOptionsAuthentication() == that.isDisableHttpOptionsAuthentication() &&
            Objects.equals(getAuthenticatorChain(), that.getAuthenticatorChain()) &&
            Objects.equals(getAuthorizers(), that.getAuthorizers()) &&
            Objects.equals(getUnsecuredPaths(), that.getUnsecuredPaths());
@@ -118,7 +118,7 @@ public class AuthConfig
         getAuthenticatorChain(),
         getAuthorizers(),
         getUnsecuredPaths(),
-        isRequireHttpOptionsAuthentication()
+        isDisableHttpOptionsAuthentication()
     );
   }
 
@@ -129,7 +129,7 @@ public class AuthConfig
            "authenticatorChain=" + authenticatorChain +
            ", authorizers=" + authorizers +
            ", unsecuredPaths=" + unsecuredPaths +
-           ", requireHttpOptionsAuthentication=" + requireHttpOptionsAuthentication +
+           ", disableHttpOptionsAuthentication=" + disableHttpOptionsAuthentication +
            '}';
   }
 }

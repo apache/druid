@@ -27,9 +27,9 @@ import java.util.List;
 
 public class AuthenticationUtils
 {
-  public static void addAllowOptionsFilter(ServletContextHandler root, boolean requireHttpOptionsAuthentication)
+  public static void addAllowOptionsFilter(ServletContextHandler root, boolean disableHttpOptionsAuthentication)
   {
-    FilterHolder holder = new FilterHolder(new AllowOptionsResourceFilter(requireHttpOptionsAuthentication));
+    FilterHolder holder = new FilterHolder(new AllowOptionsResourceFilter(disableHttpOptionsAuthentication));
     root.addFilter(
         holder,
         "/*",

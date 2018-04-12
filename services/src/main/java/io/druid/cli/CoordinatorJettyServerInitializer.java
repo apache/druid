@@ -125,7 +125,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       AuthenticationUtils.addNoopAuthorizationFilters(root, CliOverlord.UNSECURED_PATHS);
     }
 
-    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isRequireHttpOptionsAuthentication());
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isDisableHttpOptionsAuthentication());
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
