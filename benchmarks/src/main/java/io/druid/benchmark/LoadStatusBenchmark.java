@@ -66,7 +66,7 @@ public class LoadStatusBenchmark
   private Collection<DataSegment> serverSegments;
 
   @Setup(Level.Invocation)
-  public void setup() throws IOException
+  public void setup()
   {
     Map<String, DataSegment> immutableDatasourceSegmentsMap;
     ConcurrentHashMap<String, DataSegment> serverSegmentsMap;
