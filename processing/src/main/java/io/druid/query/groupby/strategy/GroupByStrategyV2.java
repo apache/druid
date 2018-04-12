@@ -29,7 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.NonBlockingPool;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -141,7 +141,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+        final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
         if (QueryContexts.hasTimeout(query)) {
           mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
         } else {
@@ -338,7 +338,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryWatcher,
         queryRunners,
         processingConfig.getNumThreads(),
-        bufferPool,
         mergeBufferPool,
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,

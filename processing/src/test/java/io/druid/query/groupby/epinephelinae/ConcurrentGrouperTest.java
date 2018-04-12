@@ -24,9 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -66,7 +65,6 @@ public class ConcurrentGrouperTest
   private static final ExecutorService SERVICE = Executors.newFixedThreadPool(8);
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(256);
   private static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
-  private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER = new TestBufferSupplier();
   private static final ColumnSelectorFactory NULL_FACTORY = new TestColumnSelectorFactory();
 
   @Rule
@@ -113,7 +111,7 @@ public class ConcurrentGrouperTest
   {
     final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
         bufferSupplier,
-        COMBINE_BUFFER_SUPPLIER,
+        TEST_RESOURCE_HOLDER,
         KEY_SERDE_FACTORY,
         KEY_SERDE_FACTORY,
         NULL_FACTORY,
@@ -172,7 +170,7 @@ public class ConcurrentGrouperTest
     grouper.close();
   }
 
-  static class TestResourceHolder implements ResourceHolder<ByteBuffer>
+  static class TestResourceHolder extends ReferenceCountingResourceHolder<ByteBuffer>
   {
     private boolean taken;
     private boolean closed;
@@ -180,7 +178,7 @@ public class ConcurrentGrouperTest
 
     TestResourceHolder(int bufferSize)
     {
-      buffer = ByteBuffer.allocate(bufferSize);
+      super(ByteBuffer.allocate(bufferSize), () -> {});
     }
 
     @Override
@@ -194,6 +192,7 @@ public class ConcurrentGrouperTest
     public void close()
     {
       closed = true;
+      super.close();
     }
   }
 
@@ -289,21 +288,6 @@ public class ConcurrentGrouperTest
           return o1.getKey().compareTo(o2.getKey());
         }
       };
-    }
-  }
-
-  private static class TestBufferSupplier implements Supplier<ResourceHolder<ByteBuffer>>
-  {
-    private final AtomicBoolean called = new AtomicBoolean(false);
-
-    @Override
-    public ResourceHolder<ByteBuffer> get()
-    {
-      if (called.compareAndSet(false, true)) {
-        return TEST_RESOURCE_HOLDER;
-      } else {
-        throw new IAE("should be called once");
-      }
     }
   }
 

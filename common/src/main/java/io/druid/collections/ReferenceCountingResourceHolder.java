@@ -52,7 +52,7 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   @SuppressWarnings("unused")
   private final Cleaner cleaner;
 
-  ReferenceCountingResourceHolder(final T object, final Closeable closer)
+  public ReferenceCountingResourceHolder(final T object, final Closeable closer)
   {
     this.object = object;
     this.closer = closer;
@@ -64,6 +64,9 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     return new ReferenceCountingResourceHolder<>(object, object);
   }
 
+  /**
+   * Returns the resource. {@link #increment()} should be called carefully before using the returned resource.
+   */
   @Override
   public T get()
   {
@@ -73,6 +76,10 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     return object;
   }
 
+  /**
+   * Increments the reference count by 1 and returns a {@link Releaser}. The returned {@link Releaser} is used to
+   * decrement the reference count when the caller no longer needs the resource.
+   */
   public Releaser increment()
   {
     while (true) {
@@ -103,6 +110,10 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     };
   }
 
+  /**
+   * Closes this holder and decrements the reference count by 1. This method should be called after all
+   * {@link Releaser}s are closed.
+   */
   @Override
   public void close()
   {
