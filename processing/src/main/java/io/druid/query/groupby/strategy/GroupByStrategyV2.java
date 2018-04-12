@@ -147,7 +147,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         } else {
           mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
         }
-        if (mergeBufferHolders == null) {
+        if (mergeBufferHolders.isEmpty()) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {
           return new GroupByQueryResource(mergeBufferHolders);
