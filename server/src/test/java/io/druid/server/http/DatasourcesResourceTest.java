@@ -128,6 +128,7 @@ public class DatasourcesResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
       new AuthenticationResult("druid", "druid", null)
@@ -142,6 +143,7 @@ public class DatasourcesResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid", null)
@@ -184,6 +186,7 @@ public class DatasourcesResourceTest
       ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
   ).once();
 
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         authenticationResult
@@ -200,6 +203,7 @@ public class DatasourcesResourceTest
         ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
     ).once();
 
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         authenticationResult
@@ -236,7 +240,7 @@ public class DatasourcesResourceTest
         inventoryView,
         null,
         null,
-        new AuthConfig(null, null),
+        new AuthConfig(),
         authMapper
     );
     Response response = datasourcesResource.getQueryableDataSources("full", null, request);
@@ -277,6 +281,7 @@ public class DatasourcesResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid", null)
