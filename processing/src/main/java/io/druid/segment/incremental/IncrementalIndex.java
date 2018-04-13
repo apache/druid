@@ -520,7 +520,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   public static class AddToFactsResult
   {
     private int rowCount;
-    private long bytesInMemory;
+    private final long bytesInMemory;
     private List<String> parseExceptionMessages;
 
     public AddToFactsResult(
@@ -1171,7 +1171,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.dimsKeySize = dimsKeySize;
     }
 
-    public static TimeAndDims createTimeAndDimswithDimsKeySize(
+    static TimeAndDims createTimeAndDimswithDimsKeySize(
         long timestamp,
         Object[] dims,
         List<DimensionDesc> dimensionDescsList,

@@ -33,6 +33,6 @@ public interface TuningConfig
   boolean DEFAULT_LOG_PARSE_EXCEPTIONS = false;
   int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
   int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
-  static final int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
-  static final long DEFAULT_MAX_BYTES_IN_MEMORY = Runtime.getRuntime().maxMemory() / 3;
+  int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
+  long DEFAULT_MAX_BYTES_IN_MEMORY = Runtime.getRuntime().maxMemory() / 3;
 }
