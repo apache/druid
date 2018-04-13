@@ -22,6 +22,7 @@ package io.druid.server.lookup.namespace.cache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import io.druid.concurrent.ConcurrentAwaitableCounter;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.guice.LazySingleton;
@@ -51,11 +52,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * // cacheState could be either NoCache or VersionedCache.
  * if (cacheState instanceof NoCache) {
  *   // the cache is not yet created, or already closed
- * } else if (cacheState instanceof VersionedCache) {
+ * } else {
  *   Map<String, String> cache = ((VersionedCache) cacheState).getCache(); // use the cache
  *   // Although VersionedCache implements AutoCloseable, versionedCache shouldn't be manually closed
  *   // when obtained from entry.getCacheState(). If the namespace updates should be ceased completely,
- *   // entry.close() (see below) should be called, it will close the last VersionedCache itself.
+ *   // entry.close() (see below) should be called, it will close the last VersionedCache as well.
  *   // On scheduled updates, outdated VersionedCaches are also closed automatically.
  * }
  * ...
@@ -105,14 +106,16 @@ public final class CacheScheduler
       return impl.updaterFuture;
     }
 
+    @VisibleForTesting
     public void awaitTotalUpdates(int totalUpdates) throws InterruptedException
     {
-      impl.updateCounter.awaitTotalUpdates(totalUpdates);
+      impl.updateCounter.awaitCount(totalUpdates);
     }
 
+    @VisibleForTesting
     void awaitNextUpdates(int nextUpdates) throws InterruptedException
     {
-      impl.updateCounter.awaitNextUpdates(nextUpdates);
+      impl.updateCounter.awaitNextIncrements(nextUpdates);
     }
 
     /**
@@ -145,7 +148,7 @@ public final class CacheScheduler
     private final Future<?> updaterFuture;
     private final Cleaner entryCleaner;
     private final CacheGenerator<T> cacheGenerator;
-    private final UpdateCounter updateCounter = new UpdateCounter();
+    private final ConcurrentAwaitableCounter updateCounter = new ConcurrentAwaitableCounter();
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
     private EntryImpl(final T namespace, final Entry<T> entry, final CacheGenerator<T> cacheGenerator)
@@ -276,7 +279,7 @@ public final class CacheScheduler
           return lastCacheState;
         }
       } while (!cacheStateHolder.compareAndSet(lastCacheState, newVersionedCache));
-      updateCounter.update();
+      updateCounter.increment();
       return lastCacheState;
     }
 
@@ -485,7 +488,7 @@ public final class CacheScheduler
     log.debug("Scheduled new %s", entry);
     boolean success = false;
     try {
-      success = entry.impl.updateCounter.awaitFirstUpdate(waitForFirstRunMs, TimeUnit.MILLISECONDS);
+      success = entry.impl.updateCounter.awaitFirstIncrement(waitForFirstRunMs, TimeUnit.MILLISECONDS);
       if (success) {
         return entry;
       } else {
