@@ -129,7 +129,7 @@ public class AppenderatorImpl implements Appenderator
   // This variable updated in add(), persist(), and drop()
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
-  private final AtomicLong currentBytesInMemory = new AtomicLong();
+  private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
   // Synchronize persisting commitMetadata so that multiple persist threads (if present)
   // and abandon threads do not step over each other
   private final Lock commitLock = new ReentrantLock();
@@ -245,15 +245,44 @@ public class AppenderatorImpl implements Appenderator
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     totalRows.addAndGet(numAddedRows);
-    currentBytesInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
+    bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
 
     boolean isPersistRequired = false;
-    if (!sink.canAppendRow()
-        || System.currentTimeMillis() > nextFlush
-        || rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()
-        || (tuningConfig.getMaxBytesInMemory() > 0 && currentBytesInMemory.get() >= tuningConfig.getMaxBytesInMemory())) {
+    boolean persist = false;
+    StringBuilder persistReason = new StringBuilder();
+
+    if (!sink.canAppendRow()) {
+      persist = true;
+      persistReason.append(" No more rows can be appended to sink");
+    }
+    if (System.currentTimeMillis() > nextFlush) {
+      persist = true;
+      persistReason.append(StringUtils.format(
+          " current time[%d] is greater than nextFlush[%d],",
+          System.currentTimeMillis(),
+          nextFlush
+      ));
+    }
+    if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
+      persist = true;
+      persistReason.append(StringUtils.format(
+          " rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d],",
+          rowsCurrentlyInMemory.get(),
+          tuningConfig.getMaxRowsInMemory()
+      ));
+    }
+    if (tuningConfig.getMaxBytesInMemory() > 0 && bytesCurrentlyInMemory.get() >= tuningConfig.getMaxBytesInMemory()) {
+      persist = true;
+      persistReason.append(StringUtils.format(
+          " bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
+          bytesCurrentlyInMemory.get(),
+          tuningConfig.getMaxBytesInMemory()
+      ));
+    }
+    if (persist) {
       if (allowIncrementalPersists) {
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
+        log.info("Persisting rows in memory due to: [%s]", persistReason.toString());
         persistAll(committerSupplier == null ? null : committerSupplier.get());
       } else {
         isPersistRequired = true;
@@ -294,9 +323,9 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @VisibleForTesting
-  long getCurrentBytesInMemory()
+  long getBytesCurrentlyInMemory()
   {
-    return currentBytesInMemory.get();
+    return bytesCurrentlyInMemory.get();
   }
 
   @VisibleForTesting
@@ -523,7 +552,7 @@ public class AppenderatorImpl implements Appenderator
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
-    currentBytesInMemory.addAndGet(-bytesPersisted);
+    bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
     return future;
   }
 
@@ -1063,7 +1092,7 @@ public class AppenderatorImpl implements Appenderator
     // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
     rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
     totalRows.addAndGet(-sink.getNumRows());
-    currentBytesInMemory.addAndGet(-sink.getBytesInMemory());
+    bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(

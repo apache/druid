@@ -52,11 +52,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
   private static final Logger log = new Logger(OnheapIncrementalIndex.class);
   /**
-   *  overhead per Map$Entry object
-   *  KeyHash + next pointer + key pointer + value pointer + safe extra
+   * overhead per Map$Entry object
+   * KeyHash + next pointer + key pointer + value pointer + safe extra
    */
   private static final int ROUGH_OVERHEAD_PER_MAP_ENTRY = Long.BYTES * 5 + Integer.BYTES;
-  private static final long defaultMaxBytesInMemory = Runtime.getRuntime().maxMemory() / 3;
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
@@ -79,19 +78,25 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, concurrentEventAdd);
     this.maxRowCount = maxRowCount;
-    this.maxBytesInMemory = maxBytesInMemory == 0 ? defaultMaxBytesInMemory : maxBytesInMemory;
+    this.maxBytesInMemory = maxBytesInMemory == 0 ? -1 : maxBytesInMemory;
     this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts);
-    maxBytesPerRowForAggregators = getMaxBytesPerRowForAggregators(incrementalIndexSchema);
+    maxBytesPerRowForAggregators = this.getMaxBytesPerRowForAggregators(incrementalIndexSchema);
 
   }
 
   /**
-   * Gives estimated max size per aggregator.
-   * size estimation consists of:
+   * Gives estimated max size per aggregator. It is assumed that every aggregator will have enough overhead for its own object header
+   * and for a pointer to a selector. We are adding a overhead-factor for each object as additional 16 bytes.
+   * These 16 bytes or 128 bits is the object metadata for 64-bit JVM process and consists of:
+   * <ul>
+   * <li>Class pointer which describes the object type: 64 bits
+   * <li>Flags which describe state of the object including hashcode: 64 bits
+   * <ul/>
+   * total size estimation consists of:
    * <ul>
    * <li> metrics length : Integer.BYTES * len
-   * <li> maxAggregatorIntermediateSize : getMaxIntermediateSize per aggregator + overhead(16 bytes)
+   * <li> maxAggregatorIntermediateSize : getMaxIntermediateSize per aggregator + overhead-factor(16 bytes)
    * </ul>
    *
    * @param incrementalIndexSchema
@@ -168,10 +173,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
       // Last ditch sanity checks
       if (numEntries.get() >= maxRowCount
-          || maxBytesInMemory != -1 && sizeInBytes.get() >= maxBytesInMemory
+          || (maxBytesInMemory != -1 && sizeInBytes.get() >= maxBytesInMemory)
              && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX
              && !skipMaxRowsInMemoryCheck) {
-        throw new IndexSizeExceededException("Maximum number of rows [%d] or max size in bytes [%d] reached", maxRowCount, maxBytesInMemory);
+        throw new IndexSizeExceededException(
+            "Maximum number of rows [%d] or max size in bytes [%d] reached",
+            maxRowCount,
+            maxBytesInMemory
+        );
       }
       final int prev = facts.putIfAbsent(key, rowIndex);
       if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
@@ -297,7 +306,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final boolean countCheck = size() < maxRowCount;
     boolean sizeCheck = true;
     if (maxBytesInMemory > 0) {
-      sizeCheck = sizeInBytes() < maxBytesInMemory;
+      sizeCheck = getBytesInMemory() < maxBytesInMemory;
     }
     final boolean canAdd = countCheck && sizeCheck;
     if (!countCheck && !sizeCheck) {

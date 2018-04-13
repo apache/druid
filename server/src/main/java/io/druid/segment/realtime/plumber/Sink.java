@@ -179,8 +179,6 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
-  //add methods for byte mem checks
-
   public boolean isWritable()
   {
     return writable;
@@ -267,7 +265,7 @@ public class Sink implements Iterable<FireHydrant>
         return 0;
       }
 
-      return currHydrant.getIndex().sizeInBytes();
+      return currHydrant.getIndex().getBytesInMemory();
     }
   }
 

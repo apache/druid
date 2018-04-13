@@ -268,9 +268,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public long estimateEncodedKeyComponentSize(int[] key)
   {
-    /**
-     * string length is being accounted for each time they are referenced, even though they are stored just once
-     */
+    // string length is being accounted for each time they are referenced, even though they are stored just once
     long estimatedSize = key.length * Integer.BYTES;
     estimatedSize += Arrays.stream(key)
                            .filter(element -> dimLookup.getValue(element) != null)

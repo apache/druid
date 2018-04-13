@@ -240,7 +240,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
     rowContainer.set(null);
-    return new AddToFactsResult(numEntries.get(), new ArrayList<>());
+    return new AddToFactsResult(numEntries.get(), 0, new ArrayList<>());
   }
 
   @Override

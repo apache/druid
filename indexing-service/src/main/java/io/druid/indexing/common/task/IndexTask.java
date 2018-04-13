@@ -1297,7 +1297,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       this(
           targetPartitionSize,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
-          maxBytesInMemory != null ? maxBytesInMemory : IndexTaskUtils.DEFAULT_MAX_BYTES_IN_MEMORY,
+          maxBytesInMemory != null ? maxBytesInMemory : TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY,
           maxTotalRows,
           numShards,
           indexSpec,
@@ -1344,8 +1344,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
 
       this.targetPartitionSize = initializeTargetPartitionSize(numShards, targetPartitionSize);
-      this.maxRowsInMemory = maxRowsInMemory == null ? IndexTaskUtils.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-      this.maxBytesInMemory = maxBytesInMemory == null ? IndexTaskUtils.DEFAULT_MAX_BYTES_IN_MEMORY : maxBytesInMemory;
+      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+      this.maxBytesInMemory = maxBytesInMemory == null ? TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY : maxBytesInMemory;
       this.maxTotalRows = initializeMaxTotalRows(numShards, maxTotalRows);
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;

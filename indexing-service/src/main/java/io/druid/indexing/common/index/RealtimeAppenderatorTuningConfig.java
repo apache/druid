@@ -37,9 +37,9 @@ import java.io.File;
 @JsonTypeName("realtime_appenderator")
 public class RealtimeAppenderatorTuningConfig implements TuningConfig, AppenderatorConfig
 {
-  private static final int defaultMaxRowsInMemory = 1000000;
+  private static final int defaultMaxRowsInMemory = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final int defaultMaxRowsPerSegment = 5_000_000;
-  private static final long defaultMaxBytesInMemory = getDefaultMaxBytesInMemory();
+  private static final long defaultMaxBytesInMemory = TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = NoneShardSpec.instance();
@@ -53,10 +53,6 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return Files.createTempDir();
   }
 
-  private static long getDefaultMaxBytesInMemory()
-  {
-    return (Runtime.getRuntime().maxMemory()) / 3;
-  }
 
 
   private final int maxRowsInMemory;

@@ -241,7 +241,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final List<DimensionDesc> dimensionDescsList;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
-  private final AtomicLong sizeInBytes = new AtomicLong();
+  private final AtomicLong bytesInMemory = new AtomicLong();
 
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
@@ -525,15 +525,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     public AddToFactsResult(
         int rowCount,
-        List<String> parseExceptionMessages
-    )
-    {
-      this.rowCount = rowCount;
-      this.parseExceptionMessages = parseExceptionMessages;
-    }
-
-    public AddToFactsResult(
-        int rowCount,
         long bytesInMemory,
         List<String> parseExceptionMessages
     )
@@ -607,7 +598,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         reportParseExceptions,
         row,
         numEntries,
-        sizeInBytes,
+        bytesInMemory,
         timeAndDimsResult.getTimeAndDims(),
         in,
         rowSupplier,
@@ -716,7 +707,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       truncated = gran.bucketStart(row.getTimestamp()).getMillis();
     }
 
-    TimeAndDims timeAndDims = new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList, dimsKeySize);
+    TimeAndDims timeAndDims = TimeAndDims.createTimeAndDimswithDimsKeySize(
+        Math.max(truncated, minTimestamp),
+        dims,
+        dimensionDescsList,
+        dimsKeySize
+    );
     return new TimeAndDimsResult(timeAndDims, parseExceptionMessages);
   }
 
@@ -773,9 +769,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return numEntries.get();
   }
 
-  public long sizeInBytes()
+  public long getBytesInMemory()
   {
-    return sizeInBytes.get();
+    return bytesInMemory.get();
   }
 
   private long getMinTimeMillis()
@@ -1162,7 +1158,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.rowIndex = rowIndex;
     }
 
-    TimeAndDims(
+    private TimeAndDims(
         long timestamp,
         Object[] dims,
         List<DimensionDesc> dimensionDescsList,
@@ -1173,6 +1169,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.dims = dims;
       this.dimensionDescsList = dimensionDescsList;
       this.dimsKeySize = dimsKeySize;
+    }
+
+    public static TimeAndDims createTimeAndDimswithDimsKeySize(
+        long timestamp,
+        Object[] dims,
+        List<DimensionDesc> dimensionDescsList,
+        long dimsKeySize
+    )
+    {
+      return new TimeAndDims(timestamp, dims, dimensionDescsList, dimsKeySize);
     }
 
     public long getTimestamp()
@@ -1196,7 +1202,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
 
     /**
-     * sizeInBytes estimates the size of TimeAndDims key, it takes into account the timestamp(long),
+     * bytesInMemory estimates the size of TimeAndDims key, it takes into account the timestamp(long),
      * dims(Object Array) and dimensionDescsList(List). Each of these are calculated as follows:
      * <ul>
      * <li> timestamp : Long.BYTES
@@ -1204,7 +1210,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
      * <li> dimensionDescList : Long.BYTES (shared pointer)
      * </ul>
      *
-     * @return long estimated sizeInBytes
+     * @return long estimated bytesInMemory
      */
     public long estimateBytesInMemory()
     {

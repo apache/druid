@@ -47,12 +47,10 @@ public class IncrementalIndexAddResult
     return rowCount;
   }
 
-
   public long getBytesInMemory()
   {
     return bytesInMemory;
   }
-
 
   @Nullable
   public ParseException getParseException()
