@@ -288,6 +288,7 @@ public class IndexGeneratorJob implements Jobby
         .setIndexSchema(indexSchema)
         .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows())
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
+        .setMaxBytesInMemory(tuningConfig.getMaxBytesInMemory())
         .buildOnheap();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {

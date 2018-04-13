@@ -222,6 +222,7 @@ public class OrcIndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 false,
                 false,
                 false,
