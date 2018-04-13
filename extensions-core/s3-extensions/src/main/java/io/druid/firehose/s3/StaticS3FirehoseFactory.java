@@ -39,6 +39,7 @@ import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.storage.s3.S3Utils;
 
@@ -267,11 +268,11 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     final String path = split.get().getKey();
     final URI splitUri;
     if (authority.endsWith("/") && path.startsWith("/")) {
-      splitUri = URI.create(authority + path.substring(1));
+      splitUri = URI.create(StringUtils.format("s3://%s%s", authority, path.substring(1)));
     } else if (!authority.endsWith("/") && !path.startsWith("/")) {
-      splitUri = URI.create(authority + "/" + path);
+      splitUri = URI.create(StringUtils.format("s3://%s/%s", authority, path));
     } else {
-      splitUri = URI.create(authority + path);
+      splitUri = URI.create(StringUtils.format("s3://%s%s", authority, path));
     }
     return new StaticS3FirehoseFactory(
         s3Client,
