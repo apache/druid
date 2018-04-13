@@ -101,7 +101,7 @@ public class CacheDistributionTest
   // when being run and checked by humans.
   @Ignore
   @Test
-  public void testDistribution() throws Exception
+  public void testDistribution()
   {
     KetamaNodeLocator locator = new KetamaNodeLocator(
         ImmutableList.of(

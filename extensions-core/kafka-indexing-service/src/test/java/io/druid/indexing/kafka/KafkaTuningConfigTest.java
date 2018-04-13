@@ -99,7 +99,7 @@ public class KafkaTuningConfigTest
   }
 
   @Test
-  public void testCopyOf() throws Exception
+  public void testCopyOf()
   {
     KafkaTuningConfig original = new KafkaTuningConfig(
         1,
@@ -111,6 +111,10 @@ public class KafkaTuningConfigTest
         true,
         true,
         5L,
+        null,
+        null,
+        null,
+        null,
         null,
         null
     );

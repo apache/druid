@@ -37,7 +37,7 @@ import java.util.Map;
 public class BenchmarkDataGeneratorTest
 {
   @Test
-  public void testSequential() throws Exception
+  public void testSequential()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
@@ -87,7 +87,7 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testDiscreteUniform() throws Exception
+  public void testDiscreteUniform()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
@@ -152,7 +152,7 @@ public class BenchmarkDataGeneratorTest
 
 
   @Test
-  public void testRoundedNormal() throws Exception
+  public void testRoundedNormal()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
@@ -195,7 +195,7 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testZipf() throws Exception
+  public void testZipf()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
@@ -250,7 +250,7 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testEnumerated() throws Exception
+  public void testEnumerated()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
@@ -279,7 +279,7 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testNormal() throws Exception
+  public void testNormal()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
@@ -322,7 +322,7 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testRealUniform() throws Exception
+  public void testRealUniform()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
@@ -363,7 +363,7 @@ public class BenchmarkDataGeneratorTest
   }
 
   @Test
-  public void testIntervalBasedTimeGeneration() throws Exception
+  public void testIntervalBasedTimeGeneration()
   {
     List<BenchmarkColumnSchema> schemas = new ArrayList<>();
 

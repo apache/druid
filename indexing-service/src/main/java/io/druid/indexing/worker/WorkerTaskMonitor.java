@@ -22,7 +22,6 @@ package io.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.indexing.IndexingService;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexer.TaskLocation;
@@ -33,6 +32,7 @@ import io.druid.indexing.overlord.TaskRunner;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -49,7 +49,6 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 public class WorkerTaskMonitor extends WorkerTaskManager
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskMonitor.class);
-  private static final int STOP_WARNING_SECONDS = 10;
 
   private final ObjectMapper jsonMapper;
   private final PathChildrenCache pathChildrenCache;
@@ -137,7 +136,8 @@ public class WorkerTaskMonitor extends WorkerTaskManager
                     announcement.getTaskType(),
                     announcement.getTaskResource(),
                     completionStatus,
-                    TaskLocation.unknown()
+                    TaskLocation.unknown(),
+                    announcement.getTaskDataSource()
                 )
             );
           }

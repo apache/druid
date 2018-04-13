@@ -48,17 +48,6 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
   private static final String bucket = "bucket";
   private static final String prefix = "prefix";
   private static final String path = "prefix/test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final DataSegment dataSegment = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.<String, Object>of("bucket", bucket, "path", path),
-      null,
-      null,
-      new NoneShardSpec(),
-      0,
-      1
-  );
 
   private GoogleStorage storage;
   private GoogleAccountConfig googleAccountConfig;

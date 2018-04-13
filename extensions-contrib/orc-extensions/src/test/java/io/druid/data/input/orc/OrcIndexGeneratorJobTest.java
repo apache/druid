@@ -134,7 +134,8 @@ public class OrcIndexGeneratorJobTest
           new TimestampSpec("timestamp", "yyyyMMddHH", null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null)
       ),
-      "struct<timestamp:string,host:string,visited_num:int>"
+      "struct<timestamp:string,host:string,visited_num:int>",
+      null
   );
 
   private File writeDataToLocalOrcFile(File outputDir, List<String> data) throws IOException
@@ -233,6 +234,8 @@ public class OrcIndexGeneratorJobTest
                 null,
                 false,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -251,7 +254,7 @@ public class OrcIndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {

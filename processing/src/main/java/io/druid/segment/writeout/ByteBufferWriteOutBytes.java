@@ -98,14 +98,14 @@ public abstract class ByteBufferWriteOutBytes extends WriteOutBytes
   public void writeInt(int v)
   {
     checkOpen();
-    if (headBuffer.remaining() >= Ints.BYTES) {
+    if (headBuffer.remaining() >= Integer.BYTES) {
       headBuffer.putInt(v);
-      size += Ints.BYTES;
+      size += Integer.BYTES;
     } else {
-      ensureCapacity(Ints.BYTES);
-      if (headBuffer.remaining() >= Ints.BYTES) {
+      ensureCapacity(Integer.BYTES);
+      if (headBuffer.remaining() >= Integer.BYTES) {
         headBuffer.putInt(v);
-        size += Ints.BYTES;
+        size += Integer.BYTES;
       } else {
         write(v >> 24);
         write(v >> 16);
@@ -116,13 +116,13 @@ public abstract class ByteBufferWriteOutBytes extends WriteOutBytes
   }
 
   @Override
-  public void write(byte[] b) throws IOException
+  public void write(byte[] b)
   {
     write0(b, 0, b.length);
   }
 
   @Override
-  public void write(byte[] b, int off, int len) throws IOException
+  public void write(byte[] b, int off, int len)
   {
     Preconditions.checkPositionIndexes(off, off + len, b.length);
     write0(b, off, len);

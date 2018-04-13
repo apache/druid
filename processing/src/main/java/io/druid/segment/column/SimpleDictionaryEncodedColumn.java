@@ -21,7 +21,6 @@ package io.druid.segment.column;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -86,10 +85,10 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   }
 
   @Override
+  @Nullable
   public String lookupName(int id)
   {
-    //Empty to Null will ensure that null and empty are equivalent for extraction function
-    return Strings.emptyToNull(cachedLookups.get(id));
+    return cachedLookups.get(id);
   }
 
   @Override

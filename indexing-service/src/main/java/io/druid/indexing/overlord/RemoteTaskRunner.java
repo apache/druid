@@ -21,7 +21,6 @@ package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -43,13 +42,6 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.InputStreamResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHolder;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
@@ -69,10 +61,17 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.InputStreamResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.tasklogs.TaskLogStreamer;
 import org.apache.commons.lang.mutable.MutableInt;
@@ -92,6 +91,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -128,7 +128,7 @@ import java.util.concurrent.TimeUnit;
 public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
-  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
+  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(StandardCharsets.UTF_8);
   private static final Joiner JOINER = Joiner.on("/");
 
   private final ObjectMapper jsonMapper;
@@ -628,7 +628,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         task.getId(),
         task.getType(),
         null,
-        null
+        null,
+        task.getDataSource()
     );
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
@@ -647,7 +648,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         new Callable<Void>()
         {
           @Override
-          public Void call() throws Exception
+          public Void call()
           {
             try {
               // make a copy of the pending tasks because tryAssignTask may delete tasks from pending and move them
@@ -933,7 +934,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           new PathChildrenCacheListener()
           {
             @Override
-            public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
+            public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
             {
               final String taskId;
               final RemoteTaskRunnerWorkItem taskRunnerWorkItem;
@@ -966,7 +967,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                             taskId,
                             announcement.getTaskType(),
                             zkWorker.getWorker(),
-                            TaskLocation.unknown()
+                            TaskLocation.unknown(),
+                            announcement.getTaskDataSource()
                         );
                         final RemoteTaskRunnerWorkItem existingItem = runningTasks.putIfAbsent(
                             taskId,

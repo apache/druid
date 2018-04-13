@@ -77,7 +77,7 @@ public class QuerySegmentSpecTest
   }
 
   @Test
-  public void testSerializationSegments() throws Exception
+  public void testSerializationSegments()
   {
     QuerySegmentSpec spec = jsonMapper.convertValue(
         ImmutableMap.<String, Object>of(

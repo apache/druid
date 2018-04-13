@@ -25,8 +25,8 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 
 import java.io.IOException;
-import java.net.BindException;
 import java.net.ServerSocket;
+import java.net.SocketException;
 import java.util.Set;
 
 public class PortFinder
@@ -45,7 +45,7 @@ public class PortFinder
       new ServerSocket(portNum).close();
       return true;
     }
-    catch (BindException be) {
+    catch (SocketException se) {
       return false;
     }
     catch (IOException e) {

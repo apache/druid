@@ -69,7 +69,7 @@ public class WorkerResource
       TaskRunner taskRunner,
       WorkerTaskMonitor workerTaskManager
 
-  ) throws Exception
+  )
   {
     this.enabledWorker = worker;
     this.curatorCoordinator = curatorCoordinator;

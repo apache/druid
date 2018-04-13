@@ -22,7 +22,6 @@ package io.druid.java.util.common.granularity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
@@ -65,11 +64,6 @@ public class DurationGranularity extends Granularity
     return DateTimes.utc(origin);
   }
 
-  public long getOriginMillis()
-  {
-    return origin;
-  }
-
   @Override
   public DateTimeFormatter getFormatter(Formatter type)
   {
@@ -80,12 +74,6 @@ public class DurationGranularity extends Granularity
   public DateTime increment(DateTime time)
   {
     return time.plus(getDuration());
-  }
-
-  @Override
-  public DateTime decrement(DateTime time)
-  {
-    return time.minus(getDuration());
   }
 
   @Override
@@ -109,7 +97,7 @@ public class DurationGranularity extends Granularity
   @Override
   public byte[] getCacheKey()
   {
-    return ByteBuffer.allocate(2 * Longs.BYTES).putLong(duration).putLong(origin).array();
+    return ByteBuffer.allocate(2 * Long.BYTES).putLong(duration).putLong(origin).array();
   }
 
   public long getDurationMillis()

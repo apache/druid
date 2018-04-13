@@ -79,7 +79,7 @@ public class ExpressionAggregationBenchmark
   private ByteBuffer aggregationBuffer = ByteBuffer.allocate(Double.BYTES);
 
   @Setup(Level.Trial)
-  public void setup() throws Exception
+  public void setup()
   {
     final BenchmarkSchemaInfo schemaInfo = new BenchmarkSchemaInfo(
         ImmutableList.of(
@@ -131,21 +131,21 @@ public class ExpressionAggregationBenchmark
   }
 
   @Benchmark
-  public void queryUsingJavaScript(Blackhole blackhole) throws Exception
+  public void queryUsingJavaScript(Blackhole blackhole)
   {
     final Double result = compute(javaScriptAggregatorFactory::factorizeBuffered);
     blackhole.consume(result);
   }
 
   @Benchmark
-  public void queryUsingExpression(Blackhole blackhole) throws Exception
+  public void queryUsingExpression(Blackhole blackhole)
   {
     final Double result = compute(expressionAggregatorFactory::factorizeBuffered);
     blackhole.consume(result);
   }
 
   @Benchmark
-  public void queryUsingNative(Blackhole blackhole) throws Exception
+  public void queryUsingNative(Blackhole blackhole)
   {
     final Double result = compute(
         columnSelectorFactory ->

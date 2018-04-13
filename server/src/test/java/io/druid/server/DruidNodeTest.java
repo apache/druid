@@ -41,7 +41,7 @@ public class DruidNodeTest
   }
 
   @Test
-  public void testDefaultsAndSanity() throws Exception
+  public void testDefaultsAndSanity()
   {
     final String service = "test/service";
 
@@ -182,79 +182,79 @@ public class DruidNodeTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testConflictingPorts() throws Exception
+  public void testConflictingPorts()
   {
     new DruidNode("test/service", "abc:123", 456, null, true, false);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testAtLeastTlsOrPlainTextIsSet() throws Exception
+  public void testAtLeastTlsOrPlainTextIsSet()
   {
     new DruidNode("test", "host:123", null, 123, false, false);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testSamePlainTextAndTlsPort() throws Exception
+  public void testSamePlainTextAndTlsPort()
   {
     new DruidNode("test", "host:123", null, 123, true, true);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testSamePlainTextAndTlsPort1() throws Exception
+  public void testSamePlainTextAndTlsPort1()
   {
     new DruidNode("test", "host", 123, 123, true, true);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testNullTlsPort() throws Exception
+  public void testNullTlsPort()
   {
     new DruidNode("test", "host:123", null, null, true, true);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testNullPlainTextAndTlsPort1() throws Exception
+  public void testNullPlainTextAndTlsPort1()
   {
     new DruidNode("test", "host", null, null, true, true);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testNullTlsPort1() throws Exception
+  public void testNullTlsPort1()
   {
     new DruidNode("test", "host:123", 123, null, true, true);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testNullPlainTextAndTlsPort() throws Exception
+  public void testNullPlainTextAndTlsPort()
   {
     new DruidNode("test", null, null, null, true, true);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testConflictingPlainTextPort() throws Exception
+  public void testConflictingPlainTextPort()
   {
     new DruidNode("test", "host:123", 321, null, true, true);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testInvalidIPv6WithPort() throws Exception
+  public void testInvalidIPv6WithPort()
   {
     new DruidNode("test/service", "[abc:fff]:123", 456, null, true, false);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testInvalidIPv6() throws Exception
+  public void testInvalidIPv6()
   {
     new DruidNode("test/service", "abc:fff", 456, null, true, false);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testConflictingPortsNonsense() throws Exception
+  public void testConflictingPortsNonsense()
   {
     new DruidNode("test/service", "[2001:db8:85a3::8a2e:370:7334]:123", 456, null, true, false);
   }
 
   @Test
-  public void testEquals() throws Exception
+  public void testEquals()
   {
     final String serviceName = "serviceName";
     final String host = "some.host";
@@ -266,7 +266,7 @@ public class DruidNodeTest
   }
 
   @Test
-  public void testHashCode() throws Exception
+  public void testHashCode()
   {
 
     final String serviceName = "serviceName";

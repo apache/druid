@@ -25,9 +25,9 @@ import io.druid.io.Channels;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.serde.MetaSerdeHelper;
+import io.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -50,8 +50,8 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   {
     Iterator<VSizeColumnarInts> objects = objectsIterable.iterator();
     if (!objects.hasNext()) {
-      final ByteBuffer buffer = ByteBuffer.allocate(Ints.BYTES).putInt(0, 0);
-      return new VSizeColumnarMultiInts(buffer, Ints.BYTES);
+      final ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES).putInt(0, 0);
+      return new VSizeColumnarMultiInts(buffer, Integer.BYTES);
     }
 
     int numBytes = -1;
@@ -68,22 +68,17 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
     HeapByteBufferWriteOutBytes headerBytes = new HeapByteBufferWriteOutBytes();
     HeapByteBufferWriteOutBytes valueBytes = new HeapByteBufferWriteOutBytes();
     int offset = 0;
-    try {
-      headerBytes.writeInt(count);
+    headerBytes.writeInt(count);
 
-      for (VSizeColumnarInts object : objectsIterable) {
-        if (object.getNumBytes() != numBytes) {
-          throw new ISE("val.numBytes[%s] != numBytesInValue[%s]", object.getNumBytes(), numBytes);
-        }
-        offset += object.getNumBytesNoPadding();
-        headerBytes.writeInt(offset);
-        object.writeBytesNoPaddingTo(valueBytes);
+    for (VSizeColumnarInts object : objectsIterable) {
+      if (object.getNumBytes() != numBytes) {
+        throw new ISE("val.numBytes[%s] != numBytesInValue[%s]", object.getNumBytes(), numBytes);
       }
-      valueBytes.write(new byte[Ints.BYTES - numBytes]);
+      offset += object.getNumBytesNoPadding();
+      headerBytes.writeInt(offset);
+      object.writeBytesNoPaddingTo(valueBytes);
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    valueBytes.write(new byte[Integer.BYTES - numBytes]);
 
     ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(headerBytes.size() + valueBytes.size()));
     headerBytes.writeTo(theBuffer);
@@ -139,7 +134,7 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
     if (index == 0) {
       endOffset = myBuffer.getInt();
     } else {
-      myBuffer.position(myBuffer.position() + ((index - 1) * Ints.BYTES));
+      myBuffer.position(myBuffer.position() + ((index - 1) * Integer.BYTES));
       startOffset = myBuffer.getInt();
       endOffset = myBuffer.getInt();
     }
@@ -156,7 +151,7 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return metaSerdeHelper.size(this) + (long) theBuffer.remaining();
   }
@@ -198,7 +193,7 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // no-op
   }

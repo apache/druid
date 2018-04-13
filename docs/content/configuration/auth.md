@@ -9,6 +9,7 @@ layout: doc_page
 |`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
 |`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
+|`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
 
 ## Enabling Authentication/Authorization
 

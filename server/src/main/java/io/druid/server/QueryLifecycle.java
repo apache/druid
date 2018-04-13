@@ -145,7 +145,7 @@ public class QueryLifecycle
         new SequenceWrapper()
         {
           @Override
-          public void after(final boolean isDone, final Throwable thrown) throws Exception
+          public void after(final boolean isDone, final Throwable thrown)
           {
             emitLogsAndMetrics(thrown, remoteAddress, -1);
           }

@@ -19,7 +19,6 @@ package io.druid.extendedset.intset;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
-import com.google.common.primitives.Ints;
 import io.druid.extendedset.utilities.IntList;
 import org.roaringbitmap.IntIterator;
 
@@ -811,14 +810,9 @@ public class ImmutableConciseSet
     if (words == null) {
       return new byte[]{};
     }
-    ByteBuffer buf = ByteBuffer.allocate(words.capacity() * Ints.BYTES);
+    ByteBuffer buf = ByteBuffer.allocate(words.capacity() * Integer.BYTES);
     buf.asIntBuffer().put(words.asReadOnlyBuffer());
     return buf.array();
-  }
-
-  public int getLastWordIndex()
-  {
-    return lastWordIndex;
   }
 
   // Based on the ConciseSet implementation by Alessandro Colantonio
@@ -885,80 +879,6 @@ public class ImmutableConciseSet
     final IntSet.IntIterator intIterator = iterator();
     intIterator.skipAllBefore(integer);
     return intIterator.hasNext() && intIterator.next() == integer;
-  }
-
-  // Based on the ConciseSet implementation by Alessandro Colantonio
-  public int get(int i)
-  {
-    if (i < 0) {
-      throw new IndexOutOfBoundsException();
-    }
-
-    // initialize data
-    int firstSetBitInWord = 0;
-    int position = i;
-    int setBitsInCurrentWord = 0;
-    for (int j = 0; j <= lastWordIndex; j++) {
-      int w = words.get(j);
-      if (ConciseSetUtils.isLiteral(w)) {
-        // number of bits in the current word
-        setBitsInCurrentWord = ConciseSetUtils.getLiteralBitCount(w);
-
-        // check if the desired bit is in the current word
-        if (position < setBitsInCurrentWord) {
-          int currSetBitInWord = -1;
-          for (; position >= 0; position--) {
-            currSetBitInWord = Integer.numberOfTrailingZeros(w & (0xFFFFFFFF << (currSetBitInWord + 1)));
-          }
-          return firstSetBitInWord + currSetBitInWord;
-        }
-
-        // skip the 31-bit block
-        firstSetBitInWord += ConciseSetUtils.MAX_LITERAL_LENGTH;
-      } else {
-        // number of involved bits (31 * blocks)
-        int sequenceLength = ConciseSetUtils.maxLiteralLengthMultiplication(ConciseSetUtils.getSequenceCount(w) + 1);
-
-        // check the sequence type
-        if (ConciseSetUtils.isOneSequence(w)) {
-          if (ConciseSetUtils.isSequenceWithNoBits(w)) {
-            setBitsInCurrentWord = sequenceLength;
-            if (position < setBitsInCurrentWord) {
-              return firstSetBitInWord + position;
-            }
-          } else {
-            setBitsInCurrentWord = sequenceLength - 1;
-            if (position < setBitsInCurrentWord) {
-              // check whether the desired set bit is after the
-              // flipped bit (or after the first block)
-              return firstSetBitInWord + position + (position < ConciseSetUtils.getFlippedBit(w) ? 0 : 1);
-            }
-          }
-        } else {
-          if (ConciseSetUtils.isSequenceWithNoBits(w)) {
-            setBitsInCurrentWord = 0;
-          } else {
-            setBitsInCurrentWord = 1;
-            if (position == 0) {
-              return firstSetBitInWord + ConciseSetUtils.getFlippedBit(w);
-            }
-          }
-        }
-
-        // skip the 31-bit blocks
-        firstSetBitInWord += sequenceLength;
-      }
-
-      // update the number of found set bits
-      position -= setBitsInCurrentWord;
-    }
-
-    throw new IndexOutOfBoundsException(Integer.toString(i));
-  }
-
-  public int compareTo(ImmutableConciseSet other)
-  {
-    return words.asReadOnlyBuffer().compareTo(other.words.asReadOnlyBuffer());
   }
 
   private boolean isEmpty()

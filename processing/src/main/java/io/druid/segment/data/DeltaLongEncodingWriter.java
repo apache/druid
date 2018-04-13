@@ -19,8 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
@@ -58,7 +56,7 @@ public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException
+  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy)
   {
     metaOut.put(CompressionFactory.setEncodingFlag(strategy.getId()));
     metaOut.put(CompressionFactory.LongEncodingFormat.DELTA.getId());
@@ -70,7 +68,7 @@ public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingW
   @Override
   public int metaSize()
   {
-    return 1 + 1 + 1 + Longs.BYTES + Ints.BYTES;
+    return 1 + 1 + 1 + Long.BYTES + Integer.BYTES;
   }
 
   @Override

@@ -51,7 +51,7 @@ public class ResourcePool<K, V> implements Closeable
         new CacheLoader<K, ImmediateCreationResourceHolder<K, V>>()
         {
           @Override
-          public ImmediateCreationResourceHolder<K, V> load(K input) throws Exception
+          public ImmediateCreationResourceHolder<K, V> load(K input)
           {
             return new ImmediateCreationResourceHolder<K, V>(
                 config.getMaxPerKey(),

@@ -28,6 +28,8 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 
+import javax.annotation.Nullable;
+
 /**
  * Used by workers to announce the status of tasks they are currently running. This class is immutable.
  */
@@ -38,9 +40,12 @@ public class TaskAnnouncement
   private final TaskResource taskResource;
   private final TaskLocation taskLocation;
 
+  @Nullable
+  private final String taskDataSource; // nullable for backward compatibility
+
   public static TaskAnnouncement create(Task task, TaskStatus status, TaskLocation location)
   {
-    return create(task.getId(), task.getType(), task.getTaskResource(), status, location);
+    return create(task.getId(), task.getType(), task.getTaskResource(), status, location, task.getDataSource());
   }
 
   public static TaskAnnouncement create(
@@ -48,11 +53,12 @@ public class TaskAnnouncement
       String taskType,
       TaskResource resource,
       TaskStatus status,
-      TaskLocation location
+      TaskLocation location,
+      String taskDataSource
   )
   {
     Preconditions.checkArgument(status.getId().equals(taskId), "task id == status id");
-    return new TaskAnnouncement(null, taskType, null, status, resource, location);
+    return new TaskAnnouncement(null, taskType, null, status, resource, location, taskDataSource);
   }
 
   @JsonCreator
@@ -62,7 +68,8 @@ public class TaskAnnouncement
       @JsonProperty("status") TaskState status,
       @JsonProperty("taskStatus") TaskStatus taskStatus,
       @JsonProperty("taskResource") TaskResource taskResource,
-      @JsonProperty("taskLocation") TaskLocation taskLocation
+      @JsonProperty("taskLocation") TaskLocation taskLocation,
+      @JsonProperty("taskDataSource") String taskDataSource
   )
   {
     this.taskType = taskType;
@@ -74,6 +81,7 @@ public class TaskAnnouncement
     }
     this.taskResource = taskResource == null ? new TaskResource(this.taskStatus.getId(), 1) : taskResource;
     this.taskLocation = taskLocation == null ? TaskLocation.unknown() : taskLocation;
+    this.taskDataSource = taskDataSource;
   }
 
   @JsonProperty("id")
@@ -112,13 +120,21 @@ public class TaskAnnouncement
     return taskLocation;
   }
 
+  @JsonProperty("taskDataSource")
+  public String getTaskDataSource()
+  {
+    return taskDataSource;
+  }
+
   @Override
   public String toString()
   {
     return "TaskAnnouncement{" +
-           "taskStatus=" + taskStatus +
+           "taskType=" + taskType +
+           ", taskStatus=" + taskStatus +
            ", taskResource=" + taskResource +
            ", taskLocation=" + taskLocation +
+           ", taskDataSource=" + taskDataSource +
            '}';
   }
 }

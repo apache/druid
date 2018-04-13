@@ -23,6 +23,7 @@ import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
@@ -40,7 +41,7 @@ public interface QueryableIndex extends ColumnSelector, Closeable
   int getNumRows();
   Indexed<String> getAvailableDimensions();
   BitmapFactory getBitmapFactoryForDimensions();
-  Metadata getMetadata();
+  @Nullable Metadata getMetadata();
   Map<String, DimensionHandler> getDimensionHandlers();
 
   /**
@@ -49,5 +50,5 @@ public interface QueryableIndex extends ColumnSelector, Closeable
    */
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away unitl SimpleQueryableIndex is fixed
   @Override
-  void close() throws IOException;
+  void close();
 }

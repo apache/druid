@@ -133,7 +133,7 @@ public class JettyHttpClientModule implements Module
             new Lifecycle.Handler()
             {
               @Override
-              public void start() throws Exception
+              public void start()
               {
               }
 

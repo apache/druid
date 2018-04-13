@@ -27,6 +27,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.common.aws.AWSCredentialsUtils;
+import io.druid.common.aws.AWSEndpointConfig;
+import io.druid.common.aws.AWSProxyConfig;
 
 /**
  */
@@ -36,6 +38,8 @@ public class AWSModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.s3.proxy", AWSProxyConfig.class);
+    JsonConfigProvider.bind(binder, "druid.s3.endpoint", AWSEndpointConfig.class);
   }
 
   @Provides

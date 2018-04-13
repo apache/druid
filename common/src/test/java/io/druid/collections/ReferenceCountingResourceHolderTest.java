@@ -23,7 +23,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,7 +76,7 @@ public class ReferenceCountingResourceHolderTest
           .fromCloseable((Closeable) new Closeable()
           {
             @Override
-            public void close() throws IOException
+            public void close()
             {
               released.set(true);
             }

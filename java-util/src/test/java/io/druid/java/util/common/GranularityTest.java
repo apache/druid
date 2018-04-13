@@ -690,7 +690,7 @@ public class GranularityTest
   }
 
   @Test
-  public void testTruncate() throws Exception
+  public void testTruncate()
   {
     DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
     Assert.assertEquals(DateTimes.of("2011-01-01T00:00:00.000"), YEAR.bucketStart(date));
@@ -703,7 +703,7 @@ public class GranularityTest
   }
 
   @Test
-  public void testGetIterable() throws Exception
+  public void testGetIterable()
   {
     DateTime start = DateTimes.of("2011-01-01T00:00:00");
     DateTime end = DateTimes.of("2011-01-14T00:00:00");

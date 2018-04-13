@@ -78,7 +78,7 @@ public class PrioritizedExecutorServiceTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     exec = PrioritizedExecutorService.create(
         new Lifecycle(),
@@ -141,7 +141,7 @@ public class PrioritizedExecutorServiceTest
         new AbstractPrioritizedCallable<Void>(-1)
         {
           @Override
-          public Void call() throws Exception
+          public Void call()
           {
             order.add(-1);
             finishLatch.countDown();
@@ -153,7 +153,7 @@ public class PrioritizedExecutorServiceTest
         new AbstractPrioritizedCallable<Void>(0)
         {
           @Override
-          public Void call() throws Exception
+          public Void call()
           {
             order.add(0);
             finishLatch.countDown();
@@ -165,7 +165,7 @@ public class PrioritizedExecutorServiceTest
         new AbstractPrioritizedCallable<Void>(2)
         {
           @Override
-          public Void call() throws Exception
+          public Void call()
           {
             order.add(2);
             finishLatch.countDown();

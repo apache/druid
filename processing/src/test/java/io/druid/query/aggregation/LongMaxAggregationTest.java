@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.primitives.Longs;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -74,7 +73,7 @@ public class LongMaxAggregationTest
   {
     LongMaxBufferAggregator agg = (LongMaxBufferAggregator) longMaxAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Longs.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -94,7 +93,7 @@ public class LongMaxAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     LongMaxAggregatorFactory one = new LongMaxAggregatorFactory("name1", "fieldName1");
     LongMaxAggregatorFactory oneMore = new LongMaxAggregatorFactory("name1", "fieldName1");

@@ -22,15 +22,19 @@ package io.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
-public abstract class SupervisorReport
-{
-  private String id;
-  private DateTime generationTime;
+import java.util.Objects;
 
-  public SupervisorReport(String id, DateTime generationTime)
+public class SupervisorReport<T>
+{
+  private final String id;
+  private final DateTime generationTime;
+  private final T payload;
+
+  public SupervisorReport(String id, DateTime generationTime, T payload)
   {
     this.id = id;
     this.generationTime = generationTime;
+    this.payload = payload;
   }
 
   @JsonProperty
@@ -46,5 +50,45 @@ public abstract class SupervisorReport
   }
 
   @JsonProperty
-  public abstract Object getPayload();
+  public T getPayload()
+  {
+    return payload;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, generationTime, payload);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == this) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final SupervisorReport that = (SupervisorReport) o;
+    if (!id.equals(that.id)) {
+      return false;
+    }
+    if (!generationTime.equals(that.generationTime)) {
+      return false;
+    }
+    return payload.equals(that.payload);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "{" +
+           "id='" + getId() + '\'' +
+           ", generationTime=" + getGenerationTime() +
+           ", payload=" + payload +
+           '}';
+  }
 }

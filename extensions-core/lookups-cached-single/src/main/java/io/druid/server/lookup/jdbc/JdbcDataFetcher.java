@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -120,7 +119,7 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
         new TransactionCallback<List<String>>()
         {
           @Override
-          public List<String> inTransaction(Handle handle, TransactionStatus status) throws Exception
+          public List<String> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle.createQuery(fetchQuery)
                          .bind("val", key)
@@ -148,7 +147,7 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
     List<String> results = inReadOnlyTransaction(new TransactionCallback<List<String>>()
     {
       @Override
-      public List<String> inTransaction(Handle handle, TransactionStatus status) throws Exception
+      public List<String> inTransaction(Handle handle, TransactionStatus status)
       {
         return handle.createQuery(reverseFetchQuery)
                      .bind("val", value)

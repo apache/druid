@@ -36,18 +36,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -74,6 +70,9 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -633,7 +632,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException
+    public void handle() throws ExecutionException, InterruptedException
     {
       // check for consistency
       // if already received request for this sequenceName and dataSourceMetadata combination then return
@@ -879,7 +878,7 @@ public class KafkaSupervisor implements Supervisor
   private static String getRandomId()
   {
     final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Ints.BYTES * 2; ++i) {
+    for (int i = 0; i < Integer.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
     }
     return suffix.toString();
@@ -1985,14 +1984,13 @@ public class KafkaSupervisor implements Supervisor
     return false;
   }
 
-  private KafkaSupervisorReport generateReport(boolean includeOffsets)
+  private SupervisorReport<KafkaSupervisorReportPayload> generateReport(boolean includeOffsets)
   {
     int numPartitions = partitionGroups.values().stream().mapToInt(Map::size).sum();
 
     Map<Integer, Long> partitionLag = getLagPerPartition(getHighestCurrentOffsets());
-    KafkaSupervisorReport report = new KafkaSupervisorReport(
+    final KafkaSupervisorReportPayload payload = new KafkaSupervisorReportPayload(
         dataSource,
-        DateTimes.nowUtc(),
         ioConfig.getTopic(),
         numPartitions,
         ioConfig.getReplicas(),
@@ -2001,6 +1999,11 @@ public class KafkaSupervisor implements Supervisor
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? offsetsLastUpdated : null
+    );
+    SupervisorReport<KafkaSupervisorReportPayload> report = new SupervisorReport<>(
+        dataSource,
+        DateTimes.nowUtc(),
+        payload
     );
 
     List<TaskReportData> taskReports = Lists.newArrayList();
@@ -2059,7 +2062,7 @@ public class KafkaSupervisor implements Supervisor
         }
       }
 
-      taskReports.forEach(report::addTask);
+      taskReports.forEach(payload::addTask);
     }
     catch (Exception e) {
       log.warn(e, "Failed to generate status report");

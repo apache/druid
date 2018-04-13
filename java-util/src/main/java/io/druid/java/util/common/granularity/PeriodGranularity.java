@@ -116,12 +116,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @Override
-  public DateTime decrement(DateTime time)
-  {
-    return new DateTime(decrement(time.getMillis()), getTimeZone());
-  }
-
-  @Override
   public DateTime bucketStart(DateTime time)
   {
     return new DateTime(truncate(time.getMillis()), getTimeZone());
@@ -225,11 +219,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     return chronology.add(period, t, 1);
   }
 
-  private long decrement(long t)
-  {
-    return chronology.add(period, t, -1);
-  }
-
   private long truncate(long t)
   {
     if (isCompound) {
@@ -326,8 +315,11 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         h -= h % hours;
         long tt = chronology.hours().add(origin, h);
         // always round down to the previous period (for timestamps prior to origin)
-        if (t < tt) {
+        if (t < tt && origin > 0) {
           t = chronology.hours().add(tt, -hours);
+        } else if (t > tt && origin < 0) {
+          t = chronology.minuteOfHour().roundFloor(tt);
+          t = chronology.minuteOfHour().set(t, 0);
         } else {
           t = tt;
         }

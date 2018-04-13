@@ -19,24 +19,26 @@
 
 package io.druid.storage.azure;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
-import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 
-public class AzureDataSegmentPuller implements DataSegmentPuller
+public class AzureDataSegmentPuller
 {
   private static final Logger log = new Logger(AzureDataSegmentPuller.class);
+
+  // The azure storage hadoop access pattern is:
+  // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
+  // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
+  static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
+  
+  static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
   private final AzureStorage azureStorage;
 
@@ -48,7 +50,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
     this.azureStorage = azureStorage;
   }
 
-  public io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
+  io.druid.java.util.common.FileUtils.FileCopyResult getSegmentFiles(
       final String containerName,
       final String blobPath,
       final File outDir
@@ -56,9 +58,23 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
       throws SegmentLoadingException
   {
     try {
-      prepareOutDir(outDir);
+      FileUtils.forceMkdir(outDir);
 
-      final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
+      log.info(
+          "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
+      );
+
+      boolean blobPathIsHadoop = blobPath.contains(AZURE_STORAGE_HOST_ADDRESS);
+      final String actualBlobPath;
+      if (blobPathIsHadoop) {
+        // Remove azure's hadoop prefix to match realtime ingestion path
+        actualBlobPath = blobPath.substring(
+            blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length() + 1);
+      } else {
+        actualBlobPath = blobPath;
+      }
+
+      final ByteSource byteSource = new AzureByteSource(azureStorage, containerName, actualBlobPath);
       final io.druid.java.util.common.FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,
@@ -66,7 +82,7 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
           false
       );
 
-      log.info("Loaded %d bytes from [%s] to [%s]", result.size(), blobPath, outDir.getAbsolutePath());
+      log.info("Loaded %d bytes from [%s] to [%s]", result.size(), actualBlobPath, outDir.getAbsolutePath());
       return result;
     }
     catch (IOException e) {
@@ -83,23 +99,5 @@ public class AzureDataSegmentPuller implements DataSegmentPuller
       }
       throw new SegmentLoadingException(e, e.getMessage());
     }
-
-  }
-
-  @Override
-  public void getSegmentFiles(DataSegment segment, File outDir) throws SegmentLoadingException
-  {
-
-    final Map<String, Object> loadSpec = segment.getLoadSpec();
-    final String containerName = MapUtils.getString(loadSpec, "containerName");
-    final String blobPath = MapUtils.getString(loadSpec, "blobPath");
-
-    getSegmentFiles(containerName, blobPath, outDir);
-  }
-
-  @VisibleForTesting
-  void prepareOutDir(final File outDir) throws IOException
-  {
-    FileUtils.forceMkdir(outDir);
   }
 }

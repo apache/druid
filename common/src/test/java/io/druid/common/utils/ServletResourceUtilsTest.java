@@ -26,7 +26,7 @@ public class ServletResourceUtilsTest
 {
 
   @Test
-  public void testSanitizeException() throws Exception
+  public void testSanitizeException()
   {
     final String message = "some message";
     Assert.assertEquals(message, ServletResourceUtils.sanitizeException(new Throwable(message)).get("error"));

@@ -19,7 +19,6 @@
 
 package io.druid.java.util.http.client;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -35,6 +34,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -110,20 +110,6 @@ public class Request
     return this;
   }
 
-  public Request setHeaderValues(String header, Iterable<String> value)
-  {
-    headers.replaceValues(header, value);
-    return this;
-  }
-
-  public Request setHeaderValues(Multimap<String, String> inHeaders)
-  {
-    for (Map.Entry<String, Collection<String>> entry : inHeaders.asMap().entrySet()) {
-      this.setHeaderValues(entry.getKey(), entry.getValue());
-    }
-    return this;
-  }
-
   public Request addHeader(String header, String value)
   {
     headers.put(header, value);
@@ -147,11 +133,6 @@ public class Request
   public Request setContent(byte[] bytes)
   {
     return setContent(null, bytes);
-  }
-
-  public Request setContent(byte[] bytes, int offset, int length)
-  {
-    return setContent(null, bytes, offset, length);
   }
 
   public Request setContent(ChannelBuffer content)
@@ -194,7 +175,7 @@ public class Request
     final ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
 
     return Base64
-        .encode(bufferFactory.getBuffer(ByteBuffer.wrap(value.getBytes(Charsets.UTF_8))), false)
-        .toString(Charsets.UTF_8);
+        .encode(bufferFactory.getBuffer(ByteBuffer.wrap(value.getBytes(StandardCharsets.UTF_8))), false)
+        .toString(StandardCharsets.UTF_8);
   }
 }

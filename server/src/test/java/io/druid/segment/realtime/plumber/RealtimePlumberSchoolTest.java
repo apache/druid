@@ -73,7 +73,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -88,7 +87,7 @@ import java.util.concurrent.TimeUnit;
 public class RealtimePlumberSchoolTest
 {
   @Parameterized.Parameters(name = "rejectionPolicy = {0}, segmentWriteOutMediumFactory = {1}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
         new NoopRejectionPolicyFactory(),

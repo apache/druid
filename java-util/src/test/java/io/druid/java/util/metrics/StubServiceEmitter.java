@@ -22,7 +22,6 @@ package io.druid.java.util.metrics;
 import io.druid.java.util.emitter.core.Event;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,12 +51,12 @@ class StubServiceEmitter extends ServiceEmitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
   }
 }

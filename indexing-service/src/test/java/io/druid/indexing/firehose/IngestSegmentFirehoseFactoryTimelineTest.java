@@ -47,6 +47,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.NoopTask;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -284,7 +285,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final TaskActionClient taskActionClient = new TaskActionClient()
       {
         @Override
-        public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+        public <RetType> RetType submit(TaskAction<RetType> taskAction)
         {
           if (taskAction instanceof SegmentListUsedAction) {
             // Expect the interval we asked for
@@ -343,7 +344,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           null,
           null,
           null,
-          null
+          null,
+          new NoopTestTaskFileWriter()
       );
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,

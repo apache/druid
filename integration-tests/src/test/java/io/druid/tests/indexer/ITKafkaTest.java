@@ -196,7 +196,7 @@ public class ITKafkaTest extends AbstractIndexerTest
       LOG.info("indexerFile name: [%s]", INDEXER_FILE);
 
       Properties consumerProperties = new Properties();
-      consumerProperties.put("zookeeper.connect", config.getZookeeperHosts());
+      consumerProperties.put("zookeeper.connect", config.getZookeeperInternalHosts());
       consumerProperties.put("zookeeper.connection.timeout.ms", "15000");
       consumerProperties.put("zookeeper.sync.time.ms", "5000");
       consumerProperties.put("group.id", Long.toString(System.currentTimeMillis()));
@@ -234,7 +234,7 @@ public class ITKafkaTest extends AbstractIndexerTest
           new Callable<Boolean>()
           {
             @Override
-            public Boolean call() throws Exception
+            public Boolean call()
             {
               return coordinator.areSegmentsLoaded(DATASOURCE);
             }
@@ -288,7 +288,7 @@ public class ITKafkaTest extends AbstractIndexerTest
   }
 
   @AfterClass
-  public void afterClass() throws Exception
+  public void afterClass()
   {
     LOG.info("teardown");
     if (config.manageKafkaTopic()) {

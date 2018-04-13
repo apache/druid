@@ -22,9 +22,9 @@ package io.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.SegmentChangeRequestDrop;
 import io.druid.server.coordination.SegmentChangeRequestLoad;
@@ -34,14 +34,12 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.data.Stat;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
@@ -249,7 +247,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       if (currentlyProcessing == null) {
         if (!stopped) {
           log.makeAlert("Crazy race condition! server[%s]", basePath)
-              .emit();
+             .emit();
         }
         actionCompleted();
         return;
@@ -261,19 +259,14 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
 
       processingExecutor.schedule(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                if (curator.checkExists().forPath(path) != null) {
-                  failAssign(new ISE("%s was never removed! Failing this operation!", path));
-                }
+          () -> {
+            try {
+              if (curator.checkExists().forPath(path) != null) {
+                failAssign(new ISE("%s was never removed! Failing this operation!", path));
               }
-              catch (Exception e) {
-                failAssign(e);
-              }
+            }
+            catch (Exception e) {
+              failAssign(e);
             }
           },
           config.getLoadTimeoutDelay().getMillis(),
@@ -281,18 +274,13 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       );
 
       final Stat stat = curator.checkExists().usingWatcher(
-          new CuratorWatcher()
-          {
-            @Override
-            public void process(WatchedEvent watchedEvent) throws Exception
-            {
-              switch (watchedEvent.getType()) {
-                case NodeDeleted:
-                  entryRemoved(watchedEvent.getPath());
-                  break;
-                default:
-                  // do nothing
-              }
+          (CuratorWatcher) watchedEvent -> {
+            switch (watchedEvent.getType()) {
+              case NodeDeleted:
+                entryRemoved(watchedEvent.getPath());
+                break;
+              default:
+                // do nothing
             }
           }
       ).forPath(path);
@@ -341,14 +329,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       final List<LoadPeonCallback> callbacks = currentlyProcessing.getCallbacks();
       currentlyProcessing = null;
       callBackExecutor.execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              executeCallbacks(callbacks);
-            }
-          }
+          () -> executeCallbacks(callbacks)
       );
     }
   }
@@ -360,18 +341,13 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         processingExecutor,
         config.getLoadQueuePeonRepeatDelay(),
         config.getLoadQueuePeonRepeatDelay(),
-        new Callable<ScheduledExecutors.Signal>()
-        {
-          @Override
-          public ScheduledExecutors.Signal call()
-          {
-            processSegmentChangeRequest();
+        () -> {
+          processSegmentChangeRequest();
 
-            if (stopped) {
-              return ScheduledExecutors.Signal.STOP;
-            } else {
-              return ScheduledExecutors.Signal.REPEAT;
-            }
+          if (stopped) {
+            return ScheduledExecutors.Signal.STOP;
+          } else {
+            return ScheduledExecutors.Signal.REPEAT;
           }
         }
     );

@@ -40,7 +40,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -52,10 +51,9 @@ public class ApproximateHistogramGroupByQueryTest
 {
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
-  private String testName;
 
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     final GroupByQueryConfig v1Config = new GroupByQueryConfig()
     {
@@ -133,7 +131,6 @@ public class ApproximateHistogramGroupByQueryTest
 
   public ApproximateHistogramGroupByQueryTest(String testName, GroupByQueryRunnerFactory factory, QueryRunner runner)
   {
-    this.testName = testName;
     this.factory = factory;
     this.runner = runner;
 

@@ -23,9 +23,11 @@ import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.incremental.IndexSizeExceededException;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
@@ -35,9 +37,9 @@ import java.util.List;
  * both of those. It can also push data to deep storage. But, it does not decide which segments data should go into.
  * It also doesn't publish segments to the metadata store or monitor handoff; you have to do that yourself!
  * <p>
- * Any time you call one of the methods that adds, persists, or pushes data, you must provide a Committer, or a
- * Supplier of one, that represents all data you have given to the Appenderator so far. The Committer will be used when
- * that data has been persisted to disk.
+ * You can provide a {@link Committer} or a Supplier of one when you call one of the methods that adds, persists, or
+ * pushes data. The Committer should represent all data you have given to the Appenderator so far. This Committer will
+ * be used when that data has been persisted to disk.
  */
 public interface Appenderator extends QuerySegmentWalker, Closeable
 {
@@ -72,8 +74,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Committer is guaranteed to be *created* synchronously with the call to add, but will actually be used
    * asynchronously.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
-   * metadata committed by Committer in sync.
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
+   * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param identifier               the segment into which this row should be added
    * @param row                      the row to add
@@ -94,7 +96,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   AppenderatorAddResult add(
       SegmentIdentifier identifier,
       InputRow row,
-      Supplier<Committer> committerSupplier,
+      @Nullable Supplier<Committer> committerSupplier,
       boolean allowIncrementalPersists
   )
       throws IndexSizeExceededException, SegmentNotWritableException;
@@ -152,8 +154,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * persist, but will actually be used asynchronously. Any metadata returned by the committer will be associated with
    * the data persisted to disk.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
-   * metadata committed by Committer in sync.
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
+   * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param identifiers segment identifiers to be persisted
    * @param committer   a committer associated with all data that has been added to segments of the given identifiers so
@@ -162,7 +164,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * @return future that resolves when all pending data to segments of the identifiers has been persisted, contains
    * commit metadata for this persist
    */
-  ListenableFuture<Object> persist(Collection<SegmentIdentifier> identifiers, Committer committer);
+  ListenableFuture<Object> persist(Collection<SegmentIdentifier> identifiers, @Nullable Committer committer);
 
   /**
    * Persist any in-memory indexed data to durable storage. This may be only somewhat durable, e.g. the
@@ -170,14 +172,14 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * be used asynchronously. Any metadata returned by the committer will be associated with the data persisted to
    * disk.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
-   * metadata committed by Committer in sync.
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
+   * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param committer a committer associated with all data that has been added so far
    *
    * @return future that resolves when all pending data has been persisted, contains commit metadata for this persist
    */
-  default ListenableFuture<Object> persistAll(Committer committer)
+  default ListenableFuture<Object> persistAll(@Nullable Committer committer)
   {
     return persist(getSegments(), committer);
   }
@@ -188,8 +190,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * <p>
    * After this method is called, you cannot add new data to any segments that were previously under construction.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
-   * metadata committed by Committer in sync.
+   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
+   * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
    *
    * @param identifiers list of segments to push
    * @param committer   a committer associated with all data that has been added so far
@@ -197,7 +199,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * @return future that resolves when all segments have been pushed. The segment list will be the list of segments
    * that have been pushed and the commit metadata from the Committer.
    */
-  ListenableFuture<SegmentsAndMetadata> push(Collection<SegmentIdentifier> identifiers, Committer committer);
+  ListenableFuture<SegmentsAndMetadata> push(Collection<SegmentIdentifier> identifiers, @Nullable Committer committer);
 
   /**
    * Stop any currently-running processing and clean up after ourselves. This allows currently running persists and pushes
@@ -227,11 +229,20 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
     private final int numRowsInSegment;
     private final boolean isPersistRequired;
 
-    AppenderatorAddResult(SegmentIdentifier identifier, int numRowsInSegment, boolean isPersistRequired)
+    @Nullable
+    private final ParseException parseException;
+
+    AppenderatorAddResult(
+        SegmentIdentifier identifier,
+        int numRowsInSegment,
+        boolean isPersistRequired,
+        @Nullable ParseException parseException
+    )
     {
       this.segmentIdentifier = identifier;
       this.numRowsInSegment = numRowsInSegment;
       this.isPersistRequired = isPersistRequired;
+      this.parseException = parseException;
     }
 
     SegmentIdentifier getSegmentIdentifier()
@@ -247,6 +258,12 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
     boolean isPersistRequired()
     {
       return isPersistRequired;
+    }
+
+    @Nullable
+    public ParseException getParseException()
+    {
+      return parseException;
     }
   }
 }

@@ -22,15 +22,14 @@ package io.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.emitter.core.Emitter;
-import io.druid.java.util.emitter.core.Event;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -127,10 +126,10 @@ public class StatsDEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException {}
+  public void flush() {}
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     statsd.stop();
   }

@@ -224,13 +224,13 @@ public class SQLServerConnector extends SQLMetadataConnector
       final String keyColumn,
       final String valueColumn,
       final String key,
-      final byte[] value) throws Exception
+      final byte[] value)
   {
     return getDBI().withHandle(
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(StringUtils.format(
                 "MERGE INTO %1$s WITH (UPDLOCK, HOLDLOCK) as target"

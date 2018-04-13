@@ -24,7 +24,7 @@ Core extensions are maintained by Druid committers.
 |druid-avro-extensions|Support for data in Apache Avro data format.|[link](../development/extensions-core/avro.html)|
 |druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.html)|
 |druid-caffeine-cache|A local cache implementation backed by Caffeine.|[link](../development/extensions-core/caffeine-cache.html)|
-|druid-datasketches|Support for approximate counts and set operations with [DataSketches](http://datasketches.github.io/).|[link](../development/extensions-core/datasketches-aggregators.html)|
+|druid-datasketches|Support for approximate counts and set operations with [DataSketches](http://datasketches.github.io/).|[link](../development/extensions-core/datasketches-extension.html)|
 |druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.html)|
 |druid-histogram|Approximate histograms and quantiles aggregator.|[link](../development/extensions-core/approximate-histograms.html)|
 |druid-kafka-eight|Kafka ingest firehose (high level consumer) for realtime nodes.|[link](../development/extensions-core/kafka-eight-firehose.html)|
@@ -71,6 +71,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.html)|
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.html)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.html)|
+|druid-opentsdb-emitter|OpenTSDB metrics emitter |[link](../development/extensions-contrib/opentsdb-emitter.html)|
 
 ## Promoting Community Extension to Core Extension
 

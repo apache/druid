@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.InputRow;
@@ -82,7 +82,7 @@ public class DataSegmentTest
       }
 
       @Override
-      public Map<String, Range<String>> getDomain()
+      public Map<String, RangeSet<String>> getDomain()
       {
         return ImmutableMap.of();
       }
@@ -217,7 +217,7 @@ public class DataSegmentTest
   }
 
   @Test
-  public void testBucketMonthComparator() throws Exception
+  public void testBucketMonthComparator()
   {
     DataSegment[] sortedOrder = {
         makeDataSegment("test1", "2011-01-01/2011-01-02", "a"),

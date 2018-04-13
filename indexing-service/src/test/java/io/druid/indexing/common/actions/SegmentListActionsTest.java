@@ -94,7 +94,7 @@ public class SegmentListActionsTest
   }
 
   @Test
-  public void testSegmentListUsedAction() throws IOException, InterruptedException
+  public void testSegmentListUsedAction()
   {
     final SegmentListUsedAction action = new SegmentListUsedAction(
         task.getDataSource(),
@@ -106,7 +106,7 @@ public class SegmentListActionsTest
   }
 
   @Test
-  public void testSegmentListUnusedAction() throws InterruptedException, IOException
+  public void testSegmentListUnusedAction()
   {
     final SegmentListUnusedAction action = new SegmentListUnusedAction(task.getDataSource(), INTERVAL);
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));

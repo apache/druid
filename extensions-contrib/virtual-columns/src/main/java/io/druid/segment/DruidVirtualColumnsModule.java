@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -34,7 +35,12 @@ public class DruidVirtualColumnsModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of(new SimpleModule().registerSubtypes(MapVirtualColumn.class));
+    return ImmutableList.of(
+        new SimpleModule(getClass().getSimpleName())
+            .registerSubtypes(
+                new NamedType(MapVirtualColumn.class, "map")
+            )
+    );
   }
 
   @Override

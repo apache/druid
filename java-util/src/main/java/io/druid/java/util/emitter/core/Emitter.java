@@ -28,6 +28,17 @@ import java.io.IOException;
 public interface Emitter extends Closeable, Flushable
 {
   void start();
+
+  /**
+   * Emit an event. This method must not throw exceptions or block.
+   *
+   * If an implementation receives too many events and internal queues fill up, it should drop events rather than
+   * blocking or consuming excessive memory.
+   *
+   * If an implementation receives input it considers to be invalid, or has an internal problem, it should deal with
+   * that by logging a warning rather than throwing an exception. Implementations that log warnings should consider
+   * throttling warnings to avoid excessive logs, since a busy Druid cluster can emit a high volume of metric events.
+   */
   void emit(Event event);
 
   @Override

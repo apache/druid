@@ -417,6 +417,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     {
       return task.getType();
     }
+    
+    @Override
+    public String getDataSource()
+    {
+      return task.getDataSource();
+    }
   }
 
   private class ThreadPoolTaskRunnerCallable implements Callable<TaskStatus>
@@ -459,11 +465,11 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
           log.warn(e, "Interrupted while running task[%s]", task);
         }
 
-        status = TaskStatus.failure(task.getId());
+        status = TaskStatus.failure(task.getId(), e.toString());
       }
       catch (Exception e) {
         log.error(e, "Exception while running task[%s]", task);
-        status = TaskStatus.failure(task.getId());
+        status = TaskStatus.failure(task.getId(), e.toString());
       }
       catch (Throwable t) {
         log.error(t, "Uncaught Throwable while running task[%s]", task);

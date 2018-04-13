@@ -22,15 +22,14 @@ package io.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
 import io.druid.java.util.http.client.response.StatusResponseHandler;
 import io.druid.java.util.http.client.response.StatusResponseHolder;
-import io.druid.java.util.common.jackson.JacksonUtils;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.StringUtils;
 import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -63,7 +62,7 @@ public class EventReceiverFirehoseTestClient
   {
     this.host = host;
     this.jsonMapper = jsonMapper;
-    this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
+    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
     this.httpClient = httpClient;
     this.chatID = chatID;
     this.smileMapper = smileMapper;

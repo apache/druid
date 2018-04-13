@@ -31,7 +31,6 @@ import io.druid.timeline.DataSegment;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.util.Map;
@@ -74,7 +73,6 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
 
   @Override
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean replaceExisting)
-      throws IOException
   {
     final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), getStorageDir(inSegment));
 

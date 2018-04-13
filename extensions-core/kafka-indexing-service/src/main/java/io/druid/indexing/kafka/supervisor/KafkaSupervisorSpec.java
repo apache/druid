@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -33,6 +32,7 @@ import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 
@@ -73,6 +73,10 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     this.tuningConfig = tuningConfig != null
                         ? tuningConfig
                         : new KafkaSupervisorTuningConfig(
+                            null,
+                            null,
+                            null,
+                            null,
                             null,
                             null,
                             null,

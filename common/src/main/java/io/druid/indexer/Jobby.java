@@ -19,9 +19,37 @@
 
 package io.druid.indexer;
 
+import io.druid.java.util.common.StringUtils;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+
 /**
  */
 public interface Jobby
 {
   boolean run();
+
+  /**
+   * @return A map containing statistics for a Jobby, optionally null if the Jobby is unable to provide stats.
+   */
+  @Nullable
+  default Map<String, Object> getStats()
+  {
+    throw new UnsupportedOperationException(
+        StringUtils.format("This Jobby does not implement getJobStats(), Jobby class: [%s]", getClass())
+    );
+  }
+
+  /**
+   * @return A string representing the error that caused a Jobby to fail. Can be null if the Jobby did not fail,
+   * or is unable to provide an error message.
+   */
+  @Nullable
+  default String getErrorMessage()
+  {
+    throw new UnsupportedOperationException(
+        StringUtils.format("This Jobby does not implement getErrorMessage(), Jobby class: [%s]", getClass())
+    );
+  }
 }

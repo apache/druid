@@ -34,19 +34,19 @@ public class CoordinatorStatsTest
   private CoordinatorStats stats;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     stats = new CoordinatorStats();
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     stats = null;
   }
 
   @Test
-  public void addToGlobalStat() throws Exception
+  public void addToGlobalStat()
   {
     Assert.assertEquals(0, stats.getGlobalStat("stats"));
     stats.addToGlobalStat("stats", 1);
@@ -56,13 +56,13 @@ public class CoordinatorStatsTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void testAddToTieredStatNonexistentStat() throws Exception
+  public void testAddToTieredStatNonexistentStat()
   {
     stats.getTieredStat("stat", "tier");
   }
 
   @Test
-  public void testAddToTieredStat() throws Exception
+  public void testAddToTieredStat()
   {
     Assert.assertFalse(stats.hasPerTierStats());
     stats.addToTieredStat("stat1", "tier1", 1);
@@ -88,7 +88,7 @@ public class CoordinatorStatsTest
   }
 
   @Test
-  public void testForEachTieredStat() throws Exception
+  public void testForEachTieredStat()
   {
     final Map<String, Long> expected = ImmutableMap.of(
         "tier1", 1L,
@@ -109,7 +109,7 @@ public class CoordinatorStatsTest
 
 
   @Test
-  public void testAccumulate() throws Exception
+  public void testAccumulate()
   {
     stats.addToGlobalStat("stat1", 1);
     stats.addToGlobalStat("stat2", 1);

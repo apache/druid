@@ -365,7 +365,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       }
 
       @Override
-      public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
+      public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
       {
         final ContainerHolder holder = containers.get(containerKey);
         if (holder == null) {

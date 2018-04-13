@@ -21,13 +21,12 @@ package io.druid.java.util.metrics;
 
 import junit.framework.Assert;
 import org.hyperic.sigar.Sigar;
-import org.hyperic.sigar.SigarException;
 import org.junit.Test;
 
 public class SigarLoadTest
 {
   @Test
-  public void testSigarLoad() throws SigarException
+  public void testSigarLoad()
   {
     Sigar sigar = SigarUtil.getSigar();
     Assert.assertTrue(sigar.getPid() > 0);

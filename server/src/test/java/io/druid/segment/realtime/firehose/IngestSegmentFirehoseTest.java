@@ -19,7 +19,6 @@
 
 package io.druid.segment.realtime.firehose;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.spatial.search.RadiusBound;
@@ -33,9 +32,6 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -51,6 +47,9 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import io.druid.segment.transform.TransformSpec;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -59,7 +58,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.List;
 
@@ -97,7 +96,7 @@ public class IngestSegmentFirehoseTest
   );
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return ImmutableList.of(
         new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
@@ -213,7 +212,7 @@ public class IngestSegmentFirehoseTest
             false,
             0
         ),
-        Charsets.UTF_8.toString()
+        StandardCharsets.UTF_8.toString()
     );
 
     try (

@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.Smoosh;
@@ -42,7 +41,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
@@ -90,7 +88,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     vals = null;
   }
@@ -101,7 +99,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
     segmentWriteOutMedium.close();
   }
 
-  private void generateVals(final int totalSize, final int maxValue) throws IOException
+  private void generateVals(final int totalSize, final int maxValue)
   {
     vals = new int[totalSize];
     for (int i = 0; i < vals.length; ++i) {
@@ -190,7 +188,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
         segmentWriteOutMedium,
         "test",
         compressionStrategy,
-        Longs.BYTES * 10000
+        Long.BYTES * 10000
     );
     CompressedVSizeColumnarIntsSerializer writer = new CompressedVSizeColumnarIntsSerializer(
         segmentWriteOutMedium,

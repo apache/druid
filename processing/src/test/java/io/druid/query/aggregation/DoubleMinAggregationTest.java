@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.primitives.Doubles;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -74,7 +73,7 @@ public class DoubleMinAggregationTest
   {
     DoubleMinBufferAggregator agg = (DoubleMinBufferAggregator) doubleMinAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Doubles.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -94,7 +93,7 @@ public class DoubleMinAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     DoubleMinAggregatorFactory one = new DoubleMinAggregatorFactory("name1", "fieldName1");
     DoubleMinAggregatorFactory oneMore = new DoubleMinAggregatorFactory("name1", "fieldName1");

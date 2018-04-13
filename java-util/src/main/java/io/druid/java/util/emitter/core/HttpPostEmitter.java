@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
+import io.druid.concurrent.ConcurrentAwaitableCounter;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
@@ -37,6 +38,7 @@ import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -109,9 +111,12 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   private final AtomicInteger approximateBuffersToReuseCount = new AtomicInteger();
 
   /**
-   * concurrentBatch.get() == null means the service is closed.
+   * concurrentBatch.get() == null means the service is closed. concurrentBatch.get() is the instance of Integer,
+   * it means that some thread has failed with a serious error during {@link #onSealExclusive} (with the batch number
+   * corresponding to the Integer object) and {@link #tryRecoverCurrentBatch} needs to be called. Otherwise (i. e.
+   * normally), an instance of {@link Batch} is stored in this atomic reference.
    */
-  private final AtomicReference<Batch> concurrentBatch = new AtomicReference<>();
+  private final AtomicReference<Object> concurrentBatch = new AtomicReference<>();
 
   private final ConcurrentLinkedDeque<Batch> buffersToEmit = new ConcurrentLinkedDeque<>();
   /**
@@ -129,7 +134,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
    */
   private final AtomicInteger approximateLargeEventsToEmitCount = new AtomicInteger();
 
-  private final EmittedBatchCounter emittedBatchCounter = new EmittedBatchCounter();
+  private final ConcurrentAwaitableCounter emittedBatchCounter = new ConcurrentAwaitableCounter();
   private final EmittingThread emittingThread;
   private final AtomicLong totalEmittedEvents = new AtomicLong();
   private final AtomicInteger allocatedBuffers = new AtomicInteger();
@@ -173,7 +178,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       throw new ISE(e, "Bad URL: %s", config.getRecipientBaseUrl());
     }
     emittingThread = new EmittingThread(config);
-    concurrentBatch.set(new Batch(this, acquireBuffer(), 0));
+    long firstBatchNumber = 1;
+    concurrentBatch.set(new Batch(this, acquireBuffer(), firstBatchNumber));
     // lastFillTimeMillis must not be 0, minHttpTimeoutMillis could be.
     lastFillTimeMillis = Math.max(config.minHttpTimeoutMillis, 1);
   }
@@ -223,6 +229,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   }
 
   @VisibleForTesting
+  @Nullable
   Batch emitAndReturnBatch(Event event)
   {
     awaitStarted();
@@ -245,12 +252,19 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     }
 
     while (true) {
-      Batch batch = concurrentBatch.get();
-      if (batch == null) {
+      Object batchObj = concurrentBatch.get();
+      if (batchObj instanceof Integer) {
+        tryRecoverCurrentBatch((Integer) batchObj);
+        continue;
+      }
+      if (batchObj == null) {
         throw new RejectedExecutionException("Service is closed.");
       }
+      Batch batch = (Batch) batchObj;
       if (batch.tryAddEvent(eventBytes)) {
         return batch;
+      } else {
+        log.debug("Failed to emit an event in batch [%s]", batch);
       }
       // Spin loop, until the thread calling onSealExclusive() updates the concurrentBatch. This update becomes visible
       // eventually, because concurrentBatch.get() is a volatile read.
@@ -291,6 +305,25 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
    */
   void onSealExclusive(Batch batch, long elapsedTimeMillis)
   {
+    try {
+      doOnSealExclusive(batch, elapsedTimeMillis);
+    }
+    catch (Throwable t) {
+      try {
+        if (!concurrentBatch.compareAndSet(batch, batch.batchNumber)) {
+          log.error("Unexpected failure to set currentBatch to the failed Batch.batchNumber");
+        }
+        log.error(t, "Serious error during onSealExclusive(), set currentBatch to the failed Batch.batchNumber");
+      }
+      catch (Throwable t2) {
+        t.addSuppressed(t2);
+      }
+      throw t;
+    }
+  }
+
+  private void doOnSealExclusive(Batch batch, long elapsedTimeMillis)
+  {
     batchFillingTimeCounter.add((int) Math.max(elapsedTimeMillis, 0));
     if (elapsedTimeMillis > 0) {
       // If elapsedTimeMillis is 0 or negative, it's likely because System.currentTimeMillis() is not monotonic, so not
@@ -300,11 +333,27 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     addBatchToEmitQueue(batch);
     wakeUpEmittingThread();
     if (!isTerminated()) {
-      int nextBatchNumber = EmittedBatchCounter.nextBatchNumber(batch.batchNumber);
-      if (!concurrentBatch.compareAndSet(batch, new Batch(this, acquireBuffer(), nextBatchNumber))) {
-        // If compareAndSet failed, the service is closed concurrently.
+      long nextBatchNumber = ConcurrentAwaitableCounter.nextCount(batch.batchNumber);
+      byte[] newBuffer = acquireBuffer();
+      if (!concurrentBatch.compareAndSet(batch, new Batch(this, newBuffer, nextBatchNumber))) {
+        buffersToReuse.add(newBuffer);
+        // If compareAndSet failed, the service should be closed concurrently, i. e. we expect isTerminated() = true.
+        // If we don't see this, there should be some bug in HttpPostEmitter.
         Preconditions.checkState(isTerminated());
       }
+    }
+  }
+
+  private void tryRecoverCurrentBatch(Integer failedBatchNumber)
+  {
+    log.info("Trying to recover currentBatch");
+    long nextBatchNumber = ConcurrentAwaitableCounter.nextCount(failedBatchNumber);
+    byte[] newBuffer = acquireBuffer();
+    if (concurrentBatch.compareAndSet(failedBatchNumber, new Batch(this, newBuffer, nextBatchNumber))) {
+      log.info("Successfully recovered currentBatch");
+    } else {
+      // It's normal, a concurrent thread could succeed to recover first.
+      buffersToReuse.add(newBuffer);
     }
   }
 
@@ -336,7 +385,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   private void batchFinalized()
   {
     // Notify HttpPostEmitter.flush(), that the batch is emitted, or failed, or dropped.
-    emittedBatchCounter.batchEmitted();
+    emittedBatchCounter.increment();
   }
 
   private Batch pollBatchFromEmitQueue()
@@ -359,7 +408,10 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   public void flush() throws IOException
   {
     awaitStarted();
-    flush(concurrentBatch.get());
+    Object batchObj = concurrentBatch.get();
+    if (batchObj instanceof Batch) {
+      flush((Batch) batchObj);
+    }
   }
 
   private void flush(Batch batch) throws IOException
@@ -372,7 +424,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       // This check doesn't always awaits for this exact batch to be emitted, because another batch could be dropped
       // from the queue ahead of this one, in limitBuffersToEmitSize(). But there is no better way currently to wait for
       // the exact batch, and it's not that important.
-      emittedBatchCounter.awaitBatchEmitted(batch.batchNumber, config.getFlushTimeOut(), TimeUnit.MILLISECONDS);
+      emittedBatchCounter.awaitCount(batch.batchNumber, config.getFlushTimeOut(), TimeUnit.MILLISECONDS);
     }
     catch (TimeoutException e) {
       String message = StringUtils.format("Timed out after [%d] millis during flushing", config.getFlushTimeOut());
@@ -392,8 +444,10 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     synchronized (startLock) {
       if (running) {
         running = false;
-        Batch lastBatch = concurrentBatch.getAndSet(null);
-        flush(lastBatch);
+        Object lastBatch = concurrentBatch.getAndSet(null);
+        if (lastBatch instanceof Batch) {
+          flush((Batch) lastBatch);
+        }
         emittingThread.shuttingDown = true;
         // EmittingThread is interrupted after the last batch is flushed.
         emittingThread.interrupt();
@@ -474,16 +528,19 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     {
       boolean needsToShutdown = Thread.interrupted() || shuttingDown;
       if (needsToShutdown) {
-        Batch lastBatch = concurrentBatch.getAndSet(null);
-        if (lastBatch != null) {
-          lastBatch.seal();
+        Object lastBatch = concurrentBatch.getAndSet(null);
+        if (lastBatch instanceof Batch) {
+          ((Batch) lastBatch).seal();
         }
       } else {
-        Batch batch = concurrentBatch.get();
-        if (batch != null) {
-          batch.sealIfFlushNeeded();
+        Object batch = concurrentBatch.get();
+        if (batch instanceof Batch) {
+          ((Batch) batch).sealIfFlushNeeded();
         } else {
-          needsToShutdown = true;
+          // batch == null means that HttpPostEmitter is terminated. Batch object could also be Integer, if some
+          // thread just failed with a serious error in onSealExclusive(), in this case we don't want to shutdown
+          // the emitter thread.
+          needsToShutdown = batch == null;
         }
       }
       return needsToShutdown;
@@ -868,7 +925,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   @VisibleForTesting
   void waitForEmission(int batchNumber) throws Exception
   {
-    emittedBatchCounter.awaitBatchEmitted(batchNumber, 10, TimeUnit.SECONDS);
+    emittedBatchCounter.awaitCount(batchNumber, 10, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting

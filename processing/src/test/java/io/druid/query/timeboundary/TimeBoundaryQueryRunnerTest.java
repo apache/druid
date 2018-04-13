@@ -65,7 +65,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TimeBoundaryQueryRunnerTest
 {
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
@@ -263,7 +263,7 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   @Test
-  public void testMergeResults() throws Exception
+  public void testMergeResults()
   {
     List<Result<TimeBoundaryResultValue>> results = Arrays.asList(
         new Result<>(
@@ -293,7 +293,7 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   @Test
-  public void testMergeResultsEmptyResults() throws Exception
+  public void testMergeResultsEmptyResults()
   {
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
 

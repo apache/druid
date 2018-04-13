@@ -53,7 +53,7 @@ public abstract class AbstractIndexerTest
   @Inject
   protected TestQueryHelper queryHelper;
 
-  protected void unloadAndKillData(final String dataSource) throws Exception
+  protected void unloadAndKillData(final String dataSource)
   {
     List<String> intervals = coordinator.getSegmentIntervals(dataSource);
 
@@ -68,7 +68,7 @@ public abstract class AbstractIndexerTest
     unloadAndKillData(dataSource, first, last);
   }
 
-  protected void unloadAndKillData(final String dataSource, String start, String end) throws Exception
+  protected void unloadAndKillData(final String dataSource, String start, String end)
   {
     // Wait for any existing index tasks to complete before disabling the datasource otherwise
     // realtime tasks can get stuck waiting for handoff. https://github.com/druid-io/druid/issues/1729
@@ -79,7 +79,7 @@ public abstract class AbstractIndexerTest
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return coordinator.areSegmentsLoaded(dataSource);
           }

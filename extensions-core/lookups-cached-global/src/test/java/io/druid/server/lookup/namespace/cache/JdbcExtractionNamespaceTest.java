@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -156,7 +156,7 @@ public class JdbcExtractionNamespaceTest
                 try (Closeable closeable = new Closeable()
                 {
                   @Override
-                  public void close() throws IOException
+                  public void close()
                   {
                     future.cancel(true);
                   }
@@ -171,7 +171,7 @@ public class JdbcExtractionNamespaceTest
             closer.register(new Closeable()
             {
               @Override
-              public void close() throws IOException
+              public void close()
               {
                 if (scheduler == null) {
                   return;
@@ -253,7 +253,7 @@ public class JdbcExtractionNamespaceTest
                     try (final Closeable closeable = new Closeable()
                     {
                       @Override
-                      public void close() throws IOException
+                      public void close()
                       {
                         future.cancel(true);
                       }
@@ -364,8 +364,7 @@ public class JdbcExtractionNamespaceTest
 
   @Test(timeout = 10_000L)
   public void testMappingWithoutFilter()
-      throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
-             InterruptedException, TimeoutException
+      throws InterruptedException
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
@@ -392,8 +391,7 @@ public class JdbcExtractionNamespaceTest
 
   @Test(timeout = 20_000L)
   public void testMappingWithFilter()
-      throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
-             InterruptedException, TimeoutException
+      throws InterruptedException
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
@@ -425,7 +423,7 @@ public class JdbcExtractionNamespaceTest
 
   @Test(timeout = 10_000L)
   public void testSkipOld()
-      throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
+      throws InterruptedException
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
@@ -438,7 +436,7 @@ public class JdbcExtractionNamespaceTest
 
   @Test(timeout = 60_000L)
   public void testFindNew()
-      throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
+      throws InterruptedException
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
@@ -449,7 +447,7 @@ public class JdbcExtractionNamespaceTest
 
   @Test(timeout = 60_000L)
   public void testIgnoresNullValues()
-          throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
+      throws InterruptedException
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       insertValues(handleRef, "fooz", null, null, "2900-01-01 00:00:00");
@@ -461,7 +459,7 @@ public class JdbcExtractionNamespaceTest
   }
 
   private CacheScheduler.Entry ensureEntry()
-      throws NoSuchFieldException, IllegalAccessException, InterruptedException
+      throws InterruptedException
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),

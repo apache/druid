@@ -33,10 +33,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
-import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -45,6 +43,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -86,7 +85,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
 
-  private final LifecycleLock lifecycleLock = new LifecycleLock();
+  // Use to synchronize start() and stop(). These methods should be synchronized to prevent from being called at the
+  // same time if two different threads are calling them. This might be possible if a druid coordinator gets and drops
+  // leadership repeatedly in quick succession.
+  private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
@@ -96,6 +98,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
   private volatile ListeningScheduledExecutorService exec = null;
   private volatile ListenableFuture<?> future = null;
+  private volatile boolean started;
 
   @Inject
   public SQLMetadataSegmentManager(
@@ -116,11 +119,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStart
   public void start()
   {
-    if (!lifecycleLock.canStart()) {
-      return;
-    }
+    synchronized (lock) {
+      if (started) {
+        return;
+      }
 
-    try {
       exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d"));
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
@@ -143,10 +146,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
-      lifecycleLock.started();
-    }
-    finally {
-      lifecycleLock.exitStart();
+      started = true;
     }
   }
 
@@ -154,10 +154,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStop
   public void stop()
   {
-    if (!lifecycleLock.canStop()) {
-      return;
-    }
-    try {
+    synchronized (lock) {
+      if (!started) {
+        return;
+      }
+
       final ConcurrentHashMap<String, DruidDataSource> emptyMap = new ConcurrentHashMap<>();
       ConcurrentHashMap<String, DruidDataSource> current;
       do {
@@ -168,9 +169,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       future = null;
       exec.shutdownNow();
       exec = null;
-    }
-    finally {
-      lifecycleLock.exitStop();
+      started = false;
     }
   }
 
@@ -185,7 +184,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             @Override
             public VersionedIntervalTimeline<String, DataSegment> inTransaction(
                 Handle handle, TransactionStatus status
-            ) throws Exception
+            )
             {
               return handle
                   .createQuery(StringUtils.format(
@@ -250,7 +249,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               Batch batch = handle.createBatch();
 
@@ -286,7 +285,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               handle.createStatement(
                   StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
@@ -366,7 +365,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public boolean isStarted()
   {
-    return lifecycleLock.isStarted();
+    return started;
   }
 
   @Override
@@ -404,7 +403,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                                   Map<String, Object> stringObjectMap,
                                   FoldController foldController,
                                   StatementContext statementContext
-                              ) throws SQLException
+                              )
                               {
                                 druidDataSources.add(
                                     MapUtils.getString(stringObjectMap, "datasource")
@@ -420,7 +419,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public void poll()
   {
     try {
-      if (!lifecycleLock.isStarted()) {
+      if (!started) {
         return;
       }
 
@@ -437,7 +436,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           new TransactionCallback<List<DataSegment>>()
           {
             @Override
-            public List<DataSegment> inTransaction(Handle handle, TransactionStatus status) throws Exception
+            public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
             {
               return handle
                   .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
@@ -532,7 +531,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         new TransactionCallback<List<Interval>>()
         {
           @Override
-          public List<Interval> inTransaction(Handle handle, TransactionStatus status) throws Exception
+          public List<Interval> inTransaction(Handle handle, TransactionStatus status)
           {
             Iterator<Interval> iter = handle
                 .createQuery(

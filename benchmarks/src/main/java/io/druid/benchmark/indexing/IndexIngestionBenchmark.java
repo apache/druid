@@ -43,7 +43,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -70,7 +69,7 @@ public class IndexIngestionBenchmark
   private BenchmarkSchemaInfo schemaInfo;
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
 
@@ -94,7 +93,7 @@ public class IndexIngestionBenchmark
   }
 
   @Setup(Level.Invocation)
-  public void setup2() throws IOException
+  public void setup2()
   {
     incIndex = makeIncIndex();
   }
@@ -120,7 +119,7 @@ public class IndexIngestionBenchmark
   {
     for (int i = 0; i < rowsPerSegment; i++) {
       InputRow row = rows.get(i);
-      int rv = incIndex.add(row);
+      int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }

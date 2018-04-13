@@ -25,16 +25,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
-import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.server.lookup.namespace.cache.CacheHandler;
@@ -367,7 +366,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         // If the number of things added has not changed during the course of this extractor's life, we can cache it
         if (startCount == doubleEventCount.get()) {
           return ByteBuffer
-              .allocate(idutf8.length + 1 + Longs.BYTES)
+              .allocate(idutf8.length + 1 + Long.BYTES)
               .put(idutf8)
               .put((byte) 0xFF)
               .putLong(startCount)

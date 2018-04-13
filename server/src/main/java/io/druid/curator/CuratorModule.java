@@ -39,7 +39,6 @@ import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -69,7 +68,7 @@ public class CuratorModule implements Module
   @LazySingleton
   public CuratorFramework makeCurator(
       CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle
-  ) throws IOException
+  )
   {
     final CuratorFramework framework =
         CuratorFrameworkFactory.builder()
@@ -85,7 +84,7 @@ public class CuratorModule implements Module
         new Lifecycle.Handler()
         {
           @Override
-          public void start() throws Exception
+          public void start()
           {
             log.info("Starting Curator");
             framework.start();
@@ -138,7 +137,7 @@ public class CuratorModule implements Module
     return new Exhibitors.BackupConnectionStringProvider()
     {
       @Override
-      public String getBackupConnectionString() throws Exception
+      public String getBackupConnectionString()
       {
         return zkHosts;
       }

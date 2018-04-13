@@ -31,25 +31,31 @@ public class NoopTaskLogs implements TaskLogs
   private final Logger log = new Logger(TaskLogs.class);
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException
+  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
   {
     return Optional.absent();
   }
 
   @Override
-  public void pushTaskLog(String taskid, File logFile) throws IOException
+  public void pushTaskLog(String taskid, File logFile)
   {
     log.info("Not pushing logs for task: %s", taskid);
   }
 
   @Override
-  public void killAll() throws IOException
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    log.info("Not pushing reports for task: %s", taskid);
+  }
+
+  @Override
+  public void killAll()
   {
     log.info("Noop: No task logs are deleted.");
   }
 
   @Override
-  public void killOlderThan(long timestamp) throws IOException
+  public void killOlderThan(long timestamp)
   {
     log.info("Noop: No task logs are deleted.");
   }

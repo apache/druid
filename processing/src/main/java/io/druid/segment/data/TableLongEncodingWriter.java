@@ -19,8 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.IAE;
 import io.druid.segment.writeout.WriteOutBytes;
 import it.unimi.dsi.fastutil.longs.Long2IntMap;
@@ -74,7 +72,7 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
-  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy) throws IOException
+  public void putMeta(ByteBuffer metaOut, CompressionStrategy strategy)
   {
     metaOut.put(CompressionFactory.setEncodingFlag(strategy.getId()));
     metaOut.put(CompressionFactory.LongEncodingFormat.TABLE.getId());
@@ -88,7 +86,7 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
   @Override
   public int metaSize()
   {
-    return 1 + 1 + 1 + Ints.BYTES + (table.size() * Longs.BYTES);
+    return 1 + 1 + 1 + Integer.BYTES + (table.size() * Long.BYTES);
   }
 
   @Override

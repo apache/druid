@@ -82,7 +82,7 @@ public class LookupNodeDiscoveryTest
   }
 
   @Test
-  public void testGetNodesInTier() throws Exception
+  public void testGetNodesInTier()
   {
     Assert.assertEquals(
         ImmutableList.of(
@@ -108,7 +108,7 @@ public class LookupNodeDiscoveryTest
   }
 
   @Test
-  public void testGetAllTiers() throws Exception
+  public void testGetAllTiers()
   {
     Assert.assertEquals(
         ImmutableSet.of("tier1", "tier2"),

@@ -134,7 +134,7 @@ public class BitmapBenchmark
 
   @Test
   @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 2)
-  public void timeConciseUnion() throws Exception
+  public void timeConciseUnion()
   {
     ImmutableConciseSet union = ImmutableConciseSet.union(concise);
     Assert.assertEquals(unionCount, union.size());
@@ -142,7 +142,7 @@ public class BitmapBenchmark
 
   @Test
   @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 2)
-  public void timeOffheapConciseUnion() throws Exception
+  public void timeOffheapConciseUnion()
   {
     ImmutableConciseSet union = ImmutableConciseSet.union(offheapConcise);
     Assert.assertEquals(unionCount, union.size());
@@ -150,7 +150,7 @@ public class BitmapBenchmark
 
   @Test
   @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 2)
-  public void timeGenericConciseUnion() throws Exception
+  public void timeGenericConciseUnion()
   {
     ImmutableBitmap union = conciseFactory.union(Lists.newArrayList(genericConcise));
     Assert.assertEquals(unionCount, union.size());
@@ -158,42 +158,42 @@ public class BitmapBenchmark
 
   @Test
   @BenchmarkOptions(warmupRounds = 1, benchmarkRounds = 5)
-  public void timeGenericConciseIntersection() throws Exception
+  public void timeGenericConciseIntersection()
   {
     ImmutableBitmap intersection = conciseFactory.intersection(Lists.newArrayList(genericConcise));
     Assert.assertTrue(intersection.size() >= minIntersection);
   }
 
   @Test
-  public void timeRoaringUnion() throws Exception
+  public void timeRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Lists.newArrayList(roaring).iterator());
     Assert.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
-  public void timeImmutableRoaringUnion() throws Exception
+  public void timeImmutableRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Lists.newArrayList(immutableRoaring).iterator());
     Assert.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
-  public void timeOffheapRoaringUnion() throws Exception
+  public void timeOffheapRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Lists.newArrayList(offheapRoaring).iterator());
     Assert.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
-  public void timeGenericRoaringUnion() throws Exception
+  public void timeGenericRoaringUnion()
   {
     ImmutableBitmap union = roaringFactory.union(Lists.newArrayList(genericRoaring));
     Assert.assertEquals(unionCount, union.size());
   }
 
   @Test
-  public void timeGenericRoaringIntersection() throws Exception
+  public void timeGenericRoaringIntersection()
   {
     ImmutableBitmap intersection = roaringFactory.intersection(Lists.newArrayList(genericRoaring));
     Assert.assertTrue(intersection.size() >= minIntersection);

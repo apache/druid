@@ -23,11 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.net.HttpHeaders;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-import org.apache.http.HttpHeaders;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -105,7 +105,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   @Override
   protected InputStream wrapObjectStream(URI object, InputStream stream) throws IOException
   {
-    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return CompressionUtils.decompress(stream, object.getPath());
   }
 
   @Override

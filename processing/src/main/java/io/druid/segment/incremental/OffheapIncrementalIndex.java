@@ -138,7 +138,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected Integer addToFacts(
+  protected AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -238,7 +238,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
     rowContainer.set(null);
-    return numEntries.get();
+    return new AddToFactsResult(numEntries.get(), new ArrayList<>());
   }
 
   @Override
@@ -311,6 +311,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     int[] indexAndOffset = indexAndOffsets.get(rowOffset);
     ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
     return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+  }
+
+  @Override
+  public boolean isNull(int rowOffset, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
+    return agg.isNull(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
   /**

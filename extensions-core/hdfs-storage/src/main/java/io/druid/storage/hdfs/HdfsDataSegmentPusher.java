@@ -51,7 +51,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(HdfsDataSegmentPusher.class);
 
-  private final HdfsDataSegmentPusherConfig config;
   private final Configuration hadoopConfig;
   private final ObjectMapper jsonMapper;
   private final String fullyQualifiedStorageDirectory;
@@ -63,7 +62,6 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       ObjectMapper jsonMapper
   ) throws IOException
   {
-    this.config = config;
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
     Path storageDir = new Path(config.getStorageDirectory());

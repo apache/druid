@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -141,7 +142,19 @@ public class MapVirtualColumnTest
   }
 
   @Test
-  public void testBasic() throws Exception
+  public void testSerde() throws IOException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    new DruidVirtualColumnsModule().getJacksonModules().forEach(mapper::registerModule);
+
+    final MapVirtualColumn column = new MapVirtualColumn("keys", "values", "params");
+    final String json = mapper.writeValueAsString(column);
+    final VirtualColumn fromJson = mapper.readValue(json, VirtualColumn.class);
+    Assert.assertEquals(column, fromJson);
+  }
+
+  @Test
+  public void testBasic()
   {
     Druids.SelectQueryBuilder builder = testBuilder();
 
@@ -185,7 +198,7 @@ public class MapVirtualColumnTest
     return map;
   }
 
-  private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected) throws Exception
+  private void checkSelectQuery(SelectQuery searchQuery, List<Map> expected)
   {
     List<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(searchQuery), ImmutableMap.of()).toList();
     Assert.assertEquals(1, results.size());

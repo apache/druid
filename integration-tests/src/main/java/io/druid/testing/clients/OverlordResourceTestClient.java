@@ -21,20 +21,19 @@ package io.druid.testing.clients;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import io.druid.java.util.http.client.HttpClient;
-import io.druid.java.util.http.client.Request;
-import io.druid.java.util.http.client.response.StatusResponseHandler;
-import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.indexer.TaskState;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
 import io.druid.testing.utils.RetryUtil;
@@ -43,6 +42,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -65,7 +65,7 @@ public class OverlordResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.indexer = config.getIndexerUrl();
-    this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
+    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
   }
 
   private String getIndexerURL()
@@ -182,7 +182,7 @@ public class OverlordResourceTestClient
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             TaskState status = getTaskStatus(taskID);
             if (status == TaskState.FAILED) {

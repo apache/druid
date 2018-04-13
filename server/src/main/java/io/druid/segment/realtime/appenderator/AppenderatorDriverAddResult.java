@@ -19,10 +19,12 @@
 
 package io.druid.segment.realtime.appenderator;
 
+import io.druid.java.util.common.parsers.ParseException;
+
 import javax.annotation.Nullable;
 
 /**
- * Result of {@link AppenderatorDriver#add}.  It contains the identifier of the
+ * Result of {@link BaseAppenderatorDriver#append)}.  It contains the identifier of the
  * segment which the InputRow is added to, the number of rows in that segment and if persist is required because either
  * maxRowsInMemory or intermediate persist period threshold is hit.
  */
@@ -33,32 +35,44 @@ public class AppenderatorDriverAddResult
   private final long totalNumRowsInAppenderator;
   private final boolean isPersistRequired;
 
+  @Nullable
+  private final ParseException parseException;
+
   public static AppenderatorDriverAddResult ok(
       SegmentIdentifier segmentIdentifier,
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
-      boolean isPersistRequired
+      boolean isPersistRequired,
+      @Nullable ParseException parseException
   )
   {
-    return new AppenderatorDriverAddResult(segmentIdentifier, numRowsInSegment, totalNumRowsInAppenderator, isPersistRequired);
+    return new AppenderatorDriverAddResult(
+        segmentIdentifier,
+        numRowsInSegment,
+        totalNumRowsInAppenderator,
+        isPersistRequired,
+        parseException
+    );
   }
 
   public static AppenderatorDriverAddResult fail()
   {
-    return new AppenderatorDriverAddResult(null, 0, 0, false);
+    return new AppenderatorDriverAddResult(null, 0, 0, false, null);
   }
 
   private AppenderatorDriverAddResult(
       @Nullable SegmentIdentifier segmentIdentifier,
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
-      boolean isPersistRequired
+      boolean isPersistRequired,
+      @Nullable ParseException parseException
   )
   {
     this.segmentIdentifier = segmentIdentifier;
     this.numRowsInSegment = numRowsInSegment;
     this.totalNumRowsInAppenderator = totalNumRowsInAppenderator;
     this.isPersistRequired = isPersistRequired;
+    this.parseException = parseException;
   }
 
   public boolean isOk()
@@ -84,5 +98,11 @@ public class AppenderatorDriverAddResult
   public boolean isPersistRequired()
   {
     return isPersistRequired;
+  }
+
+  @Nullable
+  public ParseException getParseException()
+  {
+    return parseException;
   }
 }

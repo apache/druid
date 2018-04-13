@@ -63,6 +63,7 @@ import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.common.task.KillTask;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -103,7 +104,6 @@ import io.druid.segment.loading.LocalDataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentTest;
@@ -115,6 +115,7 @@ import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -250,7 +251,7 @@ public class TaskLifecycleTest
   private static class MockExceptionalFirehoseFactory implements FirehoseFactory
   {
     @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
       return new Firehose()
       {
@@ -281,7 +282,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
 
         }
@@ -301,7 +302,7 @@ public class TaskLifecycleTest
     }
 
     @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+    public Firehose connect(InputRowParser parser, File temporaryDirectory)
     {
       final Iterator<InputRow> inputRowIterator = usedByRealtimeIdxTask
                                                   ? realtimeIdxTaskInputRows.iterator()
@@ -336,7 +337,7 @@ public class TaskLifecycleTest
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
 
         }
@@ -458,10 +459,6 @@ public class TaskLifecycleTest
             //Noop
           }
 
-          Map<SegmentDescriptor, Pair<Executor, Runnable>> getHandOffCallbacks()
-          {
-            return handOffCallbacks;
-          }
         };
       }
     };
@@ -485,7 +482,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+      public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
       {
         pushedSegments++;
         return segment;
@@ -550,7 +547,6 @@ public class TaskLifecycleTest
         {
           @Override
           public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec)
-              throws SegmentLoadingException
           {
             return dataSegment;
           }
@@ -558,13 +554,13 @@ public class TaskLifecycleTest
         new DataSegmentArchiver()
         {
           @Override
-          public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+          public DataSegment archive(DataSegment segment)
           {
             return segment;
           }
 
           @Override
-          public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+          public DataSegment restore(DataSegment segment)
           {
             return segment;
           }
@@ -572,25 +568,25 @@ public class TaskLifecycleTest
         new DataSegmentAnnouncer()
         {
           @Override
-          public void announceSegment(DataSegment segment) throws IOException
+          public void announceSegment(DataSegment segment)
           {
             announcedSinks++;
           }
 
           @Override
-          public void unannounceSegment(DataSegment segment) throws IOException
+          public void unannounceSegment(DataSegment segment)
           {
 
           }
 
           @Override
-          public void announceSegments(Iterable<DataSegment> segments) throws IOException
+          public void announceSegments(Iterable<DataSegment> segments)
           {
 
           }
 
           @Override
-          public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+          public void unannounceSegments(Iterable<DataSegment> segments)
           {
 
           }
@@ -611,7 +607,8 @@ public class TaskLifecycleTest
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new NoopTestTaskFileWriter()
     );
   }
 
@@ -671,8 +668,28 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null, null)
+            new IndexTuningConfig(
+                10000,
+                10,
+                null,
+                null,
+                null,
+                indexSpec,
+                3,
+                true,
+                true,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
         ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null
     );
 
@@ -729,8 +746,28 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
-            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null, null)
+            new IndexTuningConfig(
+                10000,
+                10,
+                null,
+                null,
+                null,
+                indexSpec,
+                3,
+                true,
+                true,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
         ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null
     );
 
@@ -1034,7 +1071,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting) throws IOException
+      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting)
       {
         throw new RuntimeException("FAILURE");
       }
@@ -1094,8 +1131,28 @@ public class TaskLifecycleTest
                 mapper
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
-            new IndexTuningConfig(10000, 10, null, null, null, indexSpec, null, false, null, null, null, null, null)
+            new IndexTuningConfig(
+                10000,
+                10,
+                null,
+                null,
+                null,
+                indexSpec,
+                null,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
         ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null
     );
 

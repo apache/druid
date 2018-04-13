@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.IAE;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -252,7 +252,7 @@ public final class DimensionSelectorUtils
 
   public static DimensionSelector constantSelector(@Nullable final String value)
   {
-    if (Strings.isNullOrEmpty(value)) {
+    if (NullHandling.isNullOrEquivalent(value)) {
       return NullDimensionSelector.instance();
     } else {
       return new ConstantDimensionSelector(value);

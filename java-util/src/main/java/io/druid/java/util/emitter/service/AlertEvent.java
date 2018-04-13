@@ -21,7 +21,9 @@ package io.druid.java.util.emitter.service;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.core.Event;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -29,7 +31,8 @@ import java.util.Map;
 
 /**
  */
-public class AlertEvent implements ServiceEvent
+@PublicApi
+public class AlertEvent implements Event
 {
   private final ImmutableMap<String, String> serviceDimensions;
   private final Severity severity;
@@ -95,7 +98,6 @@ public class AlertEvent implements ServiceEvent
     this(DateTimes.nowUtc(), service, host, Severity.DEFAULT, description, ImmutableMap.<String, Object>of());
   }
 
-  @Override
   public DateTime getCreatedTime()
   {
     return createdTime;
@@ -107,22 +109,22 @@ public class AlertEvent implements ServiceEvent
     return "alerts";
   }
 
-  @Override
+  /*
+   * This method is used in certain proprietary emitter extensions
+   */
+  @SuppressWarnings("unused")
   public String getService()
   {
     return serviceDimensions.get("service");
   }
 
-  @Override
+  /*
+   * This method is used in certain proprietary emitter extensions
+   */
+  @SuppressWarnings("unused")
   public String getHost()
   {
     return serviceDimensions.get("host");
-  }
-
-  @Override
-  public boolean isSafeToBuffer()
-  {
-    return false;
   }
 
   public Severity getSeverity()
@@ -135,6 +137,10 @@ public class AlertEvent implements ServiceEvent
     return description;
   }
 
+  /*
+   * This method is used in certain proprietary emitter extensions
+   */
+  @SuppressWarnings("unused")
   public Map<String, Object> getDataMap()
   {
     return Collections.unmodifiableMap(dataMap);
