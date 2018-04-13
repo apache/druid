@@ -107,6 +107,7 @@ public class FilterPartitionTest extends BaseFilterTest
     {
       super(dimension, value, extractionFn);
     }
+
     @Override
     public Filter toFilter()
     {

@@ -163,7 +163,10 @@ public class LookupDimensionSpecTest
   public void testApply(DimensionSpec dimensionSpec, Map<String, String> map)
   {
     for (Map.Entry<String, String> entry : map.entrySet()) {
-      Assert.assertEquals(NullHandling.emptyToNullIfNeeded(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
+      Assert.assertEquals(
+          NullHandling.emptyToNullIfNeeded(entry.getValue()),
+          dimensionSpec.getExtractionFn().apply(entry.getKey())
+      );
     }
   }
 

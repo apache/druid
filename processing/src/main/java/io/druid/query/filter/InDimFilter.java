@@ -60,6 +60,7 @@ public class InDimFilter implements DimFilter
   // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
   public static final int NUMERIC_HASHING_THRESHOLD = 16;
 
+  // values can contain `null` string.
   private final SortedSet<String> values;
   private final String dimension;
   private final ExtractionFn extractionFn;

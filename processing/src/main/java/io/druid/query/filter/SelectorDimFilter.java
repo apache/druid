@@ -36,6 +36,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
@@ -45,6 +46,8 @@ import java.util.Objects;
 public class SelectorDimFilter implements DimFilter
 {
   private final String dimension;
+
+  @Nullable
   private final String value;
   private final ExtractionFn extractionFn;
 

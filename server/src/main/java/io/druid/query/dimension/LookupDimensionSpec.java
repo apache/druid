@@ -54,6 +54,7 @@ public class LookupDimensionSpec implements DimensionSpec
   private final boolean retainMissingValue;
 
   @JsonProperty
+  @Nullable
   private final String replaceMissingValueWith;
 
   @JsonProperty
