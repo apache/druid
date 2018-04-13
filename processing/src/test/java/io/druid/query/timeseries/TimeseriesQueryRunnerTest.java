@@ -722,12 +722,12 @@ public class TimeseriesQueryRunnerTest
     );
     for (Interval interval : iterable) {
       lotsOfZeroes.add(
-          new Result<>(
-              interval.getStart(),
-              new TimeseriesResultValue(
-                  ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
+              new Result<>(
+                      interval.getStart(),
+                      new TimeseriesResultValue(
+                              ImmutableMap.<String, Object>of("rows", 0L, "idx", 0L)
+                      )
               )
-          )
       );
     }
 
@@ -1477,8 +1477,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>())
-                                                            .toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1520,8 +1519,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>())
-                                                            .toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1563,8 +1561,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>())
-                                                            .toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -2317,11 +2314,7 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(
-                                      new SelectorDimFilter(
-                                          QueryRunnerTestHelper.marketDimension,
-                                          "upfront",
-                                          lookupExtractionFn
-                                      )
+                                      new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "upfront", lookupExtractionFn)
                                   )
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
