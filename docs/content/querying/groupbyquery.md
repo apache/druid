@@ -235,10 +235,8 @@ strategy perform the outer query on the broker in a single-threaded fashion.
 
 #### Configurations
 
-This section describes the configurations for groupBy queries. You can set system-wide configurations by adding them to runtime properties or query-specific configurations by adding them to query contexts. All runtime properties are prefixed by `druid.query.groupBy`.
-
-#### Commonly tuned configurations
-
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on broker, historical, and MiddleManager nodes. You can set the query context parameters through the [query context](query-context.html).
+  
 ##### Configurations for groupBy v2
 
 Supported runtime properties:

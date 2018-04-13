@@ -218,9 +218,12 @@ public class Expressions
       final RexNode expression
   )
   {
-    if (expression.getKind() == SqlKind.AND
-        || expression.getKind() == SqlKind.OR
-        || expression.getKind() == SqlKind.NOT) {
+    if (expression.getKind() == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
+      // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
+      return toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
+    } else if (expression.getKind() == SqlKind.AND
+               || expression.getKind() == SqlKind.OR
+               || expression.getKind() == SqlKind.NOT) {
       final List<DimFilter> filters = Lists.newArrayList();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(

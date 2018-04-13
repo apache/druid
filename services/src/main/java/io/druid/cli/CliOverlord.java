@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -91,6 +92,7 @@ import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -194,7 +196,9 @@ public class CliOverlord extends ServerRunnable
             if (standalone) {
               binder.bind(RedirectFilter.class).in(LazySingleton.class);
               binder.bind(RedirectInfo.class).to(OverlordRedirectInfo.class).in(LazySingleton.class);
-              binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
+              binder.bind(JettyServerInitializer.class)
+                    .to(OverlordJettyServerInitializer.class)
+                    .in(LazySingleton.class);
             }
 
             Jerseys.addResource(binder, OverlordResource.class);
@@ -302,6 +306,14 @@ public class CliOverlord extends ServerRunnable
    */
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
+    private final AuthConfig authConfig;
+
+    @Inject
+    OverlordJettyServerInitializer(AuthConfig authConfig)
+    {
+      this.authConfig = authConfig;
+    }
+
     @Override
     public void initialize(Server server, Injector injector)
     {
@@ -330,6 +342,7 @@ public class CliOverlord extends ServerRunnable
 
       // perform no-op authorization for these resources
       AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+      AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
       authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.emitter.core.Event;
@@ -33,6 +34,7 @@ import java.util.Map;
 
 /**
  */
+@PublicApi
 public class ServiceMetricEvent implements Event
 {
   public static Builder builder()

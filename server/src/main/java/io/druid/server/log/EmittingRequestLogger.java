@@ -22,6 +22,7 @@ package io.druid.server.log;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.emitter.core.Event;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceEventBuilder;
@@ -58,6 +59,7 @@ public class EmittingRequestLogger implements RequestLogger
            '}';
   }
 
+  @PublicApi
   public static class RequestLogEvent implements Event
   {
     final ImmutableMap<String, String> serviceDimensions;
