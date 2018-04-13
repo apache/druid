@@ -51,6 +51,7 @@ import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.granularity.NoneGranularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.jackson.JacksonUtils;
@@ -79,6 +80,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -195,28 +197,37 @@ public class CompactionTask extends AbstractTask
           jsonMapper
       );
 
-      indexTaskSpec = new IndexTask(
-          getId(),
-          getGroupId(),
-          getTaskResource(),
-          getDataSource(),
-          ingestionSpec,
-          getContext(),
-          authorizerMapper,
-          null
-      );
+      if (ingestionSpec != null) {
+        indexTaskSpec = new IndexTask(
+            getId(),
+            getGroupId(),
+            getTaskResource(),
+            getDataSource(),
+            ingestionSpec,
+            getContext(),
+            authorizerMapper,
+            null
+        );
+      }
     }
 
-    if (indexTaskSpec.getIngestionSchema() == null) {
-      log.info("Cannot find segments for interval");
+    if (indexTaskSpec == null) {
+      log.warn("Failed to generate compaction spec");
+      return TaskStatus.failure(getId());
+    } else {
+      final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(indexTaskSpec);
+      log.info("Generated compaction task details: " + json);
+
+      return indexTaskSpec.run(toolbox);
     }
-
-    final String json = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(indexTaskSpec);
-    log.info("Generated compaction task details: " + json);
-
-    return indexTaskSpec.run(toolbox);
   }
 
+  /**
+   * Generate {@link IndexIngestionSpec} from input segments.
+
+   * @return null if input segments don't exist. Otherwise, a generated ingestionSpec.
+   */
+  @Nullable
   @VisibleForTesting
   static IndexIngestionSpec createIngestionSchema(
       TaskToolbox toolbox,
@@ -289,12 +300,22 @@ public class CompactionTask extends AbstractTask
       throws IOException
   {
     // find metadata for interval
-    final List<QueryableIndex> queryableIndices = loadSegments(timelineSegments, segmentFileMap, indexIO);
+    final List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments = loadSegments(
+        timelineSegments,
+        segmentFileMap,
+        indexIO
+    );
 
     // find merged aggregators
-    final List<AggregatorFactory[]> aggregatorFactories = queryableIndices
+    for (Pair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
+      final QueryableIndex index = pair.lhs;
+      if (index.getMetadata() == null) {
+        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getIdentifier());
+      }
+    }
+    final List<AggregatorFactory[]> aggregatorFactories = queryableIndexAndSegments
         .stream()
-        .map(index -> index.getMetadata().getAggregators())
+        .map(pair -> pair.lhs.getMetadata().getAggregators()) // We have already done null check on index.getMetadata()
         .collect(Collectors.toList());
     final AggregatorFactory[] mergedAggregators = AggregatorFactory.mergeAggregators(aggregatorFactories);
 
@@ -304,7 +325,11 @@ public class CompactionTask extends AbstractTask
 
     // find granularity spec
     // set rollup only if rollup is set for all segments
-    final boolean rollup = queryableIndices.stream().allMatch(index -> index.getMetadata().isRollup());
+    final boolean rollup = queryableIndexAndSegments.stream().allMatch(pair -> {
+      // We have already checked getMetadata() doesn't return null
+      final Boolean isRollup = pair.lhs.getMetadata().isRollup();
+      return isRollup != null && isRollup;
+    });
     final GranularitySpec granularitySpec = new ArbitraryGranularitySpec(
         new NoneGranularity(),
         rollup,
@@ -313,7 +338,7 @@ public class CompactionTask extends AbstractTask
 
     // find unique dimensions
     final DimensionsSpec finalDimensionsSpec = dimensionsSpec == null ?
-                                               createDimensionsSpec(queryableIndices) :
+                                               createDimensionsSpec(queryableIndexAndSegments) :
                                                dimensionsSpec;
     final InputRowParser parser = new NoopInputRowParser(new TimeAndDimsParseSpec(null, finalDimensionsSpec));
 
@@ -327,7 +352,7 @@ public class CompactionTask extends AbstractTask
     );
   }
 
-  private static DimensionsSpec createDimensionsSpec(List<QueryableIndex> queryableIndices)
+  private static DimensionsSpec createDimensionsSpec(List<Pair<QueryableIndex, DataSegment>> queryableIndices)
   {
     final BiMap<String, Integer> uniqueDims = HashBiMap.create();
     final Map<String, DimensionSchema> dimensionSchemaMap = new HashMap<>();
@@ -337,9 +362,24 @@ public class CompactionTask extends AbstractTask
     // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
     // frequently, and thus the performance should be optimized for recent ones rather than old ones.
 
-    // timelineSegments are sorted in order of interval
+    // timelineSegments are sorted in order of interval, but we do a sanity check here.
+    final Comparator<Interval> intervalComparator = Comparators.intervalsByStartThenEnd();
+    for (int i = 0; i < queryableIndices.size() - 1; i++) {
+      final Interval shouldBeSmaller = queryableIndices.get(i).lhs.getDataInterval();
+      final Interval shouldBeLarger = queryableIndices.get(i + 1).lhs.getDataInterval();
+      Preconditions.checkState(
+          intervalComparator.compare(shouldBeSmaller, shouldBeLarger) <= 0,
+          "QueryableIndexes are not sorted! Interval[%s] of segment[%s] is laster than interval[%s] of segment[%s]",
+          shouldBeSmaller,
+          queryableIndices.get(i).rhs.getIdentifier(),
+          shouldBeLarger,
+          queryableIndices.get(i + 1).rhs.getIdentifier()
+      );
+    }
+
     int index = 0;
-    for (QueryableIndex queryableIndex : Lists.reverse(queryableIndices)) {
+    for (Pair<QueryableIndex, DataSegment> pair : Lists.reverse(queryableIndices)) {
+      final QueryableIndex queryableIndex = pair.lhs;
       final Map<String, DimensionHandler> dimensionHandlerMap = queryableIndex.getDimensionHandlers();
 
       for (String dimension : queryableIndex.getAvailableDimensions()) {
@@ -385,23 +425,22 @@ public class CompactionTask extends AbstractTask
     return new DimensionsSpec(dimensionSchemas, null, null);
   }
 
-  private static List<QueryableIndex> loadSegments(
+  private static List<Pair<QueryableIndex, DataSegment>> loadSegments(
       List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
       Map<DataSegment, File> segmentFileMap,
       IndexIO indexIO
   ) throws IOException
   {
-    final List<QueryableIndex> segments = new ArrayList<>();
+    final List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
 
     for (TimelineObjectHolder<String, DataSegment> timelineSegment : timelineSegments) {
       final PartitionHolder<DataSegment> partitionHolder = timelineSegment.getObject();
       for (PartitionChunk<DataSegment> chunk : partitionHolder) {
         final DataSegment segment = chunk.getObject();
-        segments.add(
-            indexIO.loadIndex(
-                Preconditions.checkNotNull(segmentFileMap.get(segment), "File for segment %s", segment.getIdentifier())
-            )
+        final QueryableIndex queryableIndex = indexIO.loadIndex(
+            Preconditions.checkNotNull(segmentFileMap.get(segment), "File for segment %s", segment.getIdentifier())
         );
+        segments.add(Pair.of(queryableIndex, segment));
       }
     }
 
