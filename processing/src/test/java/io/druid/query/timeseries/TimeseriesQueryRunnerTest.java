@@ -475,11 +475,12 @@ public class TimeseriesQueryRunnerTest
     );
 
     // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
-    Iterable<Result<TimeseriesResultValue>> results = new FinalizeResultsQueryRunner(
+    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
         toolChest.mergeResults(runner),
         toolChest
-    ).run(QueryPlus.wrap(query), CONTEXT)
-     .toList();
+    );
+
+    final List results = finalRunner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     TestHelper.assertExpectedResults(expectedResults, results);
   }
