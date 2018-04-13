@@ -302,8 +302,8 @@ public class TestHelper
     // always generate exactly the same results (different merge ordering / float vs double)
     Assert.assertEquals(
         StringUtils.format("%s: timestamp", msg),
-        expected.getTimestamp().getMillis(),
-        actual.getTimestamp().getMillis()
+        expected.getTimestamp(),
+        actual.getTimestamp()
     );
 
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
