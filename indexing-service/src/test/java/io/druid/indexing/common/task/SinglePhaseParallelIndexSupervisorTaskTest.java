@@ -21,7 +21,6 @@ package io.druid.indexing.common.task;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -83,6 +82,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.stream.Stream;
 
 public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBase
 {
@@ -158,7 +158,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
 
-    final Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator = task.subTaskSpecIterator();
+    final Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator = task.subTaskSpecIterator().iterator();
 
     while (subTaskSpecIterator.hasNext()) {
       final SinglePhaseParallelIndexSubTaskSpec spec = subTaskSpecIterator.next();
@@ -322,12 +322,12 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends IngestionTestBas
     }
 
     @Override
-    Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator() throws IOException
+    Stream<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator() throws IOException
     {
       final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
           .getIOConfig()
           .getFirehoseFactory();
-      return Iterators.transform(baseFirehoseFactory.getSplits(), split -> {
+      return baseFirehoseFactory.getSplits().map(split -> {
         try {
           // taskId is suffixed by the current time and this sleep is to make sure that every sub task has different id
           Thread.sleep(10);

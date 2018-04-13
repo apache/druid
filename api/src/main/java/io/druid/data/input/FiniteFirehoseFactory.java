@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.druid.data.input.impl.InputRowParser;
 
 import java.io.IOException;
-import java.util.Iterator;
+import java.util.stream.Stream;
 
 /**
  * {@link FirehoseFactory} designed for batch processing. Its implementations assume that the amount of inputs is
@@ -48,7 +48,7 @@ public interface FiniteFirehoseFactory<T extends InputRowParser, S> extends Fire
    * Returns an iterator of {@link InputSplit}s.
    */
   @JsonIgnore
-  Iterator<InputSplit<S>> getSplits() throws IOException;
+  Stream<InputSplit<S>> getSplits() throws IOException;
 
   /**
    * Returns number of splits returned by {@link #getSplits()}.

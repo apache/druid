@@ -26,8 +26,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -80,6 +78,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * SinglePhaseParallelIndexSupervisorTask is capable of running multiple subTasks for parallel indexing. This is
@@ -223,7 +222,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
     );
     chatHandlerProvider.register(getId(), this, false);
 
-    final Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator();
+    final Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator().iterator();
     final int numTotalTasks = baseFirehoseFactory.getNumSplits();
     final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckPeriodMs();
     TaskState state = TaskState.FAILED;
@@ -468,9 +467,9 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   @VisibleForTesting
-  Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator() throws IOException
+  Stream<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator() throws IOException
   {
-    return Iterators.transform(baseFirehoseFactory.getSplits(), this::newTaskSpec);
+    return baseFirehoseFactory.getSplits().map(this::newTaskSpec);
   }
 
   @VisibleForTesting
@@ -496,7 +495,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     if (firehoseFactory instanceof FiniteFirehoseFactory) {
       final FiniteFirehoseFactory<?, ?> finiteFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
-      return Lists.newArrayList(finiteFirehoseFactory.getSplits());
+      return finiteFirehoseFactory.getSplits().collect(Collectors.toList());
     } else {
       throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());
     }

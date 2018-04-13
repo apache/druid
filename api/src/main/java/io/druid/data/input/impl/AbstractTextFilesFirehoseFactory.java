@@ -37,7 +37,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This is an abstract class for firehose factory for making firehoses reading text files.
@@ -103,14 +103,10 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
   }
 
   @Override
-  public Iterator<InputSplit<T>> getSplits() throws IOException
+  public Stream<InputSplit<T>> getSplits() throws IOException
   {
     initializeObjectsIfNeeded();
-    return getObjects()
-        .stream()
-        .map(InputSplit::new)
-        .collect(Collectors.toList())
-        .iterator();
+    return getObjects().stream().map(InputSplit::new);
   }
 
   @Override
