@@ -1591,7 +1591,6 @@ public class CalciteQueryTest extends CalciteTestBase
   @Test
   public void testGroupByCaseWhen() throws Exception
   {
-    String nullValue = NullHandling.replaceWithDefault() ? "" : null;
     testQuery(
         "SELECT\n"
         + "  CASE EXTRACT(DAY FROM __time)\n"
@@ -1632,7 +1631,7 @@ public class CalciteQueryTest extends CalciteTestBase
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{nullValue, 2L},
+            new Object[]{NullHandling.defaultStringValue(), 2L},
             new Object[]{"match-cnt", 1L},
             new Object[]{"match-m1 ", 3L}
         )
@@ -1656,7 +1655,7 @@ public class CalciteQueryTest extends CalciteTestBase
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
                                 "d0:v",
-                                "case_searched(((\"m1\" > 1) && (\"m1\" < 5) && (\"cnt\" == 1)),'x','')",
+                                "case_searched(((\"m1\" > 1) && (\"m1\" < 5) && (\"cnt\" == 1)),'x',null)",
                                 ValueType.STRING
                             )
                         )
@@ -1666,7 +1665,7 @@ public class CalciteQueryTest extends CalciteTestBase
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 3L},
+            new Object[]{NullHandling.defaultStringValue(), 3L},
             new Object[]{"x", 3L}
         )
     );

@@ -21,6 +21,7 @@ package io.druid.query.extraction;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import io.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,9 +40,19 @@ public class MapLookupExtractorTest
   {
     Assert.assertEquals(Arrays.asList("foo"), fn.unapply("bar"));
     Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(fn.unapply("")));
-    Assert.assertEquals("Null value should be equal to empty string",
-                        Sets.newHashSet("null", "empty String"),
-                        Sets.newHashSet(fn.unapply((String) null)));
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(
+          "Null value should be equal to empty list",
+          Sets.newHashSet(),
+          Sets.newHashSet(fn.unapply((String) null))
+      );
+    } else {
+      Assert.assertEquals(
+          "Null value should be equal to empty string",
+          Sets.newHashSet("null", "empty String"),
+          Sets.newHashSet(fn.unapply((String) null))
+      );
+    }
     Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(fn.unapply("empty_string")));
     Assert.assertEquals("not existing value returns empty list", Collections.EMPTY_LIST, fn.unapply("not There"));
   }

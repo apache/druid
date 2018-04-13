@@ -189,7 +189,14 @@ public class SelectorDimFilter implements DimFilter
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    retSet.add(Range.singleton(StringUtils.nullToEmptyNonDruidDataString(value)));
+    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueEquivalent == null) {
+      // Case when SQL compatible null handling is enabled
+      // Nulls are less than empty String in segments
+      retSet.add(Range.lessThan(""));
+    } else {
+      retSet.add(Range.singleton(valueEquivalent));
+    }
     return retSet;
   }
 

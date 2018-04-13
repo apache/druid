@@ -31,6 +31,7 @@ import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactoryContainer;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.lookup.MapLookupExtractorFactory;
+import io.druid.segment.TestHelper;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.easymock.EasyMock;
@@ -127,11 +128,11 @@ public class LookupDimensionSpecTest
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
-            ImmutableMap.of("not there", "")
+            TestHelper.createExpectedMap("not there", null)
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", null, false, null, "lookupName", LOOKUP_REF_MANAGER, true),
-            ImmutableMap.of("not there", "")
+            TestHelper.createExpectedMap("not there", null)
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null,
