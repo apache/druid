@@ -2966,6 +2966,34 @@ public class CalciteQueryTest extends CalciteTestBase
   }
 
   @Test
+  public void testRemoveUselessCaseWhen() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE\n"
+        + "  CASE\n"
+        + "    WHEN __time >= TIME_PARSE('2000-01-01 00:00:00', 'yyyy-MM-dd HH:mm:ss') AND __time < TIMESTAMP '2001-01-01 00:00:00'\n"
+        + "    THEN true\n"
+        + "    ELSE false\n"
+        + "  END\n"
+        + "OR\n"
+        + "  __time >= TIMESTAMP '2010-01-01 00:00:00' AND __time < TIMESTAMP '2011-01-01 00:00:00'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Intervals.of("2000/2001"), Intervals.of("2010/2011")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithTimeMillisecondFilters() throws Exception
   {
     testQuery(

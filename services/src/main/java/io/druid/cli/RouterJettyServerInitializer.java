@@ -34,6 +34,7 @@ import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.router.ManagementProxyConfig;
 import io.druid.server.router.Router;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -63,6 +64,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   private final ManagementProxyConfig managementProxyConfig;
   private final AsyncQueryForwardingServlet asyncQueryForwardingServlet;
   private final AsyncManagementForwardingServlet asyncManagementForwardingServlet;
+  private final AuthConfig authConfig;
 
   @Inject
   public RouterJettyServerInitializer(
@@ -70,7 +72,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       @Global DruidHttpClientConfig globalHttpClientConfig,
       ManagementProxyConfig managementProxyConfig,
       AsyncQueryForwardingServlet asyncQueryForwardingServlet,
-      AsyncManagementForwardingServlet asyncManagementForwardingServlet
+      AsyncManagementForwardingServlet asyncManagementForwardingServlet,
+      AuthConfig authConfig
   )
   {
     this.routerHttpClientConfig = routerHttpClientConfig;
@@ -78,6 +81,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     this.managementProxyConfig = managementProxyConfig;
     this.asyncQueryForwardingServlet = asyncQueryForwardingServlet;
     this.asyncManagementForwardingServlet = asyncManagementForwardingServlet;
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -105,6 +109,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);

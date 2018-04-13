@@ -31,8 +31,6 @@ The configuration examples in the rest of this document will use "kerberos" as t
 ### Properties
 |Property|Possible Values|Description|Default|required|
 |--------|---------------|-----------|-------|--------|
-|`druid.auth.authenticator.kerberos.internalClientPrincipal`|`druid@EXAMPLE.COM`| Principal user name, used for internal node communication|empty|Yes|
-|`druid.auth.authenticator.kerberos.internalClientKeytab`|`/etc/security/keytabs/druid.keytab`|Path to keytab file used for internal node communication|empty|Yes|
 |`druid.auth.authenticator.kerberos.serverPrincipal`|`HTTP/_HOST@EXAMPLE.COM`| SPNego service principal used by druid nodes|empty|Yes|
 |`druid.auth.authenticator.kerberos.serverKeytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid nodes|empty|Yes|
 |`druid.auth.authenticator.kerberos.authToLocal`|`RULE:[1:$1@$0](druid@EXAMPLE.COM)s/.*/druid DEFAULT`|It allows you to set a general rule for mapping principal names to local user names. It will be used if there is not an explicit mapping for the principal name that is being translated.|DEFAULT|No|
@@ -54,6 +52,17 @@ In Active Directory environment, SPNEGO token in the Authorization header includ
 which includes all security groups for the user. In some cases when the user belongs to many security groups the header to grow beyond what druid can handle by default.
 In such cases, max request header size that druid can handle can be increased by setting `druid.server.http.maxRequestHeaderSize` (default 8Kb) and `druid.router.http.maxRequestBufferSize` (default 8Kb).
 
+## Configuring Kerberos Escalated Client 
+
+Druid internal nodes communicate with each other using an escalated http Client. A Kerberos enabled escalated HTTP Client can be configured by following properties -  
+
+
+|Property|Example Values|Description|Default|required|
+|--------|---------------|-----------|-------|--------|
+|`druid.escalator.type`|`kerberos`| Type of Escalator client used for internal node communication.|n/a|Yes|
+|`druid.escalator.internalClientPrincipal`|`druid@EXAMPLE.COM`| Principal user name, used for internal node communication|n/a|Yes|
+|`druid.escalator.internalClientKeytab`|`/etc/security/keytabs/druid.keytab`|Path to keytab file used for internal node communication|n/a|Yes|
+|`druid.escalator.authorizerName`|`MyBasicAuthorizer`|Authorizer that requests should be directed to.|n/a|Yes|
 
 ## Accessing Druid HTTP end points when kerberos security is enabled 
 1. To access druid HTTP endpoints via curl user will need to first login using `kinit` command as follows -  

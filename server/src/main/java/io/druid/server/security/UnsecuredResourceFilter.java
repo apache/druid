@@ -53,6 +53,7 @@ public class UnsecuredResourceFilter implements Filter
 
     // This request will not go to an Authorizer, so we need to set this for PreResponseAuthorizationCheckFilter
     servletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    servletRequest.setAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH, true);
     filterChain.doFilter(servletRequest, servletResponse);
   }
 
