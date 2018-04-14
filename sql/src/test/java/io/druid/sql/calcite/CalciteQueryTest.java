@@ -276,6 +276,33 @@ public class CalciteQueryTest extends CalciteTestBase
     );
   }
 
+
+  @Test
+  public void testSelectCountStart() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  dim2 = 0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        null,
+        ImmutableList.of(
+            new Object[]{11.0, 0.0}
+        )
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  __time >= TIMESTAMP '2999-01-01 00:00:00'",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        null,
+        ImmutableList.of(
+            new Object[]{11.0, 0.0}
+        )
+    );
+  }
+
   @Test
   public void testSelectTrimFamily() throws Exception
   {
