@@ -26,6 +26,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
 import java.io.IOException;
 
@@ -57,10 +58,16 @@ public class AllowOptionsResourceFilter implements Filter
     // so this filter catches all OPTIONS requests and authorizes them.
     if (HttpMethod.OPTIONS.equals(httpReq.getMethod())) {
       if (allowUnauthenticatedHttpOptions) {
-        httpReq.setAttribute(
-            AuthConfig.DRUID_AUTHENTICATION_RESULT,
-            new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)
-        );
+        // If the request already had credentials and authenticated successfully, keep the authenticated identity.
+        // Otherwise, allow the unauthenticated request.
+        if (httpReq.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) == null) {
+          httpReq.setAttribute(
+              AuthConfig.DRUID_AUTHENTICATION_RESULT,
+              new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)
+          );
+        }
+      } else {
+        ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
       }
 
       httpReq.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);

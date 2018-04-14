@@ -102,10 +102,10 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
     AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
-    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
-
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
