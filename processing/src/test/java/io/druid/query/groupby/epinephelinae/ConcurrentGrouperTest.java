@@ -158,7 +158,7 @@ public class ConcurrentGrouperTest
     final List<Entry<Long>> actual = Lists.newArrayList(iterator);
     iterator.close();
 
-    Assert.assertTrue(!TEST_RESOURCE_HOLDER.taken || TEST_RESOURCE_HOLDER.closed);
+    Assert.assertTrue(TEST_RESOURCE_HOLDER.taken);
 
     final List<Entry<Long>> expected = new ArrayList<>();
     for (long i = 0; i < numRows; i++) {
@@ -173,8 +173,6 @@ public class ConcurrentGrouperTest
   static class TestResourceHolder extends ReferenceCountingResourceHolder<ByteBuffer>
   {
     private boolean taken;
-    private boolean closed;
-    private ByteBuffer buffer;
 
     TestResourceHolder(int bufferSize)
     {
@@ -185,14 +183,7 @@ public class ConcurrentGrouperTest
     public ByteBuffer get()
     {
       taken = true;
-      return buffer;
-    }
-
-    @Override
-    public void close()
-    {
-      closed = true;
-      super.close();
+      return super.get();
     }
   }
 
