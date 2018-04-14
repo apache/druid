@@ -98,6 +98,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     List<Authenticator> authenticators = null;
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
+    UNSECURED_PATHS.addAll(serverConfig.getUnsecuredPaths());
+
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
     AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
