@@ -20,10 +20,13 @@
 package io.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -67,6 +70,10 @@ public class ServerConfig
   @JsonProperty
   @NotNull
   private Period unannouncePropogationDelay = Period.ZERO;
+
+  @JsonProperty
+  @NotNull
+  private List<String> unsecuredPaths = ImmutableList.of("/*");
 
   public int getNumThreads()
   {
@@ -118,6 +125,11 @@ public class ServerConfig
     return unannouncePropogationDelay;
   }
 
+  public List<String> getUnsecuredPaths()
+  {
+    return unsecuredPaths;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -129,15 +141,16 @@ public class ServerConfig
     }
     ServerConfig that = (ServerConfig) o;
     return numThreads == that.numThreads &&
-           queueSize == that.queueSize &&
-           enableRequestLimit == that.enableRequestLimit &&
-           defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes == that.maxScatterGatherBytes &&
-           maxQueryTimeout == that.maxQueryTimeout &&
-           maxRequestHeaderSize == that.maxRequestHeaderSize &&
-           Objects.equals(maxIdleTime, that.maxIdleTime) &&
-           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
-           Objects.equals(unannouncePropogationDelay, that.unannouncePropogationDelay);
+        queueSize == that.queueSize &&
+        enableRequestLimit == that.enableRequestLimit &&
+        defaultQueryTimeout == that.defaultQueryTimeout &&
+        maxScatterGatherBytes == that.maxScatterGatherBytes &&
+        maxQueryTimeout == that.maxQueryTimeout &&
+        maxRequestHeaderSize == that.maxRequestHeaderSize &&
+        Objects.equals(maxIdleTime, that.maxIdleTime) &&
+        Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
+        Objects.equals(unannouncePropogationDelay, that.unannouncePropogationDelay) &&
+        Objects.equals(unsecuredPaths, that.unsecuredPaths);
   }
 
   @Override
@@ -154,7 +167,8 @@ public class ServerConfig
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
-        unannouncePropogationDelay
+        unannouncePropogationDelay,
+        unsecuredPaths
     );
   }
 
@@ -162,16 +176,17 @@ public class ServerConfig
   public String toString()
   {
     return "ServerConfig{" +
-           "numThreads=" + numThreads +
-           ", queueSize=" + queueSize +
-           ", enableRequestLimit=" + enableRequestLimit +
-           ", maxIdleTime=" + maxIdleTime +
-           ", defaultQueryTimeout=" + defaultQueryTimeout +
-           ", maxScatterGatherBytes=" + maxScatterGatherBytes +
-           ", maxQueryTimeout=" + maxQueryTimeout +
-           ", maxRequestHeaderSize=" + maxRequestHeaderSize +
-           ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
-           ", unannouncePropogationDelay=" + unannouncePropogationDelay +
-           '}';
+        "numThreads=" + numThreads +
+        ", queueSize=" + queueSize +
+        ", enableRequestLimit=" + enableRequestLimit +
+        ", maxIdleTime=" + maxIdleTime +
+        ", defaultQueryTimeout=" + defaultQueryTimeout +
+        ", maxScatterGatherBytes=" + maxScatterGatherBytes +
+        ", maxQueryTimeout=" + maxQueryTimeout +
+        ", maxRequestHeaderSize=" + maxRequestHeaderSize +
+        ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
+        ", unannouncePropogationDelay=" + unannouncePropogationDelay +
+        ", unsecuredPaths=" + unsecuredPaths +
+        '}';
   }
 }
