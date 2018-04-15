@@ -19,13 +19,12 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import io.druid.collections.NonBlockingPool;
-import io.druid.collections.ResourceHolder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -53,6 +52,8 @@ import oak.WritableOakBufferImpl;
 import oak.OakMap;
 import oak.CloseableIterator;
 
+import javax.annotation.Nullable;
+
 
 /**
  */
@@ -75,7 +76,6 @@ public class OffheapOakIncrementalIndex extends
   private volatile Map<String, ColumnSelectorFactory> selectors;
   private volatile int[] aggOffsetInBuffer;
   private volatile int aggsTotalSize;
-  NonBlockingPool<ByteBuffer> bufferPool;
   private final int maxRowCount;
   private String outOfRowsReason = null;
 
@@ -83,14 +83,12 @@ public class OffheapOakIncrementalIndex extends
       io.druid.segment.incremental.IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics, boolean reportParseExceptions,
       boolean concurrentEventAdd,
-      NonBlockingPool<ByteBuffer> bufferPool,
       int maxRowCount
   )
   {
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions,
         concurrentEventAdd);
     oak = new OakMapOffHeapImpl(new TimeAndDimsByteBuffersComp(dimensionDescsList), getMinTimeAndDimsByteBuffer());
-    this.bufferPool = bufferPool;
     this.maxRowCount = maxRowCount;
   }
 
@@ -260,10 +258,16 @@ public class OffheapOakIncrementalIndex extends
       @Override
       public Iterator<TimeAndDims> iterator()
       {
-        return Iterators.transform(
-            oak.keysIterator(),
-            byteBuffer -> timeAndDimsDeserialization(byteBuffer)
-        );
+        Function<ByteBuffer, TimeAndDims> function = new Function<ByteBuffer, TimeAndDims>() {
+          @Nullable
+          @Override
+          public TimeAndDims apply(@Nullable ByteBuffer byteBuffer)
+          {
+            return timeAndDimsDeserialization(byteBuffer);
+          }
+        };
+
+        return Iterators.transform(oak.keysIterator(), function);
       }
     };
   }
@@ -368,11 +372,9 @@ public class OffheapOakIncrementalIndex extends
       rowContainer.set(null);
     }
 
-    ResourceHolder<ByteBuffer> resourceHolder = bufferPool.take();
-    ByteBuffer aggBuffer = resourceHolder.get();
+    ByteBuffer aggBuffer = ByteBuffer.allocate(2 * aggsTotalSize);
     if (aggBuffer.capacity() < aggsTotalSize) {
-      resourceHolder.close();
-      throw new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
+      throw new IAE("buffers capacity must be >= [%s]", aggsTotalSize);
     }
 
     for (int i = 0; i < metrics.length; i++) {
@@ -380,6 +382,7 @@ public class OffheapOakIncrementalIndex extends
     }
 
     aggregate(metrics, reportParseExceptions, row, rowContainer, aggBuffer, aggOffsetInBuffer, getAggs());
+    aggBuffer.position(0);
     return aggBuffer;
   }
 
@@ -426,6 +429,7 @@ public class OffheapOakIncrementalIndex extends
       buf = ByteBuffer.allocate(allocSize);
       buf.putLong(timeAndDims.getTimestamp());
       buf.putInt(0);
+      buf.position(0);
       return buf;
     }
 
@@ -484,9 +488,9 @@ public class OffheapOakIncrementalIndex extends
           currDimsIndex += Long.BYTES;
           break;
         case STRING:
-          buf.putInt(currDimsIndex, valueType.ordinal());
+          buf.putInt(currDimsIndex, valueType.ordinal()); // writing the value type
           currDimsIndex += Integer.BYTES;
-          buf.putInt(currDimsIndex, currArrayIndex);
+          buf.putInt(currDimsIndex, currArrayIndex); // writing the array position
           currDimsIndex += Integer.BYTES;
           if (dims[dimIndex] == null) {
             buf.putInt(currDimsIndex, 0);
@@ -494,7 +498,7 @@ public class OffheapOakIncrementalIndex extends
             break;
           }
           int[] array = (int[]) dims[dimIndex];
-          buf.putInt(currDimsIndex, array.length);
+          buf.putInt(currDimsIndex, array.length); // writing the array length
           currDimsIndex += Integer.BYTES;
           for (int j = 0; j < array.length; j++) {
             buf.putInt(currArrayIndex, array[j]);
@@ -506,6 +510,7 @@ public class OffheapOakIncrementalIndex extends
           currDimsIndex += ALLOC_PER_DIM;
       }
     }
+    buf.position(0);
     return buf;
   }
 
@@ -536,12 +541,12 @@ public class OffheapOakIncrementalIndex extends
 
   static long getTimestamp(ByteBuffer buff)
   {
-    return buff.getLong(TIME_STAMP_INDEX);
+    return buff.getLong(buff.position() + TIME_STAMP_INDEX);
   }
 
   static int getDimsLength(ByteBuffer buff)
   {
-    return buff.getInt(DIMS_LENGTH_INDEX);
+    return buff.getInt(buff.position() + DIMS_LENGTH_INDEX);
   }
 
   static Object getDimValue(ByteBuffer buff, int dimIndex)
@@ -561,7 +566,7 @@ public class OffheapOakIncrementalIndex extends
     } else if (dimType == ValueType.LONG.ordinal()) {
       dimObject = buff.getLong(getDimIndexInBuffer(buff, dimIndex) + Integer.BYTES);
     } else if (dimType == ValueType.STRING.ordinal()) {
-      int arrayIndex = buff.getInt(getDimIndexInBuffer(buff, dimIndex) + Integer.BYTES);
+      int arrayIndex = buff.position() + buff.getInt(getDimIndexInBuffer(buff, dimIndex) + Integer.BYTES);
       int arraySize = buff.getInt(getDimIndexInBuffer(buff, dimIndex) + 2 * Integer.BYTES);
       int[] array = new int[arraySize];
       for (int i = 0; i < arraySize; i++) {
@@ -591,12 +596,16 @@ public class OffheapOakIncrementalIndex extends
     if (dimIndex >= dimsLength) {
       return NO_DIM;
     }
-    return DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
+    return buff.position() + DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
   }
 
   private ByteBuffer getMinTimeAndDimsByteBuffer()
   {
-    TimeAndDims minTimeAndDims = new TimeAndDims(Long.MIN_VALUE, null, null);
+    Object[] dims = new Object[dimensionDescsList.size()];
+    for (int i = 0; i < dims.length; i++) {
+      dims[i] = null;
+    }
+    TimeAndDims minTimeAndDims = new TimeAndDims(this.minTimestamp, dims, dimensionDescsList);
     ByteBuffer minTimeAndDimsByteBuffer = timeAndDimsSerialization(minTimeAndDims);
     return minTimeAndDimsByteBuffer;
   }
@@ -653,7 +662,6 @@ public class OffheapOakIncrementalIndex extends
         ByteBuffer largerDims = lengthDiff > 0 ? lhs : rhs;
         return checkDimsAllNull(largerDims) ? 0 : lengthDiff;
       }
-
       return retVal;
     }
   }

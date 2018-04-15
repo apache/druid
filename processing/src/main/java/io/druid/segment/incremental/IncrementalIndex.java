@@ -214,7 +214,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return virtualColumns.wrap(new IncrementalIndexInputRowColumnSelectorFactory());
   }
 
-  private final long minTimestamp;
+  protected final long minTimestamp;
   private final Granularity gran;
   private final boolean rollup;
   private final List<Function<InputRow, InputRow>> rowTransformers;
@@ -248,7 +248,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    *                                  value for aggregators that return metrics other than float.
    * @param reportParseExceptions     flag whether or not to report ParseExceptions that occur while extracting values
    *                                  from input rows
-   * @param concurrentEventAdd        flag whether ot not adding of input rows should be thread-safe
+   * @param concurrentEventAdd        flag whether or not adding of input rows should be thread-safe
    */
   protected IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
@@ -423,7 +423,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       );
     }
 
-    public IncrementalIndex buildOffheapOak(final NonBlockingPool<ByteBuffer> bufferPool)
+    public IncrementalIndex buildOffheapOak()
     {
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
@@ -434,7 +434,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
               deserializeComplexMetrics,
               reportParseExceptions,
               concurrentEventAdd,
-              Objects.requireNonNull(bufferPool, "bufferPool is null"),
               maxRowCount
       );
     }

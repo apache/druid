@@ -19,11 +19,8 @@
 
 package io.druid.segment.incremental;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.collections.NonBlockingPool;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import org.junit.Assert;
@@ -83,21 +80,10 @@ public class TimeAndDimsCompTest
   @Test
   public void testTimeAndDimsSerialization() throws IndexSizeExceededException
   {
-    NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<ByteBuffer>(
-        "OffheapOakIncrementalIndex-bufferPool",
-        new Supplier<ByteBuffer>() {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(256 * 1024);
-          }
-        }
-    );
-
     IncrementalIndex index = new IncrementalIndex.Builder()
             .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
             .setMaxRowCount(1000)
-            .buildOffheapOak(bufferPool);
+            .buildOffheapOak();
 
     OffheapOakIncrementalIndex oakIndex = (OffheapOakIncrementalIndex) index;
 
@@ -125,20 +111,10 @@ public class TimeAndDimsCompTest
   @Test
   public void testTimeAndDimsByteBufferComparator() throws IndexSizeExceededException
   {
-    NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<ByteBuffer>(
-          "OffheapOakIncrementalIndex-bufferPool",
-          new Supplier<ByteBuffer>() {
-            @Override
-            public ByteBuffer get()
-            {
-              return ByteBuffer.allocate(256 * 1024);
-            }
-          }
-    );
     IncrementalIndex index = new OffheapOakIncrementalIndex.Builder()
             .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
             .setMaxRowCount(1000)
-            .buildOffheapOak(bufferPool);
+            .buildOffheapOak();
 
     OffheapOakIncrementalIndex oakIndex = (OffheapOakIncrementalIndex) index;
 
