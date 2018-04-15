@@ -67,6 +67,9 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
@@ -277,6 +280,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
       }
 
+      if (segments.isEmpty() && query instanceof TimeseriesQuery) {
+        final TimeseriesQueryRunnerFactory.EmptyQueryRunner emptyQueryRunner = new TimeseriesQueryRunnerFactory.EmptyQueryRunner();
+        return (Sequence<T>) emptyQueryRunner.run((QueryPlus<Result<TimeseriesResultValue>>) queryPlus, responseContext);
+      }
       final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
       return new LazySequence<>(() -> {

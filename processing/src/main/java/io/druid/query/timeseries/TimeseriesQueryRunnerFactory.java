@@ -19,38 +19,34 @@
 
 package io.druid.query.timeseries;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
-import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
-import io.druid.query.filter.Filter;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.RowBasedColumnSelectorFactory;
-import io.druid.segment.Capabilities;
-import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.Cursor;
-import io.druid.segment.Metadata;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.data.Indexed;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -85,10 +81,7 @@ public class TimeseriesQueryRunnerFactory
   )
   {
     if (!queryRunners.iterator().hasNext()) {
-      return (queryPlus, responseContext) -> {
-        TimeseriesQuery ts = (TimeseriesQuery) queryPlus.getQuery();
-        return engine.process(ts, EmptyStorageAdapter.INSTANCE);
-      };
+      return new EmptyQueryRunner();
     }
     return new ChainedExecutionQueryRunner<>(
         queryExecutor, queryWatcher, queryRunners
@@ -127,167 +120,54 @@ public class TimeseriesQueryRunnerFactory
     }
   }
 
-  private static class EmptyStorageAdapter implements StorageAdapter
+  public static class EmptyQueryRunner implements QueryRunner<Result<TimeseriesResultValue>>
   {
-    static final EmptyStorageAdapter INSTANCE = new EmptyStorageAdapter();
-
-    private EmptyStorageAdapter() {}
-
     @Override
-    public String getSegmentIdentifier()
+    public Sequence<Result<TimeseriesResultValue>> run(QueryPlus<Result<TimeseriesResultValue>> queryPlus, Map<String, Object> responseContext)
     {
-      return null;
-    }
+      if (queryPlus.getQuery() instanceof TimeseriesQuery) {
+        final TimeseriesQuery ts = (TimeseriesQuery) queryPlus.getQuery();
+        if (!ts.isSkipEmptyBuckets()) {
+          Iterable<Interval> iterable = Iterables.concat(ts.getIntervals()
+                                                           .stream()
+                                                           .map(i -> ts.getGranularity().getIterable(i))
+                                                           .collect(Collectors.toList()));
+          if (ts.isDescending()) {
+            iterable = Lists.reverse(ImmutableList.copyOf(iterable));
+          }
+          Function fn = new Function<Interval, Result<TimeseriesResultValue>>()
+          {
+            private final List<AggregatorFactory> aggregatorSpecs = ts.getAggregatorSpecs();
+            @Override
+            public Result<TimeseriesResultValue> apply(Interval interval)
+            {
 
-    @Override
-    public Interval getInterval()
-    {
-      return null;
-    }
+              Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
+              String[] aggregatorNames = new String[aggregatorSpecs.size()];
+              for (int i = 0; i < aggregatorSpecs.size(); i++) {
+                aggregators[i] = aggregatorSpecs.get(i)
+                                                .factorize(RowBasedColumnSelectorFactory.create(() -> new MapBasedRow(
+                                                    null,
+                                                    null
+                                                ), null));
+                aggregatorNames[i] = aggregatorSpecs.get(i).getName();
+              }
+              TimeseriesResultBuilder bob = new TimeseriesResultBuilder(interval.getStart());
+              for (int i = 0; i < aggregatorSpecs.size(); i++) {
+                bob.addMetric(aggregatorNames[i], aggregators[i]);
+                aggregators[i].close();
+              }
+              Result<TimeseriesResultValue> retVal = bob.build();
+              return retVal;
+            }
+          };
 
-    @Override
-    public Indexed<String> getAvailableDimensions()
-    {
-      return null;
-    }
-
-    @Override
-    public Iterable<String> getAvailableMetrics()
-    {
-      return null;
-    }
-
-    @Override
-    public int getDimensionCardinality(String column)
-    {
-      return 0;
-    }
-
-    @Override
-    public DateTime getMinTime()
-    {
-      return null;
-    }
-
-    @Override
-    public DateTime getMaxTime()
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public Comparable getMinValue(String column)
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public Comparable getMaxValue(String column)
-    {
-      return null;
-    }
-
-    @Override
-    public Capabilities getCapabilities()
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public ColumnCapabilities getColumnCapabilities(String column)
-    {
-      return null;
-    }
-
-    @Override
-    public String getColumnTypeName(String column)
-    {
-      return null;
-    }
-
-    @Override
-    public int getNumRows()
-    {
-      return 0;
-    }
-
-    @Override
-    public DateTime getMaxIngestedEventTime()
-    {
-      return null;
-    }
-
-    @Override
-    public Metadata getMetadata()
-    {
-      return null;
-    }
-
-    @Override
-    public Sequence<Cursor> makeCursors(
-        @Nullable Filter filter,
-        Interval interval,
-        VirtualColumns virtualColumns,
-        Granularity gran,
-        boolean descending,
-        @Nullable QueryMetrics<?> queryMetrics
-    )
-    {
-      return Sequences.simple(Collections.singletonList(new Cursor()
-      {
-        private ColumnSelectorFactory columnSelectorFactory = RowBasedColumnSelectorFactory.create(() -> null, null);
-
-        @Override
-        public ColumnSelectorFactory getColumnSelectorFactory()
-        {
-          return columnSelectorFactory;
-        }
-
-        @Override
-        public DateTime getTime()
-        {
-          return null;
-        }
-
-        @Override
-        public void advance()
-        {
+          return Sequences.map(Sequences.simple(iterable), fn);
 
         }
-
-        @Override
-        public void advanceUninterruptibly()
-        {
-
-        }
-
-        @Override
-        public void advanceTo(int offset)
-        {
-
-        }
-
-        @Override
-        public boolean isDone()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean isDoneOrInterrupted()
-        {
-          return true;
-        }
-
-        @Override
-        public void reset()
-        {
-
-        }
-      }));
+        return Sequences.empty();
+      }
+      return Sequences.empty();
     }
   }
 }
