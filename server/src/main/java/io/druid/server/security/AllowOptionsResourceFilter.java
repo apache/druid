@@ -57,17 +57,17 @@ public class AllowOptionsResourceFilter implements Filter
     // Druid itself doesn't explictly handle OPTIONS requests, no resource handler will authorize such requests.
     // so this filter catches all OPTIONS requests and authorizes them.
     if (HttpMethod.OPTIONS.equals(httpReq.getMethod())) {
-      if (allowUnauthenticatedHttpOptions) {
+      if (httpReq.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) == null) {
         // If the request already had credentials and authenticated successfully, keep the authenticated identity.
         // Otherwise, allow the unauthenticated request.
-        if (httpReq.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) == null) {
+        if (allowUnauthenticatedHttpOptions) {
           httpReq.setAttribute(
               AuthConfig.DRUID_AUTHENTICATION_RESULT,
               new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)
           );
+        } else {
+          ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
         }
-      } else {
-        ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
       }
 
       httpReq.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
