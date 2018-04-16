@@ -19,15 +19,9 @@
 
 package io.druid.query.timeseries;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -36,17 +30,11 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
-import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 
 /**
  */
@@ -80,9 +68,6 @@ public class TimeseriesQueryRunnerFactory
       ExecutorService queryExecutor, Iterable<QueryRunner<Result<TimeseriesResultValue>>> queryRunners
   )
   {
-    if (!queryRunners.iterator().hasNext()) {
-      return new EmptyQueryRunner();
-    }
     return new ChainedExecutionQueryRunner<>(
         queryExecutor, queryWatcher, queryRunners
     );
@@ -120,54 +105,4 @@ public class TimeseriesQueryRunnerFactory
     }
   }
 
-  public static class EmptyQueryRunner implements QueryRunner<Result<TimeseriesResultValue>>
-  {
-    @Override
-    public Sequence<Result<TimeseriesResultValue>> run(QueryPlus<Result<TimeseriesResultValue>> queryPlus, Map<String, Object> responseContext)
-    {
-      if (queryPlus.getQuery() instanceof TimeseriesQuery) {
-        final TimeseriesQuery ts = (TimeseriesQuery) queryPlus.getQuery();
-        if (!ts.isSkipEmptyBuckets()) {
-          Iterable<Interval> iterable = Iterables.concat(ts.getIntervals()
-                                                           .stream()
-                                                           .map(i -> ts.getGranularity().getIterable(i))
-                                                           .collect(Collectors.toList()));
-          if (ts.isDescending()) {
-            iterable = Lists.reverse(ImmutableList.copyOf(iterable));
-          }
-          Function fn = new Function<Interval, Result<TimeseriesResultValue>>()
-          {
-            private final List<AggregatorFactory> aggregatorSpecs = ts.getAggregatorSpecs();
-            @Override
-            public Result<TimeseriesResultValue> apply(Interval interval)
-            {
-
-              Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
-              String[] aggregatorNames = new String[aggregatorSpecs.size()];
-              for (int i = 0; i < aggregatorSpecs.size(); i++) {
-                aggregators[i] = aggregatorSpecs.get(i)
-                                                .factorize(RowBasedColumnSelectorFactory.create(() -> new MapBasedRow(
-                                                    null,
-                                                    null
-                                                ), null));
-                aggregatorNames[i] = aggregatorSpecs.get(i).getName();
-              }
-              TimeseriesResultBuilder bob = new TimeseriesResultBuilder(interval.getStart());
-              for (int i = 0; i < aggregatorSpecs.size(); i++) {
-                bob.addMetric(aggregatorNames[i], aggregators[i]);
-                aggregators[i].close();
-              }
-              Result<TimeseriesResultValue> retVal = bob.build();
-              return retVal;
-            }
-          };
-
-          return Sequences.map(Sequences.simple(iterable), fn);
-
-        }
-        return Sequences.empty();
-      }
-      return Sequences.empty();
-    }
-  }
 }

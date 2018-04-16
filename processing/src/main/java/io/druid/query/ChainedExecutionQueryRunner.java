@@ -19,7 +19,6 @@
 
 package io.druid.query;
 
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -105,45 +104,40 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                 Lists.newArrayList(
                     Iterables.transform(
                         queryables,
-                        new Function<QueryRunner<T>, ListenableFuture<Iterable<T>>>()
-                        {
-                          @Override
-                          public ListenableFuture<Iterable<T>> apply(final QueryRunner<T> input)
-                          {
-                            if (input == null) {
-                              throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
-                            }
+                        input -> {
+                          if (input == null) {
+                            throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
+                          }
 
-                            return exec.submit(
-                                new AbstractPrioritizedCallable<Iterable<T>>(priority)
+                          return exec.submit(
+                              new AbstractPrioritizedCallable<Iterable<T>>(priority)
+                              {
+                                @Override
+                                public Iterable<T> call()
                                 {
-                                  @Override
-                                  public Iterable<T> call()
-                                  {
-                                    try {
-                                      Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
-                                      if (result == null) {
-                                        throw new ISE("Got a null result! Segments are missing!");
-                                      }
+                                  try {
+                                    Sequence<T> result = input.run(threadSafeQueryPlus, responseContext);
+                                    if (result == null) {
+                                      throw new ISE("Got a null result! Segments are missing!");
+                                    }
 
-                                      List<T> retVal = result.toList();
-                                      if (retVal == null) {
-                                        throw new ISE("Got a null list of results! WTF?!");
-                                      }
+                                    List<T> retVal = result.toList();
+                                    if (retVal == null) {
+                                      throw new ISE("Got a null list of results! WTF?!");
+                                    }
 
-                                      return retVal;
-                                    }
-                                    catch (QueryInterruptedException e) {
-                                      throw Throwables.propagate(e);
-                                    }
-                                    catch (Exception e) {
-                                      log.error(e, "Exception with one of the sequences!");
-                                      throw Throwables.propagate(e);
-                                    }
+                                    return retVal;
+                                  }
+                                  catch (QueryInterruptedException e) {
+                                    throw Throwables.propagate(e);
+                                  }
+                                  catch (Exception e) {
+                                    log.error(e, "Exception with one of the sequences!");
+                                    throw Throwables.propagate(e);
                                   }
                                 }
-                            );
-                          }
+                              }
+                          );
                         }
                     )
                 )

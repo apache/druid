@@ -301,7 +301,15 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{11.0, 0.0}
         )
     );
+
+    testQuery(
+        "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent' GROUP BY FLOOR(__time TO DAY)",
+        null,
+        ImmutableList.of()
+    );
   }
+
+
 
   @Test
   public void testSelectTrimFamily() throws Exception
