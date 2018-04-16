@@ -59,7 +59,6 @@ import org.junit.runners.Parameterized.Parameters;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerFailureTest
@@ -184,7 +183,8 @@ public class GroupByQueryRunnerFailureTest
   public void testNotEnoughMergeBuffersOnQueryable()
   {
     expectedException.expect(QueryInterruptedException.class);
-    expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(TimeoutException.class));
+    expectedException.expectCause(CoreMatchers.instanceOf(InsufficientResourcesException.class));
+    expectedException.expectMessage("Cannot acquire enough merge buffers");
 
     final GroupByQuery query = GroupByQuery
         .builder()
