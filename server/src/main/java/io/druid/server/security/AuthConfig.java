@@ -44,7 +44,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, null);
+    this(null, null, null, false);
   }
 
   @JsonCreator
@@ -52,15 +52,13 @@ public class AuthConfig
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
       @JsonProperty("authorizers") List<String> authorizers,
       @JsonProperty("unsecuredPaths") List<String> unsecuredPaths,
-      @JsonProperty("allowUnauthenticatedHttpOptions") Boolean allowUnauthenticatedHttpOptions
+      @JsonProperty("allowUnauthenticatedHttpOptions") boolean allowUnauthenticatedHttpOptions
   )
   {
     this.authenticatorChain = authenticationChain;
     this.authorizers = authorizers;
     this.unsecuredPaths = unsecuredPaths == null ? Collections.emptyList() : unsecuredPaths;
-    this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions == null
-                                            ? false
-                                            : allowUnauthenticatedHttpOptions;
+    this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions;
   }
 
   @JsonProperty
