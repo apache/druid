@@ -172,7 +172,7 @@ public class GroupByQueryRunnerTest
     public int getNumMergeBuffers()
     {
       // Some tests need two buffers for testing nested groupBy (simulating two levels of merging).
-      // Some tests need more buffers for parallel combine.
+      // Some tests need more buffers for parallel combine (testMergedPostAggHavingSpec).
       return 4;
     }
 
