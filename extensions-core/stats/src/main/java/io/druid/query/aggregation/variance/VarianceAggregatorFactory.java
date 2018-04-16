@@ -34,13 +34,13 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.NoopAggregator;
 import io.druid.query.aggregation.NoopBufferAggregator;
 import io.druid.query.aggregation.ObjectAggregateCombiner;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.NilColumnValueSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -184,7 +184,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new VarianceAggregatorFactory(fieldName, fieldName, estimator, inputType));
+    return Collections.singletonList(new VarianceAggregatorFactory(fieldName, fieldName, estimator, inputType));
   }
 
   @Override
@@ -258,25 +258,23 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    byte[] inputTypeBytes = StringUtils.toUtf8(inputType);
-    return ByteBuffer.allocate(2 + fieldNameBytes.length + 1 + inputTypeBytes.length)
-                     .put(AggregatorUtil.VARIANCE_CACHE_TYPE_ID)
-                     .put(isVariancePop ? (byte) 1 : 0)
-                     .put(fieldNameBytes)
-                     .put((byte) 0xFF)
-                     .put(inputTypeBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.VARIANCE_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendString(inputType)
+        .appendBoolean(isVariancePop)
+        .appendString(estimator)
+        .build();
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + "{" +
+    return "VarianceAggregatorFactory{" +
            "fieldName='" + fieldName + '\'' +
            ", name='" + name + '\'' +
-           ", isVariancePop='" + isVariancePop + '\'' +
+           ", estimator='" + estimator + '\'' +
            ", inputType='" + inputType + '\'' +
+           ", isVariancePop=" + isVariancePop +
            '}';
   }
 
@@ -289,29 +287,18 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     VarianceAggregatorFactory that = (VarianceAggregatorFactory) o;
-
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-    if (!Objects.equals(isVariancePop, that.isVariancePop)) {
-      return false;
-    }
-    if (!Objects.equals(inputType, that.inputType)) {
-      return false;
-    }
-
-    return true;
+    return isVariancePop == that.isVariancePop &&
+           Objects.equals(fieldName, that.fieldName) &&
+           Objects.equals(name, that.name) &&
+           Objects.equals(estimator, that.estimator) &&
+           Objects.equals(inputType, that.inputType);
   }
 
   @Override
   public int hashCode()
   {
-    int result = fieldName.hashCode();
-    result = 31 * result + Objects.hashCode(name);
-    result = 31 * result + Objects.hashCode(isVariancePop);
-    result = 31 * result + Objects.hashCode(inputType);
-    return result;
+
+    return Objects.hash(fieldName, name, estimator, inputType, isVariancePop);
   }
 }

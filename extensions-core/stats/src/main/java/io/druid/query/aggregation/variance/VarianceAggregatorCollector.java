@@ -59,20 +59,15 @@ public class VarianceAggregatorCollector
     return new VarianceAggregatorCollector(buffer.getLong(), buffer.getDouble(), buffer.getDouble());
   }
 
-  public static final Comparator<VarianceAggregatorCollector> COMPARATOR = new Comparator<VarianceAggregatorCollector>()
-  {
-    @Override
-    public int compare(VarianceAggregatorCollector o1, VarianceAggregatorCollector o2)
-    {
-      int compare = Longs.compare(o1.count, o2.count);
+  public static final Comparator<VarianceAggregatorCollector> COMPARATOR = (o1, o2) -> {
+    int compare = Longs.compare(o1.count, o2.count);
+    if (compare == 0) {
+      compare = Doubles.compare(o1.sum, o2.sum);
       if (compare == 0) {
-        compare = Doubles.compare(o1.sum, o2.sum);
-        if (compare == 0) {
-          compare = Doubles.compare(o1.nvariance, o2.nvariance);
-        }
+        compare = Doubles.compare(o1.nvariance, o2.nvariance);
       }
-      return compare;
     }
+    return compare;
   };
 
   void fold(@Nullable VarianceAggregatorCollector other)
@@ -112,13 +107,6 @@ public class VarianceAggregatorCollector
   public VarianceAggregatorCollector()
   {
     this(0, 0, 0);
-  }
-
-  public void reset()
-  {
-    count = 0;
-    sum = 0;
-    nvariance = 0;
   }
 
   void copyFrom(VarianceAggregatorCollector other)
