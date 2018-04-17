@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
@@ -52,11 +53,11 @@ public class SimpleQueryableIndex implements QueryableIndex
       BitmapFactory bitmapFactory,
       Map<String, Column> columns,
       SmooshedFileMapper fileMapper,
-      Metadata metadata
+      @Nullable Metadata metadata
   )
   {
     Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
-    this.dataInterval = dataInterval;
+    this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
     this.columnNames = columnNames;
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;
@@ -65,6 +66,28 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.metadata = metadata;
     this.dimensionHandlers = Maps.newLinkedHashMap();
     initDimensionHandlers();
+  }
+
+  @VisibleForTesting
+  public SimpleQueryableIndex(
+      Interval interval,
+      Indexed<String> columnNames,
+      Indexed<String> availableDimensions,
+      BitmapFactory bitmapFactory,
+      Map<String, Column> columns,
+      SmooshedFileMapper fileMapper,
+      @Nullable Metadata metadata,
+      Map<String, DimensionHandler> dimensionHandlers
+  )
+  {
+    this.dataInterval = interval;
+    this.columnNames = columnNames;
+    this.availableDimensions = availableDimensions;
+    this.bitmapFactory = bitmapFactory;
+    this.columns = columns;
+    this.fileMapper = fileMapper;
+    this.metadata = metadata;
+    this.dimensionHandlers = dimensionHandlers;
   }
 
   @Override
@@ -102,6 +125,18 @@ public class SimpleQueryableIndex implements QueryableIndex
   public Column getColumn(String columnName)
   {
     return columns.get(columnName);
+  }
+
+  @VisibleForTesting
+  public Map<String, Column> getColumns()
+  {
+    return columns;
+  }
+
+  @VisibleForTesting
+  public SmooshedFileMapper getFileMapper()
+  {
+    return fileMapper;
   }
 
   @Override
