@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -181,7 +182,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                         }
 
                         final Result<TimeseriesResultValue> result = new Result<>(
-                            null,
+                            DateTimes.EPOCH,
                             new TimeseriesResultValue(totalsMap)
                         );
 

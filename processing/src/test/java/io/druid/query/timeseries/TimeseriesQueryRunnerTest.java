@@ -453,7 +453,7 @@ public class TimeseriesQueryRunnerTest
 
     expectedResults.add(
         new Result<>(
-            null,
+            DateTimes.EPOCH,
             new TimeseriesResultValue(
                 ImmutableMap.of(
                     "rows",
