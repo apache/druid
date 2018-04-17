@@ -19,11 +19,14 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
+import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
@@ -38,6 +41,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -56,6 +60,38 @@ public abstract class ExternalDataIncrementalIndex<AggregatorType> extends Incre
   }
 
   protected abstract FactsHolder getFacts();
+
+  // Note: This method needs to be thread safe.
+  protected abstract Integer addToFacts(
+          AggregatorFactory[] metrics,
+          boolean deserializeComplexMetrics,
+          boolean reportParseExceptions,
+          InputRow row,
+          AtomicInteger numEntries,
+          TimeAndDims key,
+          ThreadLocal<InputRow> rowContainer,
+          Supplier<InputRow> rowSupplier,
+          boolean skipMaxRowsInMemoryCheck
+  ) throws IndexSizeExceededException;
+
+  @Override
+  public int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  {
+    TimeAndDims key = toTimeAndDims(row);
+    final int rv = addToFacts(
+            metrics,
+            deserializeComplexMetrics,
+            reportParseExceptions,
+            row,
+            numEntries,
+            key,
+            in,
+            rowSupplier,
+            skipMaxRowsInMemoryCheck
+    );
+    updateMaxIngestedTime(row.getTimestamp());
+    return rv;
+  }
 
   protected long getMinTimeMillis()
   {

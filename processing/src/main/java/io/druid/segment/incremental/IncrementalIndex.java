@@ -221,8 +221,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final VirtualColumns virtualColumns;
   protected final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
-  private final boolean deserializeComplexMetrics;
-  private final boolean reportParseExceptions;
+  protected final boolean deserializeComplexMetrics;
+  protected final boolean reportParseExceptions;
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -230,11 +230,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final Map<String, DimensionDesc> dimensionDescs;
   protected final List<DimensionDesc> dimensionDescsList;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
-  private final AtomicInteger numEntries = new AtomicInteger();
+  protected final AtomicInteger numEntries = new AtomicInteger();
 
   // This is modified on add() in a critical section.
-  private final ThreadLocal<InputRow> in = new ThreadLocal<>();
-  private final Supplier<InputRow> rowSupplier = in::get;
+  protected final ThreadLocal<InputRow> in = new ThreadLocal<>();
+  protected final Supplier<InputRow> rowSupplier = in::get;
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -455,19 +455,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       boolean concurrentEventAdd
   );
 
-  // Note: This method needs to be thread safe.
-  protected abstract Integer addToFacts(
-      AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
-      InputRow row,
-      AtomicInteger numEntries,
-      TimeAndDims key,
-      ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier,
-      boolean skipMaxRowsInMemoryCheck
-  ) throws IndexSizeExceededException;
-
   public abstract int getLastRowIndex();
 
   protected abstract AggregatorType[] getAggsForRow(TimeAndDims timeAndDims);
@@ -527,23 +514,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return add(row, false);
   }
 
-  public int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
-  {
-    TimeAndDims key = toTimeAndDims(row);
-    final int rv = addToFacts(
-        metrics,
-        deserializeComplexMetrics,
-        reportParseExceptions,
-        row,
-        numEntries,
-        key,
-        in,
-        rowSupplier,
-        skipMaxRowsInMemoryCheck
-    );
-    updateMaxIngestedTime(row.getTimestamp());
-    return rv;
-  }
+  public abstract int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException;
 
   @VisibleForTesting
   TimeAndDims toTimeAndDims(InputRow row)
