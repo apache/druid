@@ -33,6 +33,7 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.LimitRequestsFilter;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -89,6 +90,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+    final AuthConfig authConfig = injector.getInstance(AuthConfig.class);
 
     List<Authenticator> authenticators = null;
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
@@ -98,6 +100,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
