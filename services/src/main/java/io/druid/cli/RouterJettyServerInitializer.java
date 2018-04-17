@@ -114,6 +114,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
     // Check that requests were authorized before sending responses

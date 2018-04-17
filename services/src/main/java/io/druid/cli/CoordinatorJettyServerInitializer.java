@@ -128,8 +128,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
-    JettyServerInitUtils.addExtensionFilters(root, injector);
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
+    JettyServerInitUtils.addExtensionFilters(root, injector);
 
     // Check that requests were authorized before sending responses
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
