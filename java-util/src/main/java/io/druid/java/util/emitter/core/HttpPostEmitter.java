@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
+import io.druid.concurrent.ConcurrentAwaitableCounter;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
@@ -133,7 +134,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
    */
   private final AtomicInteger approximateLargeEventsToEmitCount = new AtomicInteger();
 
-  private final EmittedBatchCounter emittedBatchCounter = new EmittedBatchCounter();
+  private final ConcurrentAwaitableCounter emittedBatchCounter = new ConcurrentAwaitableCounter();
   private final EmittingThread emittingThread;
   private final AtomicLong totalEmittedEvents = new AtomicLong();
   private final AtomicInteger allocatedBuffers = new AtomicInteger();
@@ -177,7 +178,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       throw new ISE(e, "Bad URL: %s", config.getRecipientBaseUrl());
     }
     emittingThread = new EmittingThread(config);
-    concurrentBatch.set(new Batch(this, acquireBuffer(), 0));
+    long firstBatchNumber = 1;
+    concurrentBatch.set(new Batch(this, acquireBuffer(), firstBatchNumber));
     // lastFillTimeMillis must not be 0, minHttpTimeoutMillis could be.
     lastFillTimeMillis = Math.max(config.minHttpTimeoutMillis, 1);
   }
@@ -331,7 +333,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     addBatchToEmitQueue(batch);
     wakeUpEmittingThread();
     if (!isTerminated()) {
-      int nextBatchNumber = EmittedBatchCounter.nextBatchNumber(batch.batchNumber);
+      long nextBatchNumber = ConcurrentAwaitableCounter.nextCount(batch.batchNumber);
       byte[] newBuffer = acquireBuffer();
       if (!concurrentBatch.compareAndSet(batch, new Batch(this, newBuffer, nextBatchNumber))) {
         buffersToReuse.add(newBuffer);
@@ -345,7 +347,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   private void tryRecoverCurrentBatch(Integer failedBatchNumber)
   {
     log.info("Trying to recover currentBatch");
-    int nextBatchNumber = EmittedBatchCounter.nextBatchNumber(failedBatchNumber);
+    long nextBatchNumber = ConcurrentAwaitableCounter.nextCount(failedBatchNumber);
     byte[] newBuffer = acquireBuffer();
     if (concurrentBatch.compareAndSet(failedBatchNumber, new Batch(this, newBuffer, nextBatchNumber))) {
       log.info("Successfully recovered currentBatch");
@@ -383,7 +385,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   private void batchFinalized()
   {
     // Notify HttpPostEmitter.flush(), that the batch is emitted, or failed, or dropped.
-    emittedBatchCounter.batchEmitted();
+    emittedBatchCounter.increment();
   }
 
   private Batch pollBatchFromEmitQueue()
@@ -422,7 +424,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       // This check doesn't always awaits for this exact batch to be emitted, because another batch could be dropped
       // from the queue ahead of this one, in limitBuffersToEmitSize(). But there is no better way currently to wait for
       // the exact batch, and it's not that important.
-      emittedBatchCounter.awaitBatchEmitted(batch.batchNumber, config.getFlushTimeOut(), TimeUnit.MILLISECONDS);
+      emittedBatchCounter.awaitCount(batch.batchNumber, config.getFlushTimeOut(), TimeUnit.MILLISECONDS);
     }
     catch (TimeoutException e) {
       String message = StringUtils.format("Timed out after [%d] millis during flushing", config.getFlushTimeOut());
@@ -923,7 +925,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   @VisibleForTesting
   void waitForEmission(int batchNumber) throws Exception
   {
-    emittedBatchCounter.awaitBatchEmitted(batchNumber, 10, TimeUnit.SECONDS);
+    emittedBatchCounter.awaitCount(batchNumber, 10, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting

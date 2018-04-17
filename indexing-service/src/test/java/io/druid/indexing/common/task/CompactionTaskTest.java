@@ -26,7 +26,10 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.inject.Binder;
+import com.google.inject.Module;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -79,11 +82,14 @@ import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.transform.TransformingInputRowParser;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -125,10 +131,12 @@ public class CompactionTaskTest
   private static Map<String, AggregatorFactory> AGGREGATORS;
   private static List<DataSegment> SEGMENTS;
   private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
-  private static TaskToolbox toolbox;
+  private static Map<DataSegment, File> segmentMap;
+
+  private TaskToolbox toolbox;
 
   @BeforeClass
-  public static void setup()
+  public static void setupClass()
   {
     DIMENSIONS = new HashMap<>();
     AGGREGATORS = new HashMap<>();
@@ -162,7 +170,7 @@ public class CompactionTaskTest
     AGGREGATORS.put("agg_3", new FloatFirstAggregatorFactory("agg_3", "float_dim_3"));
     AGGREGATORS.put("agg_4", new DoubleLastAggregatorFactory("agg_4", "double_dim_4"));
 
-    final Map<DataSegment, File> segmentMap = new HashMap<>(5);
+    segmentMap = new HashMap<>(5);
     for (int i = 0; i < 5; i++) {
       final Interval segmentInterval = Intervals.of(StringUtils.format("2017-0%d-01/2017-0%d-01", (i + 1), (i + 2)));
       segmentMap.put(
@@ -181,12 +189,6 @@ public class CompactionTaskTest
       );
     }
     SEGMENTS = new ArrayList<>(segmentMap.keySet());
-
-    toolbox = new TestTaskToolbox(
-        new TestTaskActionClient(new ArrayList<>(segmentMap.keySet())),
-        new TestIndexIO(objectMapper, segmentMap),
-        segmentMap
-    );
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
@@ -200,7 +202,21 @@ public class CompactionTaskTest
             guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
         )
     );
-    objectMapper.setInjectableValues(new GuiceInjectableValues(GuiceInjectors.makeStartupInjector()));
+    GuiceInjectableValues injectableValues = new GuiceInjectableValues(
+        GuiceInjectors.makeStartupInjectorWithModules(
+            ImmutableList.<Module>of(
+                new Module()
+                {
+                  @Override
+                  public void configure(Binder binder)
+                  {
+                    binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+                  }
+                }
+            )
+        )
+    );
+    objectMapper.setInjectableValues(injectableValues);
     objectMapper.registerModule(
         new SimpleModule().registerSubtypes(new NamedType(NumberedShardSpec.class, "NumberedShardSpec"))
     );
@@ -244,12 +260,25 @@ public class CompactionTaskTest
         false,
         null,
         100L,
+        null,
+        null,
+        null,
         null
     );
   }
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  @Before
+  public void setup()
+  {
+    toolbox = new TestTaskToolbox(
+        new TestTaskActionClient(new ArrayList<>(segmentMap.keySet())),
+        new TestIndexIO(objectMapper, segmentMap),
+        segmentMap
+    );
+  }
 
   @Test
   public void testSerdeWithInterval() throws IOException
@@ -263,7 +292,8 @@ public class CompactionTaskTest
         null,
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
-        objectMapper
+        objectMapper,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
@@ -289,7 +319,8 @@ public class CompactionTaskTest
         null,
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
-        objectMapper
+        objectMapper,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
@@ -383,6 +414,24 @@ public class CompactionTaskTest
 
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     segments.remove(0);
+    CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(segments),
+        null,
+        TUNING_CONFIG,
+        objectMapper
+    );
+  }
+
+  @Test
+  public void testMissingMetadata() throws IOException, SegmentLoadingException
+  {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage(CoreMatchers.startsWith("Index metadata doesn't exist for segment"));
+
+    final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
+    indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
+    final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(segments),
@@ -576,9 +625,13 @@ public class CompactionTaskTest
           }
         }
 
-        final Metadata metadata = new Metadata();
-        metadata.setAggregators(aggregatorFactories.toArray(new AggregatorFactory[aggregatorFactories.size()]));
-        metadata.setRollup(false);
+        final Metadata metadata = new Metadata(
+            null,
+            aggregatorFactories.toArray(new AggregatorFactory[0]),
+            null,
+            null,
+            null
+        );
 
         queryableIndexMap.put(
             entry.getValue(),
@@ -598,6 +651,31 @@ public class CompactionTaskTest
     public QueryableIndex loadIndex(File file)
     {
       return queryableIndexMap.get(file);
+    }
+
+    void removeMetadata(File file)
+    {
+      final SimpleQueryableIndex index = (SimpleQueryableIndex) queryableIndexMap.get(file);
+      if (index != null) {
+        queryableIndexMap.put(
+            file,
+            new SimpleQueryableIndex(
+                index.getDataInterval(),
+                index.getColumnNames(),
+                index.getAvailableDimensions(),
+                index.getBitmapFactoryForDimensions(),
+                index.getColumns(),
+                index.getFileMapper(),
+                null,
+                index.getDimensionHandlers()
+            )
+        );
+      }
+    }
+
+    Map<File, QueryableIndex> getQueryableIndexMap()
+    {
+      return queryableIndexMap;
     }
   }
 

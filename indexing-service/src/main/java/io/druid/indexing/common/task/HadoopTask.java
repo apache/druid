@@ -223,4 +223,32 @@ public abstract class HadoopTask extends AbstractTask
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
+
+  /**
+   * This method tries to isolate class loading during a Function call
+   *
+   * @param clazzName    The Class which has an instance method called `runTask`
+   * @param loader       The loader to use as the context class loader during invocation
+   *
+   * @return The result of the method invocation
+   */
+  public static Object getForeignClassloaderObject(
+      final String clazzName,
+      final ClassLoader loader
+  )
+  {
+    log.debug("Launching [%s] on class loader [%s]", clazzName, loader);
+    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(loader);
+      final Class<?> clazz = loader.loadClass(clazzName);
+      return clazz.newInstance();
+    }
+    catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+      throw Throwables.propagate(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
+    }
+  }
 }

@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
@@ -43,6 +44,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   private final BitmapFactory bitmapFactory;
   private final Map<String, Column> columns;
   private final SmooshedFileMapper fileMapper;
+  @Nullable
   private final Metadata metadata;
   private final Map<String, DimensionHandler> dimensionHandlers;
 
@@ -51,11 +53,11 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
       BitmapFactory bitmapFactory,
       Map<String, Column> columns,
       SmooshedFileMapper fileMapper,
-      Metadata metadata
+      @Nullable Metadata metadata
   )
   {
     Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
-    this.dataInterval = dataInterval;
+    this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
     ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
     for (String column : columns.keySet()) {
       if (!Column.TIME_COLUMN_NAME.equals(column)) {
@@ -70,6 +72,28 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
     this.metadata = metadata;
     this.dimensionHandlers = Maps.newLinkedHashMap();
     initDimensionHandlers();
+  }
+
+  @VisibleForTesting
+  public SimpleQueryableIndex(
+      Interval interval,
+      List<String> columnNames,
+      Indexed<String> availableDimensions,
+      BitmapFactory bitmapFactory,
+      Map<String, Column> columns,
+      SmooshedFileMapper fileMapper,
+      @Nullable Metadata metadata,
+      Map<String, DimensionHandler> dimensionHandlers
+  )
+  {
+    this.dataInterval = interval;
+    this.columnNames = columnNames;
+    this.availableDimensions = availableDimensions;
+    this.bitmapFactory = bitmapFactory;
+    this.columns = columns;
+    this.fileMapper = fileMapper;
+    this.metadata = metadata;
+    this.dimensionHandlers = dimensionHandlers;
   }
 
   @Override
@@ -113,6 +137,18 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   public Column getColumn(String columnName)
   {
     return columns.get(columnName);
+  }
+
+  @VisibleForTesting
+  public Map<String, Column> getColumns()
+  {
+    return columns;
+  }
+
+  @VisibleForTesting
+  public SmooshedFileMapper getFileMapper()
+  {
+    return fileMapper;
   }
 
   @Override

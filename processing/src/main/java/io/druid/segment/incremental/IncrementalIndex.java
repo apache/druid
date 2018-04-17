@@ -44,6 +44,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -275,11 +276,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.reportParseExceptions = reportParseExceptions;
 
     this.columnCapabilities = Maps.newHashMap();
-    this.metadata = new Metadata()
-        .setAggregators(getCombiningAggregators(metrics))
-        .setTimestampSpec(incrementalIndexSchema.getTimestampSpec())
-        .setQueryGranularity(this.gran)
-        .setRollup(this.rollup);
+    this.metadata = new Metadata(
+        null,
+        getCombiningAggregators(metrics),
+        incrementalIndexSchema.getTimestampSpec(),
+        this.gran,
+        this.rollup
+    );
 
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
@@ -451,7 +454,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   );
 
   // Note: This method needs to be thread safe.
-  protected abstract Integer addToFacts(
+  protected abstract AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
@@ -479,6 +482,55 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract boolean isNull(int rowOffset, int aggOffset);
 
+  public static class TimeAndDimsResult
+  {
+    private TimeAndDims timeAndDims;
+    private List<String> parseExceptionMessages;
+
+    public TimeAndDimsResult(
+        TimeAndDims timeAndDims,
+        List<String> parseExceptionMessages
+    )
+    {
+      this.timeAndDims = timeAndDims;
+      this.parseExceptionMessages = parseExceptionMessages;
+    }
+
+    public TimeAndDims getTimeAndDims()
+    {
+      return timeAndDims;
+    }
+
+    public List<String> getParseExceptionMessages()
+    {
+      return parseExceptionMessages;
+    }
+  }
+
+  public static class AddToFactsResult
+  {
+    private int rowCount;
+    private List<String> parseExceptionMessages;
+
+    public AddToFactsResult(
+        int rowCount,
+        List<String> parseExceptionMessages
+    )
+    {
+      this.rowCount = rowCount;
+      this.parseExceptionMessages = parseExceptionMessages;
+    }
+
+    public int getRowCount()
+    {
+      return rowCount;
+    }
+
+    public List<String> getParseExceptionMessages()
+    {
+      return parseExceptionMessages;
+    }
+  }
 
   @Override
   public void close()
@@ -514,31 +566,36 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    *
    * @return the number of rows in the data set after adding the InputRow
    */
-  public int add(InputRow row) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
     return add(row, false);
   }
 
-  public int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
   {
-    TimeAndDims key = toTimeAndDims(row);
-    final int rv = addToFacts(
+    TimeAndDimsResult timeAndDimsResult = toTimeAndDims(row);
+    final AddToFactsResult addToFactsResult = addToFacts(
         metrics,
         deserializeComplexMetrics,
         reportParseExceptions,
         row,
         numEntries,
-        key,
+        timeAndDimsResult.getTimeAndDims(),
         in,
         rowSupplier,
         skipMaxRowsInMemoryCheck
     );
     updateMaxIngestedTime(row.getTimestamp());
-    return rv;
+    ParseException parseException = getCombinedParseException(
+        row,
+        timeAndDimsResult.getParseExceptionMessages(),
+        addToFactsResult.getParseExceptionMessages()
+    );
+    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), parseException);
   }
 
   @VisibleForTesting
-  TimeAndDims toTimeAndDims(InputRow row)
+  TimeAndDimsResult toTimeAndDims(InputRow row)
   {
     row = formatRow(row);
     if (row.getTimestampFromEpoch() < minTimestamp) {
@@ -549,6 +606,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     Object[] dims;
     List<Object> overflow = null;
+    List<String> parseExceptionMessages = new ArrayList<>();
     synchronized (dimensionDescs) {
       dims = new Object[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
@@ -576,10 +634,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         }
         DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
-        Object dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
-            row.getRaw(dimension),
-            reportParseExceptions
-        );
+        Object dimsKey = null;
+        try {
+          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
+              row.getRaw(dimension),
+              true
+          );
+        }
+        catch (ParseException pe) {
+          parseExceptionMessages.add(pe.getMessage());
+        }
 
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() && dimsKey != null && handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
@@ -622,7 +686,45 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (row.getTimestamp() != null) {
       truncated = gran.bucketStart(row.getTimestamp()).getMillis();
     }
-    return new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
+
+    TimeAndDims timeAndDims = new TimeAndDims(Math.max(truncated, minTimestamp), dims, dimensionDescsList);
+    return new TimeAndDimsResult(timeAndDims, parseExceptionMessages);
+  }
+
+  public static ParseException getCombinedParseException(
+      InputRow row,
+      List<String> dimParseExceptionMessages,
+      List<String> aggParseExceptionMessages
+  )
+  {
+    int numAdded = 0;
+    StringBuilder stringBuilder = new StringBuilder();
+
+    if (dimParseExceptionMessages != null) {
+      for (String parseExceptionMessage : dimParseExceptionMessages) {
+        stringBuilder.append(parseExceptionMessage);
+        stringBuilder.append(",");
+        numAdded++;
+      }
+    }
+    if (aggParseExceptionMessages != null) {
+      for (String parseExceptionMessage : aggParseExceptionMessages) {
+        stringBuilder.append(parseExceptionMessage);
+        stringBuilder.append(",");
+        numAdded++;
+      }
+    }
+
+    if (numAdded == 0) {
+      return null;
+    }
+    ParseException pe = new ParseException(
+        "Found unparseable columns in row: [%s], exceptions: [%s]",
+        row,
+        stringBuilder.toString()
+    );
+    pe.setFromPartiallyValidRow(true);
+    return pe;
   }
 
   private synchronized void updateMaxIngestedTime(DateTime eventTime)
