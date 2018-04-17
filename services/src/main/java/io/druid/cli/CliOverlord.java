@@ -328,6 +328,8 @@ public class CliOverlord extends ServerRunnable
       authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
+      AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
+
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
 

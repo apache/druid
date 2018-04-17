@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Objects;
 
 public class AuthConfig
 {
@@ -40,17 +41,19 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null);
+    this(null, null, false);
   }
 
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
-      @JsonProperty("authorizers") List<String> authorizers
+      @JsonProperty("authorizers") List<String> authorizers,
+      @JsonProperty("allowUnauthenticatedHttpOptions") boolean allowUnauthenticatedHttpOptions
   )
   {
     this.authenticatorChain = authenticationChain;
     this.authorizers = authorizers;
+    this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions;
   }
 
   @JsonProperty
@@ -58,6 +61,9 @@ public class AuthConfig
 
   @JsonProperty
   private List<String> authorizers;
+
+  @JsonProperty
+  private final boolean allowUnauthenticatedHttpOptions;
 
   public List<String> getAuthenticatorChain()
   {
@@ -69,12 +75,18 @@ public class AuthConfig
     return authorizers;
   }
 
+  public boolean isAllowUnauthenticatedHttpOptions()
+  {
+    return allowUnauthenticatedHttpOptions;
+  }
+
   @Override
   public String toString()
   {
     return "AuthConfig{" +
-           "authenticatorChain='" + authenticatorChain + '\'' +
-           ", authorizers='" + authorizers + '\'' +
+           "authenticatorChain=" + authenticatorChain +
+           ", authorizers=" + authorizers +
+           ", allowUnauthenticatedHttpOptions=" + allowUnauthenticatedHttpOptions +
            '}';
   }
 
@@ -87,23 +99,15 @@ public class AuthConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     AuthConfig that = (AuthConfig) o;
-
-    if (getAuthenticatorChain() != null
-        ? !getAuthenticatorChain().equals(that.getAuthenticatorChain())
-        : that.getAuthenticatorChain() != null) {
-      return false;
-    }
-    return getAuthorizers() != null ? getAuthorizers().equals(that.getAuthorizers()) : that.getAuthorizers() == null;
-
+    return isAllowUnauthenticatedHttpOptions() == that.isAllowUnauthenticatedHttpOptions() &&
+           Objects.equals(getAuthenticatorChain(), that.getAuthenticatorChain()) &&
+           Objects.equals(getAuthorizers(), that.getAuthorizers());
   }
 
   @Override
   public int hashCode()
   {
-    int result = getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0;
-    result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
-    return result;
+    return Objects.hash(getAuthenticatorChain(), getAuthorizers(), isAllowUnauthenticatedHttpOptions());
   }
 }
