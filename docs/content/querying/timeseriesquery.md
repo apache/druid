@@ -94,9 +94,9 @@ Druid can include an extra "grand totals" row as the last row of a timeseries re
 }
 ```
 
-The grand totals row will appear as the last row in the result array, and will have no timestamp. It will be the last
-row even if the query is run in "descending" mode. Post-aggregations in the grand totals row will be computed based
-upon the grand total aggregations.
+The grand totals row will appear as the last row in the result array, and will have the Unix epoch as its timestamp
+(1970-01-01T00:00:00Z). It will be the last row even if the query is run in "descending" mode. Post-aggregations in
+the grand totals row will be computed based upon the grand total aggregations.
 
 #### Zero-filling
 
