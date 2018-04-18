@@ -47,7 +47,6 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
 {
   private static final Logger LOG = new Logger(Fetcher.class);
   private static final String FETCH_FILE_PREFIX = "fetch-";
-
   private final CacheManager<T> cacheManager;
   private final List<T> objects;
   private final ExecutorService fetchExecutor;

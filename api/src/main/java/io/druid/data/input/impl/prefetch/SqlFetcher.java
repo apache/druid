@@ -77,7 +77,7 @@ public class SqlFetcher<T> extends Fetcher<T>
     try {
       openObjectFunction.open(object, outFile);
     }
-    catch (Exception e) {
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
     return outFile.length();

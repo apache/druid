@@ -150,22 +150,31 @@ An example is shown below:
 
 #### SqlFirehose
 
-SqlFirehoseFactory can be used to ingest events residing in RDBMS. The database information is pulled from the metadata storage configuration.
+SqlFirehoseFactory can be used to ingest events residing in RDBMS. The database connection information is provided as part of the ingestion spec.
 An example is shown below:
 
 ```json
 {
     "type" : "sql",
+    "database": {
+        "type": "mysql",
+        "connectorConfig" : {
+        "connectURI" : "jdbc:mysql://host:port/schema",
+        "user" : "user",
+        "password" : "password"
+        }
+     },
     "sqls" : ["SELECT * FROM table1", "SELECT * FROM table2"]
 }
 ```
 
-The below configurations can be optionally used for tuning the firehose behavior:
 
-|property|description|default|
-|--------|-----------|-------|
-|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|
-|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|
-|prefetchTriggerBytes|Threshold to trigger prefetching http objects.|maxFetchCapacityBytes / 2|
-|fetchTimeout|Timeout for fetching the result set.|60000|
-|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|false|
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be "sql".||Yes|
+|database|Specifies the database connection details.||Yes|
+|maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|No|
+|maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|No|
+|prefetchTriggerBytes|Threshold to trigger prefetching http objects.|maxFetchCapacityBytes / 2|No|
+|fetchTimeout|Timeout for fetching the result set.|60000|No|
+|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|false|No|

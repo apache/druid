@@ -21,13 +21,15 @@ package io.druid.segment.realtime.firehose;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.google.common.base.Preconditions;
 import io.druid.data.input.impl.prefetch.PrefetchSqlFirehoseFactory;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.StringUtils;
-import io.druid.metadata.SQLMetadataConnector;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
@@ -50,8 +52,11 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
 {
   @JsonProperty
   private final List<String> sqls;
+  @JsonProperty
+  private final MetadataStorageConnectorConfig connectorConfig;
   private final ObjectMapper objectMapper;
-  private final SQLMetadataConnector sqlMetadataConnector;
+  @JsonProperty
+  private final SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector;
   private final Boolean foldCase;
 
   @JsonCreator
@@ -62,7 +67,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("foldCase") Boolean foldCase,
-      @JacksonInject SQLMetadataConnector sqlMetadataConnector,
+      @JsonProperty("database") SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector,
       @JacksonInject @Smile ObjectMapper objectMapper
   )
   {
@@ -73,21 +78,22 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
         fetchTimeout,
         objectMapper
     );
-
     Preconditions.checkArgument(sqls.size() > 0, "No SQL queries provided");
 
     this.sqls = sqls;
     this.objectMapper = objectMapper;
-    this.sqlMetadataConnector = sqlMetadataConnector;
-    this.foldCase = (foldCase == null ? false : true);
+    this.sqlFirehoseDatabaseConnector = sqlFirehoseDatabaseConnector;
+    this.foldCase = (foldCase == null ? false : foldCase);
+    this.connectorConfig = null;
   }
 
   @Override
   protected InputStream openObjectStream(String object, File fileName) throws IOException
   {
-    Preconditions.checkNotNull(sqlMetadataConnector, "SQL Metadata Connector not configured!");
+    Preconditions.checkNotNull(sqlFirehoseDatabaseConnector, "SQL Metadata Connector not configured!");
     try (FileOutputStream fos = new FileOutputStream(fileName)) {
-      sqlMetadataConnector.retryWithHandle(
+      final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos);
+      sqlFirehoseDatabaseConnector.retryWithHandle(
           (handle) -> {
             ResultIterator<Map<String, Object>> resultIterator = handle.createQuery(
                 object
@@ -116,16 +122,19 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
                   return resultRow;
                 }
             ).iterator();
+            jg.writeStartArray();
             while (resultIterator.hasNext()) {
-              fos.write(objectMapper.writeValueAsBytes(resultIterator.next()));
+              jg.writeObject(resultIterator.next());
             }
+            jg.writeEndArray();
+            jg.close();
             return null;
           },
           (exception) -> {
             final boolean isStatementException = exception instanceof StatementException ||
                                                  (exception instanceof CallbackFailedException
                                                   && exception.getCause() instanceof StatementException);
-            return sqlMetadataConnector.isTransientException(exception) && !(isStatementException);
+            return sqlFirehoseDatabaseConnector.isTransientException(exception) && !(isStatementException);
           }
       );
     }

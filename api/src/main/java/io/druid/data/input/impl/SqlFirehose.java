@@ -22,6 +22,7 @@ import com.google.common.collect.Iterators;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.prefetch.JsonIterator;
+import io.druid.java.util.common.io.Closer;
 import io.druid.utils.Runnables;
 
 import javax.annotation.Nullable;
@@ -85,24 +86,11 @@ public class SqlFirehose implements Firehose
   @Override
   public void close() throws IOException
   {
-    try {
-      if (lineIterator != null) {
-        lineIterator.close();
-      }
+    Closer firehoseCloser = Closer.create();
+    if (lineIterator != null) {
+      firehoseCloser.register(lineIterator);
     }
-    catch (Throwable t) {
-      try {
-        if (closer != null) {
-          closer.close();
-        }
-      }
-      catch (Exception e) {
-        t.addSuppressed(e);
-      }
-      throw t;
-    }
-    if (closer != null) {
-      closer.close();
-    }
+    firehoseCloser.register(closer);
+    firehoseCloser.close();
   }
 }

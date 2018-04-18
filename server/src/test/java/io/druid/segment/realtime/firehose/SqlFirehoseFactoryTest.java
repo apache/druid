@@ -29,8 +29,11 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.StringUtils;
+import io.druid.metadata.MetadataStorageConnectorConfig;
+import io.druid.metadata.SQLFirehoseDatabaseConnector;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.segment.TestHelper;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -38,6 +41,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.Batch;
+import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -62,8 +66,7 @@ public class SqlFirehoseFactoryTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-
-  private final ObjectMapper mapper = TestHelper.getSmileMapper();
+  private final ObjectMapper mapper = TestHelper.makeSmileMapper();
 
   private final MapInputRowParser parser = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -76,7 +79,7 @@ public class SqlFirehoseFactoryTest
       )
   );
   private TestDerbyConnector derbyConnector;
-
+  private TestDerbyFirehoseConnector derbyFirehoseConnector;
 
   @BeforeClass
   public static void setup() throws IOException
@@ -148,7 +151,7 @@ public class SqlFirehoseFactoryTest
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();
@@ -161,6 +164,8 @@ public class SqlFirehoseFactoryTest
   private void createAndUpdateTable(final String tableName)
   {
     derbyConnector = derbyConnectorRule.getConnector();
+    derbyFirehoseConnector = new TestDerbyFirehoseConnector(new MetadataStorageConnectorConfig(),
+                                                                                       derbyConnector.getDBI());
     derbyConnector.createTable(
         tableName,
         ImmutableList.of(
@@ -196,7 +201,16 @@ public class SqlFirehoseFactoryTest
   {
     createAndUpdateTable(TABLE_NAME_1);
     final SqlFirehoseFactory factory =
-        new SqlFirehoseFactory(SQLLIST1, 0L, 0L, 0L, 0L, true, derbyConnector, mapper);
+        new SqlFirehoseFactory(
+            SQLLIST1,
+            0L,
+            0L,
+            0L,
+            0L,
+            true,
+            derbyFirehoseConnector,
+            mapper
+        );
 
     final List<Row> rows = new ArrayList<>();
     final File firehoseTmpDir = createFirehoseTmpDir("testWithoutCacheAndFetch");
@@ -217,7 +231,16 @@ public class SqlFirehoseFactoryTest
   {
     createAndUpdateTable(TABLE_NAME_1);
     final SqlFirehoseFactory factory =
-        new SqlFirehoseFactory(SQLLIST1, 0L, null, null, null, true, derbyConnector, mapper);
+        new SqlFirehoseFactory(
+            SQLLIST1,
+            0L,
+            null,
+            null,
+            null,
+            true,
+            derbyFirehoseConnector,
+            mapper
+        );
 
 
     final List<Row> rows = new ArrayList<>();
@@ -239,10 +262,17 @@ public class SqlFirehoseFactoryTest
   {
     createAndUpdateTable(TABLE_NAME_1);
     createAndUpdateTable(TABLE_NAME_2);
+
     final SqlFirehoseFactory factory = new
         SqlFirehoseFactory(
-        SQLLIST2, null, null,
-        0L, null, true, derbyConnector, mapper
+        SQLLIST2,
+        null,
+        null,
+        0L,
+        null,
+        true,
+        derbyFirehoseConnector,
+        mapper
     );
 
     final List<Row> rows = new ArrayList<>();
@@ -258,5 +288,24 @@ public class SqlFirehoseFactoryTest
     dropTable(TABLE_NAME_1);
     dropTable(TABLE_NAME_2);
 
+  }
+
+  class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
+  {
+    private final DBI dbi;
+
+    public TestDerbyFirehoseConnector(MetadataStorageConnectorConfig metadataStorageConnectorConfig, DBI dbi)
+    {
+      final BasicDataSource datasource = getDatasource(metadataStorageConnectorConfig);
+      datasource.setDriverClassLoader(getClass().getClassLoader());
+      datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
+      this.dbi = dbi;
+    }
+
+    @Override
+    public DBI getDBI()
+    {
+      return dbi;
+    }
   }
 }

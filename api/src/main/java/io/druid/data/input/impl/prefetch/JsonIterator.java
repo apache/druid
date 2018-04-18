@@ -23,14 +23,20 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
+import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.common.io.Closer;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
+/**
+ * An iterator over an array of JSON objects. Uses {@link ObjectCodec} to deserialize regular Java objects.
+ * @param <T> the type of object returned by this iterator
+ */
 public class JsonIterator<T> implements Iterator<T>, Closeable
 {
   private JsonParser jp;
@@ -40,6 +46,13 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
   private final Closeable resourceCloser;
   private final ObjectMapper objectMapper;
 
+  /**
+   *
+   * @param typeRef the object type that the JSON object should be deserialized into
+   * @param inputStream stream containing an array of JSON objects
+   * @param resourceCloser a {@code Closeable} implementation to release resources that the object is holding
+   * @param objectMapper object mapper, used for deserialization
+   */
   public JsonIterator(
       TypeReference typeRef,
       InputStream inputStream,
@@ -54,6 +67,10 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
     this.objectMapper = objectMapper;
   }
 
+  /**
+   * Returns {@code true} if there are more objects to be read.
+   * @return {@code true} if there are more objects to be read, else return {@code false}
+   */
   @Override
   public boolean hasNext()
   {
@@ -68,26 +85,24 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
     return true;
   }
 
+  /**
+   * Retrieves the next deserialized object from the stream of JSON objects.
+   * @return the next deserialized object from the stream of JSON ovbjects
+   */
   @Override
   public T next()
   {
-    init();
-
+    if (!hasNext()) {
+      throw new NoSuchElementException("No more objects to read!");
+    }
     try {
       final T retVal = objectCodec.readValue(jp, typeRef);
       jp.nextToken();
       return retVal;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
-  }
-
-
-  @Override
-  public void remove()
-  {
-    throw new UnsupportedOperationException();
   }
 
   private void init()
@@ -99,8 +114,13 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
         } else {
           jp = objectMapper.getFactory().createParser(inputStream);
         }
-        objectCodec = jp.getCodec();
-        jp.nextToken();
+        final JsonToken nextToken = jp.nextToken();
+        if (nextToken == JsonToken.START_OBJECT || nextToken != JsonToken.START_ARRAY) {
+          throw new IAE("First token should be START_ARRAY", jp.getCurrentToken());
+        } else {
+          jp.nextToken();
+          objectCodec = jp.getCodec();
+        }
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -111,14 +131,11 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
   @Override
   public void close() throws IOException
   {
+    Closer closer = Closer.create();
     if (jp != null) {
-      jp.close();
+      closer.register(jp);
     }
-    try {
-      resourceCloser.close();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    closer.register(resourceCloser);
+    closer.close();
   }
 }

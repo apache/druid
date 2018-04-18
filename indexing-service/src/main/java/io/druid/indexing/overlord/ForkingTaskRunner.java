@@ -292,7 +292,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               } else {
                                 taskClasspath = config.getClasspath();
                               }
-
                               command.add(config.getJavaCommand());
                               command.add("-cp");
                               command.add(taskClasspath);
@@ -357,7 +356,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   }
                                 }
                               }
-
+                              command.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8100");
                               // Add dataSource and taskId for metrics or logging
                               command.add(
                                   StringUtils.format(
@@ -513,8 +512,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                             try {
                               if (!stopping && taskDir.exists()) {
-                                log.info("Removing task directory: %s", taskDir);
-                                FileUtils.deleteDirectory(taskDir);
+                                log.info("REMOVING task directory: %s", taskDir);
+                                //FileUtils.deleteDirectory(taskDir);
                               }
                             }
                             catch (Exception e) {

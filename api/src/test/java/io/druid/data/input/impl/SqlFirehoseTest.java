@@ -19,6 +19,7 @@
 
 package io.druid.data.input.impl;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
@@ -50,7 +51,6 @@ public class SqlFirehoseTest
 
   private MapInputRowParser parser = null;
   private ObjectMapper objectMapper;
-  private static final List<File> FIREHOSE_TMP_DIRS = new ArrayList<>();
   private static File TEST_DIR;
 
   @Before
@@ -70,7 +70,11 @@ public class SqlFirehoseTest
     for (Map m : inputTexts) {
       File file = new File(TEST_DIR, "test_" + i++);
       try (FileOutputStream fos = new FileOutputStream(file)) {
-        fos.write(objectMapper.writeValueAsBytes(m));
+        final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos);
+        jg.writeStartArray();
+        jg.writeObject(m);
+        jg.writeEndArray();
+        jg.close();
         testFile.add(new FileInputStream(file));
       }
     }
@@ -121,7 +125,12 @@ public class SqlFirehoseTest
   {
     File file = File.createTempFile("test", "", TEST_DIR);
     final TestCloseable closeable = new TestCloseable();
-
+    try (FileOutputStream fos = new FileOutputStream(file)) {
+      final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos);
+      jg.writeStartArray();
+      jg.writeEndArray();
+      jg.close();
+    }
 
     final JsonIterator<Map<String, Object>> jsonIterator = new JsonIterator(new TypeReference<Map<String, Object>>()
     {
@@ -148,7 +157,7 @@ public class SqlFirehoseTest
     private boolean closed;
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }

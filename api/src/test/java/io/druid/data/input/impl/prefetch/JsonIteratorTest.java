@@ -19,6 +19,7 @@
 package io.druid.data.input.impl.prefetch;
 
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
@@ -47,9 +48,13 @@ public class JsonIteratorTest
     {
     };
     try (FileOutputStream fos = new FileOutputStream(testFile)) {
+      final JsonGenerator jg = mapper.getFactory().createGenerator(fos);
+      jg.writeStartArray();
       for (Map<String, Object> mapFromList : expectedList) {
-        fos.write(mapper.writeValueAsBytes(mapFromList));
+        jg.writeObject(mapFromList);
       }
+      jg.writeEndArray();
+      jg.close();
     }
 
     JsonIterator<Map<String, Object>> testJsonIterator = new JsonIterator<>(type, new FileInputStream(testFile), () -> {
