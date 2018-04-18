@@ -102,6 +102,7 @@ public class DruidDataSource
   @Override
   public boolean equals(Object o)
   {
+    //noinspection Contract
     throw new UnsupportedOperationException("Use ImmutableDruidDataSource instead");
   }
 

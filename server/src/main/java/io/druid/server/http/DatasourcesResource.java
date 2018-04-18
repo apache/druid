@@ -143,7 +143,7 @@ public class DatasourcesResource
       @QueryParam("full") final String full
   )
   {
-    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
       return Response.noContent().build();

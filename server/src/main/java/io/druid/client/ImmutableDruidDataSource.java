@@ -19,11 +19,15 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -34,10 +38,11 @@ public class ImmutableDruidDataSource
   private final ImmutableMap<String, String> properties;
   private final ImmutableMap<String, DataSegment> idToSegments;
 
+  @JsonCreator
   public ImmutableDruidDataSource(
-      String name,
-      ImmutableMap<String, String> properties,
-      ImmutableMap<String, DataSegment> idToSegments
+      @JsonProperty("name") String name,
+      @JsonProperty("properties") ImmutableMap<String, String> properties,
+      @JsonProperty("idToSegments") ImmutableMap<String, DataSegment> idToSegments
   )
   {
     this.name = Preconditions.checkNotNull(name);
@@ -45,16 +50,31 @@ public class ImmutableDruidDataSource
     this.idToSegments = idToSegments;
   }
 
+  @JsonProperty
   public String getName()
   {
     return name;
   }
 
+  @JsonProperty
+  public Map<String, String> getProperties()
+  {
+    return properties;
+  }
+
+  @JsonProperty
+  public Map<String, DataSegment> getIdToSegments()
+  {
+    return idToSegments;
+  }
+
+  @JsonIgnore
   public Collection<DataSegment> getSegments()
   {
     return idToSegments.values();
   }
 
+  @JsonIgnore
   public DataSegment getSegment(String segmentIdentifier)
   {
     return idToSegments.get(segmentIdentifier);
