@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
@@ -44,6 +43,7 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -58,7 +58,6 @@ import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.query.DruidMetrics;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -249,12 +248,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         dataSchema, new RealtimeIOConfig(null, null, null), null
     );
 
-    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
-        ImmutableList.of(fireDepartmentForMetrics),
-        ImmutableMap.of(
-            DruidMetrics.TASK_ID, new String[]{getId()}
-        )
-    );
+    final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
 
     this.metrics = fireDepartmentForMetrics.getMetrics();
     metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(metrics);
