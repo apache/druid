@@ -150,7 +150,15 @@ public class DatasourcesResource
     }
 
     if (full != null) {
-      return Response.ok(dataSource).build();
+      final Map<String, Object> fullResult = ImmutableMap.of(
+          "name",
+          dataSource.getName(),
+          "properties",
+          dataSource.getProperties(),
+          "segments",
+          dataSource.getIdToSegments().values()
+      );
+      return Response.ok(fullResult).build();
     }
 
     return Response.ok(getSimpleDatasource(dataSourceName)).build();
