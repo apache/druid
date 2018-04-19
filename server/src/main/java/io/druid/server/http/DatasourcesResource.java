@@ -20,6 +20,7 @@
 package io.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -72,8 +73,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -511,15 +510,15 @@ public class DatasourcesResource
       return null;
     }
 
-    SortedMap<String, DataSegment> segmentMap = new TreeMap<>();
+    final ImmutableSortedMap.Builder<String, DataSegment> builder = ImmutableSortedMap.naturalOrder();
     for (ImmutableDruidDataSource dataSource : dataSources) {
       Iterable<DataSegment> segments = dataSource.getSegments();
       for (DataSegment segment : segments) {
-        segmentMap.put(segment.getIdentifier(), segment);
+        builder.put(segment.getIdentifier(), segment);
       }
     }
 
-    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap);
+    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), builder.build());
   }
 
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
