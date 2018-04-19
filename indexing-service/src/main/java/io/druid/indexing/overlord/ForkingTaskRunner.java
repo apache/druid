@@ -64,7 +64,6 @@ import io.druid.server.DruidNode;
 import io.druid.server.metrics.MonitorsConfig;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
