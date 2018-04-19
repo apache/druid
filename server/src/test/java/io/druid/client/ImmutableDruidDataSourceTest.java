@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
@@ -52,7 +53,7 @@ public class ImmutableDruidDataSourceTest
     final ImmutableDruidDataSource dataSource = new ImmutableDruidDataSource(
         "test",
         ImmutableMap.of("prop1", "val1", "prop2", "val2"),
-        ImmutableMap.of(segment.getIdentifier(), segment)
+        ImmutableSortedMap.of(segment.getIdentifier(), segment)
     );
 
     final ObjectMapper objectMapper = new DefaultObjectMapper()

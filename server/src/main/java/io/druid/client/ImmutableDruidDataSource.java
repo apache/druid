@@ -24,11 +24,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
 
 /**
  */
@@ -36,18 +38,31 @@ public class ImmutableDruidDataSource
 {
   private final String name;
   private final ImmutableMap<String, String> properties;
-  private final ImmutableMap<String, DataSegment> idToSegments;
+  private final ImmutableSortedMap<String, DataSegment> idToSegments;
+
+  public ImmutableDruidDataSource(
+      String name,
+      Map<String, String> properties,
+      SortedMap<String, DataSegment> idToSegments
+  )
+  {
+    this.name = Preconditions.checkNotNull(name);
+    this.properties = ImmutableMap.copyOf(properties);
+    this.idToSegments = ImmutableSortedMap.copyOfSorted(idToSegments);
+  }
 
   @JsonCreator
   public ImmutableDruidDataSource(
       @JsonProperty("name") String name,
-      @JsonProperty("properties") ImmutableMap<String, String> properties,
-      @JsonProperty("idToSegments") ImmutableMap<String, DataSegment> idToSegments
+      @JsonProperty("properties") Map<String, String> properties,
+      @JsonProperty("segments") Collection<DataSegment> segments
   )
   {
     this.name = Preconditions.checkNotNull(name);
-    this.properties = properties;
-    this.idToSegments = idToSegments;
+    this.properties = ImmutableMap.copyOf(properties);
+    final ImmutableSortedMap.Builder<String, DataSegment> builder = ImmutableSortedMap.naturalOrder();
+    segments.forEach(segment -> builder.put(segment.getIdentifier(), segment));
+    this.idToSegments = builder.build();
   }
 
   @JsonProperty
@@ -63,12 +78,6 @@ public class ImmutableDruidDataSource
   }
 
   @JsonProperty
-  public Map<String, DataSegment> getIdToSegments()
-  {
-    return idToSegments;
-  }
-
-  @JsonIgnore
   public Collection<DataSegment> getSegments()
   {
     return idToSegments.values();

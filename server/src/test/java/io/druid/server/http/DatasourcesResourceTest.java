@@ -314,7 +314,7 @@ public class DatasourcesResourceTest
   @Test
   public void testFullGetTheDataSource()
   {
-    DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap());
+    DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(
         dataSource1
     ).atLeastOnce();

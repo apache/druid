@@ -65,12 +65,15 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -150,15 +153,7 @@ public class DatasourcesResource
     }
 
     if (full != null) {
-      final Map<String, Object> fullResult = ImmutableMap.of(
-          "name",
-          dataSource.getName(),
-          "properties",
-          dataSource.getProperties(),
-          "segments",
-          dataSource.getIdToSegments().values()
-      );
-      return Response.ok(fullResult).build();
+      return Response.ok(dataSource).build();
     }
 
     return Response.ok(getSimpleDatasource(dataSourceName)).build();
@@ -516,7 +511,7 @@ public class DatasourcesResource
       return null;
     }
 
-    Map<String, DataSegment> segmentMap = Maps.newHashMap();
+    SortedMap<String, DataSegment> segmentMap = new TreeMap<>();
     for (ImmutableDruidDataSource dataSource : dataSources) {
       Iterable<DataSegment> segments = dataSource.getSegments();
       for (DataSegment segment : segments) {
@@ -524,11 +519,7 @@ public class DatasourcesResource
       }
     }
 
-    return new ImmutableDruidDataSource(
-        dataSourceName,
-        ImmutableMap.of(),
-        ImmutableMap.copyOf(segmentMap)
-    );
+    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap);
   }
 
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
