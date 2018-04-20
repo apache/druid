@@ -289,12 +289,11 @@ public class SqlFirehoseFactoryTest
     dropTable(TABLE_NAME_2);
 
   }
-
-  class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
+  private static class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
   {
     private final DBI dbi;
 
-    public TestDerbyFirehoseConnector(MetadataStorageConnectorConfig metadataStorageConnectorConfig, DBI dbi)
+    private TestDerbyFirehoseConnector(MetadataStorageConnectorConfig metadataStorageConnectorConfig, DBI dbi)
     {
       final BasicDataSource datasource = getDatasource(metadataStorageConnectorConfig);
       datasource.setDriverClassLoader(getClass().getClassLoader());
