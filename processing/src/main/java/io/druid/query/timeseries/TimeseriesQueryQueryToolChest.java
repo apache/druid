@@ -150,10 +150,10 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
       final Sequence<Result<TimeseriesResultValue>> finalSequence;
 
-      if (query.getGranularity().equals(Granularities.ALL) && !query.isSkipEmptyBuckets() && baseResults.toList()
-                                                                                                         .isEmpty()) {
-        Result<TimeseriesResultValue> retVal = getNullTimeseriesResultValue(query);
-        finalSequence = Sequences.simple(Collections.singletonList(retVal));
+      if (query.getGranularity().equals(Granularities.ALL) && !query.isSkipEmptyBuckets()) {
+        //Usally it is NOT Okay to materilize results via toList(), but Granularity is ALL thus we have only one record
+        finalSequence = baseResults.toList().isEmpty() ? Sequences.simple(Collections.singletonList(
+            getNullTimeseriesResultValue(query))) : baseResults;
       } else {
         finalSequence = baseResults;
       }

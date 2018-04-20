@@ -285,7 +285,20 @@ public class CalciteQueryTest extends CalciteTestBase
         QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
         "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  dim2 = 0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
-        null,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(QSS(Filtration.eternity()))
+                               .filters(SELECTOR("dim2", "0", null))
+                               .granularity(Granularities.ALL)
+                               .aggregators(AGGS(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   EXPRESSION_POST_AGG("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
         ImmutableList.of(
             new Object[]{11.0, 0.0}
         )
@@ -296,7 +309,19 @@ public class CalciteQueryTest extends CalciteTestBase
         QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
         "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  __time >= TIMESTAMP '2999-01-01 00:00:00'",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
-        null,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(QSS(Intervals.of("2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                               .granularity(Granularities.ALL)
+                               .aggregators(AGGS(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   EXPRESSION_POST_AGG("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
         ImmutableList.of(
             new Object[]{11.0, 0.0}
         )
@@ -304,12 +329,19 @@ public class CalciteQueryTest extends CalciteTestBase
 
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent' GROUP BY FLOOR(__time TO DAY)",
-        null,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(QSS(Filtration.eternity()))
+                               .filters(SELECTOR("dim1", "nonexistent", null))
+                               .granularity(Granularities.DAY)
+                               .aggregators(AGGS(
+                                   new CountAggregatorFactory("a0")
+                               ))
+                               .context(TIMESERIES_CONTEXT_DEFAULT)
+                               .build()),
         ImmutableList.of()
     );
   }
-
-
 
   @Test
   public void testSelectTrimFamily() throws Exception
