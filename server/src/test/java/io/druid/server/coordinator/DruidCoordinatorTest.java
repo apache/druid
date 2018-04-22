@@ -37,6 +37,8 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;
@@ -47,7 +49,6 @@ import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
-import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
@@ -97,6 +98,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private JacksonConfigManager configManager;
   private DruidNode druidNode;
+  private LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
   private static final String LOADPATH = "/druid/loadqueue/localhost:1234";
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
@@ -186,7 +188,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serverInventoryView,
         metadataRuleManager,
         curator,
-        new NoopServiceEmitter(),
+        serviceEmitter,
         scheduledExecutorFactory,
         null,
         null,
@@ -386,26 +388,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     assignSegmentLatch.await();
 
+    final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
+    serviceEmitter.latch = coordinatorRunLatch;
+    coordinatorRunLatch.await();
+
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
     curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH, dataSegment.getIdentifier()));
-    // Wait for coordinator thread to run so that replication status is updated
-    while (coordinator.getSegmentAvailability().getLong(dataSource) != 0) {
-      Thread.sleep(50);
-    }
+
     Map segmentAvailability = coordinator.getSegmentAvailability();
     Assert.assertEquals(1, segmentAvailability.size());
     Assert.assertEquals(0L, segmentAvailability.get(dataSource));
-
-    while (coordinator.hasLoadPending(dataSource)) {
-      Thread.sleep(50);
-    }
-
-    // wait historical data to be updated
-    long startMillis = System.currentTimeMillis();
-    long coordinatorRunPeriodMillis = druidCoordinatorConfig.getCoordinatorPeriod().getMillis();
-    while (System.currentTimeMillis() - startMillis < coordinatorRunPeriodMillis) {
-      Thread.sleep(100);
-    }
 
     Map<String, ? extends Object2LongMap<String>> replicationStatus = coordinator.getReplicationStatus();
     Assert.assertNotNull(replicationStatus);
@@ -465,7 +457,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     pathChildrenCache.start();
     pathChildrenCacheCold.start();
 
-    DruidDataSource[] druidDataSources = {new DruidDataSource(dataSource, Collections.<String, String>emptyMap())};
+    DruidDataSource[] druidDataSources = {new DruidDataSource(dataSource, Collections.emptyMap())};
     dataSegments.values().forEach(druidDataSources[0]::addSegment);
 
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
@@ -531,16 +523,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     assignSegmentLatchHot.await();
     assignSegmentLatchCold.await();
 
+    final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
+    serviceEmitter.latch = coordinatorRunLatch;
+    coordinatorRunLatch.await();
+
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
-
-    while (coordinator.getSegmentAvailability().getLong(dataSource) != 0 && coordinator.hasLoadPending(dataSource)) {
-      Thread.sleep(50);
-    }
-
-    long startMillis = System.currentTimeMillis();
-    while (System.currentTimeMillis() - startMillis < druidCoordinatorConfig.getCoordinatorPeriod().getMillis()) {
-      Thread.sleep(100); // Wait for historical data to be updated
-    }
 
     Map<String, ? extends Object2LongMap<String>> replicationStatus = coordinator.getReplicationStatus();
     Assert.assertEquals(2, replicationStatus.entrySet().size());
@@ -632,6 +619,24 @@ public class DruidCoordinatorTest extends CuratorTestBase
     {
       leader = null;
       listener.stopBeingLeader();
+    }
+  }
+
+  private static class LatchableServiceEmitter extends ServiceEmitter
+  {
+    private CountDownLatch latch;
+
+    private LatchableServiceEmitter()
+    {
+      super("", "", null);
+    }
+
+    @Override
+    public void emit(Event event)
+    {
+      if (latch != null && "segment/count".equals(event.toMap().get("metric"))) {
+        latch.countDown();
+      }
     }
   }
 }
