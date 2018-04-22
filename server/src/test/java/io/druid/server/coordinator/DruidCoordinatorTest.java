@@ -43,6 +43,7 @@ import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
+import io.druid.server.coordinator.rules.IntervalLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
@@ -425,6 +426,132 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNull(coordinator.getCurrentLeader());
 
     EasyMock.verify(serverInventoryView);
+    EasyMock.verify(metadataRuleManager);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testCoordinatorTieredRun() throws Exception
+  {
+    final String dataSource = "dataSource", hotTierName = "hot", coldTierName = "cold";
+    final Rule hotTier = new IntervalLoadRule(Intervals.of("2018-01-01/P1M"), ImmutableMap.of(hotTierName, 1));
+    final Rule coldTier = new ForeverLoadRule(ImmutableMap.of(coldTierName, 1));
+    final String loadPathCold = "/druid/loadqueue/cold:1234";
+    final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0);
+    final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0);
+
+    final Map<String, DataSegment> dataSegments = ImmutableMap.of(
+        "2018-01-02T00:00:00.000Z_2018-01-03T00:00:00.000Z",
+        new DataSegment(dataSource, Intervals.of("2018-01-02/P1D"), "v1", null, null, null, null, 0x9, 0),
+        "2018-01-03T00:00:00.000Z_2018-01-04T00:00:00.000Z",
+        new DataSegment(dataSource, Intervals.of("2018-01-03/P1D"), "v1", null, null, null, null, 0x9, 0),
+        "2017-01-01T00:00:00.000Z_2017-01-02T00:00:00.000Z",
+        new DataSegment(dataSource, Intervals.of("2017-01-01/P1D"), "v1", null, null, null, null, 0x9, 0)
+    );
+
+    final LoadQueuePeon loadQueuePeonCold = new CuratorLoadQueuePeon(
+        curator,
+        loadPathCold,
+        objectMapper,
+        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_cold_scheduled-%d"),
+        Execs.singleThreaded("coordinator_test_load_queue_peon_cold-%d"),
+        druidCoordinatorConfig
+    );
+    final PathChildrenCache pathChildrenCacheCold = new PathChildrenCache(
+        curator, loadPathCold, true, true, Execs.singleThreaded("coordinator_test_path_children_cache_cold-%d")
+    );
+    loadManagementPeons.putAll(ImmutableMap.of("hot", loadQueuePeon, "cold", loadQueuePeonCold));
+
+    loadQueuePeonCold.start();
+    pathChildrenCache.start();
+    pathChildrenCacheCold.start();
+
+    DruidDataSource[] druidDataSources = {new DruidDataSource(dataSource, Collections.<String, String>emptyMap())};
+    dataSegments.values().forEach(druidDataSources[0]::addSegment);
+
+    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
+            .andReturn(ImmutableList.of(hotTier, coldTier)).atLeastOnce();
+    EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
+    EasyMock.expect(databaseSegmentManager.getInventory()).andReturn(
+        ImmutableList.of(druidDataSources[0].toImmutableDruidDataSource())
+    ).atLeastOnce();
+    EasyMock.expect(serverInventoryView.getInventory())
+            .andReturn(ImmutableList.of(hotServer, coldServer))
+            .atLeastOnce();
+    EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+
+    EasyMock.replay(metadataRuleManager, databaseSegmentManager, serverInventoryView);
+
+    coordinator.start();
+    leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
+
+    final CountDownLatch assignSegmentLatchHot = new CountDownLatch(2);
+    pathChildrenCache.getListenable().addListener(
+        (client, event) -> {
+          if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+            DataSegment segment = dataSegments
+                .entrySet()
+                .stream()
+                .filter(x -> event.getData().getPath().contains(x.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
+
+            if (segment != null) {
+              hotServer.addDataSegment(segment);
+              curator.delete().guaranteed().forPath(event.getData().getPath());
+            }
+
+            assignSegmentLatchHot.countDown();
+          }
+        }
+    );
+
+    final CountDownLatch assignSegmentLatchCold = new CountDownLatch(1);
+    pathChildrenCacheCold.getListenable().addListener(
+        (client, event) -> {
+          if (event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+            DataSegment segment = dataSegments
+                .entrySet()
+                .stream()
+                .filter(x -> event.getData().getPath().contains(x.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
+
+            if (segment != null) {
+              coldServer.addDataSegment(segment);
+              curator.delete().guaranteed().forPath(event.getData().getPath());
+            }
+
+            assignSegmentLatchCold.countDown();
+          }
+        }
+    );
+
+    assignSegmentLatchHot.await();
+    assignSegmentLatchCold.await();
+
+    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
+
+    while (coordinator.getSegmentAvailability().getLong(dataSource) != 0 && coordinator.hasLoadPending(dataSource)) {
+      Thread.sleep(50);
+    }
+
+    long startMillis = System.currentTimeMillis();
+    while (System.currentTimeMillis() - startMillis < druidCoordinatorConfig.getCoordinatorPeriod().getMillis()) {
+      Thread.sleep(100); // Wait for historical data to be updated
+    }
+
+    Map<String, ? extends Object2LongMap<String>> replicationStatus = coordinator.getReplicationStatus();
+    Assert.assertEquals(2, replicationStatus.entrySet().size());
+    Assert.assertEquals(0L, replicationStatus.get(hotTierName).getLong(dataSource));
+    Assert.assertEquals(0L, replicationStatus.get(coldTierName).getLong(dataSource));
+
+    coordinator.stop();
+    leaderUnannouncerLatch.await();
+
+    EasyMock.verify(serverInventoryView);
+    EasyMock.verify(databaseSegmentManager);
     EasyMock.verify(metadataRuleManager);
   }
 

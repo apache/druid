@@ -252,6 +252,7 @@ public class DruidCoordinator
                   .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
                   .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
             });
+        break; // only the first matching rule applies
       }
     }
 
