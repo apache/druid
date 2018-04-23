@@ -57,7 +57,6 @@
   {"source": "Performance-FAQ.html", "target": "operations/performance-faq.html"},
   {"source": "Plumber.html", "target": "design/plumber.html"},
   {"source": "Post-aggregations.html", "target": "querying/post-aggregations.html"},
-  {"source": "Production-Cluster-Configuration.html", "target": "configuration/production-cluster.html"},
   {"source": "Query-Context.html", "target": "querying/query-context.html"},
   {"source": "Querying.html", "target": "querying/querying.html"},
   {"source": "Realtime-Config.html", "target": "configuration/realtime.html"},
