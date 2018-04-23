@@ -53,7 +53,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
   private final Configuration hadoopConfig;
   private final ObjectMapper jsonMapper;
-  private final String fullyQualifiedStorageDirectory;
+  private final Path storageDir;
+  private String fullyQualifiedStorageDirectory;
 
   @Inject
   public HdfsDataSegmentPusher(
@@ -64,11 +65,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   {
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
-    Path storageDir = new Path(config.getStorageDirectory());
-    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
-                                                    .makeQualified(storageDir)
-                                                    .toUri()
-                                                    .toString();
+    this.storageDir = new Path(config.getStorageDirectory());
 
     log.info("Configured HDFS as deep storage");
   }
@@ -83,12 +80,16 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
+    initFullyQualifiedStorageDirectory();
+
     return fullyQualifiedStorageDirectory;
   }
 
   @Override
   public DataSegment push(File inDir, DataSegment segment, boolean replaceExisting) throws IOException
   {
+    initFullyQualifiedStorageDirectory();
+
     final String storageDir = this.getStorageDir(segment);
 
     log.info(
@@ -229,5 +230,20 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         dataSegment.getShardSpec().getPartitionNum(),
         indexName
     );
+  }
+
+  private void initFullyQualifiedStorageDirectory()
+  {
+    try {
+      if (fullyQualifiedStorageDirectory == null) {
+        fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
+                                                   .makeQualified(storageDir)
+                                                   .toUri()
+                                                   .toString();
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }
