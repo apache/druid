@@ -98,7 +98,6 @@ public class SortableBytes
     job.setMapOutputKeyClass(BytesWritable.class);
     job.setGroupingComparatorClass(SortableBytesGroupingComparator.class);
     job.setSortComparatorClass(SortableBytesSortingComparator.class);
-    job.setPartitionerClass(SortableBytesPartitioner.class);
   }
 
   public static class SortableBytesGroupingComparator extends WritableComparator
