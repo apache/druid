@@ -19,7 +19,6 @@
 package io.druid.segment.realtime.appenderator;
 
 import io.druid.data.input.InputRow;
-import io.druid.query.SegmentDescriptor;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
@@ -27,14 +26,12 @@ import io.druid.segment.realtime.plumber.NoopRejectionPolicyFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
-import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
 
 public class AppenderatorPlumberTest
 {
@@ -46,7 +43,7 @@ public class AppenderatorPlumberTest
     this.appenderatorTester = new AppenderatorTester(10);
     DataSegmentAnnouncer segmentAnnouncer = EasyMock
         .createMock(DataSegmentAnnouncer.class);
-    segmentAnnouncer.announceSegment(EasyMock.<DataSegment> anyObject());
+    segmentAnnouncer.announceSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
 
     SegmentPublisher segmentPublisher = EasyMock
@@ -62,9 +59,9 @@ public class AppenderatorPlumberTest
     EasyMock
         .expect(
             handoffNotifier.registerSegmentHandoffCallback(
-                EasyMock.<SegmentDescriptor> anyObject(),
-                EasyMock.<Executor> anyObject(),
-                EasyMock.<Runnable> anyObject())).andReturn(true).anyTimes();
+                EasyMock.anyObject(),
+                EasyMock.anyObject(),
+                EasyMock.anyObject())).andReturn(true).anyTimes();
     
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
