@@ -172,7 +172,7 @@ public class IndexGeneratorJob implements Jobby
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
 
-      SortableBytes.useSortableBytesAsMapOutputKey(job);
+      SortableBytes.useSortableBytesAsMapOutputKey(job, IndexGeneratorPartitioner.class);
 
       int numReducers = Iterables.size(config.getAllBuckets().get());
       if (numReducers == 0) {
@@ -185,7 +185,6 @@ public class IndexGeneratorJob implements Jobby
       }
 
       job.setNumReduceTasks(numReducers);
-      job.setPartitionerClass(IndexGeneratorPartitioner.class);
 
       setReducerClass(job);
       job.setOutputKeyClass(BytesWritable.class);

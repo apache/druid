@@ -23,6 +23,7 @@ import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Partitioner;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -92,11 +93,12 @@ public class SortableBytes
     );
   }
 
-  public static void useSortableBytesAsMapOutputKey(Job job)
+  public static void useSortableBytesAsMapOutputKey(Job job, Class<? extends Partitioner> partitionerClass)
   {
     job.setMapOutputKeyClass(BytesWritable.class);
     job.setGroupingComparatorClass(SortableBytesGroupingComparator.class);
     job.setSortComparatorClass(SortableBytesSortingComparator.class);
+    job.setPartitionerClass(partitionerClass);
   }
 
   public static class SortableBytesGroupingComparator extends WritableComparator
