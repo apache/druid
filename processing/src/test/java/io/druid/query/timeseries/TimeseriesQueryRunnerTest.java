@@ -510,9 +510,9 @@ public class TimeseriesQueryRunnerTest
             new TimeseriesResultValue(
                 ImmutableMap.of(
                     "rows",
-                    0l,
+                    0L,
                     "index",
-                    0l,
+                    0L,
                     QueryRunnerTestHelper.addRowsIndexConstantMetric,
                     1.0
                 )
