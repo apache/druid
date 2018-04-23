@@ -28,7 +28,6 @@ import com.google.common.primitives.Longs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
@@ -313,11 +312,12 @@ public class OffheapOakIncrementalIndex extends
   ) throws IndexSizeExceededException
   {
     ByteBuffer serializedKey = timeAndDimsSerialization(key);
-    ByteBuffer value = getNewOakValue(metrics, reportParseExceptions, row, rowContainer);
-    OffheapOakConsumer func = new OffheapOakConsumer(metrics, reportParseExceptions, row, rowContainer,
+    OffheapOakCreateValueConsumer valueCreator = new OffheapOakCreateValueConsumer(metrics, reportParseExceptions,
+            row, rowContainer, getAggs(), selectors, aggOffsetInBuffer);
+    OffheapOakComputeConsumer func = new OffheapOakComputeConsumer(metrics, reportParseExceptions, row, rowContainer,
             aggOffsetInBuffer, getAggs());
     if (numEntries.get() < maxRowCount || skipMaxRowsInMemoryCheck) {
-      oak.putIfAbsentComputeIfPresent(serializedKey, () -> value, func);
+      oak.putIfAbsentComputeIfPresent(serializedKey, valueCreator, aggsTotalSize, func);
       if (func.executed() == false) { // a put operation was executed
         numEntries.incrementAndGet();
       }
@@ -363,37 +363,6 @@ public class OffheapOakIncrementalIndex extends
     aggsTotalSize += aggOffsetInBuffer[metrics.length - 1] + metrics[metrics.length - 1].getMaxIntermediateSize();
 
     return new BufferAggregator[metrics.length];
-  }
-
-  private ByteBuffer getNewOakValue(
-          AggregatorFactory[] metrics,
-          boolean reportParseExceptions,
-          InputRow row,
-          ThreadLocal<InputRow> rowContainer
-  )
-  {
-    if (metrics.length > 0 && getAggs()[0] == null) {
-      // note: creation of Aggregators is done lazily when at least one row from input is available
-      // so that FilteredAggregators could be initialized correctly.
-      rowContainer.set(row);
-      for (int i = 0; i < metrics.length; i++) {
-        final AggregatorFactory agg = metrics[i];
-        getAggs()[i] = agg.factorizeBuffered(selectors.get(agg.getName()));
-      }
-      rowContainer.set(null);
-    }
-
-    ByteBuffer aggBuffer = ByteBuffer.allocate(2 * aggsTotalSize);
-    if (aggBuffer.capacity() < aggsTotalSize) {
-      throw new IAE("buffers capacity must be >= [%s]", aggsTotalSize);
-    }
-
-    for (int i = 0; i < metrics.length; i++) {
-      getAggs()[i].init(aggBuffer, aggOffsetInBuffer[i]);
-    }
-
-    aggregate(metrics, reportParseExceptions, row, rowContainer, aggBuffer, aggOffsetInBuffer, getAggs());
-    return aggBuffer;
   }
 
   public static void aggregate(

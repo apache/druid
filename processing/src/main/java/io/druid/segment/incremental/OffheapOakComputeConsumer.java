@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 /**
  * For sending as input parameter to the Oak's putifAbsentComputeIfPresent method
  */
-public class OffheapOakConsumer implements Consumer<WritableOakBuffer>
+public class OffheapOakComputeConsumer implements Consumer<WritableOakBuffer>
 {
   AggregatorFactory[] metrics;
   boolean reportParseExceptions;
@@ -39,7 +39,7 @@ public class OffheapOakConsumer implements Consumer<WritableOakBuffer>
   BufferAggregator[] aggs;
   boolean executed; // for figuring out whether a put or a compute was executed
 
-  public OffheapOakConsumer(
+  public OffheapOakComputeConsumer(
       AggregatorFactory[] metrics,
       boolean reportParseExceptions,
       InputRow row,
