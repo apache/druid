@@ -20,16 +20,27 @@
 package io.druid.segment.loading;
 
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 
-/**
- */
 @ExtensionPoint
 public interface DataSegmentKiller
 {
-  void kill(DataSegment segments) throws SegmentLoadingException;
-  void killAll() throws IOException;
+  Logger log = new Logger(DataSegmentKiller.class);
 
+  void kill(DataSegment segment) throws SegmentLoadingException;
+
+  default void killQuietly(DataSegment segment)
+  {
+    try {
+      kill(segment);
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to kill segment %s", segment);
+    }
+  }
+
+  void killAll() throws IOException;
 }

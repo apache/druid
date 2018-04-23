@@ -572,7 +572,7 @@ public class JobHelper
   {
     return new Path(
         prependFSIfNullScheme(fs, basePath),
-        dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName)
+        dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName, false)
     );
   }
 
@@ -588,7 +588,7 @@ public class JobHelper
         prependFSIfNullScheme(fs, basePath),
         StringUtils.format(
             "./%s.%d",
-            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP, false),
             taskAttemptID.getId()
         )
     );

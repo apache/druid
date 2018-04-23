@@ -20,7 +20,6 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -38,11 +37,14 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
@@ -61,7 +63,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class StreamAppenderatorDriverTest
+public class StreamAppenderatorDriverTest extends EasyMockSupport
 {
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
@@ -93,26 +95,33 @@ public class StreamAppenderatorDriverTest
   private AppenderatorTester appenderatorTester;
   private TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
   private StreamAppenderatorDriver driver;
+  private DataSegmentKiller dataSegmentKiller;
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
+    dataSegmentKiller = createStrictMock(DataSegmentKiller.class);
     driver = new StreamAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
         new TestUsedSegmentChecker(appenderatorTester),
+        dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
     );
+
+    EasyMock.replay(dataSegmentKiller);
   }
 
   @After
   public void tearDown() throws Exception
   {
+    EasyMock.verify(dataSegmentKiller);
+
     driver.clear();
     driver.close();
   }
@@ -345,30 +354,21 @@ public class StreamAppenderatorDriverTest
 
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)
   {
-    return ImmutableSet.copyOf(
-        Iterables.transform(
-            segments,
-            new Function<DataSegment, SegmentIdentifier>()
-            {
-              @Override
-              public SegmentIdentifier apply(DataSegment input)
-              {
-                return SegmentIdentifier.fromDataSegment(input);
-              }
-            }
-        )
-    );
+    return ImmutableSet.copyOf(Iterables.transform(segments, SegmentIdentifier::fromDataSegment));
   }
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return new TransactionalSegmentPublisher()
-    {
-      @Override
-      public boolean publishSegments(Set<DataSegment> segments, Object commitMetadata)
-      {
-        return true;
+    return (segments, commitMetadata) -> true;
+  }
+
+  static TransactionalSegmentPublisher makeFailingPublisher(boolean failWithException)
+  {
+    return (segments, commitMetadata) -> {
+      if (failWithException) {
+        throw new RuntimeException("test");
       }
+      return false;
     };
   }
 

@@ -49,7 +49,8 @@ import java.util.Map;
 
 /**
  */
-public class HdfsDataSegmentPusher implements DataSegmentPusher
+public class
+HdfsDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(HdfsDataSegmentPusher.class);
 
@@ -61,11 +62,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final Supplier<String> fullyQualifiedStorageDirectory;
 
   @Inject
-  public HdfsDataSegmentPusher(
-      HdfsDataSegmentPusherConfig config,
-      Configuration hadoopConfig,
-      ObjectMapper jsonMapper
-  ) throws IOException
+  public HdfsDataSegmentPusher(HdfsDataSegmentPusherConfig config, Configuration hadoopConfig, ObjectMapper jsonMapper)
   {
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
@@ -101,9 +98,9 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(File inDir, DataSegment segment, boolean replaceExisting) throws IOException
+  public DataSegment push(final File inDir, final DataSegment segment, final boolean useUniquePath) throws IOException
   {
-    final String storageDir = this.getStorageDir(segment);
+    final String storageDir = this.getStorageDir(segment, useUniquePath);
 
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
@@ -128,17 +125,20 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
       size = CompressionUtils.zip(inDir, out);
+      final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
       final Path outIndexFile = new Path(StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_%sindex.zip",
           fullyQualifiedStorageDirectory.get(),
           storageDir,
-          segment.getShardSpec().getPartitionNum()
+          segment.getShardSpec().getPartitionNum(),
+          uniquePrefix
       ));
       final Path outDescriptorFile = new Path(StringUtils.format(
-          "%s/%s/%d_descriptor.json",
+          "%s/%s/%d_%sdescriptor.json",
           fullyQualifiedStorageDirectory.get(),
           storageDir,
-          segment.getShardSpec().getPartitionNum()
+          segment.getShardSpec().getPartitionNum(),
+          uniquePrefix
       ));
 
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
@@ -157,8 +157,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outIndexFile.getParent());
-      copyFilesWithChecks(fs, tmpDescriptorFile, outDescriptorFile, replaceExisting);
-      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile, replaceExisting);
+      copyFilesWithChecks(fs, tmpDescriptorFile, outDescriptorFile);
+      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
     }
     finally {
       try {
@@ -174,19 +174,17 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     return dataSegment;
   }
 
-  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to, final boolean replaceExisting)
-      throws IOException
+  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
   {
-    if (!HadoopFsWrapper.rename(fs, from, to, replaceExisting)) {
+    if (!HadoopFsWrapper.rename(fs, from, to)) {
       if (fs.exists(to)) {
         log.info(
-            "Unable to rename temp Index file[%s] to final segment path [%s]. "
-            + "It is already pushed by a replica task.",
+            "Unable to rename temp file [%s] to segment path [%s], it may have already been pushed by a replica task.",
             from,
             to
         );
       } else {
-        throw new IOE("Failed to rename temp Index file[%s] and final segment path[%s] is not present.", from, to);
+        throw new IOE("Failed to rename temp file [%s] and final segment path [%s] is not present.", from, to);
       }
     }
   }
@@ -221,7 +219,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
    */
 
   @Override
-  public String getStorageDir(DataSegment segment)
+  public String getStorageDir(DataSegment segment, boolean useUniquePath)
   {
     return JOINER.join(
         segment.getDataSource(),
@@ -235,11 +233,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public String makeIndexPathName(DataSegment dataSegment, String indexName)
+  public String makeIndexPathName(DataSegment dataSegment, String indexName, boolean useUniquePath)
   {
     return StringUtils.format(
         "./%s/%d_%s",
-        this.getStorageDir(dataSegment),
+        this.getStorageDir(dataSegment, useUniquePath),
         dataSegment.getShardSpec().getPartitionNum(),
         indexName
     );

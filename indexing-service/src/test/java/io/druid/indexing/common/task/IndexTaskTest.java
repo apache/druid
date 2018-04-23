@@ -72,6 +72,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
@@ -152,7 +153,7 @@ public class IndexTaskTest
   }
 
   @After
-  public void teardown() throws IOException
+  public void teardown()
   {
     reportsFile.delete();
   }
@@ -1424,7 +1425,7 @@ public class IndexTaskTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
+      public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
       {
         segments.add(segment);
         return segment;
@@ -1437,12 +1438,27 @@ public class IndexTaskTest
       }
     };
 
+    final DataSegmentKiller killer = new DataSegmentKiller()
+    {
+      @Override
+      public void kill(DataSegment segment)
+      {
+
+      }
+
+      @Override
+      public void killAll()
+      {
+
+      }
+    };
+
     final TaskToolbox box = new TaskToolbox(
         null,
         actionClient,
         null,
         pusher,
-        null,
+        killer,
         null,
         null,
         null,

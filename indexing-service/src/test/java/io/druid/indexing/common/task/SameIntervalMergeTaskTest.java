@@ -199,7 +199,7 @@ public class SameIntervalMergeTaskTest
               }
 
               @Override
-              public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
+              public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
               {
                 // the merged segment is pushed to storage
                 segments.add(segment);
