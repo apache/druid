@@ -23,7 +23,6 @@ import io.druid.java.util.common.StringUtils;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Partitioner;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -150,18 +149,6 @@ public class SortableBytes
       }
 
       return retVal;
-    }
-  }
-
-  public static class SortableBytesPartitioner extends Partitioner<BytesWritable, Object>
-  {
-    @Override
-    public int getPartition(BytesWritable bytesWritable, Object o, int numPartitions)
-    {
-      final byte[] bytes = bytesWritable.getBytes();
-      int length = ByteBuffer.wrap(bytes).getInt();
-
-      return (ByteBuffer.wrap(bytes, 4, length).hashCode() & Integer.MAX_VALUE) % numPartitions;
     }
   }
 }
