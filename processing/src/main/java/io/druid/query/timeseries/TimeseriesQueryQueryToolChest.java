@@ -217,7 +217,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                                       ), null));
       aggregatorNames[i] = aggregatorSpecs.get(i).getName();
     }
-    TimeseriesResultBuilder bob = new TimeseriesResultBuilder(DateTimes.EPOCH);
+    final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
+    TimeseriesResultBuilder bob = new TimeseriesResultBuilder(start);
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
       bob.addMetric(aggregatorNames[i], aggregators[i]);
       aggregators[i].close();
