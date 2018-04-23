@@ -21,7 +21,6 @@ package io.druid.query.filter;
 
 import com.google.common.collect.ImmutableList;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,16 +31,16 @@ public class ColumnComparisonDimFilterTest
   @Test
   public void testGetCacheKey()
   {
-    ColumnComparisonDimFilter columnComparisonDimFilter = new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec> of(
+    ColumnComparisonDimFilter columnComparisonDimFilter = new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("abc"),
         DefaultDimensionSpec.of("d")
     ));
-    ColumnComparisonDimFilter columnComparisonDimFilter2 = new ColumnComparisonDimFilter(ImmutableList.<DimensionSpec> of(
+    ColumnComparisonDimFilter columnComparisonDimFilter2 = new ColumnComparisonDimFilter(ImmutableList.of(
         DefaultDimensionSpec.of("d"),
         DefaultDimensionSpec.of("abc")
     ));
     ColumnComparisonDimFilter columnComparisonDimFilter3 = new ColumnComparisonDimFilter(
-        ImmutableList.<DimensionSpec> of(
+        ImmutableList.of(
             DefaultDimensionSpec.of("d"),
             DefaultDimensionSpec.of("e")
         )
@@ -61,19 +60,19 @@ public class ColumnComparisonDimFilterTest
   public void testHashCode()
   {
     ColumnComparisonDimFilter columnComparisonDimFilter = new ColumnComparisonDimFilter(
-        ImmutableList.<DimensionSpec> of(
+        ImmutableList.of(
             DefaultDimensionSpec.of("abc"),
             DefaultDimensionSpec.of("d")
         )
     );
     ColumnComparisonDimFilter columnComparisonDimFilter2 = new ColumnComparisonDimFilter(
-        ImmutableList.<DimensionSpec> of(
+        ImmutableList.of(
             DefaultDimensionSpec.of("d"),
             DefaultDimensionSpec.of("abc")
         )
     );
     ColumnComparisonDimFilter columnComparisonDimFilter3 = new ColumnComparisonDimFilter(
-        ImmutableList.<DimensionSpec> of(
+        ImmutableList.of(
             DefaultDimensionSpec.of("d"),
             DefaultDimensionSpec.of("e")
         )
