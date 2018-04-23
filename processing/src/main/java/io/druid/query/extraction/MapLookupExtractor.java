@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -52,8 +53,8 @@ public class MapLookupExtractor extends LookupExtractor
       @JsonProperty("isOneToOne") boolean isOneToOne
   )
   {
-    this.map = Preconditions.checkNotNull(map, "map");
     this.isOneToOne = isOneToOne;
+    this.map = Preconditions.checkNotNull(this.isOneToOne ? HashBiMap.create(map) : map, "map");
   }
 
   @JsonProperty
@@ -72,13 +73,19 @@ public class MapLookupExtractor extends LookupExtractor
   @Override
   public List<String> unapply(final String value)
   {
-    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
-    {
-      @Override public boolean apply(@Nullable String key)
+    if (this.map instanceof HashBiMap) {
+      return Lists.newArrayList(((HashBiMap<String, String>) this.map).inverse().get(value));
+    } else {
+      return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
       {
-        return map.get(key).equals(Strings.nullToEmpty(value));
-      }
-    }).keySet());
+        @Override
+        public boolean apply(@Nullable String key)
+        {
+          return map.get(key).equals(Strings.nullToEmpty(value));
+        }
+      }).keySet());
+    }
+
 
   }
 
