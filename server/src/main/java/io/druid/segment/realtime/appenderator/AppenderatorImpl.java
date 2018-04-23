@@ -66,6 +66,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -271,7 +272,7 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (tuningConfig.getMaxBytesInMemory() > 0 && bytesCurrentlyInMemory.get() >= tuningConfig.getMaxBytesInMemory()) {
+    if (tuningConfig.getMaxBytesInMemory() != -1 && bytesCurrentlyInMemory.get() >= tuningConfig.getMaxBytesInMemory()) {
       persist = true;
       persistReason.append(StringUtils.format(
           " bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
@@ -351,7 +352,7 @@ public class AppenderatorImpl implements Appenderator
           identifier.getShardSpec(),
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
-          tuningConfig.getMaxBytesInMemory(),
+          TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
           tuningConfig.isReportParseExceptions()
       );
 
@@ -1035,7 +1036,7 @@ public class AppenderatorImpl implements Appenderator
             identifier.getShardSpec(),
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
-            tuningConfig.getMaxBytesInMemory(),
+            TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
             tuningConfig.isReportParseExceptions(),
             hydrants
         );

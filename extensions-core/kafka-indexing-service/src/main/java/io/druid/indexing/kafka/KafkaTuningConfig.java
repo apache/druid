@@ -82,7 +82,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
 
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;
-    this.maxBytesInMemory = maxBytesInMemory == null ? defaults.getMaxBytesInMemory() : maxBytesInMemory;
+    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;

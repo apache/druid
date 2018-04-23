@@ -69,6 +69,7 @@ import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
@@ -222,7 +223,7 @@ public class RealtimeManagerTest
         tuningConfig.getShardSpec(),
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getMaxBytesInMemory(),
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions()
     ));
 
@@ -243,7 +244,7 @@ public class RealtimeManagerTest
         tuningConfig.getShardSpec(),
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getMaxBytesInMemory(),
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions()
     ));
 

@@ -94,7 +94,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? defaultMaxRowsPerSegment : maxRowsPerSegment;
-    this.maxBytesInMemory = maxBytesInMemory == null ? defaultMaxBytesInMemory : maxBytesInMemory;
+    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
