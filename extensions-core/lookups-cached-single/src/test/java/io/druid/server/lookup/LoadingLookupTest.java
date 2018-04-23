@@ -22,6 +22,7 @@ package io.druid.server.lookup;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -43,13 +44,20 @@ public class LoadingLookupTest
   public void testApplyEmptyOrNull()
   {
     Assert.assertEquals(null, loadingLookup.apply(null));
-    Assert.assertEquals(null, loadingLookup.apply(""));
+    if (!NullHandling.replaceWithDefault()) {
+      // empty string should also have same behavior
+      Assert.assertEquals(null, loadingLookup.apply(""));
+    }
   }
 
   @Test
   public void testUnapplyNull()
   {
-    Assert.assertEquals(Collections.EMPTY_LIST, loadingLookup.unapply(null));
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(Collections.EMPTY_LIST, loadingLookup.unapply(null));
+    } else {
+      Assert.assertEquals(null, loadingLookup.unapply(null));
+    }
   }
 
   @Test
@@ -68,7 +76,10 @@ public class LoadingLookupTest
             .andReturn(Lists.newArrayList("key"))
             .once();
     EasyMock.replay(reverseLookupCache);
-    Assert.assertEquals(ImmutableMap.of("value", Lists.newArrayList("key")), loadingLookup.unapplyAll(ImmutableSet.<String>of("value")));
+    Assert.assertEquals(
+        ImmutableMap.of("value", Lists.newArrayList("key")),
+        loadingLookup.unapplyAll(ImmutableSet.<String>of("value"))
+    );
     EasyMock.verify(reverseLookupCache);
   }
 

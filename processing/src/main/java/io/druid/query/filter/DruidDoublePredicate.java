@@ -29,7 +29,7 @@ public interface DruidDoublePredicate
   DruidDoublePredicate MATCH_NULL_ONLY = new DruidDoublePredicate()
   {
     @Override
-    public boolean applyDouble(double input)
+    public boolean applyDouble(@SuppressWarnings("unused") double input)
     {
       return false;
     }

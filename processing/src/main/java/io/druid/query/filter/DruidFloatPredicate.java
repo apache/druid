@@ -29,7 +29,7 @@ public interface DruidFloatPredicate
   DruidFloatPredicate MATCH_NULL_ONLY = new DruidFloatPredicate()
   {
     @Override
-    public boolean applyFloat(float input)
+    public boolean applyFloat(@SuppressWarnings("unused") float input)
     {
       return false;
     }
@@ -40,6 +40,7 @@ public interface DruidFloatPredicate
       return true;
     }
   };
+
 
   boolean applyFloat(float input);
 
