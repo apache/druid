@@ -520,7 +520,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    // Must create a toolChest so we can run mergeResults (which applies grand totals).
+    // Must create a toolChest so we can run mergeResults (which creates the zeroed-out row).
     QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
