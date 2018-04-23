@@ -22,12 +22,14 @@ package io.druid.indexing.common.task;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.client.indexing.NoopIndexingServiceClient;
 import io.druid.client.indexing.TaskStatusResponse;
+import io.druid.data.input.InputSplit;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
+import io.druid.indexing.common.task.TaskMonitor.TaskHistory;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
@@ -48,9 +50,11 @@ import java.util.stream.IntStream;
 
 public class TaskMonitorTest
 {
+  private static final int SPLIT_NUM = 10;
+
   private final ExecutorService taskRunner = Execs.multiThreaded(5, "task-monitor-test-%d");
   private final ConcurrentMap<String, TaskState> tasks = new ConcurrentHashMap<>();
-  private final TaskMonitor<TestTask> monitor = new TaskMonitor<>(new TestIndexingServiceClient(), 3);
+  private final TaskMonitor<TestTask> monitor = new TaskMonitor<>(new TestIndexingServiceClient(), 3, SPLIT_NUM);
 
   @Before
   public void setup()
@@ -71,7 +75,9 @@ public class TaskMonitorTest
   {
     final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = IntStream
         .range(0, 10)
-        .mapToObj(i -> monitor.submit(new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, 100L, 0)))
+        .mapToObj(i -> monitor.submit(
+            new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, new IntegerInputSplit(i), 100L, 0)
+        ))
         .collect(Collectors.toList());
     for (int i = 0; i < futures.size(); i++) {
       // # of threads of taskRunner is 5, so the expected max timeout is 2 sec. We additionally wait three more seconds
@@ -88,9 +94,15 @@ public class TaskMonitorTest
   @Test
   public void testRetry() throws InterruptedException, ExecutionException, TimeoutException
   {
-    final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = IntStream
+    final List<TestTaskSpec> specs = IntStream
         .range(0, 10)
-        .mapToObj(i -> monitor.submit(new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, 100L, 2)))
+        .mapToObj(
+            i -> new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, new IntegerInputSplit(i), 100L, 2)
+        )
+        .collect(Collectors.toList());
+    final List<ListenableFuture<SubTaskCompleteEvent<TestTask>>> futures = specs
+        .stream()
+        .map(monitor::submit)
         .collect(Collectors.toList());
     for (int i = 0; i < futures.size(); i++) {
       // # of threads of taskRunner is 5, and each task is expected to be run 3 times (with 2 retries), so the expected
@@ -103,7 +115,10 @@ public class TaskMonitorTest
       Assert.assertEquals(TaskState.SUCCESS, result.getLastStatus().getState());
       Assert.assertEquals(TaskState.SUCCESS, result.getLastState());
 
-      final List<TaskStatusPlus> attemptHistory = result.getAttemptHistory();
+      final TaskHistory<TestTask> taskHistory = monitor.getCompleteSubTaskSpecHistory(specs.get(i).getId());
+      Assert.assertNotNull(taskHistory);
+
+      final List<TaskStatusPlus> attemptHistory = taskHistory.getAttemptHistory();
       Assert.assertNotNull(attemptHistory);
       Assert.assertEquals(3, attemptHistory.size());
       Assert.assertEquals(TaskState.FAILED, attemptHistory.get(0).getState());
@@ -123,11 +138,12 @@ public class TaskMonitorTest
         String groupId,
         String supervisorTaskId,
         Map<String, Object> context,
+        InputSplit inputSplit,
         long runTime,
         int numMaxFails
     )
     {
-      super(id, groupId, supervisorTaskId, context);
+      super(id, groupId, supervisorTaskId, context, inputSplit);
       this.runTime = runTime;
       this.numMaxFails = numMaxFails;
     }
@@ -189,6 +205,14 @@ public class TaskMonitorTest
               null
           )
       );
+    }
+  }
+
+  private static class IntegerInputSplit extends InputSplit<Integer>
+  {
+    public IntegerInputSplit(int split)
+    {
+      super(split);
     }
   }
 }

@@ -57,7 +57,6 @@ public interface IndexingServiceClient
 
   List<TaskStatusPlus> getWaitingTasks();
 
-  @Nullable
   TaskStatusResponse getTaskStatus(String taskId);
 
   @Nullable

@@ -101,11 +101,10 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
     return null;
   }
 
-  @Nullable
   @Override
   public TaskStatusResponse getTaskStatus(String taskId)
   {
-    return null;
+    return new TaskStatusResponse(taskId, null);
   }
 
   @Nullable

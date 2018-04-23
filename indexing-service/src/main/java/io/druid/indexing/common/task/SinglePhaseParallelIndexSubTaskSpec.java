@@ -19,24 +19,31 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.input.InputSplit;
+
 import java.util.Map;
 
 class SinglePhaseParallelIndexSubTaskSpec extends SubTaskSpec<SinglePhaseParallelIndexSubTask>
 {
   private final SinglePhaseParallelIndexIngestionSpec ingestionSpec;
 
+  @JsonCreator
   SinglePhaseParallelIndexSubTaskSpec(
       String id,
       String groupId,
       String supervisorTaskId,
       SinglePhaseParallelIndexIngestionSpec indexIngestionSpec,
-      Map<String, Object> context
+      Map<String, Object> context,
+      InputSplit inputSplit
   )
   {
-    super(id, groupId, supervisorTaskId, context);
+    super(id, groupId, supervisorTaskId, context, inputSplit);
     this.ingestionSpec = indexIngestionSpec;
   }
 
+  @JsonProperty
   public SinglePhaseParallelIndexIngestionSpec getIngestionSpec()
   {
     return ingestionSpec;

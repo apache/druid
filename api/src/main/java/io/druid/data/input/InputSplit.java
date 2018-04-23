@@ -19,6 +19,9 @@
 
 package io.druid.data.input;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Input unit for distributed batch ingestion. Used in {@link FiniteFirehoseFactory}.
  */
@@ -26,11 +29,13 @@ public class InputSplit<T>
 {
   private final T split;
 
-  public InputSplit(T split)
+  @JsonCreator
+  public InputSplit(@JsonProperty("split") T split)
   {
     this.split = split;
   }
 
+  @JsonProperty("split")
   public T get()
   {
     return split;

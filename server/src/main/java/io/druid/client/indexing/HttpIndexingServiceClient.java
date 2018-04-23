@@ -246,7 +246,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  @Nullable
   public TaskStatusResponse getTaskStatus(String taskId)
   {
     try {
@@ -254,16 +253,12 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s/status", taskId))
       );
 
-      if (responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
-        return jsonMapper.readValue(
-            responseHolder.getContent(),
-            new TypeReference<TaskStatusResponse>()
-            {
-            }
-        );
-      } else {
-        return null;
-      }
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<TaskStatusResponse>()
+          {
+          }
+      );
     }
     catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);

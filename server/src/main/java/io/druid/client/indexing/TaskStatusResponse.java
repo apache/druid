@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexer.TaskStatusPlus;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -31,12 +32,13 @@ import java.util.Objects;
 public class TaskStatusResponse
 {
   private final String task; // Task ID, named "task" in the JSONification of this class.
+  @Nullable
   private final TaskStatusPlus status;
 
   @JsonCreator
   public TaskStatusResponse(
       @JsonProperty("task") final String task,
-      @JsonProperty("status") final TaskStatusPlus status
+      @JsonProperty("status") @Nullable final TaskStatusPlus status
   )
   {
     this.task = task;
@@ -50,6 +52,7 @@ public class TaskStatusResponse
   }
 
   @JsonProperty
+  @Nullable
   public TaskStatusPlus getStatus()
   {
     return status;
@@ -72,7 +75,6 @@ public class TaskStatusResponse
   @Override
   public int hashCode()
   {
-
     return Objects.hash(task, status);
   }
 

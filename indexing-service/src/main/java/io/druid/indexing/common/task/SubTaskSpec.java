@@ -19,6 +19,10 @@
 
 package io.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.input.InputSplit;
+
 import java.util.Map;
 
 public abstract class SubTaskSpec<T extends Task>
@@ -27,38 +31,52 @@ public abstract class SubTaskSpec<T extends Task>
   private final String groupId;
   private final String supervisorTaskId;
   private final Map<String, Object> context;
+  private final InputSplit inputSplit;
 
+  @JsonCreator
   public SubTaskSpec(
       String id,
       String groupId,
       String supervisorTaskId,
-      Map<String, Object> context
+      Map<String, Object> context,
+      InputSplit inputSplit
   )
   {
     this.id = id;
     this.groupId = groupId;
     this.supervisorTaskId = supervisorTaskId;
     this.context = context;
+    this.inputSplit = inputSplit;
   }
 
+  @JsonProperty
   public String getId()
   {
     return id;
   }
 
+  @JsonProperty
   public String getGroupId()
   {
     return groupId;
   }
 
+  @JsonProperty
   public String getSupervisorTaskId()
   {
     return supervisorTaskId;
   }
 
+  @JsonProperty
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  @JsonProperty
+  public InputSplit getInputSplit()
+  {
+    return inputSplit;
   }
 
   public abstract T newSubTask(int numAttempts);

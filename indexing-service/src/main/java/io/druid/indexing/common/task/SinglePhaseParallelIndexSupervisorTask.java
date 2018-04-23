@@ -26,6 +26,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,10 +44,11 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import io.druid.indexing.common.task.TaskMonitor.MonitorEntry;
 import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
+import io.druid.indexing.common.task.TaskMonitor.TaskHistory;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.RE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -62,11 +64,19 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -103,10 +113,12 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   private final BlockingQueue<SubTaskCompleteEvent<SinglePhaseParallelIndexSubTask>> taskCompleteEvents =
       new LinkedBlockingDeque<>();
 
-  // subtaskId -> report
+  // subTaskId -> report
   private final ConcurrentMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
 
   private volatile boolean stopped;
+  private volatile TaskMonitor<SinglePhaseParallelIndexSubTask> taskMonitor;
+
   private int nextSpecId = 0;
 
   @JsonCreator
@@ -211,11 +223,6 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
 
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
-    final TaskMonitor<SinglePhaseParallelIndexSubTask> taskMonitor = new TaskMonitor<>(
-        Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient"),
-        ingestionSchema.getTuningConfig().getMaxRetry()
-    );
-
     log.info(
         "Found chat handler of class[%s]",
         Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider").getClass().getName()
@@ -223,13 +230,15 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
     chatHandlerProvider.register(getId(), this, false);
 
     final Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator().iterator();
-    final int numTotalTasks = baseFirehoseFactory.getNumSplits();
     final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckPeriodMs();
-    TaskState state = TaskState.FAILED;
 
-    log.info("Total number of tasks is [%d]", numTotalTasks);
+    taskMonitor = new TaskMonitor<>(
+        Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient"),
+        ingestionSchema.getTuningConfig().getMaxRetry(),
+        baseFirehoseFactory.getNumSplits()
+    );
+    TaskState state = TaskState.RUNNING;
 
-    int numCompleteTasks = 0;
     taskMonitor.start(taskStatusCheckingPeriod);
 
     try {
@@ -250,7 +259,6 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
           final TaskState completeState = taskCompleteEvent.getLastState();
           switch (completeState) {
             case SUCCESS:
-              numCompleteTasks++;
               final TaskStatusPlus completeStatus = taskCompleteEvent.getLastStatus();
               if (completeStatus == null) {
                 throw new ISE("Last status of complete task is missing!");
@@ -260,11 +268,11 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
                 throw new ISE("Missing reports from task[%s]!", completeStatus.getId());
               }
 
-              log.info("[%d/%d] tasks succeeded", numCompleteTasks, numTotalTasks);
               if (!subTaskSpecIterator.hasNext()) {
+                // We have no more subTasks to run
                 if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
                   stopped = true;
-                  if (numCompleteTasks == numTotalTasks) {
+                  if (taskMonitor.isSucceeded()) {
                     // Publishing all segments reported so far
                     publish(toolbox);
 
@@ -273,14 +281,19 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
                   } else {
                     // Failed
                     throw new ISE(
-                        "Expected to complete [%d] tasks, but we got [%d] tasks",
-                        numTotalTasks,
-                        numCompleteTasks
+                        "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
+                        taskMonitor.getExpectedNumSucceededTasks(),
+                        taskMonitor.getNumSucceededTasks(),
+                        taskMonitor.getNumFailedTasks()
                     );
                   }
                 }
               } else if (taskMonitor.getNumRunningTasks() < maxNumTasks) {
+                // We have more subTasks to run
                 submitNewTask(taskMonitor, subTaskSpecIterator.next());
+              } else {
+                // We have more subTasks to run, but don't have enough available task slots
+                // do nothing
               }
               break;
             case FAILED:
@@ -345,6 +358,8 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
         chatHandlerProvider
     ).run(toolbox);
   }
+
+  // Internal API for collecting reports from subTasks
 
   @POST
   @Path("/report")
@@ -428,6 +443,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       SinglePhaseParallelIndexSubTaskSpec spec
   )
   {
+    log.info("Submit a new task for spec[%s] and inputSplit[%s]", spec.getId(), spec.getInputSplit());
     final ListenableFuture<SubTaskCompleteEvent<SinglePhaseParallelIndexSubTask>> future = taskMonitor.submit(spec);
     Futures.addCallback(
         future,
@@ -444,24 +460,15 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
           public void onFailure(Throwable t)
           {
             // this callback is called only when there were some problems in TaskMonitor.
-            try {
-              log.error(
-                  t,
-                  "Error while running a task for inputSplits[%s]",
-                  getSplitsIfSplittable(spec.getIngestionSpec().getIOConfig().getFirehoseFactory())
-              );
-            }
-            catch (IOException e) {
-              t.addSuppressed(new RE(e, "Error while getting splits for error logging"));
-            }
-            taskCompleteEvents.offer(new SubTaskCompleteEvent<>(spec, TaskState.FAILED, null));
+            log.error(t, "Error while running a task for subTaskSpec[%s]", spec);
+            taskCompleteEvents.offer(SubTaskCompleteEvent.fail(spec, t));
           }
         }
     );
   }
 
   @VisibleForTesting
-  int getAndIncreaseNextSpecId()
+  int getAndIncrementNextSpecId()
   {
     return nextSpecId++;
   }
@@ -476,7 +483,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   SinglePhaseParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
   {
     return new SinglePhaseParallelIndexSubTaskSpec(
-        getId() + "_" + getAndIncreaseNextSpecId(),
+        getId() + "_" + getAndIncrementNextSpecId(),
         getGroupId(),
         getId(),
         new SinglePhaseParallelIndexIngestionSpec(
@@ -487,7 +494,8 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
             ),
             ingestionSchema.getTuningConfig()
         ),
-        getContext()
+        getContext(),
+        split
     );
   }
 
@@ -498,6 +506,251 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       return finiteFirehoseFactory.getSplits().collect(Collectors.toList());
     } else {
       throw new ISE("firehoseFactory[%s] is not splittable", firehoseFactory.getClass().getSimpleName());
+    }
+  }
+
+  // External APIs to get running status
+
+  @GET
+  @Path("isRunningInParallel")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response isRunningInParallel(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    return okResponse("isRunningInParallel", baseFirehoseFactory.isSplittable());
+  }
+
+  @GET
+  @Path("/numRunningTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getNumRunningTasks(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    final int numRunningTasks = taskMonitor == null ? 0 : taskMonitor.getNumRunningTasks();
+    return okResponse("numRunningTasks", numRunningTasks);
+  }
+
+  @GET
+  @Path("/numSucceededTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getNumSucceededTasks(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    final int numSucceededTasks = taskMonitor == null ? 0 : taskMonitor.getNumSucceededTasks();
+    return okResponse("numSucceededTasks", numSucceededTasks);
+  }
+
+  @GET
+  @Path("/numFailedTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getNumFailedTasks(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    final int numFailedTasks = taskMonitor == null ? 0 : taskMonitor.getNumFailedTasks();
+    return okResponse("numFailedTasks", numFailedTasks);
+  }
+
+  @GET
+  @Path("/numCompleteTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getNumCompleteTasks(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    final int numCompleteTasks = taskMonitor == null ? 0 : taskMonitor.getNumCompleteTasks();
+    return okResponse("numCompleteTasks", numCompleteTasks);
+  }
+
+  @GET
+  @Path("/expectedNumSucceededTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getExpectedNumSucceededTasks(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    final int expectedNumSucceededTasks = taskMonitor == null ? 0 : taskMonitor.getExpectedNumSucceededTasks();
+    return okResponse("expectedNumSucceededTasks", expectedNumSucceededTasks);
+  }
+
+  @GET
+  @Path("/runningSubTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRunningTasks(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    final Set<String> runningTasks = taskMonitor == null ? Collections.emptySet() : taskMonitor.getRunningTaskIds();
+    return okResponse("runningSubTasks", runningTasks);
+  }
+
+  @GET
+  @Path("/subTaskSpecs")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSubTaskSpecs(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor.getRunningSubTaskSpecs();
+    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> completeSubTaskSpecs = taskMonitor
+        .getCompleteSubTaskSpecs();
+    // Deduplicate subTaskSpecs because some subTaskSpec might exist both in runningSubTaskSpecs and
+    // completeSubTaskSpecs.
+    final Map<String, SubTaskSpec<SinglePhaseParallelIndexSubTask>> subTaskSpecMap = new HashMap<>(
+        runningSubTaskSpecs.size() + completeSubTaskSpecs.size()
+    );
+    runningSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
+    completeSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
+    return okResponse("subTaskSpecs", new ArrayList<>(subTaskSpecMap.values()));
+  }
+
+  @GET
+  @Path("/runningSubTaskSpecs")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRunningSubTaskSpecs(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    return okResponse("runningSubTaskSpecs", taskMonitor.getRunningSubTaskSpecs());
+  }
+
+  @GET
+  @Path("/completeSubTaskSpecs")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getCompleteSubTaskSpecs(@Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    return okResponse("completeSubTaskSpecs", taskMonitor.getCompleteSubTaskSpecs());
+  }
+
+  @GET
+  @Path("/subTaskSpec")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSubTaskSpec(@QueryParam("id") String id, @Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
+    // adding them to taskHistory.
+    final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(id);
+    final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
+    final SubTaskSpec<SinglePhaseParallelIndexSubTask> subTaskSpec;
+
+    if (monitorEntry != null) {
+      subTaskSpec = monitorEntry.getSpec();
+    } else {
+      if (taskHistory != null) {
+        subTaskSpec = taskHistory.getSpec();
+      } else {
+        subTaskSpec = null;
+      }
+    }
+
+    if (subTaskSpec == null) {
+      return Response.status(Status.NOT_FOUND).build();
+    } else {
+      return Response.ok(subTaskSpec).build();
+    }
+  }
+
+  @GET
+  @Path("/subTaskState")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSubTaskState(@QueryParam("id") String id, @Context final HttpServletRequest req)
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (taskMonitor == null) {
+      return Response.status(Status.NOT_FOUND).build();
+    } else {
+      // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
+      // adding them to taskHistory.
+      final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(id);
+      final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
+
+      final SubTaskStateResponse subTaskStateResponse;
+
+      if (monitorEntry != null) {
+        subTaskStateResponse = new SubTaskStateResponse(
+            (SinglePhaseParallelIndexSubTaskSpec) monitorEntry.getSpec(),
+            monitorEntry.getRunningStatus(),
+            monitorEntry.getTaskHistory()
+        );
+      } else {
+        if (taskHistory != null && !taskHistory.isEmpty()) {
+          subTaskStateResponse = new SubTaskStateResponse(
+              (SinglePhaseParallelIndexSubTaskSpec) taskHistory.getSpec(),
+              null,
+              taskHistory.getAttemptHistory()
+          );
+        } else {
+          subTaskStateResponse = null;
+        }
+      }
+
+      if (subTaskStateResponse == null) {
+        return Response.status(Status.NOT_FOUND).build();
+      } else {
+        return Response.ok(subTaskStateResponse).build();
+      }
+    }
+  }
+
+  @GET
+  @Path("/completeSubTaskSpecAttemptHistory")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getCompleteSubTaskSpecAttemptHistory(
+      @QueryParam("id") String id,
+      @Context final HttpServletRequest req
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    if (taskMonitor == null) {
+      return Response.status(Status.NOT_FOUND).build();
+    } else {
+      final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
+
+      if (taskHistory == null) {
+        return Response.status(Status.NOT_FOUND).build();
+      } else {
+        return Response.ok(taskHistory.getAttemptHistory()).build();
+      }
+    }
+  }
+
+  private static Response okResponse(String key, Object val)
+  {
+    return Response.ok(ImmutableMap.of(key, val)).build();
+  }
+
+  static class SubTaskStateResponse
+  {
+    private final SinglePhaseParallelIndexSubTaskSpec spec;
+    @Nullable
+    private final TaskStatusPlus currentStatus;
+    private final List<TaskStatusPlus> taskHistory;
+
+    @JsonCreator
+    public SubTaskStateResponse(
+        @JsonProperty("spec") SinglePhaseParallelIndexSubTaskSpec spec,
+        @JsonProperty("currentStatus") @Nullable TaskStatusPlus currentStatus,
+        @JsonProperty("taskHistory") List<TaskStatusPlus> taskHistory
+    )
+    {
+      this.spec = spec;
+      this.currentStatus = currentStatus;
+      this.taskHistory = taskHistory;
+    }
+
+    @JsonProperty
+    public SinglePhaseParallelIndexSubTaskSpec getSpec()
+    {
+      return spec;
+    }
+
+    @JsonProperty
+    @Nullable
+    public TaskStatusPlus getCurrentStatus()
+    {
+      return currentStatus;
+    }
+
+    @JsonProperty
+    public List<TaskStatusPlus> getTaskHistory()
+    {
+      return taskHistory;
     }
   }
 }
