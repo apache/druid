@@ -43,13 +43,13 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  private static final int NUM_STRIPES = 64; // for locking per buffer position (power of 2 to improve index computation)
+  private static final int NUM_STRIPES = 64; // for locking per buffer position (power of 2 to make index computation faster)
 
   private final DimensionSelector keySelector;
   private final BaseDoubleColumnValueSelector[] valueSelectors;
   private final int nominalEntries;
   private final int maxIntermediateSize;
-  private final double[] values; // for sketch update call
+  private double[] values; // not part of the state, but to reuse in aggregate() method
   private final Striped<ReadWriteLock> stripedLock = Striped.readWriteLock(NUM_STRIPES);
 
   public ArrayOfDoublesSketchBuildBufferAggregator(
@@ -77,7 +77,8 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   }
 
   /**
-   * This method uses locks because Druid can call aggregate() and get() concurrently
+   * This method uses locks because it can be used during indexing,
+   * and Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    */
   @Override
@@ -107,7 +108,8 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   }
 
   /**
-   * This method uses locks because Druid can call aggregate() and get() concurrently
+   * This method uses locks because it can be used during indexing,
+   * and Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
    * representing the current state of the aggregation, and is not affected by consequent
@@ -145,6 +147,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
   @Override
   public void close()
   {
+    values = null;
   }
 
   @Override

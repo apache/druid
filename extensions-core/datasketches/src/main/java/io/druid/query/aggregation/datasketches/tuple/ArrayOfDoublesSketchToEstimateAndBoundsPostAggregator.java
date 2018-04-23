@@ -32,6 +32,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Returns a distinct count estimate and error bounds from a given {@link ArrayOfDoublesSketch}."
@@ -63,7 +64,7 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends Array
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public double[] compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     return new double[] {sketch.getEstimate(), sketch.getLowerBound(numStdDevs), sketch.getUpperBound(numStdDevs)};
@@ -107,13 +108,10 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends Array
   @Override
   public byte[] getCacheKey()
   {
-    return getCacheKeyBuilder().appendInt(numStdDevs).build();
-  }
-
-  @Override
-  byte getCacheId()
-  {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_AND_BOUNDS_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_AND_BOUNDS_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .appendInt(numStdDevs)
+        .build();
   }
 
 }

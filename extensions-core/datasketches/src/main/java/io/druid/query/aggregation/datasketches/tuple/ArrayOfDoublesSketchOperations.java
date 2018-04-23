@@ -39,9 +39,48 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 public class ArrayOfDoublesSketchOperations
 {
 
-  public enum Func
+  public enum Operation
   {
-    UNION, INTERSECT, NOT
+    UNION, INTERSECT, NOT;
+
+    public ArrayOfDoublesSketch apply(final int nominalEntries, final int numberOfValues, final ArrayOfDoublesSketch[] sketches)
+    {
+      switch (this) {
+        case UNION:
+          final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
+              .setNumberOfValues(numberOfValues).buildUnion();
+          for (final ArrayOfDoublesSketch sketch : sketches) {
+            union.update(sketch);
+          }
+          return union.getResult();
+        case INTERSECT:
+          final ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder()
+              .setNominalEntries(nominalEntries).setNumberOfValues(numberOfValues).buildIntersection();
+          for (final ArrayOfDoublesSketch sketch : sketches) {
+            intersection.update(sketch, COMBINER);
+          }
+          return intersection.getResult();
+        case NOT:
+          if (sketches.length < 1) {
+            throw new IAE("A-Not-B requires at least 1 sketch");
+          }
+
+          if (sketches.length == 1) {
+            return sketches[0];
+          }
+
+          ArrayOfDoublesSketch result = sketches[0];
+          for (int i = 1; i < sketches.length; i++) {
+            final ArrayOfDoublesAnotB aNotB = new ArrayOfDoublesSetOperationBuilder().setNumberOfValues(numberOfValues)
+                .buildAnotB();
+            aNotB.update(result, sketches[i]);
+            result = aNotB.getResult();
+          }
+          return result;
+        default:
+          throw new IAE("Unknown sketch operation %s", this.toString());
+      }
+    }
   }
 
   // This is how to combine values for sketch intersection.
@@ -80,50 +119,6 @@ public class ArrayOfDoublesSketchOperations
   {
     final Memory mem = Memory.wrap(data);
     return ArrayOfDoublesSketches.wrapSketch(mem);
-  }
-
-  public static ArrayOfDoublesSketch sketchSetOperation(
-      final Func func,
-      final int k,
-      final int numValues,
-      final ArrayOfDoublesSketch... sketches
-  )
-  {
-    switch (func) {
-      case UNION:
-        final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(k)
-            .setNumberOfValues(numValues).buildUnion();
-        for (final ArrayOfDoublesSketch sketch : sketches) {
-          union.update(sketch);
-        }
-        return union.getResult();
-      case INTERSECT:
-        final ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder()
-            .setNominalEntries(k).setNumberOfValues(numValues).buildIntersection();
-        for (final ArrayOfDoublesSketch sketch : sketches) {
-          intersection.update(sketch, COMBINER);
-        }
-        return intersection.getResult();
-      case NOT:
-        if (sketches.length < 1) {
-          throw new IAE("A-Not-B requires at least 1 sketch");
-        }
-
-        if (sketches.length == 1) {
-          return sketches[0];
-        }
-
-        ArrayOfDoublesSketch result = sketches[0];
-        for (int i = 1; i < sketches.length; i++) {
-          final ArrayOfDoublesAnotB aNotB = new ArrayOfDoublesSetOperationBuilder().setNumberOfValues(numValues)
-              .buildAnotB();
-          aNotB.update(result, sketches[i]);
-          result = aNotB.getResult();
-        }
-        return result;
-      default:
-        throw new IAE("Unknown sketch operation %s", func.toString());
-    }
   }
 
 }

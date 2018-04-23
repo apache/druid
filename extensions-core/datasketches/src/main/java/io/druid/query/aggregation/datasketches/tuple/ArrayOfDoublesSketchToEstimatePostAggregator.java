@@ -28,6 +28,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Returns a distinct count estimate from a given {@link ArrayOfDoublesSketch}.
@@ -45,7 +46,7 @@ public class ArrayOfDoublesSketchToEstimatePostAggregator extends ArrayOfDoubles
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public Double compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     return sketch.getEstimate();
@@ -58,9 +59,11 @@ public class ArrayOfDoublesSketchToEstimatePostAggregator extends ArrayOfDoubles
   }
 
   @Override
-  byte getCacheId()
+  public byte[] getCacheKey()
   {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .build();
   }
 
 }

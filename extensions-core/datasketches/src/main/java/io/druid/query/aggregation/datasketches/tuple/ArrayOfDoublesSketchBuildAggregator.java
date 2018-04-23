@@ -38,7 +38,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
 
   private final DimensionSelector keySelector;
   private final BaseDoubleColumnValueSelector[] valueSelectors;
-  private final double[] values; // for sketch update call
+  private double[] values; // not part of the state, but to reuse in aggregate() method
   private ArrayOfDoublesUpdatableSketch sketch;
 
   public ArrayOfDoublesSketchBuildAggregator(
@@ -55,24 +55,28 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   }
 
   /**
-   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * This method is synchronized because it can be used during indexing,
+   * and Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    */
   @Override
-  public synchronized void aggregate()
+  public void aggregate()
   {
     final IndexedInts keys = keySelector.getRow();
     for (int i = 0; i < valueSelectors.length; i++) {
       values[i] = valueSelectors[i].getDouble();
     }
-    for (int i = 0; i < keys.size(); i++) {
-      final String key = keySelector.lookupName(keys.get(i));
-      sketch.update(key, values);
+    synchronized (this) {
+      for (int i = 0; i < keys.size(); i++) {
+        final String key = keySelector.lookupName(keys.get(i));
+        sketch.update(key, values);
+      }
     }
   }
 
   /**
-   * This method is synchronized because Druid can call aggregate() and get() concurrently
+   * This method is synchronized because it can be used during indexing,
+   * and Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch
    * representing the current state of the aggregation, and is not affected by consequent
@@ -100,6 +104,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   public void close()
   {
     sketch = null;
+    values = null;
   }
 
 }

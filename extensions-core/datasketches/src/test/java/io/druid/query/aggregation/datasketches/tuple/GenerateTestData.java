@@ -32,7 +32,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 
 //This is used for generating test data for ArrayOfDoublesSketchAggregationTest
-public class GenerateTestData
+class GenerateTestData
 {
 
   public static void main(String[] args) throws Exception
@@ -41,7 +41,7 @@ public class GenerateTestData
     generateBucketTestData();
   }
 
-  static void generateSketches() throws Exception
+  private static void generateSketches() throws Exception
   {
     Path path = FileSystems.getDefault().getPath("array_of_doubles_sketch_data.tsv");
     try (BufferedWriter out = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
@@ -66,7 +66,7 @@ public class GenerateTestData
   // Each user ID is associated with a numeric parameter
   // randomly drawn from normal distribution.
   // Buckets have different means.
-  static void generateBucketTestData() throws Exception
+  private static void generateBucketTestData() throws Exception
   {
     double meanTest = 10;
     double meanControl = 10.2;
@@ -80,7 +80,7 @@ public class GenerateTestData
     }
   }
 
-  static void writeBucketTestRecord(BufferedWriter out, String label, int id, double parameter) throws Exception
+  private static void writeBucketTestRecord(BufferedWriter out, String label, int id, double parameter) throws Exception
   {
     out.write("20170101");
     out.write("\t");

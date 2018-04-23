@@ -29,6 +29,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Returns a human-readable summary of a given {@link ArrayOfDoublesSketch}.
@@ -48,7 +49,7 @@ public class ArrayOfDoublesSketchToStringPostAggregator extends ArrayOfDoublesSk
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public String compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     return sketch.toString();
@@ -61,9 +62,11 @@ public class ArrayOfDoublesSketchToStringPostAggregator extends ArrayOfDoublesSk
   }
 
   @Override
-  byte getCacheId()
+  public byte[] getCacheKey()
   {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .build();
   }
 
 }

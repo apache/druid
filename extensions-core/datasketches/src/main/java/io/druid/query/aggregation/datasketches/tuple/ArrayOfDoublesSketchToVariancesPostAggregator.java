@@ -33,6 +33,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketchIterator;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Returns a list of variance values from a given {@link ArrayOfDoublesSketch}.
@@ -51,7 +52,7 @@ public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDouble
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public double[] compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     final SummaryStatistics[] stats = new SummaryStatistics[sketch.getNumValues()];
@@ -75,9 +76,11 @@ public class ArrayOfDoublesSketchToVariancesPostAggregator extends ArrayOfDouble
   }
 
   @Override
-  byte getCacheId()
+  public byte[] getCacheKey()
   {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_VARIANCES_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_VARIANCES_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .build();
   }
 
 }

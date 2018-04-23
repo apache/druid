@@ -28,6 +28,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Returns the number of retained entries from a given {@link ArrayOfDoublesSketch}.
@@ -45,7 +46,7 @@ public class ArrayOfDoublesSketchToNumEntriesPostAggregator extends ArrayOfDoubl
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public Integer compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     return sketch.getRetainedEntries();
@@ -58,9 +59,11 @@ public class ArrayOfDoublesSketchToNumEntriesPostAggregator extends ArrayOfDoubl
   }
 
   @Override
-  byte getCacheId()
+  public byte[] getCacheKey()
   {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_NUM_ENTRIES_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_NUM_ENTRIES_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .build();
   }
 
 }

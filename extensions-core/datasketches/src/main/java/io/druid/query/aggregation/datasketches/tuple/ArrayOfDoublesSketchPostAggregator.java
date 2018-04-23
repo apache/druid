@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Base class for all post aggs
@@ -74,19 +73,6 @@ public abstract class ArrayOfDoublesSketchPostAggregator implements PostAggregat
   {
     return name.hashCode();
   }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return getCacheKeyBuilder().build();
-  }
-
-  CacheKeyBuilder getCacheKeyBuilder()
-  {
-    return new CacheKeyBuilder(getCacheId());
-  }
-
-  abstract byte getCacheId();
 
   @Override
   public PostAggregator decorate(final Map<String, AggregatorFactory> map)

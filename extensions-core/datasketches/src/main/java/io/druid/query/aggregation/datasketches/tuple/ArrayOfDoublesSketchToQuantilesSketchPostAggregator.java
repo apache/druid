@@ -30,6 +30,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
+import io.druid.query.cache.CacheKeyBuilder;
 
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketchIterator;
@@ -68,18 +70,11 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
   @Override
   public Comparator<DoublesSketch> getComparator()
   {
-    return new Comparator<DoublesSketch>()
-    {
-      @Override
-      public int compare(final DoublesSketch a, final DoublesSketch b)
-      {
-        return Long.compare(a.getN(), b.getN());
-      }
-    };
+    return DoublesSketchAggregatorFactory.COMPARATOR;
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public DoublesSketch compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
     final UpdateDoublesSketch qs = UpdateDoublesSketch.builder().setK(k).build();
@@ -138,13 +133,11 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
   @Override
   public byte[] getCacheKey()
   {
-    return getCacheKeyBuilder().appendInt(column).appendInt(k).build();
-  }
-
-  @Override
-  byte getCacheId()
-  {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .appendInt(column)
+        .appendInt(k)
+        .build();
   }
 
 }

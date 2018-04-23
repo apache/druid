@@ -35,6 +35,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketchIterator;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Performs Student's t-test and returns a list of p-values given two instances of {@link ArrayOfDoublesSketch}.
@@ -63,7 +64,7 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public double[] compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch1 = (ArrayOfDoublesSketch) getFields().get(0).compute(combinedAggregators);
     final ArrayOfDoublesSketch sketch2 = (ArrayOfDoublesSketch) getFields().get(1).compute(combinedAggregators);
@@ -102,9 +103,11 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
   }
 
   @Override
-  byte getCacheId()
+  public byte[] getCacheKey()
   {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_T_TEST_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_T_TEST_CACHE_TYPE_ID)
+        .appendCacheables(getFields())
+        .build();
   }
 
 }

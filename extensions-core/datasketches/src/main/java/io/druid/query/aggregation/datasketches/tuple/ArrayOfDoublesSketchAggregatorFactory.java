@@ -213,13 +213,15 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_CACHE_TYPE_ID)
+    final CacheKeyBuilder builder = new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_CACHE_TYPE_ID)
         .appendString(name)
         .appendString(fieldName)
         .appendInt(nominalEntries)
-        .appendStrings(metricColumns)
-        .appendInt(numberOfValues)
-        .build();
+        .appendInt(numberOfValues);
+    if (metricColumns != null) {
+      builder.appendStrings(metricColumns);
+    }
+    return builder.build();
   }
 
   @Override

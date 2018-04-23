@@ -46,16 +46,6 @@ public class ArrayOfDoublesSketchModule implements DruidModule
   public static final String ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG = "arrayOfDoublesSketchMerge";
   public static final String ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG = "arrayOfDoublesSketchBuild";
 
-  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_POST_AGG = "arrayOfDoublesSketchToEstimate";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_AND_BOUNDS_POST_AGG = "arrayOfDoublesSketchToEstimateAndBounds";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_NUM_ENTRIES_POST_AGG = "arrayOfDoublesSketchToNumEntries";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_MEANS_POST_AGG = "arrayOfDoublesSketchToMeans";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_VARIANCES_POST_AGG = "arrayOfDoublesSketchToVariances";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_POST_AGG = "arrayOfDoublesSketchToQuantilesSketch";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_SET_OP_POST_AGG = "arrayOfDoublesSketchSetOp";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_T_TEST_POST_AGG = "arrayOfDoublesSketchTTest";
-  public static final String ARRAY_OF_DOUBLES_SKETCH_TO_STRING_POST_AGG = "arrayOfDoublesSketchToString";
-
   @Override
   public void configure(final Binder binder)
   {
@@ -89,39 +79,39 @@ public class ArrayOfDoublesSketchModule implements DruidModule
             ),
             new NamedType(
                 ArrayOfDoublesSketchToEstimatePostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_POST_AGG
+                "arrayOfDoublesSketchToEstimate"
             ),
             new NamedType(
                 ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_ESTIMATE_AND_BOUNDS_POST_AGG
+                "arrayOfDoublesSketchToEstimateAndBounds"
             ),
             new NamedType(
                 ArrayOfDoublesSketchToNumEntriesPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_NUM_ENTRIES_POST_AGG
+                "arrayOfDoublesSketchToNumEntries"
             ),
             new NamedType(
                 ArrayOfDoublesSketchToMeansPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_MEANS_POST_AGG
+                "arrayOfDoublesSketchToMeans"
             ),
             new NamedType(
                 ArrayOfDoublesSketchToVariancesPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_VARIANCES_POST_AGG
+                "arrayOfDoublesSketchToVariances"
             ),
             new NamedType(
                 ArrayOfDoublesSketchToQuantilesSketchPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_QUANTILES_SKETCH_POST_AGG
+                "arrayOfDoublesSketchToQuantilesSketch"
             ),
             new NamedType(
                 ArrayOfDoublesSketchSetOpPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_SET_OP_POST_AGG
+                "arrayOfDoublesSketchSetOp"
             ),
             new NamedType(
                 ArrayOfDoublesSketchTTestPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_T_TEST_POST_AGG
+                "arrayOfDoublesSketchTTest"
             ),
             new NamedType(
                 ArrayOfDoublesSketchToStringPostAggregator.class,
-                ARRAY_OF_DOUBLES_SKETCH_TO_STRING_POST_AGG
+                "arrayOfDoublesSketchToString"
             )
         ).addSerializer(ArrayOfDoublesSketch.class, new ArrayOfDoublesSketchJsonSerializer())
     );

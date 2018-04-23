@@ -19,8 +19,11 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
+
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,6 +33,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketchIterator;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Returns a list of mean values from a given {@link ArrayOfDoublesSketch}.
@@ -48,20 +52,20 @@ public class ArrayOfDoublesSketchToMeansPostAggregator extends ArrayOfDoublesSke
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public double[] compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
-    final double[] means = new double[sketch.getNumValues()];
+    final SummaryStatistics[] stats = new SummaryStatistics[sketch.getNumValues()];
+    Arrays.setAll(stats, i -> new SummaryStatistics());
     final ArrayOfDoublesSketchIterator it = sketch.iterator();
     while (it.next()) {
       final double[] values = it.getValues();
       for (int i = 0; i < values.length; i++) {
-        means[i] += values[i];
+        stats[i].addValue(values[i]);
       }
     }
-    for (int i = 0; i < means.length; i++) {
-      means[i] /= sketch.getRetainedEntries();
-    }
+    final double[] means = new double[sketch.getNumValues()];
+    Arrays.setAll(means, i -> stats[i].getMean());
     return means;
   }
 
@@ -72,9 +76,11 @@ public class ArrayOfDoublesSketchToMeansPostAggregator extends ArrayOfDoublesSke
   }
 
   @Override
-  byte getCacheId()
+  public byte[] getCacheKey()
   {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_MEANS_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_TO_MEANS_CACHE_TYPE_ID)
+        .appendCacheable(getField())
+        .build();
   }
 
 }

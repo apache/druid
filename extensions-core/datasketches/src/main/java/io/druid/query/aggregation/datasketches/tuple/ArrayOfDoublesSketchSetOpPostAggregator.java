@@ -34,6 +34,7 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import io.druid.java.util.common.IAE;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.cache.CacheKeyBuilder;
 
 /**
  * Returns a result of a specified set operation on the given array of sketches. Supported operations are:
@@ -42,21 +43,21 @@ import io.druid.query.aggregation.PostAggregator;
 public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketchMultiPostAggregator
 {
 
-  private final ArrayOfDoublesSketchOperations.Func func;
+  private final ArrayOfDoublesSketchOperations.Operation operation;
   private final int nominalEntries;
   private final int numberOfValues;
 
   @JsonCreator
   public ArrayOfDoublesSketchSetOpPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("func") final String func,
+      @JsonProperty("operation") final String operation,
       @JsonProperty("nominalEntries") @Nullable final Integer nominalEntries,
       @JsonProperty("numberOfValues") @Nullable final Integer numberOfValues,
       @JsonProperty("fields") List<PostAggregator> fields
   )
   {
     super(name, fields);
-    this.func = ArrayOfDoublesSketchOperations.Func.valueOf(func);
+    this.operation = ArrayOfDoublesSketchOperations.Operation.valueOf(operation);
     this.nominalEntries = nominalEntries == null ? Util.DEFAULT_NOMINAL_ENTRIES : nominalEntries;
     this.numberOfValues = numberOfValues == null ? 1 : numberOfValues;
     Util.checkIfPowerOf2(this.nominalEntries, "size");
@@ -73,19 +74,19 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
   }
 
   @Override
-  public Object compute(final Map<String, Object> combinedAggregators)
+  public ArrayOfDoublesSketch compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch[] sketches = new ArrayOfDoublesSketch[getFields().size()];
     for (int i = 0; i < sketches.length; i++) {
       sketches[i] = (ArrayOfDoublesSketch) getFields().get(i).compute(combinedAggregators);
     }
-    return ArrayOfDoublesSketchOperations.sketchSetOperation(func, nominalEntries, numberOfValues, sketches);
+    return operation.apply(nominalEntries, numberOfValues, sketches);
   }
 
   @JsonProperty
-  public String getFunc()
+  public String getOperation()
   {
-    return func.toString();
+    return operation.toString();
   }
 
   @JsonProperty
@@ -106,7 +107,7 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
     return this.getClass().getSimpleName() + "{"
         + "name='" + getName() + '\''
         + ", fields=" + getFields()
-        + ", func=" + func
+        + ", operation=" + operation
         + ", nominalEntries=" + nominalEntries
         + ", numberOfValues=" + numberOfValues
         + "}";
@@ -128,26 +129,24 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
     if (numberOfValues != that.numberOfValues) {
       return false;
     }
-    return func.equals(that.func);
+    return operation.equals(that.operation);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), func, nominalEntries, numberOfValues);
+    return Objects.hash(super.hashCode(), operation, nominalEntries, numberOfValues);
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return getCacheKeyBuilder().appendInt(nominalEntries).appendInt(numberOfValues)
-        .appendString(func.toString()).build();
-  }
-
-  @Override
-  byte getCacheId()
-  {
-    return AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_SET_OP_CACHE_TYPE_ID;
+    return new CacheKeyBuilder(AggregatorUtil.ARRAY_OF_DOUBLES_SKETCH_SET_OP_CACHE_TYPE_ID)
+        .appendCacheables(getFields())
+        .appendInt(nominalEntries)
+        .appendInt(numberOfValues)
+        .appendString(operation.toString())
+        .build();
   }
 
 }
