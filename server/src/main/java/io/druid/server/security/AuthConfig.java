@@ -44,19 +44,21 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null);
+    this(null, null, null, false);
   }
 
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
       @JsonProperty("authorizers") List<String> authorizers,
-      @JsonProperty("unsecuredPaths") List<String> unsecuredPaths
+      @JsonProperty("unsecuredPaths") List<String> unsecuredPaths,
+      @JsonProperty("allowUnauthenticatedHttpOptions") boolean allowUnauthenticatedHttpOptions
   )
   {
     this.authenticatorChain = authenticationChain;
     this.authorizers = authorizers;
     this.unsecuredPaths = unsecuredPaths == null ? Collections.emptyList() : unsecuredPaths;
+    this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions;
   }
 
   @JsonProperty
@@ -67,6 +69,9 @@ public class AuthConfig
 
   @JsonProperty
   private final List<String> unsecuredPaths;
+
+  @JsonProperty
+  private final boolean allowUnauthenticatedHttpOptions;
 
   public List<String> getAuthenticatorChain()
   {
@@ -83,14 +88,9 @@ public class AuthConfig
     return unsecuredPaths;
   }
 
-  @Override
-  public String toString()
+  public boolean isAllowUnauthenticatedHttpOptions()
   {
-    return "AuthConfig{" +
-           "authenticatorChain='" + authenticatorChain + '\'' +
-           ", authorizers='" + authorizers + '\'' +
-           ", unsecuredPaths='" + unsecuredPaths + '\'' +
-           '}';
+    return allowUnauthenticatedHttpOptions;
   }
 
   @Override
@@ -103,14 +103,31 @@ public class AuthConfig
       return false;
     }
     AuthConfig that = (AuthConfig) o;
-    return Objects.equals(authenticatorChain, that.authenticatorChain) &&
-           Objects.equals(authorizers, that.authorizers) &&
-           Objects.equals(unsecuredPaths, that.unsecuredPaths);
+    return isAllowUnauthenticatedHttpOptions() == that.isAllowUnauthenticatedHttpOptions() &&
+           Objects.equals(getAuthenticatorChain(), that.getAuthenticatorChain()) &&
+           Objects.equals(getAuthorizers(), that.getAuthorizers()) &&
+           Objects.equals(getUnsecuredPaths(), that.getUnsecuredPaths());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(authenticatorChain, authorizers, unsecuredPaths);
+    return Objects.hash(
+        getAuthenticatorChain(),
+        getAuthorizers(),
+        getUnsecuredPaths(),
+        isAllowUnauthenticatedHttpOptions()
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AuthConfig{" +
+           "authenticatorChain=" + authenticatorChain +
+           ", authorizers=" + authorizers +
+           ", unsecuredPaths=" + unsecuredPaths +
+           ", allowUnauthenticatedHttpOptions=" + allowUnauthenticatedHttpOptions +
+           '}';
   }
 }

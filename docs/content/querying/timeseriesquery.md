@@ -56,7 +56,7 @@ There are 7 main parts to a timeseries query:
 |filter|See [Filters](../querying/filters.html)|no|
 |aggregations|See [Aggregations](../querying/aggregations.html)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|no|
-|context|See [Context](../querying/query-context.html)|no|
+|context|Can be used to modify query behavior, including [grand totals](#grand-totals) and [zero-filling](#zero-filling). See also [Context](../querying/query-context.html) for parameters that apply to all query types.|no|
 
 To pull it all together, the above query would return 2 data points, one for each day between 2012-01-01 and 2012-01-03, from the "sample\_datasource" table. Each data point would be the (long) sum of sample\_fieldName1, the (double) sum of sample\_fieldName2 and the (double) result of sample\_fieldName1 divided by sample\_fieldName2 for the filter set. The output looks like this:
 
@@ -72,6 +72,31 @@ To pull it all together, the above query would return 2 data points, one for eac
   }
 ]
 ```
+
+#### Grand totals
+
+Druid can include an extra "grand totals" row as the last row of a timeseries result set. To enable this, add
+`"grandTotal" : true` to your query context. For example:
+
+```json
+{
+  "queryType": "timeseries",
+  "dataSource": "sample_datasource",
+  "intervals": [ "2012-01-01T00:00:00.000/2012-01-03T00:00:00.000" ],
+  "granularity": "day",
+  "aggregations": [
+    { "type": "longSum", "name": "sample_name1", "fieldName": "sample_fieldName1" },
+    { "type": "doubleSum", "name": "sample_name2", "fieldName": "sample_fieldName2" }
+  ],
+  "context": {
+    "grandTotal": true
+  }
+}
+```
+
+The grand totals row will appear as the last row in the result array, and will have no timestamp. It will be the last
+row even if the query is run in "descending" mode. Post-aggregations in the grand totals row will be computed based
+upon the grand total aggregations.
 
 #### Zero-filling
 
