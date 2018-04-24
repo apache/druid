@@ -19,7 +19,7 @@
 
 package io.druid.query.filter;
 
-
+@SuppressWarnings("unused")
 public interface DruidDoublePredicate
 {
   DruidDoublePredicate ALWAYS_FALSE = input -> false;
@@ -29,7 +29,7 @@ public interface DruidDoublePredicate
   DruidDoublePredicate MATCH_NULL_ONLY = new DruidDoublePredicate()
   {
     @Override
-    public boolean applyDouble(@SuppressWarnings("unused") double input)
+    public boolean applyDouble(double input)
     {
       return false;
     }

@@ -22,6 +22,7 @@ package io.druid.query.filter;
 /**
  * FloatPredicate is only supported in Java 8+, so use this to avoid boxing when a float predicate is needed.
  */
+@SuppressWarnings("unused")
 public interface DruidFloatPredicate
 {
   DruidFloatPredicate ALWAYS_FALSE = input -> false;
@@ -29,7 +30,7 @@ public interface DruidFloatPredicate
   DruidFloatPredicate MATCH_NULL_ONLY = new DruidFloatPredicate()
   {
     @Override
-    public boolean applyFloat(@SuppressWarnings("unused") float input)
+    public boolean applyFloat(float input)
     {
       return false;
     }
