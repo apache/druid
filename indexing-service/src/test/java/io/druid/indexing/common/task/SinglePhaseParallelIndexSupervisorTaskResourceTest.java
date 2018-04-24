@@ -238,7 +238,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(TaskState.SUCCESS, supervisorTaskFuture.get(100, TimeUnit.MILLISECONDS).getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, supervisorTaskFuture.get(1000, TimeUnit.MILLISECONDS).getStatusCode());
   }
 
   private int getNumSubTasks(String name, Function<HttpServletRequest, Response> func)
