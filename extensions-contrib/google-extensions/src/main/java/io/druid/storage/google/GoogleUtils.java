@@ -31,4 +31,16 @@ public class GoogleUtils
       return false;
     }
   };
+
+  public static String toFilename(String path)
+  {
+    String filename = path.substring(path.lastIndexOf("/") + 1); // characters after last '/'
+    filename = filename.substring(0, filename.length());
+    return filename;
+  }
+
+  public static String indexZipForSegmentPath(String path)
+  {
+    return path.substring(0, path.lastIndexOf("/")) + "/index.zip";
+  }
 }
