@@ -31,8 +31,10 @@ import io.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class ServerHolderTest
 {
@@ -65,14 +67,14 @@ public class ServerHolderTest
       "src1",
       new ImmutableDruidDataSource(
           "src1",
-          ImmutableMap.of(),
-          ImmutableMap.of()
+          Collections.emptyMap(),
+          new TreeMap<>()
       ),
       "src2",
       new ImmutableDruidDataSource(
           "src2",
-          ImmutableMap.of(),
-          ImmutableMap.of()
+          Collections.emptyMap(),
+          new TreeMap<>()
       )
   );
 

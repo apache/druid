@@ -65,12 +65,15 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -143,7 +146,7 @@ public class DatasourcesResource
       @QueryParam("full") final String full
   )
   {
-    ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
       return Response.noContent().build();
@@ -508,7 +511,7 @@ public class DatasourcesResource
       return null;
     }
 
-    Map<String, DataSegment> segmentMap = Maps.newHashMap();
+    final SortedMap<String, DataSegment> segmentMap = new TreeMap<>();
     for (ImmutableDruidDataSource dataSource : dataSources) {
       Iterable<DataSegment> segments = dataSource.getSegments();
       for (DataSegment segment : segments) {
@@ -516,11 +519,7 @@ public class DatasourcesResource
       }
     }
 
-    return new ImmutableDruidDataSource(
-        dataSourceName,
-        ImmutableMap.of(),
-        ImmutableMap.copyOf(segmentMap)
-    );
+    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap);
   }
 
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
