@@ -146,7 +146,7 @@ public class AppenderatorImpl implements Appenderator
   private volatile FileChannel basePersistDirLockChannel = null;
   private AtomicBoolean closed = new AtomicBoolean(false);
 
-  public AppenderatorImpl(
+  AppenderatorImpl(
       DataSchema schema,
       AppenderatorConfig tuningConfig,
       FireDepartmentMetrics metrics,
@@ -272,12 +272,14 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (tuningConfig.getMaxBytesInMemory() != -1 && bytesCurrentlyInMemory.get() >= tuningConfig.getMaxBytesInMemory()) {
+    if (tuningConfig.getMaxBytesInMemory() != -1
+        && bytesCurrentlyInMemory.get()
+           >= TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())) {
       persist = true;
       persistReason.append(StringUtils.format(
           " bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
-          tuningConfig.getMaxBytesInMemory()
+          TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())
       ));
     }
     if (persist) {
