@@ -19,8 +19,9 @@
 
 package io.druid.query.aggregation.datasketches.tuple;
 
-import com.google.common.base.Charsets;
 import com.yahoo.memory.Memory;
+
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.codec.binary.Base64;
 
@@ -112,7 +113,7 @@ public class ArrayOfDoublesSketchOperations
 
   public static ArrayOfDoublesSketch deserializeFromBase64EncodedString(final String str)
   {
-    return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(Charsets.UTF_8)));
+    return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static ArrayOfDoublesSketch deserializeFromByteArray(final byte[] data)
