@@ -57,7 +57,7 @@ public class SinglePhaseParallelIndexTaskClient extends IndexTaskClient
   public void report(String supervisorTaskId, List<DataSegment> pushedSegments)
   {
     try {
-      final FullResponseHolder response = submitSmilRequest(
+      final FullResponseHolder response = submitSmileRequest(
           supervisorTaskId,
           HttpMethod.POST,
           "report",

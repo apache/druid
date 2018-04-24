@@ -200,7 +200,7 @@ public abstract class IndexTaskClient implements AutoCloseable
   /**
    * To use this method, {@link #objectMapper} should be a smileMapper.
    */
-  protected FullResponseHolder submitSmilRequest(
+  protected FullResponseHolder submitSmileRequest(
       String taskId,
       HttpMethod method,
       String pathSuffix,

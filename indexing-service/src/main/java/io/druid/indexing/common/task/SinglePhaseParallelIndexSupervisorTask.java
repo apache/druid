@@ -26,7 +26,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -517,7 +516,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   public Response isRunningInParallel(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return okResponse("isRunningInParallel", baseFirehoseFactory.isSplittable());
+    return Response.ok(baseFirehoseFactory.isSplittable()).build();
   }
 
   @GET
@@ -527,7 +526,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     final int numRunningTasks = taskMonitor == null ? 0 : taskMonitor.getNumRunningTasks();
-    return okResponse("numRunningTasks", numRunningTasks);
+    return Response.ok(numRunningTasks).build();
   }
 
   @GET
@@ -537,7 +536,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     final int numSucceededTasks = taskMonitor == null ? 0 : taskMonitor.getNumSucceededTasks();
-    return okResponse("numSucceededTasks", numSucceededTasks);
+    return Response.ok(numSucceededTasks).build();
   }
 
   @GET
@@ -547,7 +546,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     final int numFailedTasks = taskMonitor == null ? 0 : taskMonitor.getNumFailedTasks();
-    return okResponse("numFailedTasks", numFailedTasks);
+    return Response.ok(numFailedTasks).build();
   }
 
   @GET
@@ -557,7 +556,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     final int numCompleteTasks = taskMonitor == null ? 0 : taskMonitor.getNumCompleteTasks();
-    return okResponse("numCompleteTasks", numCompleteTasks);
+    return Response.ok(numCompleteTasks).build();
   }
 
   @GET
@@ -567,7 +566,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     final int expectedNumSucceededTasks = taskMonitor == null ? 0 : taskMonitor.getExpectedNumSucceededTasks();
-    return okResponse("expectedNumSucceededTasks", expectedNumSucceededTasks);
+    return Response.ok(expectedNumSucceededTasks).build();
   }
 
   @GET
@@ -577,7 +576,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     final Set<String> runningTasks = taskMonitor == null ? Collections.emptySet() : taskMonitor.getRunningTaskIds();
-    return okResponse("runningSubTasks", runningTasks);
+    return Response.ok(runningTasks).build();
   }
 
   @GET
@@ -586,17 +585,21 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   public Response getSubTaskSpecs(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor.getRunningSubTaskSpecs();
-    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> completeSubTaskSpecs = taskMonitor
-        .getCompleteSubTaskSpecs();
-    // Deduplicate subTaskSpecs because some subTaskSpec might exist both in runningSubTaskSpecs and
-    // completeSubTaskSpecs.
-    final Map<String, SubTaskSpec<SinglePhaseParallelIndexSubTask>> subTaskSpecMap = new HashMap<>(
-        runningSubTaskSpecs.size() + completeSubTaskSpecs.size()
-    );
-    runningSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
-    completeSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
-    return okResponse("subTaskSpecs", new ArrayList<>(subTaskSpecMap.values()));
+    if (taskMonitor != null) {
+      final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor.getRunningSubTaskSpecs();
+      final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> completeSubTaskSpecs = taskMonitor
+          .getCompleteSubTaskSpecs();
+      // Deduplicate subTaskSpecs because some subTaskSpec might exist both in runningSubTaskSpecs and
+      // completeSubTaskSpecs.
+      final Map<String, SubTaskSpec<SinglePhaseParallelIndexSubTask>> subTaskSpecMap = new HashMap<>(
+          runningSubTaskSpecs.size() + completeSubTaskSpecs.size()
+      );
+      runningSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
+      completeSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
+      return Response.ok(new ArrayList<>(subTaskSpecMap.values())).build();
+    } else {
+      return Response.ok(Collections.emptyList()).build();
+    }
   }
 
   @GET
@@ -605,7 +608,10 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   public Response getRunningSubTaskSpecs(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return okResponse("runningSubTaskSpecs", taskMonitor.getRunningSubTaskSpecs());
+    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor == null ?
+                                                                                   Collections.emptyList() :
+                                                                                   taskMonitor.getRunningSubTaskSpecs();
+    return Response.ok(runningSubTaskSpecs).build();
   }
 
   @GET
@@ -614,7 +620,11 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   public Response getCompleteSubTaskSpecs(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return okResponse("completeSubTaskSpecs", taskMonitor.getCompleteSubTaskSpecs());
+    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> completeSubTaskSpecs =
+        taskMonitor == null ?
+        Collections.emptyList() :
+        taskMonitor.getCompleteSubTaskSpecs();
+    return Response.ok(completeSubTaskSpecs).build();
   }
 
   @GET
@@ -623,26 +633,30 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   public Response getSubTaskSpec(@QueryParam("id") String id, @Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
-    // adding them to taskHistory.
-    final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(id);
-    final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
-    final SubTaskSpec<SinglePhaseParallelIndexSubTask> subTaskSpec;
+    if (taskMonitor != null) {
+      // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
+      // adding them to taskHistory.
+      final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(id);
+      final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
+      final SubTaskSpec<SinglePhaseParallelIndexSubTask> subTaskSpec;
 
-    if (monitorEntry != null) {
-      subTaskSpec = monitorEntry.getSpec();
-    } else {
-      if (taskHistory != null) {
-        subTaskSpec = taskHistory.getSpec();
+      if (monitorEntry != null) {
+        subTaskSpec = monitorEntry.getSpec();
       } else {
-        subTaskSpec = null;
+        if (taskHistory != null) {
+          subTaskSpec = taskHistory.getSpec();
+        } else {
+          subTaskSpec = null;
+        }
       }
-    }
 
-    if (subTaskSpec == null) {
-      return Response.status(Status.NOT_FOUND).build();
+      if (subTaskSpec == null) {
+        return Response.status(Status.NOT_FOUND).build();
+      } else {
+        return Response.ok(subTaskSpec).build();
+      }
     } else {
-      return Response.ok(subTaskSpec).build();
+      return Response.status(Status.NOT_FOUND).build();
     }
   }
 
@@ -708,11 +722,6 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
         return Response.ok(taskHistory.getAttemptHistory()).build();
       }
     }
-  }
-
-  private static Response okResponse(String key, Object val)
-  {
-    return Response.ok(ImmutableMap.of(key, val)).build();
   }
 
   static class SubTaskStateResponse

@@ -20,7 +20,6 @@ package io.druid.indexing.common.task;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.InputSplit;
@@ -58,8 +57,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -133,16 +134,16 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
     // test isRunningInParallel
     Response response = task.isRunningInParallel(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("isRunningInParallel", true), response.getEntity());
+    Assert.assertTrue((Boolean) response.getEntity());
 
     // test expectedNumSucceededTasks
     response = task.getExpectedNumSucceededTasks(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("expectedNumSucceededTasks", NUM_SUB_TASKS), response.getEntity());
+    Assert.assertEquals(NUM_SUB_TASKS, response.getEntity());
 
     // Since taskMonitor works based on polling, it's hard to use a fancier way to check its state.
     // We use polling to check the state of taskMonitor in this test.
-    while (getNumSubTasks("numRunningTasks", req -> task.getNumRunningTasks(req)) < NUM_SUB_TASKS) {
+    while (getNumSubTasks(req -> task.getNumRunningTasks(req)) < NUM_SUB_TASKS) {
       Thread.sleep(100);
     }
 
@@ -161,7 +162,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       runningTasks.get(0).setState(TaskState.SUCCESS);
     }
 
-    while (getNumSubTasks("numSucceededTasks", req -> task.getNumSucceededTasks(req)) < succeededTasks) {
+    while (getNumSubTasks(req -> task.getNumSucceededTasks(req)) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -178,7 +179,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       runningTasks.get(0).setState(TaskState.FAILED);
     }
 
-    while (getNumSubTasks("numFailedTasks", req -> task.getNumFailedTasks(req)) < failedTasks) {
+    while (getNumSubTasks(req -> task.getNumFailedTasks(req)) < failedTasks) {
       Thread.sleep(100);
     }
 
@@ -200,7 +201,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       runningTasks.get(0).setState(TaskState.SUCCESS);
     }
 
-    while (getNumSubTasks("numSucceededTasks", req -> task.getNumSucceededTasks(req)) < succeededTasks) {
+    while (getNumSubTasks(req -> task.getNumSucceededTasks(req)) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -220,7 +221,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
     // Test one more failure
     runningTasks.get(0).setState(TaskState.FAILED);
     failedTasks++;
-    while (getNumSubTasks("numFailedTasks", req -> task.getNumFailedTasks(req)) < failedTasks) {
+    while (getNumSubTasks(req -> task.getNumFailedTasks(req)) < failedTasks) {
       Thread.sleep(100);
     }
 
@@ -234,19 +235,19 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
 
     runningTasks.get(0).setState(TaskState.SUCCESS);
     succeededTasks++;
-    while (getNumSubTasks("numSucceededTasks", req -> task.getNumSucceededTasks(req)) < succeededTasks) {
+    while (getNumSubTasks(req -> task.getNumSucceededTasks(req)) < succeededTasks) {
       Thread.sleep(100);
     }
 
     Assert.assertEquals(TaskState.SUCCESS, supervisorTaskFuture.get(1000, TimeUnit.MILLISECONDS).getStatusCode());
   }
 
-  private int getNumSubTasks(String name, Function<HttpServletRequest, Response> func)
+  @SuppressWarnings({"ConstantConditions"})
+  private int getNumSubTasks(Function<HttpServletRequest, Response> func)
   {
     final Response response = func.apply(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    final Map<String, Integer> numTasks = (Map<String, Integer>) response.getEntity();
-    return numTasks.get(name);
+    return (Integer) response.getEntity();
   }
 
   private Map<String, SubTaskStateResponse> buildStateMap()
@@ -276,55 +277,49 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
     // numRunningTasks
     Response response = task.getNumRunningTasks(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
-        ImmutableMap.of("numRunningTasks", runningTasks.size()),
-        response.getEntity()
-    );
+    Assert.assertEquals(runningTasks.size(), response.getEntity());
 
     // numSucceededTasks
     response = task.getNumSucceededTasks(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("numSucceededTasks", expectedSucceededTasks), response.getEntity());
+    Assert.assertEquals(expectedSucceededTasks, response.getEntity());
 
     // numFailedTasks
     response = task.getNumFailedTasks(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("numFailedTasks", expectedFailedTask), response.getEntity());
+    Assert.assertEquals(expectedFailedTask, response.getEntity());
 
     // numCompleteTasks
     response = task.getNumCompleteTasks(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
-        ImmutableMap.of("numCompleteTasks", expectedSucceededTasks + expectedFailedTask),
-        response.getEntity()
-    );
+    Assert.assertEquals(expectedSucceededTasks + expectedFailedTask, response.getEntity());
 
     // runningSubTasks
     response = task.getRunningTasks(newRequest());
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
-        ImmutableMap.of("runningSubTasks", runningTasks.stream().map(AbstractTask::getId).collect(Collectors.toSet())),
-        response.getEntity()
+        runningTasks.stream().map(AbstractTask::getId).collect(Collectors.toSet()),
+        new HashSet<>((Collection<String>) response.getEntity())
     );
 
     // subTaskSpecs
     response = task.getSubTaskSpecs(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Map<String, List<SubTaskSpec<SinglePhaseParallelIndexSubTask>>> actualSubTaskSpecMap =
-        (Map<String, List<SubTaskSpec<SinglePhaseParallelIndexSubTask>>>) response.getEntity();
+    List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> actualSubTaskSpecMap =
+        (List<SubTaskSpec<SinglePhaseParallelIndexSubTask>>) response.getEntity();
     Assert.assertEquals(
         subTaskSpecs.keySet(),
-        actualSubTaskSpecMap.get("subTaskSpecs").stream().map(SubTaskSpec::getId).collect(Collectors.toSet())
+        actualSubTaskSpecMap.stream().map(SubTaskSpec::getId).collect(Collectors.toSet())
     );
 
     // runningSubTaskSpecs
     response = task.getRunningSubTaskSpecs(newRequest());
     Assert.assertEquals(200, response.getStatus());
     actualSubTaskSpecMap =
-        (Map<String, List<SubTaskSpec<SinglePhaseParallelIndexSubTask>>>) response.getEntity();
+        (List<SubTaskSpec<SinglePhaseParallelIndexSubTask>>) response.getEntity();
     Assert.assertEquals(
         runningSpecs.keySet(),
-        actualSubTaskSpecMap.get("runningSubTaskSpecs").stream().map(SubTaskSpec::getId).collect(Collectors.toSet())
+        actualSubTaskSpecMap.stream().map(SubTaskSpec::getId).collect(Collectors.toSet())
     );
 
     // completeSubTaskSpecs
@@ -337,7 +332,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
 
     response = task.getCompleteSubTaskSpecs(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("completeSubTaskSpecs", completeSubTaskSpecs), response.getEntity());
+    Assert.assertEquals(completeSubTaskSpecs, response.getEntity());
 
     // subTaskSpec
     final String subTaskId = runningSpecs.keySet().iterator().next();
