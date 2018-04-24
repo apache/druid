@@ -19,6 +19,7 @@
 
 package io.druid.storage.google;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.inject.Inject;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -52,11 +53,24 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
     final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf("/")) + "/descriptor.json";
 
     try {
-      storage.delete(bucket, indexPath);
-      storage.delete(bucket, descriptorPath);
+      deleteIfPresent(bucket, indexPath);
+      deleteIfPresent(bucket, descriptorPath);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e.getMessage());
+    }
+  }
+
+  private void deleteIfPresent(String bucket, String path) throws IOException
+  {
+    try {
+      storage.delete(bucket, path);
+    }
+    catch (GoogleJsonResponseException e) {
+      if (e.getStatusCode() != 404) {
+        throw e;
+      }
+      LOG.debug("Already deleted: [%s] [%s]", bucket, path);
     }
   }
 
