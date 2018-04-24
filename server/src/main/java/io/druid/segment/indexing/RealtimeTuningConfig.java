@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import io.druid.java.util.common.ISE;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
@@ -55,7 +56,15 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 
   private static File createNewBasePersistDirectory()
   {
-    return Files.createTempDir();
+    try {
+      return Files.createTempDir();
+    }
+    catch (IllegalStateException e) {
+      String messageTemplate = "Failed to create temporary directory in [%s]! " +
+              "Make sure the `java.io.tmpdir` property is set to an existing and writable directory " +
+              "with enough free space.";
+      throw new ISE(e, messageTemplate, System.getProperty("java.io.tmpdir"));
+    }
   }
 
   // Might make sense for this to be a builder

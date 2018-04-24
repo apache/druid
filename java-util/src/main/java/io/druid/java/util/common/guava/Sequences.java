@@ -113,7 +113,7 @@ public class Sequences
     return new WrappingSequence<>(seq, wrapper);
   }
 
-  public static <T> Sequence<T> withEffect(final Sequence <T> seq, final Runnable effect, final Executor exec)
+  public static <T> Sequence<T> withEffect(final Sequence<T> seq, final Runnable effect, final Executor exec)
   {
     // Uses YieldingSequenceBase to be able to execute the effect if all elements of the wrapped seq are processed
     // (i. e. it "is done"), but the yielder of the underlying seq throws some exception from close(). This logic could

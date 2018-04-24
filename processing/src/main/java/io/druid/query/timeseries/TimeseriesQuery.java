@@ -45,6 +45,9 @@ import java.util.Objects;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
+  static final String CTX_GRAND_TOTAL = "grandTotal";
+  public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
+
   private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
@@ -117,9 +120,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return postAggregatorSpecs;
   }
 
+  public boolean isGrandTotal()
+  {
+    return getContextBoolean(CTX_GRAND_TOTAL, false);
+  }
+
   public boolean isSkipEmptyBuckets()
   {
-    return getContextBoolean("skipEmptyBuckets", false);
+    return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
   @Override
@@ -155,16 +163,16 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public String toString()
   {
     return "TimeseriesQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", descending=" + isDescending() +
-        ", virtualColumns=" + virtualColumns +
-        ", dimFilter=" + dimFilter +
-        ", granularity='" + getGranularity() + '\'' +
-        ", aggregatorSpecs=" + aggregatorSpecs +
-        ", postAggregatorSpecs=" + postAggregatorSpecs +
-        ", context=" + getContext() +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", descending=" + isDescending() +
+           ", virtualColumns=" + virtualColumns +
+           ", dimFilter=" + dimFilter +
+           ", granularity='" + getGranularity() + '\'' +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", context=" + getContext() +
+           '}';
   }
 
   @Override
@@ -181,9 +189,9 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     }
     final TimeseriesQuery that = (TimeseriesQuery) o;
     return Objects.equals(virtualColumns, that.virtualColumns) &&
-        Objects.equals(dimFilter, that.dimFilter) &&
-        Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
-        Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
+           Objects.equals(dimFilter, that.dimFilter) &&
+           Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
+           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
   }
 
   @Override

@@ -65,11 +65,11 @@ Make sure to [include](../../operations/including-extensions.html) `mysql-metada
 |`druid.metadata.mysql.ssl.useSSL`|Enable SSL|`false`|no|
 |`druid.metadata.mysql.ssl.clientCertificateKeyStoreUrl`|The file path URL to the client certificate key store.|none|no|
 |`druid.metadata.mysql.ssl.clientCertificateKeyStoreType`|The type of the key store where the client certificate is stored.|none|no|
-|`druid.metadata.mysql.ssl.clientCertificateKeyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the client key store.|none|no|
+|`druid.metadata.mysql.ssl.clientCertificateKeyStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the client key store.|none|no|
 |`druid.metadata.mysql.ssl.verifyServerCertificate`|Enables server certificate verification.|false|no|
 |`druid.metadata.mysql.ssl.trustCertificateKeyStoreUrl`|The file path to the trusted root certificate key store.|Default trust store provided by MySQL|yes if `verifyServerCertificate` is set to true and a custom trust store is used|
 |`druid.metadata.mysql.ssl.trustCertificateKeyStoreType`|The type of the key store where trusted root certificates are stored.|JKS|yes if `verifyServerCertificate` is set to true and keystore type is not JKS|
-|`druid.metadata.mysql.ssl.trustCertificateKeyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the trust store.|none|yes if `verifyServerCertificate` is set to true and password is not null|
+|`druid.metadata.mysql.ssl.trustCertificateKeyStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the trust store.|none|yes if `verifyServerCertificate` is set to true and password is not null|
 |`druid.metadata.mysql.ssl.enabledSSLCipherSuites`|Overrides the existing cipher suites with these cipher suites.|none|no|
 |`druid.metadata.mysql.ssl.enabledTLSProtocols`|Overrides the TLS protocols with these protocols.|none|no|
 
