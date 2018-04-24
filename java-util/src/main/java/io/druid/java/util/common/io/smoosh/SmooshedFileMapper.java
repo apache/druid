@@ -143,6 +143,9 @@ public class SmooshedFileMapper implements Closeable
   {
     Throwable thrown = null;
     for (MappedByteBuffer mappedByteBuffer : buffersList) {
+      if (mappedByteBuffer == null) {
+        continue;
+      }
       try {
         ByteBufferUtils.unmap(mappedByteBuffer);
       }
@@ -154,6 +157,7 @@ public class SmooshedFileMapper implements Closeable
         }
       }
     }
+    buffersList.clear();
     Throwables.propagateIfPossible(thrown);
   }
 }
