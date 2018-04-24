@@ -156,7 +156,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
         .asyncWriteEnable()
         .mmapFileEnable()
         .commitFileSyncDisable()
-        .cacheSize(10_000_000)
+        .cacheSize(config.getNumBufferEntries())
         .make();
     try {
       lifecycle.addMaybeStartHandler(
