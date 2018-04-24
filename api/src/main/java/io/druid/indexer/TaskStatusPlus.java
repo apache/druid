@@ -167,14 +167,15 @@ public class TaskStatusPlus
   public String toString()
   {
     return "TaskStatusPlus{" +
-           "id=" + id +
-           ", type=" + type +
+           "id='" + id + '\'' +
+           ", type='" + type + '\'' +
            ", createdTime=" + createdTime +
            ", queueInsertionTime=" + queueInsertionTime +
            ", state=" + state +
            ", duration=" + duration +
            ", location=" + location +
-           ", dataSource=" + dataSource +
-           "}";
+           ", dataSource='" + dataSource + '\'' +
+           ", errorMsg='" + errorMsg + '\'' +
+           '}';
   }
 }

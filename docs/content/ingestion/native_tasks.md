@@ -3,7 +3,7 @@ layout: doc_page
 ---
 # Native Index Tasks
 
-Druid currently two types of native index tasks, i.e., `local index task` and `single phase parallel index task`.
+Druid currently has two types of native index tasks, i.e., `local index task` and `single phase parallel index task`.
 
 Single Phase Parallel Index Task
 --------------------------------

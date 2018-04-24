@@ -264,16 +264,16 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   @Override
   public FiniteFirehoseFactory<StringInputRowParser, S3ObjectSummary> withSplit(InputSplit<S3ObjectSummary> split)
   {
-    final String authority = split.get().getBucketName();
-    final String path = split.get().getKey();
-    final URI splitUri;
-    if (authority.endsWith("/") && path.startsWith("/")) {
-      splitUri = URI.create(StringUtils.format("s3://%s%s", authority, path.substring(1)));
-    } else if (!authority.endsWith("/") && !path.startsWith("/")) {
-      splitUri = URI.create(StringUtils.format("s3://%s/%s", authority, path));
-    } else {
-      splitUri = URI.create(StringUtils.format("s3://%s%s", authority, path));
-    }
+    final String originalAuthority = split.get().getBucketName();
+    final String originalPath = split.get().getKey();
+    final String authority = originalAuthority.endsWith("/") ?
+                             originalAuthority.substring(0, originalAuthority.length() - 1) :
+                             originalAuthority;
+    final String path = originalPath.startsWith("/") ?
+                        originalPath.substring(1, originalPath.length()) :
+                        originalPath;
+
+    final URI splitUri = URI.create(StringUtils.format("s3://%s/%s", authority, path));
     return new StaticS3FirehoseFactory(
         s3Client,
         Collections.singletonList(splitUri),

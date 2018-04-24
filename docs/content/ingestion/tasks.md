@@ -15,7 +15,7 @@ See [batch ingestion](../ingestion/batch-ingestion.html).
 
 ### Native Index Tasks
 
-Druid provides a native index tasks which doesn't need any dependencies on other systems.
+Druid provides a native index task which doesn't need any dependencies on other systems.
 See [native index tasks](./native_tasks.html) for more details.
 
 Segment Merging Tasks
