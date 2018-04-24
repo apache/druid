@@ -32,7 +32,7 @@ public class NamespaceExtractionConfig
   private int numExtractionThreads = 2;
 
   @JsonProperty
-  private int numBufferEntries = 100_000;
+  private int numBufferedEntries = 100_000;
 
   public int getNumExtractionThreads()
   {
@@ -44,14 +44,14 @@ public class NamespaceExtractionConfig
     this.numExtractionThreads = numExtractionThreads;
   }
 
-  public int getNumBufferEntries()
+  public int getNumBufferedEntries()
   {
-    return numBufferEntries;
+    return numBufferedEntries;
   }
 
-  public void setNumBufferEntries(int numBufferEntries)
+  public void setNumBufferedEntries(int numBufferedEntries)
   {
-    this.numBufferEntries = numBufferEntries;
+    this.numBufferedEntries = numBufferedEntries;
   }
 
 
