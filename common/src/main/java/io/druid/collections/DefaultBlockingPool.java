@@ -22,12 +22,11 @@ package io.druid.collections;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -85,7 +84,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return wrapObject(timeoutMs > 0 ? pollObject(timeoutMs) : pollObject());
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -97,7 +96,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return wrapObject(takeObject());
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -168,7 +167,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return objects.stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -180,13 +179,13 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
   private List<T> pollObjects(int elementNum) throws InterruptedException
   {
-    final List<T> list = Lists.newArrayListWithCapacity(elementNum);
+    final List<T> list = new ArrayList<>(elementNum);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
     try {
@@ -207,7 +206,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   private List<T> pollObjects(int elementNum, long timeoutMs) throws InterruptedException
   {
     long nanos = TIME_UNIT.toNanos(timeoutMs);
-    final List<T> list = Lists.newArrayListWithCapacity(elementNum);
+    final List<T> list = new ArrayList<>(elementNum);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
     try {
@@ -229,7 +228,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
 
   private List<T> takeObjects(int elementNum) throws InterruptedException
   {
-    final List<T> list = Lists.newArrayListWithCapacity(elementNum);
+    final List<T> list = new ArrayList<>(elementNum);
     final ReentrantLock lock = this.lock;
     lock.lockInterruptibly();
     try {

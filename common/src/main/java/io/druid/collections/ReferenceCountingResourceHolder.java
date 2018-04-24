@@ -65,8 +65,8 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   }
 
   /**
-   * Returns the resource. If multiple threads are supposed to call this method for the same holder,
-   * {@link #increment()} should be called before using the returned resource.
+   * Returns the resource with an initial reference count of 1. More references can be added by
+   * calling {@link #increment()}.
    */
   @Override
   public T get()
@@ -80,6 +80,9 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   /**
    * Increments the reference count by 1 and returns a {@link Releaser}. The returned {@link Releaser} is used to
    * decrement the reference count when the caller no longer needs the resource.
+   *
+   * {@link Releaser}s are not thread-safe. If multiple threads need references to the same holder, they should
+   * each acquire their own {@link Releaser}.
    */
   public Releaser increment()
   {

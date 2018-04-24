@@ -323,7 +323,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       if (numBuffers > mergeBufferPool.maxSize()) {
         throw new ResourceLimitExceededException(
             "Query needs " + numBuffers + " merge buffers, but only "
-            + mergeBufferPool.maxSize() + " merge buffers were configured"
+            + mergeBufferPool.maxSize() + " merge buffers were configured. "
+            + "Try raising druid.processing.numMergeBuffers."
         );
       }
       final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolder;
@@ -334,7 +335,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
           throw new TimeoutException();
         }
         if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
-          throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
+          throw new TimeoutException("Cannot acquire enough merge buffers");
         }
       } else {
         mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);

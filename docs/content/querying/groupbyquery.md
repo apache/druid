@@ -204,7 +204,7 @@ The default number of initial buckets is 1024 and the default max load factor of
 
 ##### Parallel combine
 
-Once a historical finishes aggregation using the hash table, it sorts aggregates and merge them before sending to the
+Once a historical finishes aggregation using the hash table, it sorts the aggregated results and merges them before sending to the
 broker for N-way merge aggregation in the broker. By default, historicals use all their available processing threads
 (configured by `druid.processing.numThreads`) for aggregation, but use a single thread for sorting and merging
 aggregates which is an http thread to send data to brokers.
@@ -224,7 +224,7 @@ Once parallel combine is enabled, the groupBy v2 engine can create a combining t
 intermediate node of the tree is a thread merging aggregates from the child nodes. The leaf node threads read and merge
 aggregates from hash tables including spilled ones. Usually, leaf nodes are slower than intermediate nodes because they
 need to read data from disk. As a result, less threads are used for intermediate nodes by default. You can change the
-degree of intermeidate nodes. See `intermediateCombineDegree` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
+degree of intermediate nodes. See `intermediateCombineDegree` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
 
 Please note that each historical needs two merge buffers to process a groupBy v2 query with parallel combine: one for
 computing intermediate aggregates from each segment and another for combining intermediate aggregates in parallel.
