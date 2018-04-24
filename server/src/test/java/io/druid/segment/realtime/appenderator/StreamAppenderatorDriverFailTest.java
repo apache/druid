@@ -34,6 +34,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -280,7 +281,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
     dataSegmentKiller.killQuietly(new DataSegment(
         "foo",
-        new Interval("2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z"),
+        Intervals.of("2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z"),
         "abc123",
         ImmutableMap.of(),
         ImmutableList.of(),
@@ -293,7 +294,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
     dataSegmentKiller.killQuietly(new DataSegment(
         "foo",
-        new Interval("2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z"),
+        Intervals.of("2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z"),
         "abc123",
         ImmutableMap.of(),
         ImmutableList.of(),
