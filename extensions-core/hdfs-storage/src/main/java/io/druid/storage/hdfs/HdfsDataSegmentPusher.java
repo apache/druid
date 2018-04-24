@@ -232,6 +232,9 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     );
   }
 
+
+  // We lazily initialiize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
+  // Please see https://github.com/druid-io/druid/pull/5684
   private void initFullyQualifiedStorageDirectory()
   {
     try {
