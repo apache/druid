@@ -20,6 +20,7 @@
 package io.druid.indexing.materializedview;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapDifference;
@@ -28,6 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.HadoopIndexTask;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -63,7 +65,7 @@ public class MaterializedViewSupervisor implements Supervisor
 {
   private static final EmittingLogger log = new EmittingLogger(MaterializedViewSupervisor.class);
   private static final Interval ALL_INTERVAL = Intervals.of("0000-01-01/3000-01-01");
-  private static final int MAX_TASK_COUNT = 1;
+  private static final int DEFAULT_MAX_TASK_COUNT = 1;
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final SQLMetadataSegmentManager segmentManager;
@@ -75,13 +77,17 @@ public class MaterializedViewSupervisor implements Supervisor
   private final String supervisorId;
   private final int maxTaskCount;
   private final Map<Interval, HadoopIndexTask> runningTasks = Maps.newHashMap();
+  private final Map<Interval, String> runningVersion = Maps.newHashMap();
+  // taskLock is used to synchronize runningTask and runningVersion
   private final Object taskLock = new Object();
+  // stateLock is used to synchronize materializedViewSupervisor's status
   private final Object stateLock = new Object();
-  private volatile boolean started = false;
-  private volatile ListenableFuture<?> future = null;
-  private volatile ListeningScheduledExecutorService exec = null;
-  private volatile Set<Interval> missInterval = Sets.newHashSet();
-  private Map<Interval, String> runningVersion = Maps.newHashMap();
+  private boolean started = false;
+  private ListenableFuture<?> future = null;
+  private ListeningScheduledExecutorService exec = null;
+  // In the missing intervals, baseDataSource has data but derivedDataSource does not, which means
+  // data in these intervals of derivedDataSource needs to be rebuilt.
+  private Set<Interval> missInterval = Sets.newHashSet();
   
   public MaterializedViewSupervisor(
       TaskMaster taskMaster,
@@ -102,7 +108,9 @@ public class MaterializedViewSupervisor implements Supervisor
     this.spec = spec;
     this.dataSource = spec.getDataSourceName();
     this.supervisorId = StringUtils.format("MaterializedViewSupervisor-%s", dataSource);
-    this.maxTaskCount = spec.getContext().containsKey("maxTaskCount") ? Integer.parseInt(String.valueOf(spec.getContext().get("maxTaskCount"))) : MAX_TASK_COUNT;
+    this.maxTaskCount = spec.getContext().containsKey("maxTaskCount")
+        ? Integer.parseInt(String.valueOf(spec.getContext().get("maxTaskCount")))
+        : DEFAULT_MAX_TASK_COUNT;
   }
   
   @Override
@@ -134,7 +142,12 @@ public class MaterializedViewSupervisor implements Supervisor
                     && spec.getMetrics().equals(((DerivativeDataSourceMetadata) metadata).getMetrics())) {
                   checkSegmentsAndSubmitTasks();
                 } else {
-                  log.error("Failed to start %s. Metadata in database(%s) is different from new dataSource metadata(%s)", supervisorId, metadata, spec);
+                  log.error(
+                      "Failed to start %s. Metadata in database(%s) is different from new dataSource metadata(%s)",
+                      supervisorId,
+                      metadata,
+                      spec
+                  );
                 }
               }
               catch (Exception e) {
@@ -213,24 +226,35 @@ public class MaterializedViewSupervisor implements Supervisor
           }
         }
       }
-      commitDataSourceMetadata(new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics()));
+      commitDataSourceMetadata(
+          new DerivativeDataSourceMetadata(spec.getBaseDataSource(), spec.getDimensions(), spec.getMetrics())
+      );
     } else {
       throw new IAE("DerivedDataSourceMetadata is not allowed to reset to a new DerivedDataSourceMetadata");
     }
   }
 
   @Override
-  public void checkpoint(@Nullable String sequenceName, @Nullable DataSourceMetadata previousCheckPoint, @Nullable DataSourceMetadata currentCheckPoint)
+  public void checkpoint(
+      @Nullable String sequenceName,
+      @Nullable DataSourceMetadata previousCheckPoint,
+      @Nullable DataSourceMetadata currentCheckPoint
+  )
   {
     // do nothing
   }
 
+  /**
+   * Find intervals in which derived dataSource should rebuild the segments.
+   * Choose the latest intervals to create new HadoopIndexTask and submit it.
+   */
   @VisibleForTesting
   void checkSegmentsAndSubmitTasks()
   {
     synchronized (taskLock) {
       for (Map.Entry<Interval, HadoopIndexTask> entry : runningTasks.entrySet()) {
-        if (!taskStorage.getStatus(entry.getValue().getId()).get().isRunnable()) {
+        Optional<TaskStatus> taskStatus = taskStorage.getStatus(entry.getValue().getId());
+        if (!taskStatus.isPresent() || !taskStatus.get().isRunnable()) {
           runningTasks.remove(entry.getKey());
           runningVersion.remove(entry.getKey());
         }
@@ -247,31 +271,63 @@ public class MaterializedViewSupervisor implements Supervisor
     }
   }
 
+  /**
+   * Find infomation about the intervals in which derived dataSource data should be rebuilt.
+   * The infomation includes the version and DataSegments list of a interval.
+   * The intervals include: in the interval,
+   *  1) baseDataSource has data, but the derivedDataSource does not;
+   *  2) version of derived segments isn't the max(created_date) of all base segments;
+   *
+   *  Drop the segments of the intervals in which derivedDataSource has data, but baseDataSource does not.
+   *
+   * @return the left part of Pair: interval -> version, and the right part: interval -> DataSegment list.
+   *          Version and DataSegment list can be used to create HadoopIndexTask.
+   *          Derived datasource data in all these intervals need to be rebuilt. 
+   */
   @VisibleForTesting
   Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> checkSegments()
   {
+    // Pair< interval -> version, interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> derivativeSegmentsSnapshot =
-        getVersionAndBaseSegments(metadataStorageCoordinator.getUsedSegmentsForInterval(dataSource, ALL_INTERVAL));
+        getVersionAndBaseSegments(
+            metadataStorageCoordinator.getUsedSegmentsForInterval(
+                dataSource,
+                ALL_INTERVAL
+            )
+        );
+    // Pair< interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
-        getMaxCreateDateAndBaseSegments(metadataStorageCoordinator.getUsedSegmentAndCreatedDateForInterval(spec.getBaseDataSource(), ALL_INTERVAL));
+        getMaxCreateDateAndBaseSegments(
+            metadataStorageCoordinator.getUsedSegmentAndCreatedDateForInterval(
+                spec.getBaseDataSource(),
+                ALL_INTERVAL
+            )
+        );
     // baseSegments are used to create HadoopIndexTask
     Map<Interval, List<DataSegment>> baseSegments = baseSegmentsSnapshot.rhs;
     Map<Interval, List<DataSegment>> derivativeSegments = derivativeSegmentsSnapshot.rhs;
     // use max created_date of base segments as the version of derivative segments
     Map<Interval, String> maxCreatedDate = baseSegmentsSnapshot.lhs;
     Map<Interval, String> derivativeVersion = derivativeSegmentsSnapshot.lhs;
-    
-    SortedMap<Interval, String> sortedToBuildInterval = Maps.newTreeMap(Comparators.inverse(Comparators.intervalsByStartThenEnd()));
+    SortedMap<Interval, String> sortedToBuildInterval = Maps.newTreeMap(
+        Comparators.inverse(Comparators.intervalsByStartThenEnd())
+    );
+    // finde the intervals to drop and to build
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);
     Map<Interval, String> toBuildInterval = Maps.newHashMap(difference.entriesOnlyOnLeft());
     Map<Interval, String> toDropInterval = Maps.newHashMap(difference.entriesOnlyOnRight());
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
     for (Interval interval : runningVersion.keySet()) {
-      if (toBuildInterval.containsKey(interval) && toBuildInterval.get(interval).equals(runningVersion.get(interval))) {
+      if (toBuildInterval.containsKey(interval) 
+          && toBuildInterval.get(interval).equals(runningVersion.get(interval))
+          ) {
         toBuildInterval.remove(interval);
 
-      } else if (toBuildInterval.containsKey(interval) && !toBuildInterval.get(interval).equals(runningVersion.get(interval))) {
+      } else if (
+          toBuildInterval.containsKey(interval) 
+          && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
+      ) {
         if (taskMaster.getTaskQueue().isPresent()) {
           taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId());
           runningTasks.remove(interval);
@@ -289,7 +345,10 @@ public class MaterializedViewSupervisor implements Supervisor
     return new Pair<>(sortedToBuildInterval, baseSegments);
   }
 
-  private void submitTasks(SortedMap<Interval, String> sortedToBuildVersion, Map<Interval, List<DataSegment>> baseSegments)
+  private void submitTasks(
+      SortedMap<Interval, String> sortedToBuildVersion, 
+      Map<Interval, List<DataSegment>> baseSegments
+  )
   {
     
     for (Map.Entry<Interval, String> entry : sortedToBuildVersion.entrySet()) {
@@ -312,7 +371,9 @@ public class MaterializedViewSupervisor implements Supervisor
     }
   }
   
-  private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getVersionAndBaseSegments(List<DataSegment> snapshot)
+  private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getVersionAndBaseSegments(
+      List<DataSegment> snapshot
+  )
   {
     Map<Interval, String> versions = Maps.newHashMap();
     Map<Interval, List<DataSegment>> segments = Maps.newHashMap();
@@ -325,7 +386,9 @@ public class MaterializedViewSupervisor implements Supervisor
     return new Pair<>(versions, segments);
   }
   
-  private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(List<Pair<DataSegment, String>> snapshot)
+  private Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> getMaxCreateDateAndBaseSegments(
+      List<Pair<DataSegment, String>> snapshot
+  )
   {
     Map<Interval, String> maxCreatedDate = Maps.newHashMap();
     Map<Interval, List<DataSegment>> segments = Maps.newHashMap();

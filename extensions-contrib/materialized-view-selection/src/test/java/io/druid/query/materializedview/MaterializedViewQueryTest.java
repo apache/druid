@@ -19,10 +19,12 @@
 
 package io.druid.query.materializedview;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Query;
 import static io.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
 import static io.druid.query.QueryRunnerTestHelper.allGran;
@@ -36,9 +38,11 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.expression.LookupEnabledTestExprMacroTable;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.segment.TestHelper;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,11 +53,18 @@ import java.util.Arrays;
 public class MaterializedViewQueryTest 
 {
   private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private DataSourceOptimizer optimizer;
 
   @Before
   public void setUp() 
   {
-    jsonMapper.registerSubtypes(new NamedType(MaterializedViewQuery.class, "view"));
+    jsonMapper.registerSubtypes(new NamedType(MaterializedViewQuery.class, MaterializedViewQuery.TYPE));
+    optimizer = EasyMock.createMock(DataSourceOptimizer.class);
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
+            .addValue(DataSourceOptimizer.class, optimizer)
+    );
   }
   
   @Test
@@ -79,7 +90,7 @@ public class MaterializedViewQueryTest
         )
         .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
         .build();
-    MaterializedViewQuery query = new MaterializedViewQuery(topNQuery);
+    MaterializedViewQuery query = new MaterializedViewQuery(topNQuery, optimizer);
     String json = jsonMapper.writeValueAsString(query);
     Query serdeQuery = jsonMapper.readValue(json, Query.class);
     Assert.assertEquals(query, serdeQuery);

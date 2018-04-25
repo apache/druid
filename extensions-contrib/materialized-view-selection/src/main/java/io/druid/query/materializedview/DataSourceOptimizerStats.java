@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class DatasourceOptimizerStats 
+public class DataSourceOptimizerStats 
 {
   private final String base;
   private final long hitcount;
@@ -32,7 +32,7 @@ public class DatasourceOptimizerStats
   private final Map<Set<String>, AtomicLong> missFields;
   private final Map<String, Long> derivativesHitCount;
   
-  public DatasourceOptimizerStats(
+  public DataSourceOptimizerStats(
       String base,
       long hitcount,
       long totalcount,

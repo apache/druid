@@ -45,6 +45,8 @@ import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.TestHelper;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import static org.easymock.EasyMock.expect;
@@ -115,7 +117,9 @@ public class MaterializedViewSupervisorTest
         metadataSupervisorManager,
         sqlMetadataSegmentManager,
         indexerMetadataStorageCoordinator,
-        new MaterializedViewTaskConfig()
+        new MaterializedViewTaskConfig(),
+        createMock(AuthorizerMapper.class),
+        createMock(ChatHandlerProvider.class)
     );
     supervisor = (MaterializedViewSupervisor) spec.createSupervisor();
   }
@@ -147,37 +151,43 @@ public class MaterializedViewSupervisorTest
             1024
         )
     );
-    expect(indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments)).andVoid();
+    indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     expect(taskMaster.getTaskRunner()).andReturn(Optional.<TaskRunner>absent()).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
     Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = supervisor.checkSegments();
     Map<Interval, List<DataSegment>> expectedSegments = Maps.newHashMap();
-    expectedSegments.put(Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), Lists.newArrayList(
-        new DataSegment(
-            "base",
-            Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
-            "2015-01-02",
-            ImmutableMap.<String, Object>of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
-            9,
-            1024
-        ))
+    expectedSegments.put(
+        Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), 
+        Lists.newArrayList(
+            new DataSegment(
+                "base", 
+                Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), 
+                "2015-01-02", 
+                ImmutableMap.<String, Object>of(), 
+                ImmutableList.of("dim1", "dim2"), 
+                ImmutableList.of("m1"), 
+                new HashBasedNumberedShardSpec(0, 1, null, null),
+                9, 
+                1024
+            )
+        )
     );
-    expectedSegments.put(Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), Lists.newArrayList(
-        new DataSegment(
-            "base",
-            Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
-            "2015-01-03",
-            ImmutableMap.<String, Object>of(),
-            ImmutableList.of("dim1", "dim2"),
-            ImmutableList.of("m1"),
-            new HashBasedNumberedShardSpec(0, 1, null, null),
-            9,
-            1024
-        ))
+    expectedSegments.put(
+        Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), 
+        Lists.newArrayList(
+            new DataSegment(
+                "base", 
+                Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), 
+                "2015-01-03", 
+                ImmutableMap.<String, Object>of(), 
+                ImmutableList.of("dim1", "dim2"), 
+                ImmutableList.of("m1"), 
+                new HashBasedNumberedShardSpec(0, 1, null, null), 
+                9, 
+                1024
+            )
+        )
     );
     Assert.assertEquals(expectedSegments, toBuildInterval.rhs);
   }

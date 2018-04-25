@@ -78,6 +78,8 @@ public class MaterializedViewUtils
         String dim = spec.getDimension();
         dimensions.add(dim);
       }
+    } else {
+      throw new UnsupportedOperationException("Method getRequeiredFields only support TopNQuery/TimeseriesQuery/GroupByQuery");
     }
     return dimensions;
   }
@@ -141,11 +143,19 @@ public class MaterializedViewUtils
   }
 
   /**
-   * interval2 - interval1
-   * 
-   * @param interval2
-   * @param interval1
-   * @return results of interval2-interval1
+   * caculate the intervals which are covered by interval2, but not covered by interval1.
+   * result intervals = interval2 - interval1 ∩ interval2
+   * e.g. 
+   * a list of interval2: ["2018-04-01T00:00:00.000Z/2018-04-02T00:00:00.000Z",
+   *                       "2018-04-03T00:00:00.000Z/2018-04-10T00:00:00.000Z"]
+   * a list of interval1: ["2018-04-04T00:00:00.000Z/2018-04-06T00:00:00.000Z"]
+   * the result list of intervals: ["2018-04-01T00:00:00.000Z/2018-04-02T00:00:00.000Z",
+   *                                "2018-04-03T00:00:00.000Z/2018-04-04T00:00:00.000Z",
+   *                                "2018-04-06T00:00:00.000Z/2018-04-10T00:00:00.000Z"]
+   * If interval2 is empty, then return an empty list of interval.                           
+   * @param interval2 list of intervals
+   * @param interval1 list of intervals
+   * @return list of intervals are covered by interval2, but not covered by interval1.
    */
   public static List<Interval> minus(List<Interval> interval2, List<Interval> interval1)
   {

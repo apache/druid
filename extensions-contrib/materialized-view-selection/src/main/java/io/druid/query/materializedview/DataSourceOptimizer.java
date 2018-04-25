@@ -26,7 +26,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.druid.client.TimelineServerView;
-import io.druid.client.selector.ServerSelector;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.groupby.GroupByQuery;
@@ -36,6 +35,7 @@ import io.druid.query.topn.TopNQuery;
 import io.druid.timeline.TimelineObjectHolder;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,20 +43,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-public class DatasourceOptimizer 
+public class DataSourceOptimizer
 {
-  private static final ReadWriteLock lock = new ReentrantReadWriteLock();
-  private static ConcurrentHashMap<Derivative, AtomicLong> derivativesHitCount = new ConcurrentHashMap<>();
-  private static ConcurrentHashMap<String, AtomicLong> totalCount = new ConcurrentHashMap<>();
-  private static ConcurrentHashMap<String, AtomicLong> hitCount = new ConcurrentHashMap<>();
-  private static ConcurrentHashMap<String, AtomicLong> costTime = new ConcurrentHashMap<>();
-  private static ConcurrentHashMap<String, ConcurrentHashMap<Set<String>, AtomicLong>> missFields = new ConcurrentHashMap<>();
-  private static TimelineServerView serverView = null;
-
+  private final ReadWriteLock lock = new ReentrantReadWriteLock();
+  private final TimelineServerView serverView;
+  private ConcurrentHashMap<String, AtomicLong> derivativesHitCount = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<String, AtomicLong> totalCount = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<String, AtomicLong> hitCount = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<String, AtomicLong> costTime = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<String, ConcurrentHashMap<Set<String>, AtomicLong>> missFields = new ConcurrentHashMap<>();
+  
   @Inject
-  public DatasourceOptimizer(TimelineServerView serverView)
+  public DataSourceOptimizer(TimelineServerView serverView) 
   {
     this.serverView = serverView;
   }
@@ -64,33 +64,33 @@ public class DatasourceOptimizer
   /**
    * Do main work about materialized view selection: transform user query to one or more sub-queries.
    * 
-   * In the sub-query, the dataSource is the derivative of dataSource in user query, and sum of all sub-queries' intervals
-   * equals the interval in user query
+   * In the sub-query, the dataSource is the derivative of dataSource in user query, and sum of all sub-queries' 
+   * intervals equals the interval in user query
    * 
-   * Derived dataSource with smallest average size of segments have highest priority to replace the datasource in user query
+   * Derived dataSource with smallest average data size per segment granularity have highest priority to replace the
+   * datasource in user query
    * 
    * @param query only TopNQuery/TimeseriesQuery/GroupByQuery can be optimized
    * @return a list of queries with specified derived dataSources and intervals 
    */
-  public static List<Query> optimize(Query query)
+  public List<Query> optimize(Query query)
   {
     long start = System.currentTimeMillis();
     // only topN/timeseries/groupby query can be optimized
     // only TableDataSource can be optimiezed
     if (!(query instanceof TopNQuery || query instanceof TimeseriesQuery || query instanceof GroupByQuery)
         || !(query.getDataSource() instanceof TableDataSource)) {
-      return Lists.newArrayList(query);
+      return Collections.singletonList(query);
     }
-
     String datasourceName = ((TableDataSource) query.getDataSource()).getName();
-    // get all derivatives for datasource in query. The derivatives set is sorted by average size of per segment granularity.
-    ImmutableSortedSet<Derivative> derivatives = DerivativesManager.getDerivatives(datasourceName);
+    // get all derivatives for datasource in query. The derivatives set is sorted by average size of 
+    // per segment granularity.
+    ImmutableSortedSet<DerivativeDataSource> derivatives = DerivativeDataSourceManager.getDerivatives(datasourceName);
     if (derivatives.isEmpty()) {
       return Lists.newArrayList(query);
     }
-
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();
       totalCount.putIfAbsent(datasourceName, new AtomicLong(0));
       hitCount.putIfAbsent(datasourceName, new AtomicLong(0));
       costTime.putIfAbsent(datasourceName, new AtomicLong(0));
@@ -99,11 +99,11 @@ public class DatasourceOptimizer
       // get all fields which the query required
       Set<String> requiredFields = MaterializedViewUtils.getRequiredFields(query);
       
-      Set<Derivative> derivativesWithRequiredFields = Sets.newHashSet();
-      for (Derivative derivative : derivatives) {
-        derivativesHitCount.putIfAbsent(derivative, new AtomicLong(0));
-        if (derivative.getColumns().containsAll(requiredFields)) {
-          derivativesWithRequiredFields.add(derivative);
+      Set<DerivativeDataSource> derivativesWithRequiredFields = Sets.newHashSet();
+      for (DerivativeDataSource derivativeDataSource : derivatives) {
+        derivativesHitCount.putIfAbsent(derivativeDataSource.getName(), new AtomicLong(0));
+        if (derivativeDataSource.getColumns().containsAll(requiredFields)) {
+          derivativesWithRequiredFields.add(derivativeDataSource);
         }
       }
       // if no derivatives contains all required dimensions, this materialized view selection failed.
@@ -114,35 +114,31 @@ public class DatasourceOptimizer
         costTime.get(datasourceName).addAndGet(System.currentTimeMillis() - start);
         return Lists.newArrayList(query);
       }
-
-      // 
+      
       List<Query> queries = Lists.newArrayList();
       List<Interval> remainingQueryIntervals = (List<Interval>) query.getIntervals();
-      for (Derivative derivative : derivativesWithRequiredFields) {
-        List<Interval> derivativeIntervals = Lists.newArrayList();
-        for (Interval interval : remainingQueryIntervals) {
-          serverView.getTimeline(new TableDataSource(derivative.getName()))
-              .lookup(interval)
-              .forEach(new Consumer<TimelineObjectHolder<String, ServerSelector>>() {
-                @Override
-                public void accept(TimelineObjectHolder<String, ServerSelector> stringServerSelectorTimelineObjectHolder) 
-                {
-                  derivativeIntervals.add(stringServerSelectorTimelineObjectHolder.getInterval());
-                }
-              }
-            );
-        }
-        // if the derivative does not contain any parts of intervals in the query, the derivative will not be selected. 
+      
+      for (DerivativeDataSource derivativeDataSource : derivativesWithRequiredFields) {
+        final List<Interval> derivativeIntervals = remainingQueryIntervals.stream()
+            .flatMap(interval -> serverView
+                .getTimeline((new TableDataSource(derivativeDataSource.getName())))
+                .lookup(interval)
+                .stream()
+                .map(TimelineObjectHolder::getInterval)
+            )
+            .collect(Collectors.toList());
+        // if the derivative does not contain any parts of intervals in the query, the derivative will
+        // not be selected. 
         if (derivativeIntervals.isEmpty()) {
           continue;
         }
         
         remainingQueryIntervals = MaterializedViewUtils.minus(remainingQueryIntervals, derivativeIntervals);
         queries.add(
-            query.withDataSource(new TableDataSource(derivative.getName()))
+            query.withDataSource(new TableDataSource(derivativeDataSource.getName()))
                 .withQuerySegmentSpec(new MultipleIntervalSegmentSpec(derivativeIntervals))
         );
-        derivativesHitCount.get(derivative).incrementAndGet();
+        derivativesHitCount.get(derivativeDataSource.getName()).incrementAndGet();
         if (remainingQueryIntervals.isEmpty()) {
           break;
         }
@@ -153,7 +149,8 @@ public class DatasourceOptimizer
         return Lists.newArrayList(query);
       }
 
-      //after materialized view selection, the result of the remaining query interval will be computed based on the original datasource. 
+      //after materialized view selection, the result of the remaining query interval will be computed based on
+      // the original datasource. 
       if (!remainingQueryIntervals.isEmpty()) {
         queries.add(query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(remainingQueryIntervals)));
       }
@@ -166,15 +163,15 @@ public class DatasourceOptimizer
     }
   }
 
-  public List<DatasourceOptimizerStats> getAndResetStats() 
+  public List<DataSourceOptimizerStats> getAndResetStats() 
   {
-    ImmutableMap<Derivative, AtomicLong> derivativesHitCountSnapshot;
+    ImmutableMap<String, AtomicLong> derivativesHitCountSnapshot;
     ImmutableMap<String, AtomicLong> totalCountSnapshot;
     ImmutableMap<String, AtomicLong> hitCountSnapshot;
     ImmutableMap<String, AtomicLong> costTimeSnapshot;
     ImmutableMap<String, ConcurrentHashMap<Set<String>, AtomicLong>> missFieldsSnapshot;
+    lock.writeLock().lock();
     try {
-      lock.writeLock().lock();
       derivativesHitCountSnapshot = ImmutableMap.copyOf(derivativesHitCount);
       totalCountSnapshot = ImmutableMap.copyOf(totalCount);
       hitCountSnapshot = ImmutableMap.copyOf(hitCount);
@@ -189,20 +186,23 @@ public class DatasourceOptimizer
     finally {
       lock.writeLock().unlock();
     }
-    List<DatasourceOptimizerStats> stats = Lists.newArrayList();
-    Map<String, Set<Derivative>> baseToDerivatives = DerivativesManager.getAllDerivatives();
-    for (String base : baseToDerivatives.keySet()) {
+    List<DataSourceOptimizerStats> stats = Lists.newArrayList();
+    Map<String, Set<DerivativeDataSource>> baseToDerivatives = DerivativeDataSourceManager.getAllDerivatives();
+    for (Map.Entry<String, Set<DerivativeDataSource>> entry : baseToDerivatives.entrySet()) {
       Map<String, Long> derivativesStat = Maps.newHashMap();
-      for (Derivative derivative : baseToDerivatives.get(base)) {
-        derivativesStat.put(derivative.getName(), derivativesHitCountSnapshot.getOrDefault(derivative, new AtomicLong(0)).get());
+      for (DerivativeDataSource derivative : entry.getValue()) {
+        derivativesStat.put(
+            derivative.getName(),
+            derivativesHitCountSnapshot.getOrDefault(derivative.getName(), new AtomicLong(0)).get()
+        );
       }
       stats.add(
-          new DatasourceOptimizerStats(
-              base,
-              hitCountSnapshot.getOrDefault(base, new AtomicLong(0)).get(),
-              totalCountSnapshot.getOrDefault(base, new AtomicLong(0)).get(),
-              costTimeSnapshot.getOrDefault(base, new AtomicLong(0)).get(),
-              missFieldsSnapshot.getOrDefault(base, new ConcurrentHashMap<>()),
+          new DataSourceOptimizerStats(
+              entry.getKey(),
+              hitCountSnapshot.getOrDefault(entry.getKey(), new AtomicLong(0)).get(),
+              totalCountSnapshot.getOrDefault(entry.getKey(), new AtomicLong(0)).get(),
+              costTimeSnapshot.getOrDefault(entry.getKey(), new AtomicLong(0)).get(),
+              missFieldsSnapshot.getOrDefault(entry.getKey(), new ConcurrentHashMap<>()),
               derivativesStat
           )
       );

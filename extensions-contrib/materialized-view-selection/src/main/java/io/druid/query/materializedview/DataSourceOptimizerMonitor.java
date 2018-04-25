@@ -28,12 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class DatasourceOptimizerMonitor extends AbstractMonitor 
+public class DataSourceOptimizerMonitor extends AbstractMonitor 
 {
-  private final DatasourceOptimizer optimizer;
+  private final DataSourceOptimizer optimizer;
 
   @Inject
-  public DatasourceOptimizerMonitor(DatasourceOptimizer optimizer)
+  public DataSourceOptimizerMonitor(DataSourceOptimizer optimizer)
   {
     this.optimizer = optimizer;
   }
@@ -41,8 +41,8 @@ public class DatasourceOptimizerMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter) 
   {
-    List<DatasourceOptimizerStats> stats = optimizer.getAndResetStats();
-    for (DatasourceOptimizerStats stat : stats) {
+    List<DataSourceOptimizerStats> stats = optimizer.getAndResetStats();
+    for (DataSourceOptimizerStats stat : stats) {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       builder.setDimension("dataSource", stat.getBase());
       emitter.emit(builder.build("/materialized/view/query/totalNum", stat.getTotalcount()));

@@ -34,20 +34,23 @@ import java.util.Map;
 public class MaterializedViewQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner runner;
-  public MaterializedViewQueryRunner(QueryRunner queryRunner)
+  private final DataSourceOptimizer optimizer;
+  
+  public MaterializedViewQueryRunner(QueryRunner queryRunner, DataSourceOptimizer optimizer)
   {
     this.runner = queryRunner;
+    this.optimizer = optimizer;
   }
 
   @Override
   public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
   {
-    Query<T> query = queryPlus.getQuery();
+    Query query = queryPlus.getQuery();
     return new MergeSequence<>(
         query.getResultOrdering(),
         Sequences.simple(
             Lists.transform(
-                DatasourceOptimizer.optimize(query),
+                optimizer.optimize(query),
                 new Function<Query, Sequence<T>>()
                 {
                   @Override

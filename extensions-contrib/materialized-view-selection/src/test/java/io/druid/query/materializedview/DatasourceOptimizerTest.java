@@ -74,11 +74,11 @@ public class DatasourceOptimizerTest extends CuratorTestBase
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private TestDerbyConnector derbyConnector;
-  private DerivativesManager derivativesManager;
+  private DerivativeDataSourceManager derivativesManager;
   private DruidServer druidServer;
   private ObjectMapper jsonMapper;
   private ZkPathsConfig zkPathsConfig;
-  private DatasourceOptimizer optimizer;
+  private DataSourceOptimizer optimizer;
   private MaterializedViewConfig viewConfig;
   private IndexerSQLMetadataStorageCoordinator metadataStorageCoordinator;
   private BatchServerInventoryView baseView;
@@ -94,7 +94,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(new NamedType(DerivativeDataSourceMetadata.class, "view"));
     metadataStorageCoordinator = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
-    derivativesManager = new DerivativesManager(
+    derivativesManager = new DerivativeDataSourceManager(
         viewConfig, 
         derbyConnectorRule.metadataTablesConfigSupplier(), 
         jsonMapper, 
@@ -123,7 +123,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         0
     );
     setupZNodeForServer(druidServer, new ZkPathsConfig(), jsonMapper);
-    optimizer = new DatasourceOptimizer(brokerServerView);
+    optimizer = new DataSourceOptimizer(brokerServerView);
   }
   
   @After
@@ -192,7 +192,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     Assert.assertFalse(baseResult.contains(false));
     Assert.assertFalse(derivativeResult.contains(false));
     derivativesManager.start();
-    while (DerivativesManager.getAllDerivatives().isEmpty()) {
+    while (DerivativeDataSourceManager.getAllDerivatives().isEmpty()) {
       TimeUnit.SECONDS.sleep(1L);
     }
     // build user query
@@ -238,7 +238,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
             )
             .build()
     );
-    Assert.assertEquals(expectedQueryAfterOptimizing, DatasourceOptimizer.optimize(userQuery));
+    Assert.assertEquals(expectedQueryAfterOptimizing, optimizer.optimize(userQuery));
     derivativesManager.stop();
   }
   

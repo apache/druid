@@ -40,11 +40,15 @@ import io.druid.indexing.overlord.supervisor.Supervisor;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularities;
 import io.druid.metadata.MetadataSupervisorManager;
 import io.druid.metadata.SQLMetadataSegmentManager;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.transform.TransformSpec;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.joda.time.Interval;
@@ -74,6 +78,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   private final TaskMaster taskMaster;
   private final TaskStorage taskStorage;
   private final MaterializedViewTaskConfig config;
+  private final AuthorizerMapper authorizerMapper;
+  private final ChatHandlerProvider chatHandlerProvider;
   
   public MaterializedViewSupervisorSpec(
       @JsonProperty("baseDataSource") String baseDataSource,
@@ -91,17 +97,35 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       @JacksonInject MetadataSupervisorManager metadataSupervisorManager,
       @JacksonInject SQLMetadataSegmentManager segmentManager,
       @JacksonInject IndexerMetadataStorageCoordinator metadataStorageCoordinator,
-      @JacksonInject MaterializedViewTaskConfig config
+      @JacksonInject MaterializedViewTaskConfig config,
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    this.baseDataSource = Preconditions.checkNotNull(baseDataSource, "baseDataSource cannot be null. Please provide a baseDataSource.");
-    this.dimensionsSpec = Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec cannot be null. Please provide a dimensionsSpec");
-    this.aggregators = Preconditions.checkNotNull(aggregators, "metricsSpec cannot be null. Please provide a metricsSpec");
-    this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig cannot be null. Please provide tuningConfig");
+    this.baseDataSource = Preconditions.checkNotNull(
+                            baseDataSource, 
+                            "baseDataSource cannot be null. Please provide a baseDataSource."
+                          );
+    this.dimensionsSpec = Preconditions.checkNotNull(
+                            dimensionsSpec, 
+                            "dimensionsSpec cannot be null. Please provide a dimensionsSpec"
+                          );
+    this.aggregators = Preconditions.checkNotNull(
+                         aggregators, 
+                         "metricsSpec cannot be null. Please provide a metricsSpec"
+                       );
+    this.tuningConfig = Preconditions.checkNotNull(
+                          tuningConfig, 
+                          "tuningConfig cannot be null. Please provide tuningConfig"
+                        );
     
-    this.dataSourceName = dataSourceName == null ? 
-        StringUtils.format("%s-%s", baseDataSource, DigestUtils.sha1Hex(dimensionsSpec.toString()).substring(0, 8)) :
-        dataSourceName;
+    this.dataSourceName = dataSourceName == null 
+                          ? StringUtils.format(
+                              "%s-%s", 
+                              baseDataSource, 
+                              DigestUtils.sha1Hex(dimensionsSpec.toString()).substring(0, 8)
+                            ) 
+                          : dataSourceName;
     this.hadoopCoordinates = hadoopCoordinates;
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
     this.classpathPrefix = classpathPrefix;
@@ -112,6 +136,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.segmentManager = segmentManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
+    this.authorizerMapper = authorizerMapper;
+    this.chatHandlerProvider = chatHandlerProvider;
     this.config = config;
     
     this.metrics = Sets.newHashSet();
@@ -137,56 +163,80 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     parser.put("parseSpec", parseSpec);
     
     //generate HadoopTuningConfig
-    Map<String, Object> tmp = Maps.newHashMap();
-    tmp.putAll(objectMapper.convertValue(tuningConfig, Map.class));
-    tmp.put("version", version);
-    tmp.put("type", "hadoop");
-    tmp.put("useExplicitVersion", true);
-    HadoopTuningConfig tuningConfigForTask = objectMapper.convertValue(tmp, HadoopTuningConfig.class);
+    HadoopTuningConfig tuningConfigForTask = new HadoopTuningConfig(
+        tuningConfig.getWorkingPath(),
+        version,
+        tuningConfig.getPartitionsSpec(),
+        tuningConfig.getShardSpecs(),
+        tuningConfig.getIndexSpec(),
+        tuningConfig.getRowFlushBoundary(),
+        tuningConfig.isLeaveIntermediate(),
+        tuningConfig.isCleanupOnFailure(),
+        tuningConfig.isOverwriteFiles(),
+        tuningConfig.isIgnoreInvalidRows(),
+        tuningConfig.getJobProperties(),
+        tuningConfig.isCombineText(),
+        tuningConfig.getUseCombiner(),
+        tuningConfig.getRowFlushBoundary(),
+        tuningConfig.getBuildV9Directly(),
+        tuningConfig.getNumBackgroundPersistThreads(),
+        tuningConfig.isForceExtendableShardSpecs(),
+        true,
+        tuningConfig.getUserAllowedHadoopPrefix(),
+        tuningConfig.isLogParseExceptions(),
+        tuningConfig.getMaxParseExceptions()
+    );
     
     // generate granularity
-    tmp.clear();
-    tmp.put("type", "arbitrary");
-    tmp.put("intervals", ImmutableList.of(interval));
-    ArbitraryGranularitySpec granularitySpec = objectMapper.convertValue(tmp, ArbitraryGranularitySpec.class);
-    tmp.clear();
+    ArbitraryGranularitySpec granularitySpec = new ArbitraryGranularitySpec(
+        Granularities.NONE,
+        ImmutableList.of(interval)
+    );
 
     // generate DataSchema
-    tmp.clear();
-    tmp.put("dataSource", dataSourceName);
-    tmp.put("parser", parser);
-    tmp.put("metricsSpec", aggregators);
-    DataSchema dataSchema = objectMapper.convertValue(tmp, DataSchema.class).withGranularitySpec(granularitySpec);
+    DataSchema dataSchema = new DataSchema(
+        dataSourceName,
+        parser,
+        aggregators,
+        granularitySpec,
+        TransformSpec.NONE,
+        objectMapper
+    );
     
     // generate DatasourceIngestionSpec
-    tmp.clear();
-    tmp.put("dataSource", baseDataSource);
-    tmp.put("intervals", ImmutableList.of(interval));
-    tmp.put("segments", segments);
-    DatasourceIngestionSpec datasourceIngestionSpec = objectMapper.convertValue(tmp, DatasourceIngestionSpec.class);
+    DatasourceIngestionSpec datasourceIngestionSpec = new DatasourceIngestionSpec(
+        baseDataSource,
+        null,
+        ImmutableList.of(interval),
+        segments,
+        null,
+        null,
+        null,
+        false,
+        null
+    );
 
     // generate HadoopIOConfig
-    tmp.clear();
     Map<String, Object> inputSpec = Maps.newHashMap();
     inputSpec.put("type", "dataSource");
     inputSpec.put("ingestionSpec", datasourceIngestionSpec);
-    tmp.put("type", "hadoop");
-    tmp.put("inputSpec", inputSpec);
-    HadoopIOConfig hadoopIOConfig = objectMapper.convertValue(tmp, HadoopIOConfig.class);
+    HadoopIOConfig hadoopIOConfig = new HadoopIOConfig(inputSpec, null, null);
     
     // generate HadoopIngestionSpec
     HadoopIngestionSpec spec = new HadoopIngestionSpec(dataSchema, hadoopIOConfig, tuningConfigForTask);
     
     // generate HadoopIndexTask
-    tmp.clear();
-    tmp.put("type", "index_hadoop");
-    tmp.put("id", taskId);
-    tmp.put("spec", spec);
-    tmp.put("hadoopCoordinates", hadoopCoordinates);
-    tmp.put("hadoopDependencyCoordinates", hadoopDependencyCoordinates);
-    tmp.put("classpathPrefix", classpathPrefix);
-    tmp.put("context", context);
-    HadoopIndexTask task = objectMapper.convertValue(tmp, HadoopIndexTask.class);
+    HadoopIndexTask task = new HadoopIndexTask(
+        taskId,
+        spec,
+        hadoopCoordinates,
+        hadoopDependencyCoordinates,
+        classpathPrefix,
+        objectMapper,
+        context,
+        authorizerMapper,
+        chatHandlerProvider
+    );
 
     return task;
   }

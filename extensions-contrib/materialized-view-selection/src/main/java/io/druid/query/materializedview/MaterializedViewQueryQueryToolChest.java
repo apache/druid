@@ -36,9 +36,12 @@ import java.util.Map;
 public class MaterializedViewQueryQueryToolChest extends QueryToolChest 
 {
   private final QueryToolChestWarehouse warehouse;
+  private DataSourceOptimizer optimizer;
 
   @Inject
-  public MaterializedViewQueryQueryToolChest(QueryToolChestWarehouse warehouse)
+  public MaterializedViewQueryQueryToolChest(
+      QueryToolChestWarehouse warehouse
+  )
   {
     this.warehouse = warehouse;
   }
@@ -86,7 +89,7 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
         Query realQuery = getRealQuery(queryPlus.getQuery());
         QueryToolChest realQueryToolChest = warehouse.getToolChest(realQuery);
         QueryRunner realQueryRunner = realQueryToolChest.preMergeQueryDecoration(
-            new MaterializedViewQueryRunner(runner)
+            new MaterializedViewQueryRunner(runner, optimizer)
         );
         return realQueryRunner.run(queryPlus.withQuery(realQuery), responseContext);
       }
@@ -96,7 +99,8 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   public Query getRealQuery(Query query)
   {
     if (query instanceof MaterializedViewQuery) {
-      return ((MaterializedViewQuery) query).getRealQuery();
+      optimizer = ((MaterializedViewQuery) query).getOptimizer();
+      return ((MaterializedViewQuery) query).getQuery();
     }
     return query;
   }

@@ -19,8 +19,10 @@
 
 package io.druid.query.materializedview;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
@@ -29,7 +31,10 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.topn.TopNQuery;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -38,23 +43,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * MaterializedViewQuery helps to do materialized view selection automatically. 
+ * 
+ * Each MaterializedViewQuery contains a real query which type can be topn, timeseries or groupBy.
+ * The real query will be optimized based on its dataSources and intervals. It will be converted into one or more
+ * sub-queries, in which dataSources and intervals are replaced by derived dataSources and related sub-intervals.
+ * 
+ * Derived dataSources always have less dimensions, but contains all dimensions which real query required.
+ */
 public class MaterializedViewQuery<T> implements Query<T> 
 {
-  public static final String VIEW = "view";
+  public static final String TYPE = "view";
   private final Query query;
+  private final DataSourceOptimizer optimizer;
   
   @JsonCreator
   public MaterializedViewQuery(
-      @JsonProperty("query") Query query
+      @JsonProperty("query") Query query,
+      @JacksonInject DataSourceOptimizer optimizer
   )
   {
+    Preconditions.checkArgument(
+        query instanceof TopNQuery || query instanceof TimeseriesQuery || query instanceof GroupByQuery,
+        "Only topN/timeseries/groupby query are supported"
+    );
     this.query = query;
+    this.optimizer = optimizer;
   }
   
   @JsonProperty("query")
   public Query getQuery()
   {
     return query;
+  }
+  
+  public DataSourceOptimizer getOptimizer()
+  {
+    return optimizer;
   }
   
   @Override
@@ -151,19 +177,19 @@ public class MaterializedViewQuery<T> implements Query<T>
   @Override
   public MaterializedViewQuery withOverriddenContext(Map<String, Object> contextOverride) 
   {
-    return new MaterializedViewQuery(query.withOverriddenContext(contextOverride));
+    return new MaterializedViewQuery(query.withOverriddenContext(contextOverride), optimizer);
   }
 
   @Override
   public MaterializedViewQuery withQuerySegmentSpec(QuerySegmentSpec spec) 
   {
-    return new MaterializedViewQuery(query.withQuerySegmentSpec(spec));
+    return new MaterializedViewQuery(query.withQuerySegmentSpec(spec), optimizer);
   }
 
   @Override
   public MaterializedViewQuery withId(String id)
   {
-    return new MaterializedViewQuery(query.withId(id));
+    return new MaterializedViewQuery(query.withId(id), optimizer);
   }
 
   @Override
@@ -175,7 +201,7 @@ public class MaterializedViewQuery<T> implements Query<T>
   @Override
   public MaterializedViewQuery withDataSource(DataSource dataSource) 
   {
-    return new MaterializedViewQuery(query.withDataSource(dataSource));
+    return new MaterializedViewQuery(query.withDataSource(dataSource), optimizer);
   }
 
   @Override
@@ -184,11 +210,6 @@ public class MaterializedViewQuery<T> implements Query<T>
     return "MaterializedViewQuery{" +
         "query=" + query.toString() +
         "}";
-  }
-  
-  public Query getRealQuery()
-  {
-    return query;
   }
 
   @Override
@@ -201,13 +222,13 @@ public class MaterializedViewQuery<T> implements Query<T>
       return false;
     }
     MaterializedViewQuery other = (MaterializedViewQuery) o;
-    return other.getRealQuery().equals(query);
+    return other.getQuery().equals(query);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(VIEW) + query.hashCode();
+    return Objects.hash(TYPE, query);
   }
 
 }

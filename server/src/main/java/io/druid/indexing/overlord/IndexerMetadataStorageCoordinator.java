@@ -52,6 +52,7 @@ public interface IndexerMetadataStorageCoordinator
    * @return The DataSegments and the related created_date of segments which include data in the requested interval
    */
   List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
+  
   /**
    * Get all segments which may include any data in the interval and are flagged as used.
    *

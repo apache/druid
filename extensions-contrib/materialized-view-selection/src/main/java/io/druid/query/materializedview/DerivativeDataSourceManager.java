@@ -58,32 +58,35 @@ import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Read and store derivatives information from dataSource table frequently.
  * When optimize query, DerivativesManager offers the information about derivatives.
  */
 @ManageLifecycleLast
-public class DerivativesManager 
+public class DerivativeDataSourceManager 
 {
-  private static final EmittingLogger log = new EmittingLogger(DerivativesManager.class);
+  private static final EmittingLogger log = new EmittingLogger(DerivativeDataSourceManager.class);
+  private static final AtomicReference<ConcurrentHashMap<String, SortedSet<DerivativeDataSource>>> derivativesRef =
+      new AtomicReference<>(new ConcurrentHashMap<>());
   private final MaterializedViewConfig config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
   private final ObjectMapper objectMapper;
   private final Object lock = new Object();
   
-  private static volatile AtomicReference<ConcurrentHashMap<String, SortedSet<Derivative>>> derivativesRef = new AtomicReference<>(new ConcurrentHashMap<>());
-  private volatile boolean started = false;
-  private volatile ListeningScheduledExecutorService exec = null;
-  private volatile ListenableFuture<?> future = null;
+  private boolean started = false;
+  private ListeningScheduledExecutorService exec = null;
+  private ListenableFuture<?> future = null;
   
   @Inject
-  public DerivativesManager(
+  public DerivativeDataSourceManager(
       MaterializedViewConfig config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       ObjectMapper objectMapper,
-      SQLMetadataConnector connector)
+      SQLMetadataConnector connector
+  )
   {
     this.config = config;
     this.dbTables = dbTables;
@@ -99,7 +102,7 @@ public class DerivativesManager
       if (started) {
         return;
       }
-      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("SQLMetadataDerivativesManager-Exec--%d"));
+      exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DerivativeDataSourceManager-Exec-%d"));
       final Duration delay = config.getPollDuration().toStandardDuration();
       future = exec.scheduleWithFixedDelay(
           new Runnable() {
@@ -133,37 +136,33 @@ public class DerivativesManager
       started = false;
       future.cancel(true);
       future = null;
-      final ConcurrentHashMap<String, SortedSet<Derivative>> emptyMap = new ConcurrentHashMap<>();
-      ConcurrentHashMap<String, SortedSet<Derivative>> current;
-      do {
-        current = derivativesRef.get();
-      } while (!derivativesRef.compareAndSet(current, emptyMap));
+      derivativesRef.set(new ConcurrentHashMap<>());
       exec.shutdownNow();
       exec = null;
     }
   }
 
-  public static ImmutableSortedSet<Derivative> getDerivatives(String datasource)
+  public static ImmutableSortedSet<DerivativeDataSource> getDerivatives(String datasource)
   {
     return ImmutableSortedSet.copyOf(derivativesRef.get().getOrDefault(datasource, Sets.newTreeSet()));
   }
 
-  public static ImmutableMap getAllDerivatives()
+  public static ImmutableMap<String, Set<DerivativeDataSource>> getAllDerivatives()
   {
     return ImmutableMap.copyOf(derivativesRef.get());
   }
 
   private void updateDerivatives()
   {
-    List<Pair<String, Derivative>> derivativesInDatabase = connector.retryWithHandle(
+    List<Pair<String, DerivativeDataSourceMetadata>> derivativesInDatabase = connector.retryWithHandle(
         handle ->
           handle.createQuery(
               StringUtils.format("SELECT DISTINCT dataSource,commit_metadata_payload FROM %1$s", dbTables.get().getDataSourceTable())
           )
-              .map(new ResultSetMapper<Pair<String, Derivative>>() 
+              .map(new ResultSetMapper<Pair<String, DerivativeDataSourceMetadata>>() 
               {
                 @Override 
-                public Pair<String, Derivative> map(int index, ResultSet r, StatementContext ctx) throws SQLException 
+                public Pair<String, DerivativeDataSourceMetadata> map(int index, ResultSet r, StatementContext ctx) throws SQLException 
                 {
                   String datasourceName = r.getString("dataSource");
                   try {
@@ -174,36 +173,56 @@ public class DerivativesManager
                       return null;
                     }
                     DerivativeDataSourceMetadata metadata = (DerivativeDataSourceMetadata) payload;
-                    long avgSizePerGranularity = getAvgSizePerGranularity(datasourceName);
-                    String baseDataSource = metadata.getBaseDataSource();
-                    log.info("find derivatives: {bases=%s, derivative=%s, dimensions=%s, metrics=%s, avgSize=%s}", baseDataSource, 
-                        datasourceName, metadata.getDimensions(), metadata.getMetrics(), avgSizePerGranularity);
-                    if (avgSizePerGranularity > 0) {
-                      return new Pair<>(baseDataSource, new Derivative(datasourceName, metadata.getColumns(), avgSizePerGranularity));
-                    }
+                    return new Pair<>(datasourceName, metadata);
                   }
                   catch (IOException e) {
                     throw new RuntimeException(e);
                   }
-                  return null;
                 }
               })
               .list()
     );
-    ConcurrentHashMap<String, SortedSet<Derivative>> newDerivatives = new ConcurrentHashMap<>();
-    for (Pair<String, Derivative> derivativesPair : derivativesInDatabase) {
-      if (derivativesPair == null) {
-        continue;
-      }
-      newDerivatives.putIfAbsent(derivativesPair.lhs, Sets.newTreeSet());
-      newDerivatives.get(derivativesPair.lhs).add(derivativesPair.rhs);
+    
+    List<DerivativeDataSource> derivativeDataSources = derivativesInDatabase.parallelStream()
+        .filter(data -> data != null)
+        .map(derivatives -> {
+          String name = derivatives.lhs;
+          DerivativeDataSourceMetadata metadata = derivatives.rhs;
+          String baseDataSource = metadata.getBaseDataSource();
+          long avgSizePerGranularity = getAvgSizePerGranularity(name);
+          log.info("find derivatives: {bases=%s, derivative=%s, dimensions=%s, metrics=%s, avgSize=%s}", 
+              baseDataSource, name, metadata.getDimensions(), metadata.getMetrics(), avgSizePerGranularity);
+          return new DerivativeDataSource(name, baseDataSource, metadata.getColumns(), avgSizePerGranularity);
+        })
+        .filter(derivatives -> derivatives.getAvgSizeBasedGranularity() > 0)
+        .collect(Collectors.toList());
+    
+    ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> newDerivatives = new ConcurrentHashMap<>();
+    for (DerivativeDataSource derivative : derivativeDataSources) {
+      newDerivatives.putIfAbsent(derivative.getBaseDataSource(), Sets.newTreeSet());
+      newDerivatives.get(derivative.getBaseDataSource()).add(derivative);
     }
-    ConcurrentHashMap<String, SortedSet<Derivative>> current;
+    ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> current;
     do {
       current = derivativesRef.get();
     } while (!derivativesRef.compareAndSet(current, newDerivatives));
   }
 
+  /**
+   * caculate the average data size per segment granularity for a given datasource.
+   * 
+   * e.g. for a datasource, there're 5 segments as follows,
+   * interval = "2018-04-01/2017-04-02", segment size = 1024 * 1024 * 2
+   * interval = "2018-04-01/2017-04-02", segment size = 1024 * 1024 * 2
+   * interval = "2018-04-02/2017-04-03", segment size = 1024 * 1024 * 1
+   * interval = "2018-04-02/2017-04-03", segment size = 1024 * 1024 * 1
+   * interval = "2018-04-02/2017-04-03", segment size = 1024 * 1024 * 1
+   * Then, we get interval number = 2, total segment size = 1024 * 1024 * 7
+   * At last, return the result 1024 * 1024 * 7 / 2 = 1024 * 1024 * 3.5
+   * 
+   * @param datasource
+   * @return average data size per segment granularity
+   */
   private long getAvgSizePerGranularity(String datasource)
   {
     return connector.retryWithHandle(

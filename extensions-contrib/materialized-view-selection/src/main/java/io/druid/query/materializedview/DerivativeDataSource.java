@@ -19,19 +19,23 @@
 
 package io.druid.query.materializedview;
 
+import com.google.common.base.Preconditions;
+
 import java.util.Objects;
 import java.util.Set;
 
-public class Derivative implements Comparable<Derivative>
+public class DerivativeDataSource implements Comparable<DerivativeDataSource>
 {
   private final String name;
+  private final String baseDataSource;
   private final Set<String> columns;
   private final long avgSizeBasedGranularity;
 
-  public Derivative(String name, Set<String> columns, long size)
+  public DerivativeDataSource(String name, String baseDataSource, Set<String> columns, long size)
   {
-    this.name = name;
-    this.columns = columns;
+    this.name = Preconditions.checkNotNull(name, "name");
+    this.baseDataSource = Preconditions.checkNotNull(baseDataSource, "baseDataSource");
+    this.columns = Preconditions.checkNotNull(columns, "columns");
     this.avgSizeBasedGranularity = size;
   }
 
@@ -40,6 +44,11 @@ public class Derivative implements Comparable<Derivative>
     return name;
   }
 
+  public String getBaseDataSource()
+  {
+    return baseDataSource;
+  }
+  
   public Set<String> getColumns()
   {
     return columns;
@@ -51,7 +60,7 @@ public class Derivative implements Comparable<Derivative>
   }
 
   @Override
-  public int compareTo(Derivative o)
+  public int compareTo(DerivativeDataSource o)
   {
     if (this.avgSizeBasedGranularity > o.getAvgSizeBasedGranularity()) {
       return 1;
@@ -68,16 +77,18 @@ public class Derivative implements Comparable<Derivative>
     if (o == null) {
       return false;
     }
-    if (!(o instanceof Derivative)) {
+    if (!(o instanceof DerivativeDataSource)) {
       return false;
     }
-    Derivative that = (Derivative) o;
-    return name.equals(that.getName()) && columns.equals(that.getColumns());
+    DerivativeDataSource that = (DerivativeDataSource) o;
+    return name.equals(that.getName()) 
+        && baseDataSource.equals(that.getBaseDataSource())
+        && columns.equals(that.getColumns());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(name) + Objects.hashCode(columns);
+    return Objects.hash(name, baseDataSource, columns);
   }
 }

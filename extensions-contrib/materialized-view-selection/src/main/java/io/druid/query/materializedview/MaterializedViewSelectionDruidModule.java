@@ -41,7 +41,7 @@ public class MaterializedViewSelectionDruidModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
-                new NamedType(MaterializedViewQuery.class, MaterializedViewQuery.VIEW))
+                new NamedType(MaterializedViewQuery.class, MaterializedViewQuery.TYPE))
     );
   }
   
@@ -51,12 +51,9 @@ public class MaterializedViewSelectionDruidModule implements DruidModule
     DruidBinders.queryToolChestBinder(binder)
         .addBinding(MaterializedViewQuery.class)
         .to(MaterializedViewQueryQueryToolChest.class);
-    DruidBinders.queryRunnerFactoryBinder(binder)
-        .addBinding(MaterializedViewQuery.class)
-        .to(MaterializedViewQueryRunnerFactory.class);
-    LifecycleModule.register(binder, DerivativesManager.class);
-    binder.bind(DatasourceOptimizer.class).in(Singleton.class);
-    MetricsModule.register(binder, DatasourceOptimizerMonitor.class);
+    LifecycleModule.register(binder, DerivativeDataSourceManager.class);
+    binder.bind(DataSourceOptimizer.class).in(Singleton.class);
+    MetricsModule.register(binder, DataSourceOptimizerMonitor.class);
     JsonConfigProvider.bind(binder, "druid.manager.derivatives", MaterializedViewConfig.class);
   }
 }
