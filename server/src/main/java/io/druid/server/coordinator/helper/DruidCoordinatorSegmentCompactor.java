@@ -112,7 +112,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   }
 
   @SafeVarargs
-  private static int findNumNonCompleteCompactTasks(List<TaskStatusPlus> ... taskStatusStreams)
+  private static int findNumNonCompleteCompactTasks(List<TaskStatusPlus>...taskStatusStreams)
   {
     final List<TaskStatusPlus> allTaskStatusPlus = new ArrayList<>();
     Arrays.stream(taskStatusStreams).forEach(allTaskStatusPlus::addAll);
