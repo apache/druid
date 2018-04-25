@@ -21,6 +21,7 @@ package io.druid.data.input;
 
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Pair;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,6 +40,7 @@ public class MapBasedRowTest
           .put("k4", "9223372036854775806")
           .put("k5", "-9223372036854775807")
           .put("k6", "+9223372036854775802")
+          .put("k7", new Pair<>(1234L, "1.24"))
           .build()
     );
     
@@ -49,5 +51,6 @@ public class MapBasedRowTest
     Assert.assertEquals(9223372036854775806L, row.getMetric("k4"));
     Assert.assertEquals(-9223372036854775807L, row.getMetric("k5"));
     Assert.assertEquals(9223372036854775802L, row.getMetric("k6"));
+    Assert.assertEquals(1.24, row.getMetric("k7"));
   }
 }

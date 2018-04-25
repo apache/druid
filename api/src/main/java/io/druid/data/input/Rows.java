@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.parsers.ParseException;
 
@@ -116,6 +117,8 @@ public class Rows
       catch (Exception e) {
         throw new ParseException(e, "Unable to parse value[%s] for field[%s]", inputValue, name);
       }
+    } else if (inputValue instanceof Pair) {
+      return objectToNumber(name, ((Pair) inputValue).rhs);
     } else {
       throw new ParseException("Unknown type[%s] for field", inputValue.getClass(), inputValue);
     }
