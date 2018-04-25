@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common.io.smoosh;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -158,6 +157,8 @@ public class SmooshedFileMapper implements Closeable
       }
     }
     buffersList.clear();
-    Throwables.propagateIfPossible(thrown);
+    if (thrown != null) {
+      throw new RuntimeException(thrown);
+    }
   }
 }
