@@ -20,6 +20,7 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -100,7 +101,9 @@ HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment push(final File inDir, final DataSegment segment, final boolean useUniquePath) throws IOException
   {
-    final String storageDir = this.getStorageDir(segment, useUniquePath);
+    // For HDFS, useUniquePath does not affect the directory tree but instead affects the filename, which is of the form
+    // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths.
+    final String storageDir = this.getStorageDir(segment, false);
 
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
@@ -221,6 +224,14 @@ HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getStorageDir(DataSegment segment, boolean useUniquePath)
   {
+    // For HDFS, useUniquePath does not affect the directory tree but instead affects the filename, which is of the form
+    // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths. Hence
+    // useUniquePath is ignored here and we expect it to be false.
+    Preconditions.checkArgument(
+        !useUniquePath,
+        "useUniquePath must be false for HdfsDataSegmentPusher.getStorageDir()"
+    );
+
     return JOINER.join(
         segment.getDataSource(),
         StringUtils.format(
@@ -233,11 +244,12 @@ HdfsDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public String makeIndexPathName(DataSegment dataSegment, String indexName, boolean useUniquePath)
+  public String makeIndexPathName(DataSegment dataSegment, String indexName)
   {
+    // This is only called from Hadoop batch which doesn't require unique segment paths so set useUniquePath=false
     return StringUtils.format(
         "./%s/%d_%s",
-        this.getStorageDir(dataSegment, useUniquePath),
+        this.getStorageDir(dataSegment, false),
         dataSegment.getShardSpec().getPartitionNum(),
         indexName
     );

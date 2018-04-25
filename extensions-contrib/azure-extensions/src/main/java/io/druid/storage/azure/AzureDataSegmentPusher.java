@@ -144,8 +144,8 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   )
       throws StorageException, IOException, URISyntaxException
   {
-    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"), true);
-    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"), true);
+    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"));
+    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"));
 
     final DataSegment outSegment = segment
         .withSize(size)

@@ -366,7 +366,7 @@ public class JobHelper
 
     return succeeded;
   }
-  
+
   public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = true;
@@ -572,7 +572,7 @@ public class JobHelper
   {
     return new Path(
         prependFSIfNullScheme(fs, basePath),
-        dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName, false)
+        dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName)
     );
   }
 
@@ -588,7 +588,7 @@ public class JobHelper
         prependFSIfNullScheme(fs, basePath),
         StringUtils.format(
             "./%s.%d",
-            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP, false),
+            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
             taskAttemptID.getId()
         )
     );

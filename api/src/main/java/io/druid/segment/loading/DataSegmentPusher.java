@@ -83,9 +83,10 @@ public interface DataSegmentPusher
     return getDefaultStorageDir(dataSegment, useUniquePath);
   }
 
-  default String makeIndexPathName(DataSegment dataSegment, String indexName, boolean useUniquePath)
+  default String makeIndexPathName(DataSegment dataSegment, String indexName)
   {
-    return StringUtils.format("./%s/%s", getStorageDir(dataSegment, useUniquePath), indexName);
+    // This is only called from Hadoop batch which doesn't require unique segment paths so set useUniquePath=false
+    return StringUtils.format("./%s/%s", getStorageDir(dataSegment, false), indexName);
   }
 
   /**

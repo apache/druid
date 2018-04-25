@@ -152,9 +152,9 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final File descriptorFile = new File("descriptor.json");
     final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment, false);
 
-    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"), true);
+    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"));
     expectLastCall();
-    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"), true);
+    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"));
     expectLastCall();
 
     replayAll();

@@ -53,7 +53,7 @@ public class HadoopFsWrapper
   {
     try {
       // Note: Using reflection instead of simpler
-      // fs.rename(from, to, replaceExisting ? Options.Rename.OVERWRITE : Options.Rename.NONE);
+      // fs.rename(from, to, Options.Rename.NONE);
       // due to the issues discussed in https://github.com/druid-io/druid/pull/3787
       Method renameMethod = findRenameMethodRecursively(fs.getClass());
       renameMethod.invoke(fs, from, to, new Options.Rename[]{Options.Rename.NONE});
