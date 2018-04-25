@@ -128,6 +128,7 @@ public class OffheapOakIncrementalIndexTest
         index.add(rows[i]);
       }
     }
+    Assert.assertEquals(index.size(), rows.length);
 
     Iterable<TimeAndDims> keySet = index.keySet();
     Consumer<TimeAndDims> keySetConsumer = new Consumer<TimeAndDims>() {
@@ -143,8 +144,6 @@ public class OffheapOakIncrementalIndexTest
     };
 
     keySet.forEach(keySetConsumer);
-    Assert.assertEquals(index.size(), rows.length);
-
   }
 
   @Test

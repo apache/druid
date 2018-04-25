@@ -19,7 +19,6 @@
 
 package io.druid.segment.incremental;
 
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
@@ -44,11 +43,11 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import oak.OakMapOffHeapImpl;
 import oak.WritableOakBufferImpl;
-import oak.OakBufferImpl;
 import oak.OakMap;
 import oak.CloseableIterator;
 
@@ -93,63 +92,72 @@ public class OffheapOakIncrementalIndex extends
   }
 
   @Override
-  public Iterable<Row> iterableWithPostAggregations(
-      List<PostAggregator> postAggs, boolean descending)
+  public Iterable<Row> iterableWithPostAggregations(List<PostAggregator> postAggs, boolean descending)
   {
     return new Iterable<Row>()
     {
       @Override
       public Iterator<Row> iterator()
       {
-        final List<DimensionDesc> dimensions = getDimensions();
-
-        return Iterators.transform(
-            oak.entriesIterator(),
-            entry -> {
-              TimeAndDims timeAndDims = timeAndDimsDeserialization(entry.getKey());
-              OakBufferImpl oakValue = (OakBufferImpl) entry.getValue();
-              ByteBuffer aggBuffer = ByteBuffer.allocate(aggsTotalSize);
-              for (int i = 0; i < aggsTotalSize; i++) {
-                aggBuffer.put(i, oakValue.get(i));
-                aggBuffer.position(0);
-              }
-              Object[] theDims = timeAndDims.getDims();
-
-              Map<String, Object> theVals = Maps.newLinkedHashMap();
-              for (int i = 0; i < theDims.length; ++i) {
-                Object dim = theDims[i];
-                DimensionDesc dimensionDesc = dimensions.get(i);
-                if (dimensionDesc == null) {
-                  continue;
-                }
-                String dimensionName = dimensionDesc.getName();
-                DimensionHandler handler = dimensionDesc.getHandler();
-                if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
-                  theVals.put(dimensionName, null);
-                  continue;
-                }
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
-                theVals.put(dimensionName, rowVals);
-              }
-
-              BufferAggregator[] aggs = getAggs();
-              for (int i = 0; i < aggs.length; ++i) {
-                theVals.put(metrics[i].getName(), aggs[i].get(aggBuffer, aggOffsetInBuffer[i]));
-              }
-
-              if (postAggs != null) {
-                for (PostAggregator postAgg : postAggs) {
-                  theVals.put(postAgg.getName(), postAgg.compute(theVals));
-                }
-              }
-
-              return new MapBasedRow(timeAndDims.getTimestamp(), theVals);
-            }
-        );
+        OakMap oakMap = descending ? oak.descendingMap() : oak;
+        Function<Map.Entry<ByteBuffer, ByteBuffer>, Row> transformer = new Transformer(postAggs);
+        return oakMap.entriesTransformIterator(transformer);
       }
     };
   }
+
+  // for oak's transform iterator
+  private class Transformer implements Function<Map.Entry<ByteBuffer, ByteBuffer>, Row>
+  {
+    List<PostAggregator> postAggs;
+    final List<DimensionDesc> dimensions;
+
+    public Transformer(List<PostAggregator> postAggs)
+    {
+      this.postAggs = postAggs;
+      this.dimensions = getDimensions();
+    }
+
+    @Nullable
+    @Override
+    public Row apply(@Nullable Map.Entry<ByteBuffer, ByteBuffer> entry)
+    {
+      TimeAndDims key = timeAndDimsDeserialization(entry.getKey());
+      ByteBuffer value = entry.getValue();
+      Object[] dims = key.getDims();
+
+      Map<String, Object> theVals = Maps.newLinkedHashMap();
+      for (int i = 0; i < dims.length; ++i) {
+        Object dim = dims[i];
+        DimensionDesc dimensionDesc = dimensions.get(i);
+        if (dimensionDesc == null) {
+          continue;
+        }
+        String dimensionName = dimensionDesc.getName();
+        DimensionHandler handler = dimensionDesc.getHandler();
+        if (dim == null || handler.getLengthOfEncodedKeyComponent(dim) == 0) {
+          theVals.put(dimensionName, null);
+          continue;
+        }
+        final DimensionIndexer indexer = dimensionDesc.getIndexer();
+        Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
+        theVals.put(dimensionName, rowVals);
+      }
+
+      BufferAggregator[] aggs = getAggs();
+      for (int i = 0; i < aggs.length; ++i) {
+        theVals.put(metrics[i].getName(), aggs[i].get(value, aggOffsetInBuffer[i]));
+      }
+
+      if (postAggs != null) {
+        for (PostAggregator postAgg : postAggs) {
+          theVals.put(postAgg.getName(), postAgg.compute(theVals));
+        }
+      }
+
+      return new MapBasedRow(key.getTimestamp(), theVals);
+    }
+  };
 
   @Override
   protected long getMinTimeMillis()
@@ -267,20 +275,16 @@ public class OffheapOakIncrementalIndex extends
   @Override
   public Iterable<IncrementalIndex.TimeAndDims> keySet()
   {
+    CloseableIterator<ByteBuffer> keysIterator = oak.keysIterator();
+
     return new Iterable<TimeAndDims>() {
       @Override
       public Iterator<TimeAndDims> iterator()
       {
-        Function<ByteBuffer, TimeAndDims> function = new Function<ByteBuffer, TimeAndDims>() {
-          @Nullable
-          @Override
-          public TimeAndDims apply(@Nullable ByteBuffer byteBuffer)
-          {
-            return timeAndDimsDeserialization(byteBuffer);
-          }
-        };
-
-        return Iterators.transform(oak.keysIterator(), function);
+        return Iterators.transform(
+            keysIterator,
+            byteBuffer -> timeAndDimsDeserialization(byteBuffer)
+        );
       }
     };
   }
