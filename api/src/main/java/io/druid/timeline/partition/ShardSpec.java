@@ -46,9 +46,15 @@ public interface ShardSpec
   ShardSpecLookup getLookup(List<ShardSpec> shardSpecs);
 
   /**
-   * Get the possible range of each dimension for the rows this shard contains.
+   * Get dimensions who have possible range for the rows this shard contains.
    *
-   * @return map of dimensions to its possible range. Dimensions with unknown possible range are not mapped
+   * @return list of dimensions who has its possible range. Dimensions with unknown possible range are not listed
    */
-  Map<String, RangeSet<String>> getDomain();
+  List<String> getDomainDimensions();
+
+  /**
+   * if given domain ranges are not possible in this shard, return false; otherwise return true;
+   * @return possibility of in domain
+   */
+  boolean possibleInDomain(Map<String, RangeSet<String>> domain);
 }

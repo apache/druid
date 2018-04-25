@@ -27,9 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.RangeSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
@@ -37,7 +35,6 @@ import io.druid.data.input.Rows;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
@@ -113,11 +110,5 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       int index = Math.abs(hash(timestamp, row) % getPartitions());
       return shardSpecs.get(index);
     };
-  }
-
-  @Override
-  public Map<String, RangeSet<String>> getDomain()
-  {
-    return ImmutableMap.of();
   }
 }
