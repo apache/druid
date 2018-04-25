@@ -392,7 +392,14 @@ public class TaskLockbox
                   priority
               );
             } else {
-              log.info("Cannot create a new taskLockPosse because some locks of same or higher priorities exist");
+              log.info(
+                  "Cannot create a new taskLockPosse for task[%s] and interval[%s] with priority[%d]"
+                  + " because existing locks[%s] have same or higher priorities",
+                  task.getId(),
+                  interval,
+                  priority,
+                  foundPosses
+              );
               return null;
             }
           }
