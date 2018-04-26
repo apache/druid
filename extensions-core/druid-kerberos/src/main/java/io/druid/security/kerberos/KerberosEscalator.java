@@ -22,15 +22,24 @@ package io.druid.security.kerberos;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.java.util.http.client.HttpClient;
+import com.google.common.base.Joiner;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
+import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.http.HttpHeader;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.net.HttpCookie;
+import java.util.stream.Collectors;
 
 @JsonTypeName("kerberos")
 public class KerberosEscalator implements Escalator
 {
   private static final Logger log = new Logger(KerberosAuthenticator.class);
+  public static final String SIGNED_TOKEN_ATTRIBUTE = "signedToken";
 
   private final String internalClientPrincipal;
   private final String internalClientKeytab;
@@ -58,5 +67,22 @@ public class KerberosEscalator implements Escalator
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
     return new AuthenticationResult(internalClientPrincipal, authorizerName, null);
+  }
+
+  @Override
+  public void decorateProxyRequest(
+      HttpServletRequest clientRequest, HttpServletResponse proxyResponse, Request proxyRequest
+  )
+  {
+    Object cookieToken = clientRequest.getAttribute(SIGNED_TOKEN_ATTRIBUTE);
+    if (cookieToken != null && cookieToken instanceof String) {
+      log.debug("Found cookie token will attache it to proxyRequest as cookie");
+      String authResult = (String) cookieToken;
+      String existingCookies = proxyRequest.getCookies()
+                                           .stream()
+                                           .map(HttpCookie::toString)
+                                           .collect(Collectors.joining(";"));
+      proxyRequest.header(HttpHeader.COOKIE, Joiner.on(";").join(authResult, existingCookies));
+    }
   }
 }

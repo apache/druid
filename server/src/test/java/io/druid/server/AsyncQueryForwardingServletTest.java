@@ -57,6 +57,7 @@ import io.druid.server.security.AllowAllAuthorizer;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
+import io.druid.server.security.NoopEscalator;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -250,7 +251,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         new NoopServiceEmitter(),
         requestLogLine -> { /* noop */ },
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory(jsonMapper),
+        new NoopEscalator()
     )
     {
       @Override
@@ -341,7 +343,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
               requestLogLine -> { /* noop */ },
-              new DefaultGenericQueryMetricsFactory(jsonMapper)
+              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              new NoopEscalator()
           )
           {
             @Override

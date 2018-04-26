@@ -337,6 +337,14 @@ public class KerberosAuthenticator implements Authenticator
                     !token.isExpired() && token.getExpires() > 0,
                     isHttps
                 );
+                request.setAttribute(KerberosEscalator.SIGNED_TOKEN_ATTRIBUTE, tokenToCookieString(
+                    signedToken,
+                    getCookieDomain(),
+                    getCookiePath(),
+                    token.getExpires(),
+                    !token.isExpired() && token.getExpires() > 0,
+                    isHttps
+                ));
               }
               // Since this request is validated also set DRUID_AUTHENTICATION_RESULT
               request.setAttribute(
@@ -354,7 +362,7 @@ public class KerberosAuthenticator implements Authenticator
           errCode = HttpServletResponse.SC_FORBIDDEN;
           authenticationEx = ex;
           if (log.isDebugEnabled()) {
-            log.debug("Authentication exception: " + ex.getMessage(), ex);
+            log.debug(ex, "Authentication exception: " + ex.getMessage());
           } else {
             log.warn("Authentication exception: " + ex.getMessage());
           }
@@ -649,6 +657,16 @@ public class KerberosAuthenticator implements Authenticator
       boolean isSecure
   )
   {
+    resp.addHeader("Set-Cookie", tokenToCookieString(token, domain, path, expires, isCookiePersistent, isSecure));
+  }
+
+  private static String tokenToCookieString(
+      String token,
+      String domain, String path, long expires,
+      boolean isCookiePersistent,
+      boolean isSecure
+  )
+  {
     StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE)
         .append("=");
     if (token != null && token.length() > 0) {
@@ -675,6 +693,6 @@ public class KerberosAuthenticator implements Authenticator
     }
 
     sb.append("; HttpOnly");
-    resp.addHeader("Set-Cookie", sb.toString());
+    return sb.toString();
   }
 }

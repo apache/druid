@@ -45,6 +45,7 @@ import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.Escalator;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
@@ -113,6 +114,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final Escalator escalator;
 
   private HttpClient broadcastClient;
 
@@ -126,7 +128,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       @Router DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      GenericQueryMetricsFactory queryMetricsFactory
+      GenericQueryMetricsFactory queryMetricsFactory,
+      Escalator escalator
   )
   {
     this.warehouse = warehouse;
@@ -138,6 +141,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryMetricsFactory = queryMetricsFactory;
+    this.escalator = escalator;
   }
 
   @Override
@@ -312,7 +316,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
     // will log that on the remote node.
     clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-
+    escalator.decorateProxyRequest(clientRequest,
+                                   proxyResponse,
+                                   proxyRequest);
     super.sendProxyRequest(
         clientRequest,
         proxyResponse,
