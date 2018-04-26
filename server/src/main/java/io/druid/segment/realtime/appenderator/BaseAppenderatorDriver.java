@@ -336,7 +336,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    *
    * @param wrappedCommitter   should not be null if you want to persist intermediate states
    * @param segmentIdentifiers identifiers of the segments to be pushed
-   * @param useUniquePath true if the segment should be written to a path with a unique identifier
+   * @param useUniquePath      true if the segment should be written to a path with a unique identifier
    *
    * @return a future for pushing segments
    */
@@ -443,6 +443,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     .collect(Collectors.toSet());
                 if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
                                       .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
+                  log.info(
+                      "Removing our segments from deep storage because someone else already published them: %s",
+                      segmentsAndMetadata.getSegments()
+                  );
+                  segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+
                   log.info("Our segments really do exist, awaiting handoff.");
                 } else {
                   throw new ISE("Failed to publish segments[%s]", segmentsAndMetadata.getSegments());
@@ -450,7 +456,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
               }
             }
             catch (Exception e) {
-              log.warn("Removing segments from deep storage after failed publish: %s", segmentsAndMetadata.getSegments());
+              log.warn(
+                  "Removing segments from deep storage after failed publish: %s",
+                  segmentsAndMetadata.getSegments()
+              );
               segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
 
               throw Throwables.propagate(e);

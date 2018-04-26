@@ -224,9 +224,10 @@ HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getStorageDir(DataSegment segment, boolean useUniquePath)
   {
-    // For HDFS, useUniquePath does not affect the directory tree but instead affects the filename, which is of the form
-    // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths. Hence
-    // useUniquePath is ignored here and we expect it to be false.
+    // This is only called by HdfsDataSegmentPusher.push(), which will always set useUniquePath to false since any
+    // 'uniqueness' will be applied not to the directory but to the filename along with the shard number. This is done
+    // to avoid performance issues due to excessive HDFS directories. Hence useUniquePath is ignored here and we
+    // expect it to be false.
     Preconditions.checkArgument(
         !useUniquePath,
         "useUniquePath must be false for HdfsDataSegmentPusher.getStorageDir()"

@@ -78,7 +78,7 @@ public class S3DataSegmentPusherTest
   @Test
   public void testPushUseUniquePath() throws Exception
   {
-    testPushInternal(true, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/[A-Za-z0-9]{5}/index\\.zip");
+    testPushInternal(true, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip");
   }
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception

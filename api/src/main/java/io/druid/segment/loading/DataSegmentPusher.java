@@ -115,8 +115,6 @@ public interface DataSegmentPusher
 
   static String generateUniquePath()
   {
-    // There's a pretty low chance tasks publishing the same (dataSource, interval, version, shard) will collide so save
-    // some space by not using a full UUID.
-    return UUID.randomUUID().toString().substring(0, 5);
+    return UUID.randomUUID().toString();
   }
 }

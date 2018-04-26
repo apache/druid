@@ -30,8 +30,18 @@ public interface DataSegmentKiller
 {
   Logger log = new Logger(DataSegmentKiller.class);
 
+  /**
+   * Removes segment files (index and metadata) from deep storage.
+   * @param segment the segment to kill
+   * @throws SegmentLoadingException if the segment could not be completely removed
+   */
   void kill(DataSegment segment) throws SegmentLoadingException;
 
+  /**
+   * A more stoic killer who doesn't throw a tantrum if things get messy. Use when killing segments for best-effort
+   * cleanup.
+   * @param segment the segment to kill
+   */
   default void killQuietly(DataSegment segment)
   {
     try {
@@ -42,5 +52,9 @@ public interface DataSegmentKiller
     }
   }
 
+  /**
+   * Like a nuke. Use wisely. Used by the 'reset-cluster' command, and of the built-in deep storage implementations, it
+   * is only implemented by local and HDFS.
+   */
   void killAll() throws IOException;
 }

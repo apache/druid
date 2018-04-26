@@ -124,7 +124,7 @@ public class LocalDataSegmentPusherTest
     DataSegment segment = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
 
     String path = segment.getLoadSpec().get("path").toString();
-    String matcher = ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9]{5}/index\\.zip";
+    String matcher = ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index\\.zip";
     Assert.assertTrue(path, path.matches(matcher));
     Assert.assertTrue(new File(path).exists());
   }
