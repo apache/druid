@@ -316,6 +316,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
     // will log that on the remote node.
     clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+
     authenticatorMapper.getAuthenticatorChain()
                        .stream()
                        .forEach(authenticator -> authenticator.decorateProxyRequest(
