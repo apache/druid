@@ -30,7 +30,8 @@ import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.SurrogateLockListAction;
+import io.druid.indexing.common.actions.LockListAction;
+import io.druid.indexing.common.actions.SurrogateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.SinglePhaseParallelIndexSupervisorTask.SubTaskStateResponse;
 import io.druid.java.util.common.DateTimes;
@@ -622,7 +623,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       final TestFirehose firehose = (TestFirehose) getIngestionSchema().getIOConfig().getFirehoseFactory();
 
       final List<TaskLock> locks = toolbox.getTaskActionClient()
-                                          .submit(new SurrogateLockListAction(getSupervisorTaskId()));
+                                          .submit(new SurrogateAction<>(getSupervisorTaskId(), new LockListAction()));
       Preconditions.checkState(locks.size() == 1, "There should be a single lock");
 
       task.collectReport(

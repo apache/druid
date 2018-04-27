@@ -61,6 +61,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
     for (int i = 0; i < 5; i++) {
       try (final Writer writer =
                Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
+        writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 24 + i, i));
         writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 25 + i, i));
       }
     }

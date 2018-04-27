@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.client.indexing.IndexingServiceClient;
@@ -38,18 +37,17 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.SurrogateLockListAction;
-import io.druid.indexing.common.actions.SurrogateLockTryAcquireAction;
+import io.druid.indexing.common.actions.LockListAction;
+import io.druid.indexing.common.actions.LockTryAcquireAction;
+import io.druid.indexing.common.actions.SegmentAllocateAction;
+import io.druid.indexing.common.actions.SurrogateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
-import io.druid.indexing.common.task.IndexTask.ShardSpecs;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.DruidMetrics;
@@ -67,9 +65,6 @@ import io.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.HashBasedNumberedShardSpec;
-import io.druid.timeline.partition.NumberedShardSpec;
-import io.druid.timeline.partition.ShardSpec;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.Interval;
 
@@ -80,12 +75,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -192,10 +184,10 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
-    final boolean determineIntervals = !ingestionSchema.getDataSchema()
-                                                       .getGranularitySpec()
-                                                       .bucketIntervals()
-                                                       .isPresent();
+    final boolean explicitIntervals = ingestionSchema.getDataSchema()
+                                                     .getGranularitySpec()
+                                                     .bucketIntervals()
+                                                     .isPresent();
 
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
@@ -208,37 +200,20 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     // Firehose temporary directory is automatically removed when this IndexTask completes.
     FileUtils.forceMkdir(firehoseTempDir);
 
-    final IndexTask.ShardSpecs shardSpecs = determineShardSpecs(firehoseFactory, firehoseTempDir);
-
-    final DataSchema dataSchema;
+    final DataSchema dataSchema = ingestionSchema.getDataSchema();
     final Map<Interval, String> versions;
-    if (determineIntervals) {
-      final SortedSet<Interval> intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
-      intervals.addAll(shardSpecs.getIntervals());
-      final Map<Interval, TaskLock> locks = tryAcquireExclusiveSurrogateLocks(toolbox.getTaskActionClient(), intervals);
-      versions = locks.entrySet().stream()
-                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getVersion()));
 
-      dataSchema = ingestionSchema.getDataSchema().withGranularitySpec(
-          ingestionSchema.getDataSchema()
-                         .getGranularitySpec()
-                         .withIntervals(
-                             JodaUtils.condenseIntervals(
-                                 shardSpecs.getIntervals()
-                             )
-                         )
-      );
+    if (explicitIntervals) {
+      versions = toolbox.getTaskActionClient().submit(new SurrogateAction<>(supervisorTaskId, new LockListAction()))
+                        .stream()
+                        .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
     } else {
-      versions = toolbox.getTaskActionClient().submit(new SurrogateLockListAction(supervisorTaskId))
-          .stream()
-          .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
-      dataSchema = ingestionSchema.getDataSchema();
+      versions = null;
     }
 
     final List<DataSegment> pushedSegments = generateAndPushSegments(
         toolbox,
         dataSchema,
-        shardSpecs,
         versions,
         firehoseFactory,
         firehoseTempDir
@@ -264,159 +239,14 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     final Map<Interval, TaskLock> lockMap = new HashMap<>();
     for (Interval interval : Tasks.computeCompactIntervals(intervals)) {
       final TaskLock lock = Preconditions.checkNotNull(
-          client.submit(new SurrogateLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval, supervisorTaskId)),
+          client.submit(
+              new SurrogateAction<>(supervisorTaskId, new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval))
+          ),
           "Cannot acquire a lock for interval[%s]", interval
       );
       lockMap.put(interval, lock);
     }
     return lockMap;
-  }
-
-  /**
-   * Determines intervals and shardSpecs for input data.  This method first checks that it must determine intervals and
-   * shardSpecs by itself.  Intervals must be determined if they are not specified in {@link GranularitySpec}.
-   * ShardSpecs must be determined if the perfect rollup must be guaranteed even though the number of shards is not
-   * specified in {@link IndexTask.IndexTuningConfig}.
-   * <P/>
-   * If both intervals and shardSpecs don't have to be determined, this method simply returns {@link IndexTask.ShardSpecs} for the
-   * given intervals.  Here, if {@link IndexTask.IndexTuningConfig#numShards} is not specified, {@link NumberedShardSpec} is used.
-   * <p/>
-   * If one of intervals or shardSpecs need to be determined, this method reads the entire input for determining one of
-   * them.  If the perfect rollup must be guaranteed, {@link HashBasedNumberedShardSpec} is used for hash partitioning
-   * of input data.  In the future we may want to also support single-dimension partitioning.
-   *
-   * @return generated {@link IndexTask.ShardSpecs} representing a map of intervals and corresponding shard specs
-   */
-  private IndexTask.ShardSpecs determineShardSpecs(
-      final FirehoseFactory firehoseFactory,
-      final File firehoseTempDir
-  ) throws IOException
-  {
-    final IndexTask.IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-
-    final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-
-    // Must determine intervals if unknown, since we acquire all locks before processing any data.
-    final boolean determineIntervals = !granularitySpec.bucketIntervals().isPresent();
-
-    // Must determine partitions if # of shards is not provided.
-    final boolean determineNumPartitions = tuningConfig.getNumShards() == null;
-
-    // if we were given number of shards per interval and the intervals, we don't need to scan the data
-    if (!determineNumPartitions && !determineIntervals) {
-      log.info("Skipping determine partition scan");
-      return createShardSpecWithoutInputScan(granularitySpec);
-    } else {
-      // determine intervals containing data
-      return createShardSpecsFromInput(
-          ingestionSchema,
-          firehoseFactory,
-          firehoseTempDir,
-          granularitySpec,
-          determineIntervals
-      );
-    }
-  }
-
-  private static IndexTask.ShardSpecs createShardSpecWithoutInputScan(GranularitySpec granularitySpec)
-  {
-    final Map<Interval, List<ShardSpec>> shardSpecs = new HashMap<>();
-    final SortedSet<Interval> intervals = granularitySpec.bucketIntervals().get();
-
-    for (Interval interval : intervals) {
-      shardSpecs.put(interval, ImmutableList.of());
-    }
-
-    return new IndexTask.ShardSpecs(shardSpecs);
-  }
-
-  private static IndexTask.ShardSpecs createShardSpecsFromInput(
-      SinglePhaseParallelIndexIngestionSpec ingestionSchema,
-      FirehoseFactory firehoseFactory,
-      File firehoseTempDir,
-      GranularitySpec granularitySpec,
-      boolean determineIntervals
-  ) throws IOException
-  {
-    log.info("Determining intervals");
-    long determineShardSpecsStartMillis = System.currentTimeMillis();
-
-    final List<Interval> intervals = collectIntervalsAndShardSpecs(
-        ingestionSchema,
-        firehoseFactory,
-        firehoseTempDir,
-        granularitySpec,
-        determineIntervals
-    );
-
-    final Map<Interval, List<ShardSpec>> intervalToShardSpecs = intervals
-        .stream()
-        .collect(Collectors.toMap(Function.identity(), i -> ImmutableList.of()));
-    log.info("Found intervals and shardSpecs in %,dms", System.currentTimeMillis() - determineShardSpecsStartMillis);
-
-    return new IndexTask.ShardSpecs(intervalToShardSpecs);
-  }
-
-  private static List<Interval> collectIntervalsAndShardSpecs(
-      SinglePhaseParallelIndexIngestionSpec ingestionSchema,
-      FirehoseFactory firehoseFactory,
-      File firehoseTempDir,
-      GranularitySpec granularitySpec,
-      boolean determineIntervals
-  ) throws IOException
-  {
-    final List<Interval> intervals = new ArrayList<>();
-    int thrownAway = 0;
-    int unparseable = 0;
-
-    try (
-        final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
-    ) {
-      while (firehose.hasMore()) {
-        try {
-          final InputRow inputRow = firehose.nextRow();
-
-          // The null inputRow means the caller must skip this row.
-          if (inputRow == null) {
-            continue;
-          }
-
-          final Interval interval;
-          if (determineIntervals) {
-            interval = granularitySpec.getSegmentGranularity().bucket(inputRow.getTimestamp());
-          } else {
-            final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-            if (!optInterval.isPresent()) {
-              thrownAway++;
-              continue;
-            }
-            interval = optInterval.get();
-          }
-
-          if (!intervals.contains(interval)) {
-            intervals.add(interval);
-          }
-        }
-        catch (ParseException e) {
-          if (ingestionSchema.getTuningConfig().isReportParseExceptions()) {
-            throw e;
-          } else {
-            unparseable++;
-          }
-        }
-      }
-    }
-
-    // These metrics are reported in generateAndPushSegments()
-    if (thrownAway > 0) {
-      log.warn("Unable to find a matching interval for [%,d] events", thrownAway);
-    }
-    if (unparseable > 0) {
-      log.warn("Unable to parse [%,d] events", unparseable);
-    }
-
-    intervals.sort(Comparators.intervalsByStartThenEnd());
-    return intervals;
   }
 
   /**
@@ -440,8 +270,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
   private List<DataSegment> generateAndPushSegments(
       final TaskToolbox toolbox,
       final DataSchema dataSchema,
-      final ShardSpecs shardSpecs,
-      final Map<Interval, String> versions,
+      @Nullable final Map<Interval, String> versions,
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir
   ) throws IOException, InterruptedException
@@ -464,16 +293,31 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final long pushTimeout = tuningConfig.getPushTimeout();
+    final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
 
     final SegmentAllocator segmentAllocator;
-    if (ioConfig.isAppendToExisting()) {
-      segmentAllocator = new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema);
+    if (ioConfig.isAppendToExisting() || !explicitIntervals) {
+      segmentAllocator = new ActionBasedSegmentAllocator(
+          toolbox.getTaskActionClient(),
+          dataSchema,
+          (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SurrogateAction<>(
+              supervisorTaskId,
+              new SegmentAllocateAction(
+                  schema.getDataSource(),
+                  row.getTimestamp(),
+                  schema.getGranularitySpec().getQueryGranularity(),
+                  schema.getGranularitySpec().getSegmentGranularity(),
+                  sequenceName,
+                  previousSegmentId,
+                  skipSegmentLineageCheck
+              )
+          )
+      );
     } else {
       segmentAllocator = new CountingActionBasedSegmentAllocator(
           toolbox.getTaskActionClient(),
           getDataSource(),
           granularitySpec,
-          shardSpecs.getMap(),
           versions
       );
     }
@@ -504,10 +348,12 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
             throw new ParseException(errorMsg);
           }
 
-          final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
-          if (!optInterval.isPresent()) {
-            fireDepartmentMetrics.incrementThrownAway();
-            continue;
+          if (explicitIntervals) {
+            final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
+            if (!optInterval.isPresent()) {
+              fireDepartmentMetrics.incrementThrownAway();
+              continue;
+            }
           }
 
           // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
@@ -547,7 +393,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
       return pushedSegments;
     }
     catch (TimeoutException | ExecutionException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

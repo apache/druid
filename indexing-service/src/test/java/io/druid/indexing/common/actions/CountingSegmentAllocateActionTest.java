@@ -134,12 +134,6 @@ public class CountingSegmentAllocateActionTest extends IngestionTestBase
         ),
         ImmutableMap.of(
             Intervals.of("2017-01-01/2017-01-02"),
-            ImmutableList.of(new NumberedShardSpec(0, 0)),
-            Intervals.of("2017-01-02/2017-01-03"),
-            ImmutableList.of(new NumberedShardSpec(1, 0))
-        ),
-        ImmutableMap.of(
-            Intervals.of("2017-01-01/2017-01-02"),
             "version1",
             Intervals.of("2017-01-02/2017-01-03"),
             "version1"

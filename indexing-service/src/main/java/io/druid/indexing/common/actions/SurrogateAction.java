@@ -16,29 +16,28 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 
-import java.util.List;
-
-public class SurrogateLockListAction implements TaskAction<List<TaskLock>>
+public class SurrogateAction<R, T extends TaskAction<R>> implements TaskAction<R>
 {
   private final String surrogateId;
+  private final T taskAction;
 
   @JsonCreator
-  public SurrogateLockListAction(
-      @JsonProperty("surrogateId") String surrogateId
+  public SurrogateAction(
+      @JsonProperty("surrogateId") String surrogateId,
+      @JsonProperty("taskAction") T taskAction
   )
   {
     this.surrogateId = surrogateId;
+    this.taskAction = taskAction;
   }
 
   @JsonProperty
@@ -47,18 +46,24 @@ public class SurrogateLockListAction implements TaskAction<List<TaskLock>>
     return surrogateId;
   }
 
-  @Override
-  public TypeReference<List<TaskLock>> getReturnTypeReference()
+  @JsonProperty
+  public T getTaskAction()
   {
-    return new TypeReference<List<TaskLock>>() {};
+    return taskAction;
   }
 
   @Override
-  public List<TaskLock> perform(Task task, TaskActionToolbox toolbox)
+  public TypeReference<R> getReturnTypeReference()
+  {
+    return taskAction.getReturnTypeReference();
+  }
+
+  @Override
+  public R perform(Task task, TaskActionToolbox toolbox)
   {
     final Optional<Task> maybeSurrogateTask = toolbox.getTaskStorage().getTask(surrogateId);
     if (maybeSurrogateTask.isPresent()) {
-      return toolbox.getTaskLockbox().findLocksForTask(maybeSurrogateTask.get());
+      return taskAction.perform(maybeSurrogateTask.get(), toolbox);
     } else {
       throw new ISE("Can't find surrogate task[%s]", surrogateId);
     }
@@ -67,12 +72,15 @@ public class SurrogateLockListAction implements TaskAction<List<TaskLock>>
   @Override
   public boolean isAudited()
   {
-    return false;
+    return taskAction.isAudited();
   }
 
   @Override
   public String toString()
   {
-    return "LockListAction{}";
+    return "SurrogateAction{" +
+           "surrogateId='" + surrogateId + '\'' +
+           ", taskAction=" + taskAction +
+           '}';
   }
 }

@@ -34,14 +34,13 @@ import io.druid.java.util.common.Intervals;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.partition.NumberedShardSpec;
-import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.SortedSet;
 
 public class CountingSegmentAllocateAction implements TaskAction<SegmentIdentifier>
 {
@@ -49,24 +48,24 @@ public class CountingSegmentAllocateAction implements TaskAction<SegmentIdentifi
   private final DateTime timestamp;
   private final GranularitySpec granularitySpec;
   @JsonDeserialize(keyUsing = IntervalDeserializer.class)
-  private final Map<Interval, List<ShardSpec>> shardSpecs;
-  @JsonDeserialize(keyUsing = IntervalDeserializer.class)
   private final Map<Interval, String> versions;
+
+  private final SortedSet<Interval> bucketIntervals;
 
   @JsonCreator
   public CountingSegmentAllocateAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("timestamp") DateTime timestamp,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
-      @JsonProperty("shardSpecs") Map<Interval, List<ShardSpec>> shardSpecs,
       @JsonProperty("versions") Map<Interval, String> versions
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.timestamp = Preconditions.checkNotNull(timestamp, "timestamp");
     this.granularitySpec = Preconditions.checkNotNull(granularitySpec, "granularitySpec");
-    this.shardSpecs = Preconditions.checkNotNull(shardSpecs, "shardSpecs");
     this.versions = Preconditions.checkNotNull(versions, "versions");
+
+    this.bucketIntervals = Preconditions.checkNotNull(granularitySpec.bucketIntervals().orNull(), "bucketIntervals");
   }
 
   @JsonProperty
@@ -85,12 +84,6 @@ public class CountingSegmentAllocateAction implements TaskAction<SegmentIdentifi
   public GranularitySpec getGranularitySpec()
   {
     return granularitySpec;
-  }
-
-  @JsonProperty
-  public Map<Interval, List<ShardSpec>> getShardSpecs()
-  {
-    return shardSpecs;
   }
 
   @JsonProperty
@@ -116,8 +109,8 @@ public class CountingSegmentAllocateAction implements TaskAction<SegmentIdentifi
     }
 
     final Interval interval = maybeInterval.get();
-    if (!shardSpecs.containsKey(interval)) {
-      throw new ISE("Could not find shardSpec for interval[%s]", interval);
+    if (!bucketIntervals.contains(interval)) {
+      throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
     }
 
     final Counters counters = toolbox.getCounters();
@@ -144,7 +137,6 @@ public class CountingSegmentAllocateAction implements TaskAction<SegmentIdentifi
            "dataSource='" + dataSource + '\'' +
            ", timestamp=" + timestamp +
            ", granularitySpec=" + granularitySpec +
-           ", shardSpecs=" + shardSpecs +
            ", versions=" + versions +
            '}';
   }
@@ -170,16 +162,13 @@ public class CountingSegmentAllocateAction implements TaskAction<SegmentIdentifi
     if (!granularitySpec.equals(that.granularitySpec)) {
       return false;
     }
-    if (!shardSpecs.equals(that.shardSpecs)) {
-      return false;
-    }
     return versions.equals(that.versions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, timestamp, granularitySpec, shardSpecs, versions);
+    return Objects.hash(dataSource, timestamp, granularitySpec, versions);
   }
 
   private static String findVersion(Map<Interval, String> versions, Interval interval)

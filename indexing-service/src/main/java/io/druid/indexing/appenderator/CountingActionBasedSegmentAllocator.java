@@ -26,11 +26,9 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
-import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 public class CountingActionBasedSegmentAllocator implements SegmentAllocator
@@ -38,21 +36,18 @@ public class CountingActionBasedSegmentAllocator implements SegmentAllocator
   private final TaskActionClient taskActionClient;
   private final String dataSource;
   private final GranularitySpec granularitySpec;
-  private final Map<Interval, List<ShardSpec>> shardSpecs;
   private final Map<Interval, String> versions;
 
   public CountingActionBasedSegmentAllocator(
       TaskActionClient taskActionClient,
       String dataSource,
       GranularitySpec granularitySpec,
-      Map<Interval, List<ShardSpec>> shardSpecs,
       Map<Interval, String> versions
   )
   {
     this.taskActionClient = Preconditions.checkNotNull(taskActionClient, "taskActionClient");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.granularitySpec = Preconditions.checkNotNull(granularitySpec, "granularitySpec");
-    this.shardSpecs = Preconditions.checkNotNull(shardSpecs, "shardSpecs");
     this.versions = Preconditions.checkNotNull(versions, "versions");
   }
 
@@ -69,7 +64,6 @@ public class CountingActionBasedSegmentAllocator implements SegmentAllocator
             dataSource,
             row.getTimestamp(),
             granularitySpec,
-            shardSpecs,
             versions
         )
     );

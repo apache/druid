@@ -16,44 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.indexing.appenderator;
 
 import io.druid.data.input.InputRow;
-import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.actions.TaskAction;
 import io.druid.segment.indexing.DataSchema;
-import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 
-import java.io.IOException;
-
-public class ActionBasedSegmentAllocator implements SegmentAllocator
+public interface SegmentAllocateActionGenerator
 {
-  private final TaskActionClient taskActionClient;
-  private final DataSchema dataSchema;
-  private final SegmentAllocateActionGenerator actionGenerator;
-
-  public ActionBasedSegmentAllocator(
-      TaskActionClient taskActionClient,
+  TaskAction<SegmentIdentifier> generate(
       DataSchema dataSchema,
-      SegmentAllocateActionGenerator actionGenerator
-  )
-  {
-    this.taskActionClient = taskActionClient;
-    this.dataSchema = dataSchema;
-    this.actionGenerator = actionGenerator;
-  }
-
-  @Override
-  public SegmentIdentifier allocate(
-      final InputRow row,
-      final String sequenceName,
-      final String previousSegmentId,
-      final boolean skipSegmentLineageCheck
-  ) throws IOException
-  {
-    return taskActionClient.submit(
-        actionGenerator.generate(dataSchema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck)
-    );
-  }
+      InputRow row,
+      String sequenceName,
+      String previousSegmentId,
+      boolean skipSegmentLineageCheck
+  );
 }
