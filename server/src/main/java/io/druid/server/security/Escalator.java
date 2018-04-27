@@ -22,10 +22,6 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.java.util.http.client.HttpClient;
-import org.eclipse.jetty.client.api.Request;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * This interface provides methods needed for escalating internal system requests with priveleged authentication
@@ -55,12 +51,4 @@ public interface Escalator
    */
   AuthenticationResult createEscalatedAuthenticationResult();
 
-  default void decorateProxyRequest(
-      HttpServletRequest clientRequest,
-      HttpServletResponse proxyResponse,
-      Request proxyRequest
-  )
-  {
-    //noop
-  }
 }

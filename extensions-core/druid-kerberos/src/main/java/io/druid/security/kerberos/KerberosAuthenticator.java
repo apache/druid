@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.StringUtils;
@@ -41,6 +42,8 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.http.HttpHeader;
 import sun.security.krb5.EncryptedData;
 import sun.security.krb5.EncryptionKey;
 import sun.security.krb5.internal.APReq;
@@ -72,6 +75,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -88,6 +92,8 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 
 @JsonTypeName("kerberos")
 public class KerberosAuthenticator implements Authenticator
@@ -95,6 +101,7 @@ public class KerberosAuthenticator implements Authenticator
   private static final Logger log = new Logger(KerberosAuthenticator.class);
   private static final Pattern HADOOP_AUTH_COOKIE_REGEX = Pattern.compile(".*p=(\\S+)&t=.*");
   public static final List<String> DEFAULT_EXCLUDED_PATHS = Collections.emptyList();
+  public static final String SIGNED_TOKEN_ATTRIBUTE = "signedToken";
 
   private final DruidNode node;
   private final String serverPrincipal;
@@ -337,7 +344,7 @@ public class KerberosAuthenticator implements Authenticator
                     !token.isExpired() && token.getExpires() > 0,
                     isHttps
                 );
-                request.setAttribute(KerberosEscalator.SIGNED_TOKEN_ATTRIBUTE, tokenToCookieString(
+                request.setAttribute(SIGNED_TOKEN_ATTRIBUTE, tokenToCookieString(
                     signedToken,
                     getCookieDomain(),
                     getCookiePath(),
@@ -463,6 +470,22 @@ public class KerberosAuthenticator implements Authenticator
     return false;
   }
 
+  @Override
+  public void decorateProxyRequest(
+      HttpServletRequest clientRequest, HttpServletResponse proxyResponse, Request proxyRequest
+  )
+  {
+    Object cookieToken = clientRequest.getAttribute(SIGNED_TOKEN_ATTRIBUTE);
+    if (cookieToken != null && cookieToken instanceof String) {
+      log.debug("Found cookie token will attache it to proxyRequest as cookie");
+      String authResult = (String) cookieToken;
+      String existingCookies = proxyRequest.getCookies()
+                                           .stream()
+                                           .map(HttpCookie::toString)
+                                           .collect(Collectors.joining(";"));
+      proxyRequest.header(HttpHeader.COOKIE, Joiner.on(";").join(authResult, existingCookies));
+    }
+  }
 
   /**
    * Kerberos context configuration for the JDK GSS library. Copied from hadoop-auth's KerberosAuthenticationHandler.

@@ -22,9 +22,12 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
+import org.eclipse.jetty.client.api.Request;
 
 import javax.annotation.Nullable;
 import javax.servlet.Filter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -93,4 +96,14 @@ public interface Authenticator extends ServletFilterHolder
    */
   @Nullable
   AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
+
+
+  default void decorateProxyRequest(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Request proxyRequest
+  )
+  {
+    //noop
+  }
 }

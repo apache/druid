@@ -45,7 +45,7 @@ import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.Escalator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
@@ -114,7 +114,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
-  private final Escalator escalator;
+  private final AuthenticatorMapper authenticatorMapper;
 
   private HttpClient broadcastClient;
 
@@ -129,7 +129,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       ServiceEmitter emitter,
       RequestLogger requestLogger,
       GenericQueryMetricsFactory queryMetricsFactory,
-      Escalator escalator
+      AuthenticatorMapper authenticatorMapper
   )
   {
     this.warehouse = warehouse;
@@ -141,7 +141,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryMetricsFactory = queryMetricsFactory;
-    this.escalator = escalator;
+    this.authenticatorMapper = authenticatorMapper;
   }
 
   @Override
@@ -316,9 +316,13 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
     // will log that on the remote node.
     clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    escalator.decorateProxyRequest(clientRequest,
-                                   proxyResponse,
-                                   proxyRequest);
+    authenticatorMapper.getAuthenticatorChain()
+                       .stream()
+                       .forEach(authenticator -> authenticator.decorateProxyRequest(
+                           clientRequest,
+                           proxyResponse,
+                           proxyRequest
+                       ));
     super.sendProxyRequest(
         clientRequest,
         proxyResponse,
