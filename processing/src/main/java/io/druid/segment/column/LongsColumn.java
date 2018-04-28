@@ -63,27 +63,9 @@ public class LongsColumn implements GenericColumn
   }
 
   @Override
-  public float getFloatSingleValueRow(int rowNum)
-  {
-    return (float) column.get(rowNum);
-  }
-
-  @Override
   public long getLongSingleValueRow(int rowNum)
   {
     return column.get(rowNum);
-  }
-
-  @Override
-  public double getDoubleSingleValueRow(int rowNum)
-  {
-    return (double) column.get(rowNum);
-  }
-
-  @Override
-  public boolean isNull(int rowNum)
-  {
-    return false;
   }
 
   @Override

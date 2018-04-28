@@ -80,9 +80,9 @@ public class SchemalessTestSimpleTest
       final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
       final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
       final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
-      argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null)});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, persistedIncrementalIndex)});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedIncrementalIndex)});
+      argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null), false});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, persistedIncrementalIndex), false});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedIncrementalIndex), true});
     }
     return argumentArrays;
   }
@@ -110,13 +110,13 @@ public class SchemalessTestSimpleTest
       Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
-  private Segment segment;
+  private final Segment segment;
+  private final boolean coalesceAbsentAndEmptyDims;
 
-  public SchemalessTestSimpleTest(
-      Segment segment
-  )
+  public SchemalessTestSimpleTest(Segment segment, boolean coalesceAbsentAndEmptyDims)
   {
     this.segment = segment;
+    this.coalesceAbsentAndEmptyDims = coalesceAbsentAndEmptyDims;
   }
 
   @Test
@@ -145,9 +145,9 @@ public class SchemalessTestSimpleTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 11L)
+                            .put("rows", coalesceAbsentAndEmptyDims ? 10L : 11L)
                             .put("index", 900.0)
-                            .put("addRowsIndexConstant", 912.0)
+                            .put("addRowsIndexConstant", coalesceAbsentAndEmptyDims ? 911.0 : 912.0)
                             .put("uniques", 2.000977198748901D)
                             .put("maxIndex", 100.0)
                             .put("minIndex", 0.0)

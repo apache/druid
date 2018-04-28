@@ -19,8 +19,6 @@
 
 package io.druid.benchmark;
 
-// Run FloatCompressionBenchmarkFileGenerator to generate the required files before running this benchmark
-
 import com.google.common.base.Supplier;
 import com.google.common.io.Files;
 import io.druid.segment.data.ColumnarFloats;
@@ -44,6 +42,9 @@ import java.nio.ByteOrder;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Run {@link FloatCompressionBenchmarkFileGenerator} to generate the required files before running this benchmark
+ */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)

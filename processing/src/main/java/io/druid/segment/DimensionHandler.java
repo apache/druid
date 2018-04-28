@@ -20,12 +20,11 @@
 package io.druid.segment;
 
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.Closeable;
+import java.util.Comparator;
 
 /**
  * Processing related interface
@@ -40,10 +39,8 @@ import java.io.Closeable;
  *
  * This interface allows type-specific behavior column logic, such as choice of indexing structures and disk formats.
  * to be contained within a type-specific set of handler objects, simplifying processing classes
- * such as IncrementalIndex and IndexMerger and allowing for abstracted development of additional dimension types.
- *
- * A dimension may have two representations, an encoded representation and a actual representation.
- * For example, a value for a String dimension has an integer dictionary encoding, and an actual String representation.
+ * such as {@link io.druid.segment.incremental.IncrementalIndex} and {@link IndexMerger} and allowing for abstracted
+ * development of additional dimension types.
  *
  * A DimensionHandler is a stateless object, and thus thread-safe; its methods should be pure functions.
  *
@@ -85,7 +82,6 @@ public interface DimensionHandler
    */
   DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer();
 
-
   /**
    * Creates a new DimensionMergerV9, a per-dimension object responsible for merging indexes/row data across segments
    * and building the on-disk representation of a dimension. For use with IndexMergerV9 only.
@@ -99,13 +95,12 @@ public interface DimensionHandler
 
    * @return A new DimensionMergerV9 object.
    */
-  DimensionMergerV9<EncodedKeyComponentType> makeMerger(
+  DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress
   );
-
 
   /**
    * Given an key component representing a single set of row value(s) for this dimension as an Object,
@@ -119,73 +114,17 @@ public interface DimensionHandler
    */
   int getLengthOfEncodedKeyComponent(EncodedKeyComponentType dimVals);
 
+  /**
+   * Returns a comparator that knows how to compare {@link ColumnValueSelector} of the assumed dimension type,
+   * corresponding to this DimensionHandler. E. g. {@link StringDimensionHandler} returns a comparator, that compares
+   * {@link ColumnValueSelector}s as {@link DimensionSelector}s.
+   */
+  Comparator<ColumnValueSelector> getEncodedValueSelectorComparator();
 
   /**
-   * Given two key components representing sorted encoded row value(s), return the result of their comparison.
-   *
-   * If the two key components have different lengths, the shorter component should be ordered first in the comparison.
-   *
-   * Otherwise, this function should iterate through the key components and return the comparison of the
-   * first difference.
-   *
-   * For dimensions that do not support multivalue rows, lhs and rhs can be compared directly.
-   *
-   * @param lhs key component from a row
-   * @param rhs key component from a row
-   *
-   * @return integer indicating comparison result of key components
+   * Creates and returns a new object of some implementation of {@link SettableColumnValueSelector}, that corresponds
+   * to the type of this DimensionHandler. E. g. {@link LongDimensionHandler} returns {@link
+   * io.druid.segment.selector.settable.SettableLongColumnValueSelector}, etc.
    */
-  int compareSortedEncodedKeyComponents(EncodedKeyComponentType lhs, EncodedKeyComponentType rhs);
-
-
-  /**
-   * Given two key components representing sorted encoded row value(s), check that the two key components
-   * have the same encoded values, or if the encoded values differ, that they translate into the same actual values,
-   * using the mappings provided by lhsEncodings and rhsEncodings (if applicable).
-   *
-   * If validation fails, this method should throw a SegmentValidationException.
-   *
-   * Used by IndexIO for validating segments.
-   *
-   * See StringDimensionHandler.validateSortedEncodedKeyComponents() for a reference implementation.
-   *
-   * @param lhs key component from a row
-   * @param rhs key component from a row
-   * @param lhsEncodings encoding lookup from lhs's segment, null if not applicable for this dimension's type
-   * @param rhsEncodings encoding lookup from rhs's segment, null if not applicable for this dimension's type
-   */
-  void validateSortedEncodedKeyComponents(
-      EncodedKeyComponentType lhs,
-      EncodedKeyComponentType rhs,
-      Indexed<ActualType> lhsEncodings,
-      Indexed<ActualType> rhsEncodings
-  ) throws SegmentValidationException;
-
-
-  /**
-   * Given a Column, return a type-specific object that can be used to retrieve row values.
-   *
-   * For example:
-   * - A String-typed implementation would return the result of column.getDictionaryEncoding()
-   * - A long-typed implemention would return the result of column.getGenericColumn().
-   *
-   * @param column Column for this dimension from a QueryableIndex
-   * @return The type-specific column subobject for this dimension.
-   */
-  Closeable getSubColumn(Column column);
-
-
-  /**
-   * Given a subcolumn from getSubColumn, and the index of the current row, retrieve a dimension's values
-   * from a row as an EncodedKeyComponentType.
-   *
-   * For example:
-   * - A String-typed implementation would read the current row from a DictionaryEncodedColumn as an int[].
-   * - A long-typed implemention would read the current row from a GenericColumn and return a Long.
-   *
-   * @param column Column for this dimension from a QueryableIndex
-   * @param currRow The index of the row to retrieve
-   * @return The key component for this dimension from the current row of the column.
-   */
-  EncodedKeyComponentType getEncodedKeyComponentFromColumn(Closeable column, int currRow);
+  SettableColumnValueSelector makeNewSettableEncodedValueSelector();
 }

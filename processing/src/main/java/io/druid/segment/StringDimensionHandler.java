@@ -19,23 +19,96 @@
 
 package io.druid.segment;
 
-import com.google.common.primitives.Ints;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.ISE;
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.DictionaryEncodedColumn;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.ZeroIndexedInts;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
+import io.druid.segment.selector.settable.SettableDimensionValueSelector;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import javax.annotation.Nullable;
-import java.io.Closeable;
-import java.lang.reflect.Array;
-import java.util.Arrays;
+import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
 {
+
+  /**
+   * Compares {@link IndexedInts} lexicographically, with the exception that if a row contains only zeros (that's the
+   * index of null) at all positions, it is considered "null" as a whole and is "less" than any "non-null" row. Empty
+   * row (size is zero) is also considered "null".
+   *
+   * The implementation is a bit complicated because it tries to check each position of both rows only once.
+   */
+  private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR = (s1, s2) -> {
+    IndexedInts row1 = getRow(s1);
+    IndexedInts row2 = getRow(s2);
+    int len1 = row1.size();
+    int len2 = row2.size();
+    boolean row1IsNull = true;
+    boolean row2IsNull = true;
+    for (int i = 0; i < Math.min(len1, len2); i++) {
+      int v1 = row1.get(i);
+      row1IsNull &= v1 == 0;
+      int v2 = row2.get(i);
+      row2IsNull &= v2 == 0;
+      int valueDiff = Integer.compare(v1, v2);
+      if (valueDiff != 0) {
+        return valueDiff;
+      }
+    }
+    //noinspection SubtractionInCompareTo -- substraction is safe here, because lenghts or rows are small numbers.
+    int lenDiff = len1 - len2;
+    if (lenDiff == 0) {
+      return 0;
+    } else {
+      if (!row1IsNull || !row2IsNull) {
+        return lenDiff;
+      } else {
+        return compareRestNulls(row1, len1, row2, len2);
+      }
+    }
+  };
+
+  private static int compareRestNulls(IndexedInts row1, int len1, IndexedInts row2, int len2)
+  {
+    if (len1 < len2) {
+      for (int i = len1; i < len2; i++) {
+        if (row2.get(i) != 0) {
+          return -1;
+        }
+      }
+    } else {
+      for (int i = len2; i < len1; i++) {
+        if (row1.get(i) != 0) {
+          return 1;
+        }
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Value for absent column, i. e. {@link NilColumnValueSelector}, should be equivalent to [null] during index merging.
+   *
+   * During index merging, if one of the merged indexes has absent columns, {@link StringDimensionMergerV9} ensures
+   * that null value is present, and it has index = 0 after sorting, because sorting puts null first. See {@link
+   * StringDimensionMergerV9#hasNull} and the place where it is assigned.
+   */
+  private static IndexedInts getRow(ColumnValueSelector s)
+  {
+    if (s instanceof DimensionSelector) {
+      return ((DimensionSelector) s).getRow();
+    } else if (s instanceof NilColumnValueSelector) {
+      return ZeroIndexedInts.instance();
+    } else {
+      throw new ISE(
+          "ColumnValueSelector[%s], only DimensionSelector or NilColumnValueSelector is supported",
+          s.getClass()
+      );
+    }
+  }
+
   private final String dimensionName;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
@@ -66,145 +139,15 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public int compareSortedEncodedKeyComponents(int[] lhs, int[] rhs)
+  public Comparator<ColumnValueSelector> getEncodedValueSelectorComparator()
   {
-    int lhsLen = lhs.length;
-    int rhsLen = rhs.length;
-
-    int retVal = Ints.compare(lhsLen, rhsLen);
-
-    int valsIndex = 0;
-    while (retVal == 0 && valsIndex < lhsLen) {
-      retVal = Ints.compare(lhs[valsIndex], rhs[valsIndex]);
-      ++valsIndex;
-    }
-    return retVal;
-  }
-
-  private boolean isNullRow(@Nullable int[] row, Indexed<String> encodings)
-  {
-    if (row == null) {
-      return true;
-    }
-    for (int value : row) {
-      if (encodings.get(value) != null) {
-        // Non-Null value
-        return false;
-      }
-    }
-    return true;
+    return DIMENSION_SELECTOR_COMPARATOR;
   }
 
   @Override
-  public void validateSortedEncodedKeyComponents(
-      int[] lhs,
-      int[] rhs,
-      Indexed<String> lhsEncodings,
-      Indexed<String> rhsEncodings
-  ) throws SegmentValidationException
+  public SettableColumnValueSelector makeNewSettableEncodedValueSelector()
   {
-    if (lhs == null || rhs == null) {
-      if (!isNullRow(lhs, lhsEncodings) || !isNullRow(rhs, rhsEncodings)) {
-        throw new SegmentValidationException(
-            "Expected nulls, found %s and %s",
-            Arrays.toString(lhs),
-            Arrays.toString(rhs)
-        );
-      } else {
-        return;
-      }
-    }
-
-    int lhsLen = Array.getLength(lhs);
-    int rhsLen = Array.getLength(rhs);
-
-    if (lhsLen != rhsLen) {
-      // Might be OK if one of them has null. This occurs in IndexMakerTest
-      if (lhsLen == 0 && rhsLen == 1) {
-        final String dimValName = rhsEncodings.get(rhs[0]);
-        if (dimValName == null) {
-          return;
-        } else {
-          throw new SegmentValidationException(
-              "Dim [%s] value [%s] is not null",
-              dimensionName,
-              dimValName
-          );
-        }
-      } else if (rhsLen == 0 && lhsLen == 1) {
-        final String dimValName = lhsEncodings.get(lhs[0]);
-        if (dimValName == null) {
-          return;
-        } else {
-          throw new SegmentValidationException(
-              "Dim [%s] value [%s] is not null",
-              dimensionName,
-              dimValName
-          );
-        }
-      } else {
-        throw new SegmentValidationException(
-            "Dim [%s] value lengths not equal. Expected %d found %d",
-            dimensionName,
-            lhsLen,
-            rhsLen
-        );
-      }
-    }
-
-    for (int j = 0; j < Math.max(lhsLen, rhsLen); ++j) {
-      final int dIdex1 = lhsLen <= j ? -1 : lhs[j];
-      final int dIdex2 = rhsLen <= j ? -1 : rhs[j];
-
-      final String dim1ValName = dIdex1 < 0 ? null : lhsEncodings.get(dIdex1);
-      final String dim2ValName = dIdex2 < 0 ? null : rhsEncodings.get(dIdex2);
-      if ((dim1ValName == null) || (dim2ValName == null)) {
-        if ((dim1ValName == null) && (dim2ValName == null)) {
-          continue;
-        } else {
-          throw new SegmentValidationException(
-              "Dim [%s] value not equal. Expected [%s] found [%s]",
-              dimensionName,
-              dim1ValName,
-              dim2ValName
-          );
-        }
-      }
-
-      if (!dim1ValName.equals(dim2ValName)) {
-        throw new SegmentValidationException(
-            "Dim [%s] value not equal. Expected [%s] found [%s]",
-            dimensionName,
-            dim1ValName,
-            dim2ValName
-        );
-      }
-    }
-  }
-
-  @Override
-  public Closeable getSubColumn(Column column)
-  {
-    return column.getDictionaryEncoding();
-  }
-
-  @Override
-  public int[] getEncodedKeyComponentFromColumn(Closeable column, int currRow)
-  {
-    DictionaryEncodedColumn dict = (DictionaryEncodedColumn) column;
-    int[] theVals;
-    if (dict.hasMultipleValues()) {
-      final IndexedInts dimVals = dict.getMultiValueRow(currRow);
-      theVals = new int[dimVals.size()];
-      for (int i = 0; i < theVals.length; ++i) {
-        theVals[i] = dimVals.get(i);
-      }
-    } else {
-      theVals = new int[1];
-      theVals[0] = dict.getSingleValueRow(currRow);
-    }
-
-    return theVals;
+    return new SettableDimensionValueSelector();
   }
 
   @Override
@@ -214,7 +157,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   }
 
   @Override
-  public DimensionMergerV9<int[]> makeMerger(
+  public DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,

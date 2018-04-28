@@ -129,7 +129,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
     );
     writer.open();
     for (int val : vals) {
-      writer.add(val);
+      writer.addValue(val);
     }
     long writtenLength = writer.getSerializedSize();
     final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
@@ -200,7 +200,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
     );
     writer.open();
     for (int val : vals) {
-      writer.add(val);
+      writer.addValue(val);
     }
 
     final SmooshedWriter channel = smoosher.addWithSmooshedWriter(

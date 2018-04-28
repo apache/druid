@@ -32,7 +32,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -106,19 +105,18 @@ public class FloatColumnSerializerV2 implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(@Nullable Object obj) throws IOException
+  public void serialize(ColumnValueSelector selector) throws IOException
   {
-    if (obj == null) {
+    if (selector.isNull()) {
       nullRowsBitmap.add(rowCount);
       writer.add(0f);
     } else {
-      writer.add(((Number) obj).floatValue());
+      writer.add(selector.getFloat());
     }
     rowCount++;
   }
 
   @Override
-
   public long getSerializedSize() throws IOException
   {
     nullValueBitmapWriter.write(bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(nullRowsBitmap));

@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -35,7 +34,6 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -45,6 +43,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -505,16 +504,9 @@ public class SchemalessIndexTest
                             public IndexableAdapter apply(PartitionChunk<File> chunk)
                             {
                               try {
-                                return new RowboatFilteringIndexAdapter(
+                                return new RowFilteringIndexAdapter(
                                     new QueryableIndexIndexableAdapter(indexIO.loadIndex(chunk.getObject())),
-                                    new Predicate<Rowboat>()
-                                    {
-                                      @Override
-                                      public boolean apply(Rowboat input)
-                                      {
-                                        return timelineObjectHolder.getInterval().contains(input.getTimestamp());
-                                      }
-                                    }
+                                    rowPointer -> timelineObjectHolder.getInterval().contains(rowPointer.getTimestamp())
                                 );
                               }
                               catch (IOException e) {

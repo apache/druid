@@ -76,7 +76,7 @@ public class EntireLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloa
     @Override
     public String toString()
     {
-      return "EntireCompressedColumnarFloats_Anonymous{" +
+      return "EntireLayoutColumnarFloats{" +
              ", totalSize=" + totalSize +
              '}';
     }
