@@ -42,6 +42,37 @@ public class IndexSpecTest
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());
     Assert.assertEquals(CompressionStrategy.LZF, spec.getMetricCompression());
     Assert.assertEquals(CompressionFactory.LongEncodingStrategy.AUTO, spec.getLongEncoding());
+    Assert.assertEquals(IndexSpec.EncodingStrategy.COMPRESSION, spec.getIntEncodingStrategy().getStrategy());
+    Assert.assertEquals(
+        IndexSpec.ShapeShiftOptimizationTarget.FASTBUTSMALLISH,
+        spec.getIntEncodingStrategy().getOptimizationTarget()
+    );
+    Assert.assertEquals(IndexSpec.ShapeShiftBlockSize.LARGE, spec.getIntEncodingStrategy().getBlockSize());
+
+    Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
+  }
+
+
+  @Test
+  public void testSerdeShapeshift() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+    final String json = "{ \"bitmap\" : { \"type\" : \"roaring\" }, \"dimensionCompression\" : \"lz4\", "
+                        + "\"metricCompression\" : \"lzf\", \"longEncoding\" : \"auto\", \"intEncodingStrategy\" : { "
+                        + "\"strategy\" : \"shapeshift\", \"optimizationTarget\" : \"faster\", "
+                        + "\"blockSize\" : \"small\"}}";
+
+    final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
+    Assert.assertEquals(new RoaringBitmapSerdeFactory(null), spec.getBitmapSerdeFactory());
+    Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());
+    Assert.assertEquals(CompressionStrategy.LZF, spec.getMetricCompression());
+    Assert.assertEquals(CompressionFactory.LongEncodingStrategy.AUTO, spec.getLongEncoding());
+    Assert.assertEquals(IndexSpec.EncodingStrategy.SHAPESHIFT, spec.getIntEncodingStrategy().getStrategy());
+    Assert.assertEquals(
+        IndexSpec.ShapeShiftOptimizationTarget.FASTER,
+        spec.getIntEncodingStrategy().getOptimizationTarget()
+    );
+    Assert.assertEquals(IndexSpec.ShapeShiftBlockSize.SMALL, spec.getIntEncodingStrategy().getBlockSize());
 
     Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
   }

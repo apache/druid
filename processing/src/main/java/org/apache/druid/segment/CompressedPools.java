@@ -20,11 +20,18 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.ning.compress.BufferRecycler;
+import me.lemire.integercompression.FastPFOR;
+import me.lemire.integercompression.SkippableComposition;
+import me.lemire.integercompression.SkippableIntegerCODEC;
+import me.lemire.integercompression.VariableByte;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.data.ShapeShiftingColumnarInts;
+import org.apache.druid.segment.data.codecs.ints.IntCodecs;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -34,7 +41,26 @@ public class CompressedPools
 {
   private static final Logger log = new Logger(CompressedPools.class);
 
+  private static final int SMALLEST_BUFFER_SIZE = 0x4000;
+  private static final int SMALLER_BUFFER_SIZE = 0x8000;
   public static final int BUFFER_SIZE = 0x10000;
+  // Straight from the horse's mouth (https://github.com/lemire/JavaFastPFOR/blob/master/example.java).
+  private static final int ENCODED_INTS_SHOULD_BE_ENOUGH = 1024;
+  private static final int INT_ARRAY_SIZE = 1 << 14;
+  private static final int SMALLER_INT_ARRAY_SIZE = 1 << 13;
+  private static final int SMALLEST_INT_ARRAY_SIZE = 1 << 12;
+
+  // todo: i have no idea what these should legitimately be, this is only ~24.7M which cannot be reclaimed by gc...
+  // ...but maybe convservative if there is a lot of load, perhaps this is configurable?
+  private static final int INT_DECODED_ARRAY_POOL_MAX_CACHE = 256;
+  private static final int INT_ENCODED_ARRAY_POOL_MAX_CACHE = 128;
+
+
+  // todo: see ^ re: sizing.. these are currently ~1M on heap + ~200K direct buffer. Heap could be ~1/4 of the size
+  // with minor changes to fastpfor lib to allow passing page size (our max is 2^14 but codec allocates for 2^16)
+  // current sizing put it in around 33.6M that cannot be reclaimed
+  private static final int LEMIRE_FASTPFOR_CODEC_POOL_MAX_CACHE = 28;
+
   private static final NonBlockingPool<BufferRecycler> BUFFER_RECYCLER_POOL = new StupidPool<>(
       "bufferRecyclerPool",
       new Supplier<BufferRecycler>()
@@ -75,41 +101,245 @@ public class CompressedPools
     return OUTPUT_BYTES_POOL.take();
   }
 
-  private static final NonBlockingPool<ByteBuffer> BIG_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
-      "bigEndByteBufPool",
-      new Supplier<ByteBuffer>()
-      {
-        private final AtomicLong counter = new AtomicLong(0);
-
-        @Override
-        public ByteBuffer get()
+  private static NonBlockingPool<ByteBuffer> makeBufferPool(String name, int size, ByteOrder order)
+  {
+    return new StupidPool<>(
+        name,
+        new Supplier<ByteBuffer>()
         {
-          log.debug("Allocating new bigEndByteBuf[%,d]", counter.incrementAndGet());
-          return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN);
+          private final AtomicLong counter = new AtomicLong(0);
+
+          @Override
+          public ByteBuffer get()
+          {
+            log.info("Allocating new %s[%,d]", name, counter.incrementAndGet());
+            return ByteBuffer.allocateDirect(size).order(order);
+          }
         }
-      }
-  );
+    );
+  }
 
-  private static final NonBlockingPool<ByteBuffer> LITTLE_ENDIAN_BYTE_BUF_POOL = new StupidPool<ByteBuffer>(
-      "littleEndByteBufPool",
-      new Supplier<ByteBuffer>()
-      {
-        private final AtomicLong counter = new AtomicLong(0);
-
-        @Override
-        public ByteBuffer get()
+  private static NonBlockingPool<int[]> makeIntArrayPool(String name, int size, int maxCache)
+  {
+    return new StupidPool<>(
+        name,
+        new Supplier<int[]>()
         {
-          log.debug("Allocating new littleEndByteBuf[%,d]", counter.incrementAndGet());
-          return ByteBuffer.allocateDirect(BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN);
-        }
-      }
-  );
+          private final AtomicLong counter = new AtomicLong(0);
+
+          @Override
+          public int[] get()
+          {
+            log.info("Allocating new %s[%,d]", name, counter.incrementAndGet());
+            return new int[size];
+          }
+        },
+        0,
+        maxCache
+    );
+  }
+
+  private static NonBlockingPool<SkippableIntegerCODEC> makeFastpforPool(String name, int size)
+  {
+    return new StupidPool<>(
+        name,
+        new Supplier<SkippableIntegerCODEC>()
+        {
+          private final AtomicLong counter = new AtomicLong(0);
+
+          @Override
+          public SkippableIntegerCODEC get()
+          {
+            log.info("Allocating new %s[%,d]", name, counter.incrementAndGet());
+
+            Supplier<ByteBuffer> compressionBufferSupplier =
+                Suppliers.memoize(() -> ByteBuffer.allocateDirect(size));
+            return new SkippableComposition(
+                new FastPFOR(),
+                new VariableByte() {
+                  // VariableByte allocates a buffer in compress method instead of in constructor like fastpfor
+                  // so override to re-use instead (and only allocate if indexing)
+                  @Override
+                  protected ByteBuffer makeBuffer(int sizeInBytes)
+                  {
+                    ByteBuffer theBuffer = compressionBufferSupplier.get();
+                    theBuffer.clear();
+                    return theBuffer;
+                  }
+                }
+              );
+          }
+        },
+        0,
+        LEMIRE_FASTPFOR_CODEC_POOL_MAX_CACHE
+    );
+  }
+
+  private static final NonBlockingPool<ByteBuffer> BIG_END_BYTE_BUF_POOL =
+      makeBufferPool("bigEndByteBufPool", BUFFER_SIZE, ByteOrder.BIG_ENDIAN);
+
+  private static final NonBlockingPool<ByteBuffer> LITTLE_BIG_END_BYTE_BUF_POOL =
+      makeBufferPool("littleBigEndByteBufPool", SMALLER_BUFFER_SIZE, ByteOrder.BIG_ENDIAN);
+
+  private static final NonBlockingPool<ByteBuffer> LITTLEST_BIG_END_BYTE_BUF_POOL =
+      makeBufferPool("littlestBigEndByteBufPool", SMALLEST_BUFFER_SIZE, ByteOrder.BIG_ENDIAN);
+
+  private static final NonBlockingPool<ByteBuffer> LITTLE_END_BYTE_BUF_POOL =
+      makeBufferPool("littleEndByteBufPool", BUFFER_SIZE, ByteOrder.LITTLE_ENDIAN);
+
+  private static final NonBlockingPool<ByteBuffer> LITTLER_END_BYTE_BUF_POOL =
+      makeBufferPool("littlerEndByteBufPool", SMALLER_BUFFER_SIZE, ByteOrder.LITTLE_ENDIAN);
+
+  private static final NonBlockingPool<ByteBuffer> LITTLEST_END_BYTE_BUF_POOL =
+      makeBufferPool("littlestEndByteBufPool", SMALLEST_BUFFER_SIZE, ByteOrder.LITTLE_ENDIAN);
+
+  private static final NonBlockingPool<int[]> SHAPESHIFT_INTS_DECODED_VALUES_ARRAY_POOL =
+      makeIntArrayPool(
+          "shapeshiftIntsDecodedValuesArrayPool",
+          INT_ARRAY_SIZE,
+          INT_DECODED_ARRAY_POOL_MAX_CACHE
+      );
+
+  private static final NonBlockingPool<int[]> SHAPESHIFT_INTS_ENCODED_VALUES_ARRAY_POOL =
+      makeIntArrayPool(
+          "shapeshiftIntsEncodedValuesArrayPool",
+          INT_ARRAY_SIZE + ENCODED_INTS_SHOULD_BE_ENOUGH,
+          INT_ENCODED_ARRAY_POOL_MAX_CACHE
+      );
+
+  private static final NonBlockingPool<int[]> SHAPESHIFT_SMALLER_INTS_DECODED_VALUES_ARRAY_POOL =
+      makeIntArrayPool(
+          "shapeshiftSmallerIntsDecodedValuesArrayPool",
+          SMALLER_INT_ARRAY_SIZE,
+          INT_DECODED_ARRAY_POOL_MAX_CACHE
+      );
+
+  private static final NonBlockingPool<int[]> SHAPESHIFT_SMALLER_INTS_ENCODED_VALUES_ARRAY_POOL =
+      makeIntArrayPool(
+          "shapeshiftSmallerIntsEncodedValuesArrayPool",
+          SMALLER_INT_ARRAY_SIZE + ENCODED_INTS_SHOULD_BE_ENOUGH,
+          INT_ENCODED_ARRAY_POOL_MAX_CACHE
+      );
+
+  private static final NonBlockingPool<int[]> SHAPESHIFT_SMALLEST_INTS_DECODED_VALUES_ARRAY_POOL =
+      makeIntArrayPool(
+          "shapeshiftSmallestIntsDecodedValuesArrayPool",
+          SMALLEST_INT_ARRAY_SIZE,
+          INT_DECODED_ARRAY_POOL_MAX_CACHE
+      );
+
+  private static final NonBlockingPool<int[]> SHAPESHIFT_SMALLEST_INTS_ENCODED_VALUES_ARRAY_POOL =
+      makeIntArrayPool(
+          "shapeshiftSmallestIntsEncodedValuesArrayPool",
+          SMALLEST_INT_ARRAY_SIZE + ENCODED_INTS_SHOULD_BE_ENOUGH,
+          INT_ENCODED_ARRAY_POOL_MAX_CACHE
+      );
+
+
+  private static final NonBlockingPool<SkippableIntegerCODEC> SHAPESHIFT_FAST_PFOR_CODEC_POOL =
+      makeFastpforPool(
+          "shapeshiftFastPforCodecPool",
+          INT_ARRAY_SIZE
+      );
+
 
   public static ResourceHolder<ByteBuffer> getByteBuf(ByteOrder order)
   {
-    if (order == ByteOrder.LITTLE_ENDIAN) {
-      return LITTLE_ENDIAN_BYTE_BUF_POOL.take();
+    if (order.equals(ByteOrder.LITTLE_ENDIAN)) {
+      return LITTLE_END_BYTE_BUF_POOL.take();
     }
-    return BIG_ENDIAN_BYTE_BUF_POOL.take();
+    return BIG_END_BYTE_BUF_POOL.take();
+  }
+
+  private static ResourceHolder<ByteBuffer> getSmallerByteBuf(ByteOrder order)
+  {
+    if (order.equals(ByteOrder.LITTLE_ENDIAN)) {
+      return LITTLER_END_BYTE_BUF_POOL.take();
+    }
+    return LITTLE_BIG_END_BYTE_BUF_POOL.take();
+  }
+
+  private static ResourceHolder<ByteBuffer> getSmallestByteBuf(ByteOrder order)
+  {
+    if (order.equals(ByteOrder.LITTLE_ENDIAN)) {
+      return LITTLEST_END_BYTE_BUF_POOL.take();
+    }
+    return LITTLEST_BIG_END_BYTE_BUF_POOL.take();
+  }
+
+  /**
+   * Get pooled decoded values buffer for {@link ShapeShiftingColumnarInts}
+   * @param logBytesPerChunk
+   * @param order
+   * @return
+   */
+  public static ResourceHolder<ByteBuffer> getShapeshiftDecodedValuesBuffer(int logBytesPerChunk, ByteOrder order)
+  {
+    switch (logBytesPerChunk) {
+      case 14:
+        return getSmallestByteBuf(order);
+      case 15:
+        return getSmallerByteBuf(order);
+      case 16:
+      default:
+        return getByteBuf(order);
+    }
+  }
+
+
+  /**
+   * Get pooled decoded values array for {@link ShapeShiftingColumnarInts}
+   * @param logValuesPerChunk
+   * @return
+   */
+  public static ResourceHolder<int[]> getShapeshiftIntsDecodedValuesArray(int logValuesPerChunk)
+  {
+    switch (logValuesPerChunk) {
+      case 12:
+        return SHAPESHIFT_SMALLEST_INTS_DECODED_VALUES_ARRAY_POOL.take();
+      case 13:
+        return SHAPESHIFT_SMALLER_INTS_DECODED_VALUES_ARRAY_POOL.take();
+      case 14:
+      default:
+        return SHAPESHIFT_INTS_DECODED_VALUES_ARRAY_POOL.take();
+    }
+  }
+
+  /**
+   * Get pooled encoded values array for {@link ShapeShiftingColumnarInts}
+   * @param logValuesPerChunk
+   * @return
+   */
+  public static ResourceHolder<int[]> getShapeshiftIntsEncodedValuesArray(int logValuesPerChunk)
+  {
+    switch (logValuesPerChunk) {
+      case 12:
+        return SHAPESHIFT_SMALLEST_INTS_ENCODED_VALUES_ARRAY_POOL.take();
+      case 13:
+        return SHAPESHIFT_SMALLER_INTS_ENCODED_VALUES_ARRAY_POOL.take();
+      case 14:
+      default:
+        return SHAPESHIFT_INTS_ENCODED_VALUES_ARRAY_POOL.take();
+    }
+  }
+
+  public static NonBlockingPool<SkippableIntegerCODEC> getShapeshiftFastPforPool(int logValuesPerChunk)
+  {
+    switch (logValuesPerChunk) {
+      case 12:
+      case 13:
+      case 14:
+      default:
+        return SHAPESHIFT_FAST_PFOR_CODEC_POOL;
+    }
+  }
+
+  public static NonBlockingPool<SkippableIntegerCODEC> getShapeshiftLemirePool(byte header, int logValuesPerChunk)
+  {
+    switch (header) {
+      case IntCodecs.FASTPFOR:
+      default:
+        return getShapeshiftFastPforPool(logValuesPerChunk);
+    }
   }
 }

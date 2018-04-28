@@ -86,4 +86,9 @@ public class FloatsColumn implements NumericColumn
   {
     inspector.visit("column", column);
   }
+
+  public ColumnarFloats getColumn()
+  {
+    return column;
+  }
 }

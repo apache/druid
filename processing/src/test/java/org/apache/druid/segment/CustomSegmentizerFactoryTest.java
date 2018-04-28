@@ -87,6 +87,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
             null,
             null,
             null,
+            null,
             null
         ),
         null
@@ -112,7 +113,8 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
             null,
             null,
             null,
-            new CustomSegmentizerFactory()
+            new CustomSegmentizerFactory(),
+            null
         ),
         null
     );

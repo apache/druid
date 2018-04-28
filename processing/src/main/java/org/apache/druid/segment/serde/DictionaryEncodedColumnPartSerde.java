@@ -42,6 +42,7 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
+import org.apache.druid.segment.data.ShapeShiftingColumnarIntsSupplier;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
@@ -59,7 +60,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   private static final int NO_FLAGS = 0;
   private static final int STARTING_FLAGS = Feature.NO_BITMAP_INDEX.getMask();
 
-  enum Feature
+  public enum Feature
   {
     MULTI_VALUE,
     MULTI_VALUE_V3,
@@ -76,12 +77,13 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     }
   }
 
-  enum VERSION
+  public enum VERSION
   {
     UNCOMPRESSED_SINGLE_VALUE,  // 0x0
     UNCOMPRESSED_MULTI_VALUE,   // 0x1
     COMPRESSED,                 // 0x2
-    UNCOMPRESSED_WITH_FLAGS;    // 0x3
+    UNCOMPRESSED_WITH_FLAGS,    // 0x3
+    SHAPESHIFT;                 // 0x4
 
     public static VERSION fromByte(byte b)
     {
@@ -196,7 +198,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public SerializerBuilder withValue(ColumnarIntsSerializer valueWriter, boolean hasMultiValue, boolean compressed)
+    public SerializerBuilder withValue(
+        ColumnarIntsSerializer valueWriter,
+        boolean hasMultiValue,
+        boolean compressed,
+        boolean shapeshift
+    )
     {
       this.valueWriter = valueWriter;
       if (hasMultiValue) {
@@ -208,7 +215,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           this.flags |= Feature.MULTI_VALUE.getMask();
         }
       } else {
-        if (compressed) {
+        if (shapeshift) {
+          this.version = VERSION.SHAPESHIFT;
+        } else if (compressed) {
           this.version = VERSION.COMPRESSED;
         } else {
           this.version = VERSION.UNCOMPRESSED_SINGLE_VALUE;
@@ -362,6 +371,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             return VSizeColumnarInts.readFromByteBuffer(buffer);
           case COMPRESSED:
             return CompressedVSizeColumnarIntsSupplier.fromByteBuffer(buffer, byteOrder);
+          case SHAPESHIFT:
+            return ShapeShiftingColumnarIntsSupplier.fromByteBuffer(buffer, byteOrder);
           default:
             throw new IAE("Unsupported single-value version[%s]", version);
         }

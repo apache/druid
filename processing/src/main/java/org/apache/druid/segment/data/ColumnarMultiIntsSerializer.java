@@ -24,7 +24,7 @@ import java.io.IOException;
 /**
  * Serializer that produces {@link ColumnarMultiInts}.
  */
-public abstract class ColumnarMultiIntsSerializer implements ColumnarIntsSerializer
+public interface ColumnarMultiIntsSerializer extends ColumnarIntsSerializer
 {
-  public abstract void addValues(IndexedInts ints) throws IOException;
+  void addValues(IndexedInts ints) throws IOException;
 }

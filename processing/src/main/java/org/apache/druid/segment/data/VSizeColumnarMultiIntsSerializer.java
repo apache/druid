@@ -34,7 +34,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Streams arrays of objects out in the binary format described by {@link VSizeColumnarMultiInts}.
  */
-public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerializer
+public class VSizeColumnarMultiIntsSerializer implements ColumnarMultiIntsSerializer
 {
   private static final byte VERSION = 0x1;
 
