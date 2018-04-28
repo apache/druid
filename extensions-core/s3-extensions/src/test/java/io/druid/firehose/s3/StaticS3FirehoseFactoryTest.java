@@ -108,7 +108,7 @@ public class StaticS3FirehoseFactoryTest
         100L,
         5
     );
-    final List<FiniteFirehoseFactory<StringInputRowParser, S3ObjectSummary>> subFactories = factory
+    final List<FiniteFirehoseFactory<StringInputRowParser, URI>> subFactories = factory
         .getSplits()
         .map(factory::withSplit)
         .sorted(Comparator.comparing(eachFactory -> {

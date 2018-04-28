@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<S3ObjectSummary>
+public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
   private static final int MAX_LISTING_LENGTH = 1024;
@@ -113,20 +113,12 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected Collection<S3ObjectSummary> initObjects() throws IOException
+  protected Collection<URI> initObjects() throws IOException
   {
     // Here, the returned s3 objects contain minimal information without data.
     // Getting data is deferred until openObjectStream() is called for each object.
     if (!uris.isEmpty()) {
-      return uris.stream()
-                 .map(
-                     uri -> {
-                       final String s3Bucket = uri.getAuthority();
-                       final String key = S3Utils.extractS3Key(uri);
-                       return S3Utils.getSingleObjectSummary(s3Client, s3Bucket, key);
-                     }
-                 )
-                 .collect(Collectors.toList());
+      return uris;
     } else {
       final List<S3ObjectSummary> objects = new ArrayList<>();
       for (URI uri : prefixes) {
@@ -172,18 +164,21 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
           }
         }
       }
-      return objects;
+      return objects.stream().map(StaticS3FirehoseFactory::toUri).collect(Collectors.toList());
     }
   }
 
   @Override
-  protected InputStream openObjectStream(S3ObjectSummary object) throws IOException
+  protected InputStream openObjectStream(URI object) throws IOException
   {
     try {
       // Get data of the given object and open an input stream
-      final S3Object s3Object = s3Client.getObject(object.getBucketName(), object.getKey());
+      final String bucket = object.getAuthority();
+      final String key = S3Utils.extractS3Key(object);
+
+      final S3Object s3Object = s3Client.getObject(bucket, key);
       if (s3Object == null) {
-        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", object.getBucketName(), object.getKey());
+        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, key);
       }
       return s3Object.getObjectContent();
     }
@@ -193,17 +188,20 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected InputStream openObjectStream(S3ObjectSummary object, long start) throws IOException
+  protected InputStream openObjectStream(URI object, long start) throws IOException
   {
-    final GetObjectRequest request = new GetObjectRequest(object.getBucketName(), object.getKey());
+    final String bucket = object.getAuthority();
+    final String key = S3Utils.extractS3Key(object);
+
+    final GetObjectRequest request = new GetObjectRequest(bucket, key);
     request.setRange(start);
     try {
       final S3Object s3Object = s3Client.getObject(request);
       if (s3Object == null) {
         throw new ISE(
             "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
-            object.getBucketName(),
-            object.getKey(),
+            bucket,
+            key,
             start
         );
       }
@@ -215,9 +213,9 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected InputStream wrapObjectStream(S3ObjectSummary object, InputStream stream) throws IOException
+  protected InputStream wrapObjectStream(URI object, InputStream stream) throws IOException
   {
-    return CompressionUtils.decompress(stream, object.getKey());
+    return CompressionUtils.decompress(stream, S3Utils.extractS3Key(object));
   }
 
   @Override
@@ -262,21 +260,11 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  public FiniteFirehoseFactory<StringInputRowParser, S3ObjectSummary> withSplit(InputSplit<S3ObjectSummary> split)
+  public FiniteFirehoseFactory<StringInputRowParser, URI> withSplit(InputSplit<URI> split)
   {
-    final String originalAuthority = split.get().getBucketName();
-    final String originalPath = split.get().getKey();
-    final String authority = originalAuthority.endsWith("/") ?
-                             originalAuthority.substring(0, originalAuthority.length() - 1) :
-                             originalAuthority;
-    final String path = originalPath.startsWith("/") ?
-                        originalPath.substring(1, originalPath.length()) :
-                        originalPath;
-
-    final URI splitUri = URI.create(StringUtils.format("s3://%s/%s", authority, path));
     return new StaticS3FirehoseFactory(
         s3Client,
-        Collections.singletonList(splitUri),
+        Collections.singletonList(split.get()),
         null,
         getMaxCacheCapacityBytes(),
         getMaxFetchCapacityBytes(),
@@ -284,5 +272,19 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
         getFetchTimeout(),
         getMaxFetchRetry()
     );
+  }
+
+  private static URI toUri(S3ObjectSummary object)
+  {
+    final String originalAuthority = object.getBucketName();
+    final String originalPath = object.getKey();
+    final String authority = originalAuthority.endsWith("/") ?
+                             originalAuthority.substring(0, originalAuthority.length() - 1) :
+                             originalAuthority;
+    final String path = originalPath.startsWith("/") ?
+                        originalPath.substring(1, originalPath.length()) :
+                        originalPath;
+
+    return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }
 }
