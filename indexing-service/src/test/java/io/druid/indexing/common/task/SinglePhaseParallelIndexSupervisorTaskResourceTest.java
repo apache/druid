@@ -33,6 +33,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SurrogateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.task.SinglePhaseParallelIndexSupervisorTask.Status;
 import io.druid.indexing.common.task.SinglePhaseParallelIndexSupervisorTask.SubTaskStateResponse;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
@@ -135,16 +136,16 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
     // test isRunningInParallel
     Response response = task.isRunningInParallel(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue((Boolean) response.getEntity());
+    Assert.assertEquals("parallel", response.getEntity());
 
     // test expectedNumSucceededTasks
-    response = task.getExpectedNumSucceededTasks(newRequest());
+    response = task.getStatus(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(NUM_SUB_TASKS, response.getEntity());
+    Assert.assertEquals(NUM_SUB_TASKS, ((Status) response.getEntity()).getExpectedSucceeded());
 
     // Since taskMonitor works based on polling, it's hard to use a fancier way to check its state.
     // We use polling to check the state of taskMonitor in this test.
-    while (getNumSubTasks(req -> task.getNumRunningTasks(req)) < NUM_SUB_TASKS) {
+    while (getNumSubTasks(Status::getRunning) < NUM_SUB_TASKS) {
       Thread.sleep(100);
     }
 
@@ -163,7 +164,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       runningTasks.get(0).setState(TaskState.SUCCESS);
     }
 
-    while (getNumSubTasks(req -> task.getNumSucceededTasks(req)) < succeededTasks) {
+    while (getNumSubTasks(Status::getSucceeded) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -180,7 +181,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       runningTasks.get(0).setState(TaskState.FAILED);
     }
 
-    while (getNumSubTasks(req -> task.getNumFailedTasks(req)) < failedTasks) {
+    while (getNumSubTasks(Status::getFailed) < failedTasks) {
       Thread.sleep(100);
     }
 
@@ -202,7 +203,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       runningTasks.get(0).setState(TaskState.SUCCESS);
     }
 
-    while (getNumSubTasks(req -> task.getNumSucceededTasks(req)) < succeededTasks) {
+    while (getNumSubTasks(Status::getSucceeded) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -222,7 +223,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
     // Test one more failure
     runningTasks.get(0).setState(TaskState.FAILED);
     failedTasks++;
-    while (getNumSubTasks(req -> task.getNumFailedTasks(req)) < failedTasks) {
+    while (getNumSubTasks(Status::getFailed) < failedTasks) {
       Thread.sleep(100);
     }
 
@@ -236,7 +237,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
 
     runningTasks.get(0).setState(TaskState.SUCCESS);
     succeededTasks++;
-    while (getNumSubTasks(req -> task.getNumSucceededTasks(req)) < succeededTasks) {
+    while (getNumSubTasks(Status::getSucceeded) < succeededTasks) {
       Thread.sleep(100);
     }
 
@@ -244,11 +245,11 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
   }
 
   @SuppressWarnings({"ConstantConditions"})
-  private int getNumSubTasks(Function<HttpServletRequest, Response> func)
+  private int getNumSubTasks(Function<Status, Integer> func)
   {
-    final Response response = func.apply(newRequest());
+    final Response response = task.getStatus(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    return (Integer) response.getEntity();
+    return func.apply((Status) response.getEntity());
   }
 
   private Map<String, SubTaskStateResponse> buildStateMap()
@@ -275,25 +276,24 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       Map<String, SubTaskStateResponse> expectedSubTaskStateResponses // subTaskSpecId -> response
   )
   {
-    // numRunningTasks
-    Response response = task.getNumRunningTasks(newRequest());
+    Response response = task.getStatus(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(runningTasks.size(), response.getEntity());
+    final Status monitorStatus = (Status) response.getEntity();
+
+    // numRunningTasks
+    Assert.assertEquals(runningTasks.size(), monitorStatus.getRunning());
 
     // numSucceededTasks
-    response = task.getNumSucceededTasks(newRequest());
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(expectedSucceededTasks, response.getEntity());
+    Assert.assertEquals(expectedSucceededTasks, monitorStatus.getSucceeded());
 
     // numFailedTasks
-    response = task.getNumFailedTasks(newRequest());
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(expectedFailedTask, response.getEntity());
+    Assert.assertEquals(expectedFailedTask, monitorStatus.getFailed());
 
     // numCompleteTasks
-    response = task.getNumCompleteTasks(newRequest());
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(expectedSucceededTasks + expectedFailedTask, response.getEntity());
+    Assert.assertEquals(expectedSucceededTasks + expectedFailedTask, monitorStatus.getComplete());
+
+    // numTotalTasks
+    Assert.assertEquals(runningTasks.size() + expectedSucceededTasks + expectedFailedTask, monitorStatus.getTotal());
 
     // runningSubTasks
     response = task.getRunningTasks(newRequest());

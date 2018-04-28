@@ -242,34 +242,36 @@ public class OverlordResource
     final Pair<DateTime, String> createdDateAndDataSource = taskStorageQueryAdapter.getCreatedDateAndDataSource(
         taskid
     );
-    final TaskStatusResponse response;
-    if (taskMaster.getTaskRunner().isPresent() &&
-        task != null &&
-        taskStatus != null &&
-        createdDateAndDataSource != null) {
-      final TaskRunner taskRunner = taskMaster.getTaskRunner().get();
-      final TaskRunnerWorkItem workItem = taskRunner
-          .getKnownTasks()
-          .stream()
-          .filter(item -> item.getTaskId().equals(taskid))
-          .findAny()
-          .orElse(null);
-      if (workItem != null) {
-        response = new TaskStatusResponse(
-            taskid,
-            new TaskStatusPlus(
-                taskid,
-                task.getType(),
-                createdDateAndDataSource.lhs,
-                workItem.getQueueInsertionTime(),
-                taskStatus.getStatusCode(),
-                taskStatus.getDuration(),
-                workItem.getLocation(),
-                createdDateAndDataSource.rhs,
-                null
-            )
-        );
-      } else {
+    TaskStatusResponse response = null;
+
+    if (task != null && taskStatus != null && createdDateAndDataSource != null) {
+      if (taskMaster.getTaskRunner().isPresent()) {
+        final TaskRunner taskRunner = taskMaster.getTaskRunner().get();
+        final TaskRunnerWorkItem workItem = taskRunner
+            .getKnownTasks()
+            .stream()
+            .filter(item -> item.getTaskId().equals(taskid))
+            .findAny()
+            .orElse(null);
+        if (workItem != null) {
+          response = new TaskStatusResponse(
+              taskid,
+              new TaskStatusPlus(
+                  taskid,
+                  task.getType(),
+                  createdDateAndDataSource.lhs,
+                  workItem.getQueueInsertionTime(),
+                  taskStatus.getStatusCode(),
+                  taskStatus.getDuration(),
+                  workItem.getLocation(),
+                  createdDateAndDataSource.rhs,
+                  null
+              )
+          );
+        }
+      }
+
+      if (response == null) {
         response = new TaskStatusResponse(
             taskid,
             new TaskStatusPlus(

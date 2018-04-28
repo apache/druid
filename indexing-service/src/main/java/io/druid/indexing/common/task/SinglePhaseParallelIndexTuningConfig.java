@@ -163,40 +163,23 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
     SinglePhaseParallelIndexTuningConfig that = (SinglePhaseParallelIndexTuningConfig) o;
-    return getMaxRowsInMemory() == that.getMaxRowsInMemory() &&
-           Objects.equals(getMaxTotalRows(), that.getMaxTotalRows()) &&
-           getMaxPendingPersists() == that.getMaxPendingPersists() &&
-           isForceExtendableShardSpecs() == that.isForceExtendableShardSpecs() &&
-           isReportParseExceptions() == that.isReportParseExceptions() &&
-           getPushTimeout() == that.getPushTimeout() &&
-           Objects.equals(getTargetPartitionSize(), that.getTargetPartitionSize()) &&
-           Objects.equals(getNumShards(), that.getNumShards()) &&
-           Objects.equals(getIndexSpec(), that.getIndexSpec()) &&
-           Objects.equals(getBasePersistDirectory(), that.getBasePersistDirectory()) &&
-           Objects.equals(getSegmentWriteOutMediumFactory(), that.getSegmentWriteOutMediumFactory()) &&
-           maxNumBatchTasks == that.maxNumBatchTasks &&
+    return maxNumBatchTasks == that.maxNumBatchTasks &&
            maxRetry == that.maxRetry &&
            taskStatusCheckPeriodMs == that.taskStatusCheckPeriodMs &&
-           chatHandlerTimeout.equals(that.chatHandlerTimeout) &&
-           chatHandlerNumRetries == that.chatHandlerNumRetries;
+           chatHandlerNumRetries == that.chatHandlerNumRetries &&
+           Objects.equals(chatHandlerTimeout, that.chatHandlerTimeout);
   }
 
   @Override
   public int hashCode()
   {
+
     return Objects.hash(
-        getTargetPartitionSize(),
-        getMaxRowsInMemory(),
-        getMaxTotalRows(),
-        getNumShards(),
-        getIndexSpec(),
-        getBasePersistDirectory(),
-        getMaxPendingPersists(),
-        isForceExtendableShardSpecs(),
-        isReportParseExceptions(),
-        getPushTimeout(),
-        getSegmentWriteOutMediumFactory(),
+        super.hashCode(),
         maxNumBatchTasks,
         maxRetry,
         taskStatusCheckPeriodMs,

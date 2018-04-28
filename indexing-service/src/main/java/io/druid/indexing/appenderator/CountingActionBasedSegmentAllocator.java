@@ -31,6 +31,9 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * Segment allocator based on {@link CountingSegmentAllocateAction}.
+ */
 public class CountingActionBasedSegmentAllocator implements SegmentAllocator
 {
   private final TaskActionClient taskActionClient;

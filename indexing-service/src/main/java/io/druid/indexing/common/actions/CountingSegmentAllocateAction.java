@@ -42,6 +42,11 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.SortedSet;
 
+/**
+ * This action is to find a proper {@link io.druid.timeline.partition.ShardSpec} based on counting. This keeps track of
+ * the next shard number per {@link Interval} in {@link Counters}. The next shard number is incremented by 1 whenever a
+ * new {@link SegmentIdentifier} is allocated.
+ */
 public class CountingSegmentAllocateAction implements TaskAction<SegmentIdentifier>
 {
   private final String dataSource;

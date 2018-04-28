@@ -3,7 +3,9 @@ layout: doc_page
 ---
 # Native Index Tasks
 
-Druid currently has two types of native index tasks, i.e., `local index task` and `single phase parallel index task`.
+Druid currently has two types of native batch indexing tasks, `index_single_phase_parallel` which runs tasks
+in parallel on multiple middle manager nodes, and `index` which will run a single indexing task locally on a single
+middle manager.
 
 Single Phase Parallel Index Task
 --------------------------------
@@ -18,8 +20,8 @@ If all worker tasks succeed, then it collects the reported list of generated seg
 
 To use this task, the `firehose` in `ioConfig` should be _splittable_. If it's not, this task runs sequentially. The
 current splittable fireshoses are [`LocalFirehose`](./firehose.html#localfirehose), [`HttpFirehose`](./firehose.html#httpfirehose)
-, [`StaticS3Firehose`](../development/extensions-core/statics3firehose), [`StaticAzureBlobStoreFirehose`](../development/extensions-contrib/staticazureblobstorefirehose)
-, [`StaticGoogleBlobStoreFirehose`](../development/extensions-contrib/staticgoogleblobstorefirehose), and [`StaticCloudFilesFirehose`](../development/extensions-contrib/staticcloudfilesfirehose).
+, [`StaticS3Firehose`](../development/extensions-core/s3.html#statics3firehose), [`StaticAzureBlobStoreFirehose`](../development/extensions-contrib/azure.html#staticazureblobstorefirehose)
+, [`StaticGoogleBlobStoreFirehose`](../development/extensions-contrib/google.html#staticgoogleblobstorefirehose), and [`StaticCloudFilesFirehose`](../development/extensions-contrib/cloudfiles.html#staticcloudfilesfirehose).
 
 The splittable firehose is responsible for generating _splits_. The supervisor task generates _worker task specs_ each of
 which specifies a split and submits worker tasks using those specs. As a result, the number of worker tasks depends on
@@ -149,53 +151,37 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 The supervisor task provides some HTTP endpoints to get running status.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/isRunningInParallel`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}//mode`
 
-Returns the indexing task is running in parallel. It returns false if the firehose in IOConfig is not splittable.
+Returns 'parallel' if the indexing task is running in parallel. Otherwise, it returns 'sequential'.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/numRunningTasks`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/status`
 
-Returns the number of running worker tasks or 0 if isRunningInParallel is false.
+Returns the current running status if the supervisor task is running in the parallel mode.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/numSucceededTasks`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtasks/running`
 
-Returns the number of succeeded worker tasks or 0 if isRunningInParallel is false.
+Returns the task IDs of running worker tasks, or an empty list if the supervisor task is running in the sequential mode.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/numFailedTasks`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspecs`
 
-Returns the number of failed worker tasks or 0 if isRunningInParallel is false.
+Returns all worker task specs, or an empty list if the supervisor task is running in the sequential mode.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/numCompleteTasks`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspecs/running`
 
-Returns the number of succeeded or failed worker tasks, or 0 if isRunningInParallel is false.
+Returns running worker task specs, or an empty list if the supervisor task is running in the sequential mode.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/expectedNumSucceededTasks`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspecs/complete`
 
-Returns the expected number of succeeded worker tasks to complete, or 0 if isRunningInParallel is false.
+Returns complete worker task specs, or an empty list if the supervisor task is running in the sequential mode.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/runningSubTasks`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspec/{SUB_TASK_SPEC_ID}`
 
-Returns the task IDs of running worker tasks, or an empty list if isRunningInParallel is false.
+Returns the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subTaskSpecs`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspec/{SUB_TASK_SPEC_ID}/state`
 
-Returns all worker task specs, or an empty list if isRunningInParallel is false.
-
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/runningSubTaskSpecs`
-
-Returns running worker task specs, or an empty list if isRunningInParallel is false.
-
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/completeSubTaskSpecs`
-
-Returns complete worker task specs, or an empty list if isRunningInParallel is false.
-
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subTaskSpec?id={SUB_TASK_SPEC_ID}`
-
-Returns the worker task spec of the given id, or HTTP 404 Not Found error if isRunningInParallel is false.
-
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subTaskState?id={SUB_TASK_SPEC_ID}`
-
-Returns the state of the worker task spec of the given id, or HTTP 404 Not Found error if isRunningInParallel is false.
+Returns the state of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 The returned result contains the worker task spec, a current task status if exists, and task attempt history.
 
 An example of the result is
@@ -365,9 +351,9 @@ An example of the result is
 }
 ```
 
-* `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/completeSubTaskSpecAttemptHistory?id={SUB_TASK_SPEC_ID}`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspec/{SUB_TASK_SPEC_ID}/history`
 
-Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if isRunningInParallel is false.
+Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
 Local Index Task
 ----------------

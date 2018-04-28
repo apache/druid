@@ -66,12 +66,11 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -279,11 +278,12 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
                     state = TaskState.SUCCESS;
                   } else {
                     // Failed
+                    final Status monitorStatus = taskMonitor.getStatus();
                     throw new ISE(
                         "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
-                        taskMonitor.getExpectedNumSucceededTasks(),
-                        taskMonitor.getNumSucceededTasks(),
-                        taskMonitor.getNumFailedTasks()
+                        monitorStatus.expectedSucceeded,
+                        monitorStatus.succeeded,
+                        monitorStatus.failed
                     );
                   }
                 }
@@ -376,9 +376,20 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   @VisibleForTesting
   void collectReport(PushedSegmentsReport report)
   {
-    if (segmentsMap.put(report.getTaskId(), report) != null) {
-      throw new ISE("Dupliate task report from task[%s]", report.getTaskId());
-    }
+    // subTasks might send their reports multiple times because of the HTTP retry.
+    // Here, we simply make sure the current report is exactly same with the previous one.
+    segmentsMap.compute(report.getTaskId(), (taskId, prevReport) -> {
+      if (prevReport != null) {
+        Preconditions.checkState(
+            prevReport.getSegments().equals(report.getSegments()),
+            "task[%s] sent two or more reports and previous report[%s] is different from the current one[%s]",
+            taskId,
+            prevReport,
+            report
+        );
+      }
+      return report;
+    });
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(SinglePhaseParallelIndexTuningConfig tuningConfig)
@@ -511,66 +522,25 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   // External APIs to get running status
 
   @GET
-  @Path("isRunningInParallel")
+  @Path("/mode")
   @Produces(MediaType.APPLICATION_JSON)
   public Response isRunningInParallel(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    return Response.ok(baseFirehoseFactory.isSplittable()).build();
+    return Response.ok(baseFirehoseFactory.isSplittable() ? "parallel" : "sequential").build();
   }
 
   @GET
-  @Path("/numRunningTasks")
+  @Path("/status")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getNumRunningTasks(@Context final HttpServletRequest req)
+  public Response getStatus(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final int numRunningTasks = taskMonitor == null ? 0 : taskMonitor.getNumRunningTasks();
-    return Response.ok(numRunningTasks).build();
+    return Response.ok(taskMonitor == null ? Status.empty() : taskMonitor.getStatus()).build();
   }
 
   @GET
-  @Path("/numSucceededTasks")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getNumSucceededTasks(@Context final HttpServletRequest req)
-  {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final int numSucceededTasks = taskMonitor == null ? 0 : taskMonitor.getNumSucceededTasks();
-    return Response.ok(numSucceededTasks).build();
-  }
-
-  @GET
-  @Path("/numFailedTasks")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getNumFailedTasks(@Context final HttpServletRequest req)
-  {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final int numFailedTasks = taskMonitor == null ? 0 : taskMonitor.getNumFailedTasks();
-    return Response.ok(numFailedTasks).build();
-  }
-
-  @GET
-  @Path("/numCompleteTasks")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getNumCompleteTasks(@Context final HttpServletRequest req)
-  {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final int numCompleteTasks = taskMonitor == null ? 0 : taskMonitor.getNumCompleteTasks();
-    return Response.ok(numCompleteTasks).build();
-  }
-
-  @GET
-  @Path("/expectedNumSucceededTasks")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getExpectedNumSucceededTasks(@Context final HttpServletRequest req)
-  {
-    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final int expectedNumSucceededTasks = taskMonitor == null ? 0 : taskMonitor.getExpectedNumSucceededTasks();
-    return Response.ok(expectedNumSucceededTasks).build();
-  }
-
-  @GET
-  @Path("/runningSubTasks")
+  @Path("/subtasks/running")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningTasks(@Context final HttpServletRequest req)
   {
@@ -580,7 +550,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   @GET
-  @Path("/subTaskSpecs")
+  @Path("/subtaskspecs")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSubTaskSpecs(@Context final HttpServletRequest req)
   {
@@ -603,7 +573,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   @GET
-  @Path("/runningSubTaskSpecs")
+  @Path("/subtaskspecs/running")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRunningSubTaskSpecs(@Context final HttpServletRequest req)
   {
@@ -615,7 +585,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   @GET
-  @Path("/completeSubTaskSpecs")
+  @Path("/subtaskspecs/complete")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteSubTaskSpecs(@Context final HttpServletRequest req)
   {
@@ -628,9 +598,9 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   @GET
-  @Path("/subTaskSpec")
+  @Path("/subtaskspec/{id}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getSubTaskSpec(@QueryParam("id") String id, @Context final HttpServletRequest req)
+  public Response getSubTaskSpec(@PathParam("id") String id, @Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     if (taskMonitor != null) {
@@ -651,23 +621,23 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       }
 
       if (subTaskSpec == null) {
-        return Response.status(Status.NOT_FOUND).build();
+        return Response.status(Response.Status.NOT_FOUND).build();
       } else {
         return Response.ok(subTaskSpec).build();
       }
     } else {
-      return Response.status(Status.NOT_FOUND).build();
+      return Response.status(Response.Status.NOT_FOUND).build();
     }
   }
 
   @GET
-  @Path("/subTaskState")
+  @Path("/subtaskspec/{id}/state")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getSubTaskState(@QueryParam("id") String id, @Context final HttpServletRequest req)
+  public Response getSubTaskState(@PathParam("id") String id, @Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     if (taskMonitor == null) {
-      return Response.status(Status.NOT_FOUND).build();
+      return Response.status(Response.Status.NOT_FOUND).build();
     } else {
       // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
       // adding them to taskHistory.
@@ -695,7 +665,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       }
 
       if (subTaskStateResponse == null) {
-        return Response.status(Status.NOT_FOUND).build();
+        return Response.status(Response.Status.NOT_FOUND).build();
       } else {
         return Response.ok(subTaskStateResponse).build();
       }
@@ -703,24 +673,93 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   @GET
-  @Path("/completeSubTaskSpecAttemptHistory")
+  @Path("/subtaskspec/{id}/history")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompleteSubTaskSpecAttemptHistory(
-      @QueryParam("id") String id,
+      @PathParam("id") String id,
       @Context final HttpServletRequest req
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     if (taskMonitor == null) {
-      return Response.status(Status.NOT_FOUND).build();
+      return Response.status(Response.Status.NOT_FOUND).build();
     } else {
       final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
 
       if (taskHistory == null) {
-        return Response.status(Status.NOT_FOUND).build();
+        return Response.status(Response.Status.NOT_FOUND).build();
       } else {
         return Response.ok(taskHistory.getAttemptHistory()).build();
       }
+    }
+  }
+
+  static class Status
+  {
+    private final int running;
+    private final int succeeded;
+    private final int failed;
+    private final int complete;
+    private final int total;
+    private final int expectedSucceeded;
+
+    static Status empty()
+    {
+      return new Status(0, 0, 0, 0, 0, 0);
+    }
+
+    @JsonCreator
+    Status(
+        @JsonProperty("running") int running,
+        @JsonProperty("succeeded") int succeeded,
+        @JsonProperty("failed") int failed,
+        @JsonProperty("complete") int complete,
+        @JsonProperty("total") int total,
+        @JsonProperty("expectedSucceeded") int expectedSucceeded
+    )
+    {
+      this.running = running;
+      this.succeeded = succeeded;
+      this.failed = failed;
+      this.complete = complete;
+      this.total = total;
+      this.expectedSucceeded = expectedSucceeded;
+    }
+
+    @JsonProperty
+    public int getRunning()
+    {
+      return running;
+    }
+
+    @JsonProperty
+    public int getSucceeded()
+    {
+      return succeeded;
+    }
+
+    @JsonProperty
+    public int getFailed()
+    {
+      return failed;
+    }
+
+    @JsonProperty
+    public int getComplete()
+    {
+      return complete;
+    }
+
+    @JsonProperty
+    public int getTotal()
+    {
+      return total;
+    }
+
+    @JsonProperty
+    public int getExpectedSucceeded()
+    {
+      return expectedSucceeded;
     }
   }
 

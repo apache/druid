@@ -25,6 +25,9 @@ import com.google.common.base.Optional;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;
 
+/**
+ * Perform the given action using {@link #surrogateId} on behalf of the caller task.
+ */
 public class SurrogateAction<R, T extends TaskAction<R>> implements TaskAction<R>
 {
   private final String surrogateId;
