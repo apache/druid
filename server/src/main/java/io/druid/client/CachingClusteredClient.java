@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -611,7 +612,24 @@ public class CachingClusteredClient implements QuerySegmentWalker
                 .map(r -> {
                   if (cachePopulator != null) {
                     // only compute cache data if populating cache
-                    cachePopulator.cacheFutures.add(backgroundExecutorService.submit(() -> cacheFn.apply(r)));
+                    final SettableFuture<Object> future = SettableFuture.create();
+                    cachePopulator.cacheFutures.add(future);
+                    backgroundExecutorService.submit(
+                        new Runnable()
+                        {
+                          @Override
+                          public void run()
+                          {
+                            try {
+                              future.set(cacheFn.apply(r));
+                            }
+                            catch (Exception e) {
+                              // if there is exception, should setException to quit the caching processing
+                              future.setException(e);
+                            }
+                          }
+                        }
+                    );
                   }
                   return r;
                 })
