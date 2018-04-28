@@ -26,7 +26,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
+import io.druid.collections.Releaser;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
@@ -84,7 +85,7 @@ public class ParallelCombiner<KeyType>
   // details.
   private static final int MINIMUM_LEAF_COMBINE_DEGREE = 2;
 
-  private final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier;
+  private final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder;
   private final AggregatorFactory[] combiningFactories;
   private final KeySerdeFactory<KeyType> combineKeySerdeFactory;
   private final ListeningExecutorService executor;
@@ -98,7 +99,7 @@ public class ParallelCombiner<KeyType>
   private final int intermediateCombineDegree;
 
   public ParallelCombiner(
-      Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
+      ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       AggregatorFactory[] combiningFactories,
       KeySerdeFactory<KeyType> combineKeySerdeFactory,
       ListeningExecutorService executor,
@@ -109,7 +110,7 @@ public class ParallelCombiner<KeyType>
       int intermediateCombineDegree
   )
   {
-    this.combineBufferSupplier = combineBufferSupplier;
+    this.combineBufferHolder = combineBufferHolder;
     this.combiningFactories = combiningFactories;
     this.combineKeySerdeFactory = combineKeySerdeFactory;
     this.executor = executor;
@@ -137,9 +138,6 @@ public class ParallelCombiner<KeyType>
   {
     // CombineBuffer is initialized when this method is called and closed after the result iterator is done
     final Closer closer = Closer.create();
-    final ResourceHolder<ByteBuffer> combineBufferHolder = combineBufferSupplier.get();
-    closer.register(combineBufferHolder);
-
     try {
       final ByteBuffer combineBuffer = combineBufferHolder.get();
       final int minimumRequiredBufferCapacity = StreamingMergeSortedGrouper.requiredBufferCapacity(
@@ -172,6 +170,7 @@ public class ParallelCombiner<KeyType>
 
       final CloseableIterator<Entry<KeyType>> combineIterator = Iterables.getOnlyElement(combineIteratorAndFutures.lhs);
       final List<Future> combineFutures = combineIteratorAndFutures.rhs;
+
       closer.register(() -> checkCombineFutures(combineFutures));
 
       return CloseableIterators.wrap(combineIterator, closer);
@@ -278,7 +277,7 @@ public class ParallelCombiner<KeyType>
    *
    * @return minimum number of buffers required for combining tree
    *
-   * @see #buildCombineTree(List, Supplier, AggregatorFactory[], int, List)
+   * @see #buildCombineTree
    */
   private int computeRequiredBufferNum(int numChildNodes, int combineDegree)
   {
@@ -405,7 +404,10 @@ public class ParallelCombiner<KeyType>
                 CloseableIterator<Entry<KeyType>> mergedIterator = CloseableIterators.mergeSorted(
                     iterators,
                     keyObjComparator
-                )
+                );
+                // This variable is used to close releaser automatically.
+                @SuppressWarnings("unused")
+                final Releaser releaser = combineBufferHolder.increment()
             ) {
               while (mergedIterator.hasNext()) {
                 final Entry<KeyType> next = mergedIterator.next();
