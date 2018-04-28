@@ -110,19 +110,10 @@ public class S3DataSegmentFinder implements DataSegmentFinder
                 }
               }
 
-              timestampedSegments.merge(
-                  dataSegment.getIdentifier(),
-                  Pair.of(
-                      dataSegment,
-                      objectMetadata.getLastModified() == null ? 0 : objectMetadata.getLastModified().getTime()
-                  ),
-                  (previous, current) -> {
-                    log.warn(
-                        "Multiple copies of segmentId [%s] found, using newest version",
-                        current.lhs.getIdentifier()
-                    );
-                    return previous.rhs > current.rhs ? previous : current;
-                  }
+              DataSegmentFinder.putInMapRetainingNewest(
+                  timestampedSegments,
+                  dataSegment,
+                  objectMetadata.getLastModified() == null ? 0 : objectMetadata.getLastModified().getTime()
               );
             }
           } else {

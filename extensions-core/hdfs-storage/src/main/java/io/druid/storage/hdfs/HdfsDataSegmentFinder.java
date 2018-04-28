@@ -44,7 +44,6 @@ import java.util.stream.Collectors;
  */
 public class HdfsDataSegmentFinder implements DataSegmentFinder
 {
-
   private static final Logger log = new Logger(HdfsDataSegmentFinder.class);
 
   private final Configuration config;
@@ -125,16 +124,10 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
               }
             }
 
-            timestampedSegments.merge(
-                dataSegment.getIdentifier(),
-                Pair.of(dataSegment, locatedFileStatus.getModificationTime()),
-                (previous, current) -> {
-                  log.warn(
-                      "Multiple copies of segmentId [%s] found, using newest version",
-                      current.lhs.getIdentifier()
-                  );
-                  return previous.rhs > current.rhs ? previous : current;
-                }
+            DataSegmentFinder.putInMapRetainingNewest(
+                timestampedSegments,
+                dataSegment,
+                locatedFileStatus.getModificationTime()
             );
           } else {
             throw new SegmentLoadingException(

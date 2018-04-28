@@ -356,6 +356,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
                                                                            .map(SegmentIdentifier::fromDataSegment)
                                                                            .collect(Collectors.toSet());
           if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
+            log.warn(
+                "Removing segments from deep storage because sanity check failed: %s", segmentsAndMetadata.getSegments()
+            );
+
+            segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+
             throw new ISE(
                 "WTF?! Pushed different segments than requested. Pushed[%s], requested[%s].",
                 pushedSegments,

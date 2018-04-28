@@ -90,17 +90,7 @@ public class LocalDataSegmentFinder implements DataSegmentFinder
               }
             }
 
-            timestampedSegments.merge(
-                dataSegment.getIdentifier(),
-                Pair.of(dataSegment, indexZip.lastModified()),
-                (previous, current) -> {
-                  log.warn(
-                      "Multiple copies of segmentId [%s] found, using newest version",
-                      current.lhs.getIdentifier()
-                  );
-                  return previous.rhs > current.rhs ? previous : current;
-                }
-            );
+            DataSegmentFinder.putInMapRetainingNewest(timestampedSegments, dataSegment, indexZip.lastModified());
           }
           catch (IOException e) {
             throw new SegmentLoadingException(

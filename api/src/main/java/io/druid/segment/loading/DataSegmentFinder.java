@@ -20,8 +20,11 @@
 package io.druid.segment.loading;
 
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -31,6 +34,8 @@ import java.util.Set;
 @ExtensionPoint
 public interface DataSegmentFinder
 {
+  Logger log = new Logger(DataSegmentFinder.class);
+
   /**
    * This method should first recursively look for descriptor.json (partitionNum_descriptor.json for HDFS data storage) underneath
    * workingDirPath and then verify that index.zip (partitionNum_index.zip for HDFS data storage) exists in the same folder.
@@ -46,4 +51,26 @@ public interface DataSegmentFinder
    * @return a set of segments that were found underneath workingDirPath
    */
   Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor) throws SegmentLoadingException;
+
+  /**
+   * Adds dataSegment if it does not exist in timestampedSegments. If it exists, replaces entry if segmentModifiedAt is
+   * newer than stored timestamp.
+   *
+   * @param timestampedSegments map of <segmentID, Pair<segment, modifiedAt>> containing segments with modified time
+   * @param dataSegment         segment to add
+   * @param segmentModifiedAt   segment modified timestamp
+   */
+  static void putInMapRetainingNewest(
+      Map<String, Pair<DataSegment, Long>> timestampedSegments, DataSegment dataSegment, long segmentModifiedAt
+  )
+  {
+    timestampedSegments.merge(
+        dataSegment.getIdentifier(),
+        Pair.of(dataSegment, segmentModifiedAt),
+        (previous, current) -> {
+          log.warn("Multiple copies of segmentId [%s] found, using newest version", current.lhs.getIdentifier());
+          return previous.rhs > current.rhs ? previous : current;
+        }
+    );
+  }
 }
