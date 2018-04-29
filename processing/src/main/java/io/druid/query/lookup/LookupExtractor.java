@@ -74,7 +74,7 @@ public abstract class LookupExtractor
    *              Null and empty are considered to be the same value = nullToEmpty(value)
    *
    * @return the list of keys that maps to value or empty list.
-   * Note that for the case of a none existing value in the lookup we have to cases either return an empty list OR list with null element.
+   * Note that for the case of a none existing value in the lookup we have two cases either return an empty list OR list with null element.
    * returning an empty list implies that user want to ignore such a lookup value.
    * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
    */

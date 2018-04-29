@@ -20,6 +20,7 @@
 package io.druid.query.extraction;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,17 +34,22 @@ public class MapLookupExtractorTest
 {
   private final Map lookupMap = ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "", "empty_string");
   private final MapLookupExtractor fn = new MapLookupExtractor(lookupMap, false);
+  private final MapLookupExtractor fnOneToOne = new MapLookupExtractor(lookupMap, true);
 
   @Test
   public void testUnApply()
   {
-    Assert.assertEquals(Arrays.asList("foo"), fn.unapply("bar"));
-    Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(fn.unapply("")));
-    Assert.assertEquals("Null value should be equal to empty string",
-                        Sets.newHashSet("null", "empty String"),
-                        Sets.newHashSet(fn.unapply((String) null)));
-    Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(fn.unapply("empty_string")));
-    Assert.assertEquals("not existing value returns empty list", Collections.EMPTY_LIST, fn.unapply("not There"));
+    for (MapLookupExtractor fn : Lists.newArrayList(fn, fnOneToOne)) {
+      Assert.assertEquals(Arrays.asList("foo"), fn.unapply("bar"));
+      Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(fn.unapply("")));
+      Assert.assertEquals(
+          "Null value should be equal to empty string",
+          Sets.newHashSet("null", "empty String"),
+          Sets.newHashSet(fn.unapply((String) null))
+      );
+      Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(fn.unapply("empty_string")));
+      Assert.assertEquals("not existing value returns empty list", Collections.EMPTY_LIST, fn.unapply("not There"));
+    }
   }
 
   @Test
