@@ -155,7 +155,7 @@ a `pollPeriod` at the end of which time they poll the remote resource of interes
 `onHeap` uses `ConcurrentMap`s in the java heap, and thus affects garbage collection and heap sizing.
 `offHeap` uses an on-heap buffer and MapDB using memory-mapped files in the java temporary directory.
 So if total number of entries in the `cachedNamespace` is in excess of the buffer's configured capacity, the extra will be kept in memory as page cache, and paged in and out by general OS tunings.
-It's highly recommended that `druid.lookup.namespace.numBufferedEntries` is set when using `offHeap`, the value will depend on heap size and the average size of entries to be included in the lookup.
+It's highly recommended that `druid.lookup.namespace.numBufferedEntries` is set when using `offHeap`, the value should be chosen from the range between 10% and 50% of the number of entries in the lookup.
 
 
 # Supported Lookups
