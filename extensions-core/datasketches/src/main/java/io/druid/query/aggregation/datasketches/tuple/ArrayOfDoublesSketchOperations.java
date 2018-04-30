@@ -43,6 +43,7 @@ public class ArrayOfDoublesSketchOperations
   public enum Operation
   {
     UNION {
+      @Override
       public ArrayOfDoublesSketch apply(final int nominalEntries, final int numberOfValues, final ArrayOfDoublesSketch[] sketches)
       {
         final ArrayOfDoublesUnion union = new ArrayOfDoublesSetOperationBuilder().setNominalEntries(nominalEntries)
@@ -54,6 +55,7 @@ public class ArrayOfDoublesSketchOperations
       }
     },
     INTERSECT {
+      @Override
       public ArrayOfDoublesSketch apply(final int nominalEntries, final int numberOfValues, final ArrayOfDoublesSketch[] sketches)
       {
         final ArrayOfDoublesIntersection intersection = new ArrayOfDoublesSetOperationBuilder()
@@ -65,6 +67,7 @@ public class ArrayOfDoublesSketchOperations
       }
     },
     NOT {
+      @Override
       public ArrayOfDoublesSketch apply(final int nominalEntries, final int numberOfValues, final ArrayOfDoublesSketch[] sketches)
       {
         if (sketches.length < 1) {
