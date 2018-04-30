@@ -17,15 +17,12 @@
  * under the License.
  */
 
-
 package io.druid.segment.data;
 
 import io.druid.io.Channels;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.IndexIO;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -87,19 +84,17 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
   }
 
   @Override
-  protected void addValues(IntList vals) throws IOException
+  public void addValues(IndexedInts ints) throws IOException
   {
     if (lastOffsetWritten) {
       throw new IllegalStateException("written out already");
     }
-    if (vals == null) {
-      vals = IntLists.EMPTY_LIST;
+    offsetWriter.addValue(offset);
+    int numValues = ints.size();
+    for (int i = 0; i < numValues; i++) {
+      valueWriter.addValue(ints.get(i));
     }
-    offsetWriter.add(offset);
-    for (int i = 0; i < vals.size(); i++) {
-      valueWriter.add(vals.getInt(i));
-    }
-    offset += vals.size();
+    offset += numValues;
   }
 
   @Override
@@ -121,7 +116,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
   private void writeLastOffset() throws IOException
   {
     if (!lastOffsetWritten) {
-      offsetWriter.add(offset);
+      offsetWriter.addValue(offset);
       lastOffsetWritten = true;
     }
   }

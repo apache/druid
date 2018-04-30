@@ -27,6 +27,8 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
  */
 public final class ArrayBasedIndexedInts implements IndexedInts
 {
+  static final IndexedInts EMPTY = new ArrayBasedIndexedInts();
+
   private int[] expansion;
   private int size;
 

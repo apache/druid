@@ -35,8 +35,6 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-import java.nio.ShortBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 
@@ -255,48 +253,30 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
   private class CompressedFullSizeColumnarInts extends CompressedVSizeColumnarInts
   {
-    IntBuffer intBuffer;
-
     @Override
-    protected void loadBuffer(int bufferNum)
+    protected int _get(ByteBuffer buffer, boolean bigEngian, int bufferIndex)
     {
-      super.loadBuffer(bufferNum);
-      intBuffer = buffer.asIntBuffer();
-    }
-
-    @Override
-    protected int _get(int index)
-    {
-      return intBuffer.get(index);
+      return buffer.getInt(bufferIndex * Integer.BYTES);
     }
   }
 
   private class CompressedShortSizeColumnarInts extends CompressedVSizeColumnarInts
   {
-    ShortBuffer shortBuffer;
-
     @Override
-    protected void loadBuffer(int bufferNum)
-    {
-      super.loadBuffer(bufferNum);
-      shortBuffer = buffer.asShortBuffer();
-    }
-
-    @Override
-    protected int _get(int index)
+    protected int _get(ByteBuffer buffer, boolean bigEngian, int bufferIndex)
     {
       // removes the need for padding
-      return shortBuffer.get(index) & 0xFFFF;
+      return buffer.getShort(bufferIndex * Short.BYTES) & 0xFFFF;
     }
   }
 
   private class CompressedByteSizeColumnarInts extends CompressedVSizeColumnarInts
   {
     @Override
-    protected int _get(int index)
+    protected int _get(ByteBuffer buffer, boolean bigEngian, int bufferIndex)
     {
       // removes the need for padding
-      return buffer.get(index) & 0xFF;
+      return buffer.get(bufferIndex) & 0xFF;
     }
   }
 
@@ -333,24 +313,25 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     {
       // assumes the number of entries in each buffer is a power of 2
       final int bufferNum = index >> div;
+      final int bufferIndex = index & rem;
 
       if (bufferNum != currBufferNum) {
         loadBuffer(bufferNum);
       }
 
-      return _get(index & rem);
+      return _get(buffer, bigEndian, bufferIndex);
     }
 
     /**
-     * Returns the value at the given index in the current decompression buffer
+     * Returns the value at the given bufferIndex in the current decompression buffer
      *
-     * @param index index of the value in the current buffer
+     * @param bufferIndex index of the value in the current buffer
      *
-     * @return the value at the given index
+     * @return the value at the given bufferIndex
      */
-    protected int _get(final int index)
+    int _get(ByteBuffer buffer, boolean bigEndian, final int bufferIndex)
     {
-      final int pos = index * numBytes;
+      final int pos = bufferIndex * numBytes;
       // example for numBytes = 3
       // big-endian:    0x000c0b0a stored 0c 0b 0a XX, read 0x0c0b0aXX >>> 8
       // little-endian: 0x000c0b0a stored 0a 0b 0c XX, read 0xXX0c0b0a & 0x00FFFFFF
@@ -382,7 +363,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     @Override
     public String toString()
     {
-      return "CompressedVSizedIntsIndexedSupplier{" +
+      return "CompressedVSizeColumnarInts{" +
              "currBufferNum=" + currBufferNum +
              ", sizePer=" + sizePer +
              ", numChunks=" + singleThreadedBuffers.size() +

@@ -41,8 +41,8 @@ public class TimeAndDimsKeySizeTest
         .setMaxBytesInMemory(1000)
         .buildOnheap();
     long time = System.currentTimeMillis();
-    IncrementalIndex.TimeAndDimsResult tndResult = index.toTimeAndDims(toMapRow(time, "billy", "A", "joe", "B"));
-    IncrementalIndex.TimeAndDims td1 = tndResult.getTimeAndDims();
+    IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B"));
+    IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
     Assert.assertEquals(44, td1.estimateBytesInMemory());
   }
 
@@ -55,14 +55,14 @@ public class TimeAndDimsKeySizeTest
         .setMaxBytesInMemory(1000)
         .buildOnheap();
     long time = System.currentTimeMillis();
-    IncrementalIndex.TimeAndDimsResult tndResult = index.toTimeAndDims(toMapRow(
+    IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
         "billy",
         "A",
         "joe",
         Arrays.asList("A", "B")
     ));
-    IncrementalIndex.TimeAndDims td1 = tndResult.getTimeAndDims();
+    IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
     Assert.assertEquals(50, td1.estimateBytesInMemory());
   }
 
@@ -75,14 +75,14 @@ public class TimeAndDimsKeySizeTest
         .setMaxBytesInMemory(1000)
         .buildOnheap();
     long time = System.currentTimeMillis();
-    IncrementalIndex.TimeAndDimsResult tndResult = index.toTimeAndDims(toMapRow(
+    IncrementalIndex.IncrementalIndexRowResult tndResult = index.toIncrementalIndexRow(toMapRow(
         time + 1,
         "billy",
         "nelson",
         "joe",
         Arrays.asList("123", "abcdef")
     ));
-    IncrementalIndex.TimeAndDims td1 = tndResult.getTimeAndDims();
+    IncrementalIndexRow td1 = tndResult.getIncrementalIndexRow();
     Assert.assertEquals(74, td1.estimateBytesInMemory());
   }
 

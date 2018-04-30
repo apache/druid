@@ -19,6 +19,7 @@
 
 package io.druid.query.groupby.resource;
 
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.ResourceHolder;
 import io.druid.java.util.common.logger.Logger;
 
@@ -36,19 +37,20 @@ public class GroupByQueryResource implements Closeable
 {
   private static final Logger log = new Logger(GroupByQueryResource.class);
 
-  private final ResourceHolder<List<ByteBuffer>> mergeBuffersHolder;
+  private final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
   private final Deque<ByteBuffer> mergeBuffers;
 
   public GroupByQueryResource()
   {
-    this.mergeBuffersHolder = null;
+    this.mergeBufferHolders = null;
     this.mergeBuffers = new ArrayDeque<>();
   }
 
-  public GroupByQueryResource(ResourceHolder<List<ByteBuffer>> mergeBuffersHolder)
+  public GroupByQueryResource(List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders)
   {
-    this.mergeBuffersHolder = mergeBuffersHolder;
-    this.mergeBuffers = new ArrayDeque<>(mergeBuffersHolder.get());
+    this.mergeBufferHolders = mergeBufferHolders;
+    this.mergeBuffers = new ArrayDeque<>(mergeBufferHolders.size());
+    mergeBufferHolders.forEach(holder -> mergeBuffers.add(holder.get()));
   }
 
   /**
@@ -81,11 +83,11 @@ public class GroupByQueryResource implements Closeable
   @Override
   public void close()
   {
-    if (mergeBuffersHolder != null) {
-      if (mergeBuffers.size() != mergeBuffersHolder.get().size()) {
-        log.warn("%d resources are not returned yet", mergeBuffersHolder.get().size() - mergeBuffers.size());
+    if (mergeBufferHolders != null) {
+      if (mergeBuffers.size() != mergeBufferHolders.size()) {
+        log.warn("%d resources are not returned yet", mergeBufferHolders.size() - mergeBuffers.size());
       }
-      mergeBuffersHolder.close();
+      mergeBufferHolders.forEach(ReferenceCountingResourceHolder::close);
     }
   }
 }

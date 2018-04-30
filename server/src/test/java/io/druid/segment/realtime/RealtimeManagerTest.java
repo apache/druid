@@ -475,20 +475,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -521,6 +508,24 @@ public class RealtimeManagerTest
 
   }
 
+  private void awaitStarted() throws InterruptedException
+  {
+    while (true) {
+      boolean notAllStarted = realtimeManager3
+          .getFireChiefs("testing").values().stream()
+          .anyMatch(
+              fireChief -> {
+                final Plumber plumber = fireChief.getPlumber();
+                return plumber == null || !((TestPlumber) plumber).isStartedJob();
+              }
+          );
+      if (!notAllStarted) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+  }
+
   @Test(timeout = 10_000L)
   public void testQueryWithSegmentSpec() throws InterruptedException
   {
@@ -548,20 +553,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -660,20 +652,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     final Interval interval_26_28 = Intervals.of("2011-03-26T00:00:00.000Z/2011-03-28T00:00:00.000Z");
     final Interval interval_28_29 = Intervals.of("2011-03-28T00:00:00.000Z/2011-03-29T00:00:00.000Z");

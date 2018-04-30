@@ -146,7 +146,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       InputRow row,
       AtomicInteger numEntries,
       AtomicLong sizeInBytes, // ignored, added to make abstract class method impl happy
-      TimeAndDims key,
+      IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
       boolean skipMaxRowsInMemoryCheck // ignored, we always want to check this for offheap
@@ -158,7 +158,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     synchronized (this) {
       final int priorIndex = facts.getPriorIndex(key);
-      if (TimeAndDims.EMPTY_ROW_INDEX != priorIndex) {
+      if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
         final int[] indexAndOffset = indexAndOffsets.get(priorIndex);
         bufferIndex = indexAndOffset[0];
         bufferOffset = indexAndOffset[1];
@@ -202,7 +202,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
+        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
           throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
         }
 
@@ -212,7 +212,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         // concurrent readers get hold of it and might ask for newly added row
         indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
         final int prev = facts.putIfAbsent(key, rowIndex);
-        if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
+        if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
         } else {
           throw new ISE("WTF! we are in sychronized block.");

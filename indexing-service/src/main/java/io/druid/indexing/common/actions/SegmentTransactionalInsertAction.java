@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.CriticalAction;
 import io.druid.indexing.overlord.DataSourceMetadata;
@@ -126,9 +127,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
     if (retVal.isSuccess()) {
       // Emit metrics
-      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-          .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-          .setDimension(DruidMetrics.TASK_TYPE, task.getType());
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
       if (retVal.isSuccess()) {
         toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));

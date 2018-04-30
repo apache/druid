@@ -35,6 +35,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
@@ -89,11 +90,12 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       UsedSegmentChecker usedSegmentChecker,
+      DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
       FireDepartmentMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker);
+    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
@@ -270,7 +272,9 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         .collect(Collectors.toList());
 
     final ListenableFuture<SegmentsAndMetadata> publishFuture = ListenableFutures.transformAsync(
-        pushInBackground(wrapCommitter(committer), theSegments),
+        // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
+        // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
+        pushInBackground(wrapCommitter(committer), theSegments, true),
         sam -> publishInBackground(
             sam,
             publisher

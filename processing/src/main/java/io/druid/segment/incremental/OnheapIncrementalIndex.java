@@ -149,7 +149,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       InputRow row,
       AtomicInteger numEntries,
       AtomicLong sizeInBytes,
-      TimeAndDims key,
+      IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
       boolean skipMaxRowsInMemoryCheck
@@ -160,7 +160,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     Aggregator[] aggs;
 
-    if (TimeAndDims.EMPTY_ROW_INDEX != priorIndex) {
+    if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
     } else {
@@ -174,7 +174,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       // Last ditch sanity checks
       if (numEntries.get() >= maxRowCount
           || (maxBytesInMemory != -1 && sizeInBytes.get() >= maxBytesInMemory)
-             && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX
+             && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX
              && !skipMaxRowsInMemoryCheck) {
         throw new IndexSizeExceededException(
             "Maximum number of rows [%d] or max size in bytes [%d] reached",
@@ -183,7 +183,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         );
       }
       final int prev = facts.putIfAbsent(key, rowIndex);
-      if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
+      if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
         long estimatedRowSize = estimateRowSizeInBytes(key, maxBytesPerRowForAggregators);
         sizeInBytes.addAndGet(estimatedRowSize);
@@ -213,7 +213,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    *
    * @return estimated size of row
    */
-  private long estimateRowSizeInBytes(TimeAndDims key, long maxBytesPerRowForAggregators)
+  private long estimateRowSizeInBytes(IncrementalIndexRow key, long maxBytesPerRowForAggregators)
   {
     return ROUGH_OVERHEAD_PER_MAP_ENTRY + key.estimateBytesInMemory() + maxBytesPerRowForAggregators;
   }

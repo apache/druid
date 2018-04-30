@@ -94,7 +94,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
   }
 
   @Override
-  protected void addValue(int val) throws IOException
+  public void addValue(int val) throws IOException
   {
     if (endBuffer == null) {
       throw new IllegalStateException("written out already");
