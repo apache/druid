@@ -59,6 +59,6 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientUsername, authorizerName, null);
+    return new AuthenticationResult(internalClientUsername, authorizerName, "basic", null);
   }
 }

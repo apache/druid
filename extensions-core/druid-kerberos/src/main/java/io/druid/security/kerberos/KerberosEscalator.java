@@ -57,7 +57,7 @@ public class KerberosEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientPrincipal, authorizerName, null);
+    return new AuthenticationResult(internalClientPrincipal, authorizerName, "kerberos", null);
   }
 
 }

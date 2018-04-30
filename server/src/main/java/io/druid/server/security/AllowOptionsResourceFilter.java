@@ -63,7 +63,7 @@ public class AllowOptionsResourceFilter implements Filter
         if (allowUnauthenticatedHttpOptions) {
           httpReq.setAttribute(
               AuthConfig.DRUID_AUTHENTICATION_RESULT,
-              new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)
+              new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null, null)
           );
         } else {
           ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED);

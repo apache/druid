@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.StringUtils;
@@ -110,6 +111,7 @@ public class KerberosAuthenticator implements Authenticator
   private final List<String> excludedPaths;
   private final String cookieSignatureSecret;
   private final String authorizerName;
+  private final String name;
   private LoginContext loginContext;
 
   @JsonCreator
@@ -120,6 +122,7 @@ public class KerberosAuthenticator implements Authenticator
       @JsonProperty("excludedPaths") List<String> excludedPaths,
       @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret,
       @JsonProperty("authorizerName") String authorizerName,
+      @JsonProperty("name") String name,
       @JacksonInject @Self DruidNode node
   )
   {
@@ -130,6 +133,7 @@ public class KerberosAuthenticator implements Authenticator
     this.excludedPaths = excludedPaths == null ? DEFAULT_EXCLUDED_PATHS : excludedPaths;
     this.cookieSignatureSecret = cookieSignatureSecret;
     this.authorizerName = authorizerName;
+    this.name = Preconditions.checkNotNull(name);
   }
 
   @Override
@@ -264,7 +268,7 @@ public class KerberosAuthenticator implements Authenticator
           if (clientPrincipal != null) {
             request.setAttribute(
                 AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                new AuthenticationResult(clientPrincipal, authorizerName, null)
+                new AuthenticationResult(clientPrincipal, authorizerName, name, null)
             );
           }
         }
@@ -356,7 +360,7 @@ public class KerberosAuthenticator implements Authenticator
               // Since this request is validated also set DRUID_AUTHENTICATION_RESULT
               request.setAttribute(
                   AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                  new AuthenticationResult(token.getName(), authorizerName, null)
+                  new AuthenticationResult(token.getName(), authorizerName, name, null)
               );
               doFilter(filterChain, httpRequest, httpResponse);
             }

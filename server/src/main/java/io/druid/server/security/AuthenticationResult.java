@@ -37,6 +37,11 @@ public class AuthenticationResult
    */
   private final String authorizerName;
 
+
+  /**
+   * Name of authentiator whom created the results
+   */
+  private final String authenticatedBy;
   /**
    * parameter containing additional context information from an Authenticator
    */
@@ -46,11 +51,13 @@ public class AuthenticationResult
   public AuthenticationResult(
       final String identity,
       final String authorizerName,
+      final String authenticatedBy,
       final Map<String, Object> context
   )
   {
     this.identity = identity;
     this.authorizerName = authorizerName;
+    this.authenticatedBy = authenticatedBy;
     this.context = context;
   }
 
@@ -67,5 +74,10 @@ public class AuthenticationResult
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  public String getAuthentiatedBy()
+  {
+    return authenticatedBy;
   }
 }
