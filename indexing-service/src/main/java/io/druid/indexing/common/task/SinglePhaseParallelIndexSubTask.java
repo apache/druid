@@ -438,7 +438,8 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     return new BatchAppenderatorDriver(
         appenderator,
         segmentAllocator,
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient())
+        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        toolbox.getDataSegmentKiller()
     );
   }
 }
