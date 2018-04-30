@@ -10,7 +10,7 @@ In this quickstart, we will download Druid, set up it up on a single machine, lo
 
 You will need:
 
-  * Java 8 or higher
+  * Java 8
   * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
   * 8G of RAM
   * 2 vCPUs
