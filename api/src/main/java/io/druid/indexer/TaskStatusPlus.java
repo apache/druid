@@ -50,15 +50,15 @@ public class TaskStatusPlus
       @JsonProperty("statusCode") @Nullable TaskState state,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("errorMsg") String errorMsg
+      @JsonProperty("dataSource") @Nullable String dataSource, // nullable for backward compatibility
+      @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
     if (state != null && state.isComplete()) {
       Preconditions.checkNotNull(duration, "duration");
     }
     this.id = Preconditions.checkNotNull(id, "id");
-    this.type = Preconditions.checkNotNull(type, "type");
+    this.type = type;
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
     this.state = state;

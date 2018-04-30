@@ -17,32 +17,38 @@
  * under the License.
  */
 
-package io.druid.segment.incremental;
+package io.druid.segment.selector.settable;
 
-/**
- * This interface is the core "pointer" interface that is used to create {@link io.druid.segment.ColumnValueSelector}s
- * over incremental index. It's counterpart for historical segments is {@link io.druid.segment.data.Offset}.
- */
-public class TimeAndDimsHolder
+import io.druid.common.config.NullHandling;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DoubleColumnSelector;
+
+public class SettableDoubleColumnValueSelector implements SettableColumnValueSelector<Double>, DoubleColumnSelector
 {
-  IncrementalIndex.TimeAndDims currEntry = null;
+  private boolean isNull;
+  private double value;
 
-  public IncrementalIndex.TimeAndDims get()
+  @Override
+  public void setValueFrom(ColumnValueSelector selector)
   {
-    return currEntry;
+    isNull = selector.isNull();
+    if (!isNull) {
+      value = selector.getDouble();
+    } else {
+      value = 0;
+    }
   }
 
-  public void set(IncrementalIndex.TimeAndDims currEntry)
+  @Override
+  public double getDouble()
   {
-    this.currEntry = currEntry;
+    assert NullHandling.replaceWithDefault() || !isNull;
+    return value;
   }
 
-  /**
-   * This method doesn't have well-defined semantics ("value" of what?), should be removed in favor of chaining
-   * get().getRowIndex().
-   */
-  public int getValue()
+  @Override
+  public boolean isNull()
   {
-    return currEntry.getRowIndex();
+    return isNull;
   }
 }

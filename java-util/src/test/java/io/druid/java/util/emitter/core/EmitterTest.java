@@ -239,7 +239,7 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }
@@ -281,7 +281,7 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }
@@ -297,7 +297,7 @@ public class EmitterTest
 
     httpClient.setGoHandler(GoHandlers.passingHandler(okResponse()).times(1));
     emitter.emit(new UnitEvent("test", 3));
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
 
     httpClient.setGoHandler(GoHandlers.failingHandler());
     emitter.emit(new UnitEvent("test", 4));
@@ -337,7 +337,7 @@ public class EmitterTest
         timeWaited < timeBetweenEmissions * 2
     );
 
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
 
     final CountDownLatch thisLatch = new CountDownLatch(1);
     httpClient.setGoHandler(
@@ -362,7 +362,7 @@ public class EmitterTest
         timeWaited < timeBetweenEmissions * 2
     );
 
-    waitForEmission(emitter, 1);
+    waitForEmission(emitter, 2);
     closeNoFlush(emitter);
     Assert.assertTrue("httpClient.succeeded()", httpClient.succeeded());
   }
@@ -388,7 +388,7 @@ public class EmitterTest
     );
     emitter.emit(event1);
     emitter.flush();
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     Assert.assertTrue(httpClient.succeeded());
 
     // Failed to emit the first event.
@@ -407,7 +407,7 @@ public class EmitterTest
 
     emitter.emit(event2);
     emitter.flush();
-    waitForEmission(emitter, 1);
+    waitForEmission(emitter, 2);
     closeNoFlush(emitter);
     // Failed event is emitted inside emitter thread, there is no other way to wait for it other than joining the
     // emitterThread
@@ -461,7 +461,7 @@ public class EmitterTest
       emitter.emit(event);
     }
     emitter.flush();
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }
@@ -512,11 +512,11 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     Assert.assertEquals(2, emitter.getTotalEmittedEvents());
 
     emitter.flush();
-    waitForEmission(emitter, 1);
+    waitForEmission(emitter, 2);
     Assert.assertEquals(4, emitter.getTotalEmittedEvents());
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
@@ -571,7 +571,7 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }

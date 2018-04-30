@@ -150,4 +150,13 @@ public class SegmentWithState
         to
     );
   }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentWithState{" +
+           "segmentIdentifier=" + segmentIdentifier +
+           ", state=" + state +
+           '}';
+  }
 }

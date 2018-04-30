@@ -44,6 +44,7 @@ public class EntireLayoutColumnarDoublesSupplier implements Supplier<ColumnarDou
 
   private class EntireLayoutColumnarDoubles implements ColumnarDoubles
   {
+
     @Override
     public int size()
     {
@@ -65,7 +66,7 @@ public class EntireLayoutColumnarDoublesSupplier implements Supplier<ColumnarDou
     @Override
     public String toString()
     {
-      return "EntireCompressedColumnarDoubles_Anonymous{" +
+      return "EntireLayoutColumnarDoubles{" +
              ", totalSize=" + totalSize +
              '}';
     }

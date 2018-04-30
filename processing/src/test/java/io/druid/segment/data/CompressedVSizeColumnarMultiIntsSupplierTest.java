@@ -42,7 +42,7 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
   private Closer closer;
   protected List<int[]> vals;
 
-  protected WritableSupplier<ColumnarMultiInts> indexedSupplier;
+  protected WritableSupplier<ColumnarMultiInts> columnarMultiIntsSupplier;
 
   @Before
   public void setUpSimple()
@@ -55,7 +55,7 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
         new int[]{11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
     );
 
-    indexedSupplier = CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
+    columnarMultiIntsSupplier = CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
         Iterables.transform(vals, input -> VSizeColumnarInts.fromArray(input, 20)),
         20,
         ByteOrder.nativeOrder(),
@@ -67,7 +67,7 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
   @After
   public void teardown() throws IOException
   {
-    indexedSupplier = null;
+    columnarMultiIntsSupplier = null;
     vals = null;
     closer.close();
   }
@@ -75,32 +75,32 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
   @Test
   public void testSanity()
   {
-    assertSame(vals, indexedSupplier.get());
+    assertSame(vals, columnarMultiIntsSupplier.get());
   }
 
   @Test
   public void testSerde() throws IOException
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    indexedSupplier.writeTo(Channels.newChannel(baos), null);
+    columnarMultiIntsSupplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
-    Assert.assertEquals(indexedSupplier.getSerializedSize(), bytes.length);
-    WritableSupplier<ColumnarMultiInts> deserializedIndexed = fromByteBuffer(ByteBuffer.wrap(bytes));
+    Assert.assertEquals(columnarMultiIntsSupplier.getSerializedSize(), bytes.length);
+    WritableSupplier<ColumnarMultiInts> deserializedColumnarMultiInts = fromByteBuffer(ByteBuffer.wrap(bytes));
 
-    assertSame(vals, deserializedIndexed.get());
+    assertSame(vals, deserializedColumnarMultiInts.get());
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testGetInvalidElementInRow()
   {
-    indexedSupplier.get().get(3).get(15);
+    columnarMultiIntsSupplier.get().get(3).get(15);
   }
 
   @Test
   public void testIterators()
   {
-    Iterator<IndexedInts> iterator = indexedSupplier.get().iterator();
+    Iterator<IndexedInts> iterator = columnarMultiIntsSupplier.get().iterator();
     int row = 0;
     while (iterator.hasNext()) {
       final int[] ints = vals.get(row);
@@ -114,12 +114,12 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
     }
   }
 
-  private void assertSame(List<int[]> someInts, ColumnarMultiInts indexed)
+  private void assertSame(List<int[]> someInts, ColumnarMultiInts columnarMultiInts)
   {
-    Assert.assertEquals(someInts.size(), indexed.size());
-    for (int i = 0; i < indexed.size(); ++i) {
+    Assert.assertEquals(someInts.size(), columnarMultiInts.size());
+    for (int i = 0; i < columnarMultiInts.size(); ++i) {
       final int[] ints = someInts.get(i);
-      final IndexedInts vSizeIndexedInts = indexed.get(i);
+      final IndexedInts vSizeIndexedInts = columnarMultiInts.get(i);
 
       Assert.assertEquals(ints.length, vSizeIndexedInts.size());
       for (int j = 0; j < ints.length; j++) {

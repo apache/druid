@@ -126,7 +126,7 @@ public class OverlordResourceTest
   public void expectAuthorizationTokenCheck()
   {
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
-
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -203,7 +203,7 @@ public class OverlordResourceTest
     expectAuthorizationTokenCheck();
 
     List<String> tasksIds = ImmutableList.of("id_1", "id_2", "id_3");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>> expect(taskRunner.getRunningTasks()).andReturn(
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem(tasksIds.get(0), null),
             new MockTaskRunnerWorkItem(tasksIds.get(1), null),
@@ -373,7 +373,7 @@ public class OverlordResourceTest
   {
 
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>> expect(taskRunner.getRunningTasks()).andReturn(
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem(tasksIds.get(0), null),
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)));
@@ -398,7 +398,7 @@ public class OverlordResourceTest
     expectAuthorizationTokenCheck();
 
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>> expect(taskRunner.getRunningTasks()).andReturn(
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem(tasksIds.get(0), null),
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)));

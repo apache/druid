@@ -195,11 +195,16 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    *
    * @param identifiers list of segments to push
    * @param committer   a committer associated with all data that has been added so far
+   * @param useUniquePath true if the segment should be written to a path with a unique identifier
    *
    * @return future that resolves when all segments have been pushed. The segment list will be the list of segments
    * that have been pushed and the commit metadata from the Committer.
    */
-  ListenableFuture<SegmentsAndMetadata> push(Collection<SegmentIdentifier> identifiers, @Nullable Committer committer);
+  ListenableFuture<SegmentsAndMetadata> push(
+      Collection<SegmentIdentifier> identifiers,
+      @Nullable Committer committer,
+      boolean useUniquePath
+  );
 
   /**
    * Stop any currently-running processing and clean up after ourselves. This allows currently running persists and pushes

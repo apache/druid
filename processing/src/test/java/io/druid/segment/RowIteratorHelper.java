@@ -17,41 +17,27 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.aggregation;
+package io.druid.segment;
 
-import io.druid.query.aggregation.PostAggregator;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Can create PostAggregators with specific output names.
- */
-public abstract class PostAggregatorFactory
+public final class RowIteratorHelper
 {
-  public abstract PostAggregator factorize(String outputName);
-
-  @Override
-  public boolean equals(Object o)
+  public static List<DebugRow> toList(RowIterator it)
   {
-    if (this == o) {
-      return true;
+    try {
+      List<DebugRow> result = new ArrayList<>();
+      while (it.moveToNext()) {
+        RowPointer row = it.getPointer();
+        result.add(new DebugRow(row.getDimensionNamesToValuesForDebug(), row.getMetricNamesToValuesForDebug()));
+      }
+      return result;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+    finally {
+      it.close();
     }
-
-    PostAggregatorFactory that = (PostAggregatorFactory) o;
-
-    return factorize(null).equals(that.factorize(null));
   }
 
-  @Override
-  public int hashCode()
-  {
-    return factorize(null).hashCode();
-  }
-
-  @Override
-  public String toString()
-  {
-    return factorize(null).toString();
-  }
+  private RowIteratorHelper() {}
 }

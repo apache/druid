@@ -184,7 +184,8 @@ public class GroupByQueryRunnerFailureTest
   public void testNotEnoughMergeBuffersOnQueryable()
   {
     expectedException.expect(QueryInterruptedException.class);
-    expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(TimeoutException.class));
+    expectedException.expectCause(CoreMatchers.instanceOf(TimeoutException.class));
+    expectedException.expectMessage("Cannot acquire enough merge buffers");
 
     final GroupByQuery query = GroupByQuery
         .builder()
@@ -268,8 +269,15 @@ public class GroupByQueryRunnerFailureTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
-    try (ReferenceCountingResourceHolder<List<ByteBuffer>> holder = mergeBufferPool.takeBatch(1, 10)) {
+    List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
+    try {
+      holder = mergeBufferPool.takeBatch(1, 10);
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    }
+    finally {
+      if (holder != null) {
+        holder.forEach(ReferenceCountingResourceHolder::close);
+      }
     }
   }
 }

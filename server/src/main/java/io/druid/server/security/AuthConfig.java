@@ -22,7 +22,9 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class AuthConfig
 {
@@ -36,21 +38,27 @@ public class AuthConfig
    */
   public static final String DRUID_AUTHORIZATION_CHECKED = "Druid-Authorization-Checked";
 
+  public static final String DRUID_ALLOW_UNSECURED_PATH = "Druid-Allow-Unsecured-Path";
+
   public static final String ALLOW_ALL_NAME = "allowAll";
 
   public AuthConfig()
   {
-    this(null, null);
+    this(null, null, null, false);
   }
 
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticationChain,
-      @JsonProperty("authorizers") List<String> authorizers
+      @JsonProperty("authorizers") List<String> authorizers,
+      @JsonProperty("unsecuredPaths") List<String> unsecuredPaths,
+      @JsonProperty("allowUnauthenticatedHttpOptions") boolean allowUnauthenticatedHttpOptions
   )
   {
     this.authenticatorChain = authenticationChain;
     this.authorizers = authorizers;
+    this.unsecuredPaths = unsecuredPaths == null ? Collections.emptyList() : unsecuredPaths;
+    this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions;
   }
 
   @JsonProperty
@@ -58,6 +66,12 @@ public class AuthConfig
 
   @JsonProperty
   private List<String> authorizers;
+
+  @JsonProperty
+  private final List<String> unsecuredPaths;
+
+  @JsonProperty
+  private final boolean allowUnauthenticatedHttpOptions;
 
   public List<String> getAuthenticatorChain()
   {
@@ -69,13 +83,14 @@ public class AuthConfig
     return authorizers;
   }
 
-  @Override
-  public String toString()
+  public List<String> getUnsecuredPaths()
   {
-    return "AuthConfig{" +
-           "authenticatorChain='" + authenticatorChain + '\'' +
-           ", authorizers='" + authorizers + '\'' +
-           '}';
+    return unsecuredPaths;
+  }
+
+  public boolean isAllowUnauthenticatedHttpOptions()
+  {
+    return allowUnauthenticatedHttpOptions;
   }
 
   @Override
@@ -87,23 +102,32 @@ public class AuthConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     AuthConfig that = (AuthConfig) o;
-
-    if (getAuthenticatorChain() != null
-        ? !getAuthenticatorChain().equals(that.getAuthenticatorChain())
-        : that.getAuthenticatorChain() != null) {
-      return false;
-    }
-    return getAuthorizers() != null ? getAuthorizers().equals(that.getAuthorizers()) : that.getAuthorizers() == null;
-
+    return isAllowUnauthenticatedHttpOptions() == that.isAllowUnauthenticatedHttpOptions() &&
+           Objects.equals(getAuthenticatorChain(), that.getAuthenticatorChain()) &&
+           Objects.equals(getAuthorizers(), that.getAuthorizers()) &&
+           Objects.equals(getUnsecuredPaths(), that.getUnsecuredPaths());
   }
 
   @Override
   public int hashCode()
   {
-    int result = getAuthenticatorChain() != null ? getAuthenticatorChain().hashCode() : 0;
-    result = 31 * result + (getAuthorizers() != null ? getAuthorizers().hashCode() : 0);
-    return result;
+    return Objects.hash(
+        getAuthenticatorChain(),
+        getAuthorizers(),
+        getUnsecuredPaths(),
+        isAllowUnauthenticatedHttpOptions()
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AuthConfig{" +
+           "authenticatorChain=" + authenticatorChain +
+           ", authorizers=" + authorizers +
+           ", unsecuredPaths=" + unsecuredPaths +
+           ", allowUnauthenticatedHttpOptions=" + allowUnauthenticatedHttpOptions +
+           '}';
   }
 }

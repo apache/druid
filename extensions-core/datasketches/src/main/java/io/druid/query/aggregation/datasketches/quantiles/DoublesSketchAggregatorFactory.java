@@ -182,7 +182,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory> singletonList(
+    return Collections.singletonList(
         new DoublesSketchAggregatorFactory(
             fieldName,
             fieldName,

@@ -34,6 +34,11 @@ import java.util.function.IntConsumer;
 @PublicApi
 public interface IndexedInts extends HotLoopCallee
 {
+  static IndexedInts empty()
+  {
+    return ArrayBasedIndexedInts.EMPTY;
+  }
+
   @CalledFromHotLoop
   int size();
   @CalledFromHotLoop

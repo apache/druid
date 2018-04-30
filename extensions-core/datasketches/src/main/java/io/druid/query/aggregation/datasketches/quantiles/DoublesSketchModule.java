@@ -19,22 +19,22 @@
 
 package io.druid.query.aggregation.datasketches.quantiles;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.yahoo.sketches.quantiles.DoublesSketch;
-
 import io.druid.initialization.DruidModule;
 import io.druid.segment.serde.ComplexMetrics;
+
+import java.util.Collections;
+import java.util.List;
 
 public class DoublesSketchModule implements DruidModule
 {
 
   public static final String DOUBLES_SKETCH = "quantilesDoublesSketch";
+  public static final String DOUBLES_SKETCH_MERGE = "quantilesDoublesSketchMerge";
 
   public static final String DOUBLES_SKETCH_HISTOGRAM_POST_AGG = "quantilesDoublesSketchToHistogram";
   public static final String DOUBLES_SKETCH_QUANTILE_POST_AGG = "quantilesDoublesSketchToQuantile";
@@ -52,14 +52,17 @@ public class DoublesSketchModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module> asList(
-        new SimpleModule("DoublesQuantilesSketchModule").registerSubtypes(
-            new NamedType(DoublesSketchAggregatorFactory.class, DOUBLES_SKETCH),
-            new NamedType(DoublesSketchToHistogramPostAggregator.class, DOUBLES_SKETCH_HISTOGRAM_POST_AGG),
-            new NamedType(DoublesSketchToQuantilePostAggregator.class, DOUBLES_SKETCH_QUANTILE_POST_AGG),
-            new NamedType(DoublesSketchToQuantilesPostAggregator.class, DOUBLES_SKETCH_QUANTILES_POST_AGG),
-            new NamedType(DoublesSketchToStringPostAggregator.class, DOUBLES_SKETCH_TO_STRING_POST_AGG))
-            .addSerializer(DoublesSketch.class, new DoublesSketchJsonSerializer()));
+    return Collections.<Module>singletonList(
+        new SimpleModule("DoublesQuantilesSketchModule")
+            .registerSubtypes(
+                new NamedType(DoublesSketchAggregatorFactory.class, DOUBLES_SKETCH),
+                new NamedType(DoublesSketchMergeAggregatorFactory.class, DOUBLES_SKETCH_MERGE),
+                new NamedType(DoublesSketchToHistogramPostAggregator.class, DOUBLES_SKETCH_HISTOGRAM_POST_AGG),
+                new NamedType(DoublesSketchToQuantilePostAggregator.class, DOUBLES_SKETCH_QUANTILE_POST_AGG),
+                new NamedType(DoublesSketchToQuantilesPostAggregator.class, DOUBLES_SKETCH_QUANTILES_POST_AGG),
+                new NamedType(DoublesSketchToStringPostAggregator.class, DOUBLES_SKETCH_TO_STRING_POST_AGG)
+            ).addSerializer(DoublesSketch.class, new DoublesSketchJsonSerializer())
+    );
   }
 
 }
