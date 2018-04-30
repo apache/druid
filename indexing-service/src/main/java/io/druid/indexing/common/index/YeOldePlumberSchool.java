@@ -199,10 +199,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
                                                      .withBinaryVersion(SegmentUtils.getVersionFromDir(fileToUpload));
 
-          // This plumber is only used in batch ingestion situations where you do not have replica tasks pushing
-          // segments with the same identifier but potentially different contents. In case of conflict, favor the most
-          // recently pushed segment (replaceExisting == true).
-          dataSegmentPusher.push(fileToUpload, segmentToUpload, true);
+          dataSegmentPusher.push(fileToUpload, segmentToUpload, false);
 
           log.info(
               "Uploaded segment[%s]",

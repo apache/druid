@@ -792,7 +792,8 @@ public class IndexTask extends AbstractTask
     return new BatchAppenderatorDriver(
         appenderator,
         segmentAllocator,
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient())
+        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        toolbox.getDataSegmentKiller()
     );
   }
 

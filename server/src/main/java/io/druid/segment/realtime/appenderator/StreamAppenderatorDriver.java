@@ -35,6 +35,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
@@ -54,11 +55,11 @@ import java.util.stream.Collectors;
 
 /**
  * This class is specialized for streaming ingestion. In streaming ingestion, the segment lifecycle is like:
- *
+ * <p>
  * <pre>
  * APPENDING -> APPEND_FINISHED -> PUBLISHED
  * </pre>
- *
+ * <p>
  * <ul>
  * <li>APPENDING: Segment is available for appending.</li>
  * <li>APPEND_FINISHED: Segment cannot be updated (data cannot be added anymore) and is waiting for being published.</li>
@@ -89,11 +90,12 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       UsedSegmentChecker usedSegmentChecker,
+      DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
       FireDepartmentMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker);
+    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
@@ -261,7 +263,9 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         .collect(Collectors.toList());
 
     final ListenableFuture<SegmentsAndMetadata> publishFuture = Futures.transform(
-        pushInBackground(wrapCommitter(committer), theSegments),
+        // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
+        // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
+        pushInBackground(wrapCommitter(committer), theSegments, true),
         (AsyncFunction<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> publishInBackground(
             segmentsAndMetadata,
             publisher

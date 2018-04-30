@@ -124,7 +124,6 @@ public class S3DataSegmentFinderTest
   private String indexZip4_1;
 
 
-
   @BeforeClass
   public static void setUpStatic()
   {
@@ -210,31 +209,51 @@ public class S3DataSegmentFinderTest
     final String serializedSegment4_0 = mapper.writeValueAsString(updatedSegment4_0);
     final String serializedSegment4_1 = mapper.writeValueAsString(updatedSegment4_1);
 
-    Assert.assertNotEquals(serializedSegment1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getDataInputStream()));
-    Assert.assertNotEquals(serializedSegment2,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getDataInputStream()));
-    Assert.assertNotEquals(serializedSegment3,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getDataInputStream()));
-    Assert.assertNotEquals(serializedSegment4_0,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getDataInputStream()));
-    Assert.assertNotEquals(serializedSegment4_1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getDataInputStream()));
+    Assert.assertNotEquals(
+        serializedSegment1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getDataInputStream())
+    );
+    Assert.assertNotEquals(
+        serializedSegment2,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getDataInputStream())
+    );
+    Assert.assertNotEquals(
+        serializedSegment3,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getDataInputStream())
+    );
+    Assert.assertNotEquals(
+        serializedSegment4_0,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getDataInputStream())
+    );
+    Assert.assertNotEquals(
+        serializedSegment4_1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getDataInputStream())
+    );
 
     final Set<DataSegment> segments2 = s3DataSegmentFinder.findSegments("", true);
 
     Assert.assertEquals(segments, segments2);
 
-    Assert.assertEquals(serializedSegment1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getDataInputStream()));
-    Assert.assertEquals(serializedSegment2,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getDataInputStream()));
-    Assert.assertEquals(serializedSegment3,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getDataInputStream()));
-    Assert.assertEquals(serializedSegment4_0,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getDataInputStream()));
-    Assert.assertEquals(serializedSegment4_1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getDataInputStream()));
+    Assert.assertEquals(
+        serializedSegment1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getDataInputStream())
+    );
+    Assert.assertEquals(
+        serializedSegment2,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getDataInputStream())
+    );
+    Assert.assertEquals(
+        serializedSegment3,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getDataInputStream())
+    );
+    Assert.assertEquals(
+        serializedSegment4_0,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getDataInputStream())
+    );
+    Assert.assertEquals(
+        serializedSegment4_1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getDataInputStream())
+    );
   }
 
   @Test(expected = SegmentLoadingException.class)
@@ -268,9 +287,7 @@ public class S3DataSegmentFinderTest
   public void testFindSegmentsUpdateLoadSpec() throws Exception
   {
     config.setBucket("amazing");
-    final DataSegment segmentMissingLoadSpec = DataSegment.builder(SEGMENT_1)
-        .loadSpec(ImmutableMap.of())
-        .build();
+    final DataSegment segmentMissingLoadSpec = DataSegment.builder(SEGMENT_1).loadSpec(ImmutableMap.of()).build();
     final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
     final String segmentPath = baseKey + "/interval_missing_load_spec/v1/1/";
     final String descriptorPath = S3Utils.descriptorPathForSegmentPath(segmentPath);
@@ -302,6 +319,32 @@ public class S3DataSegmentFinderTest
     Assert.assertEquals("amazing", testLoadSpec.get("bucket"));
     Assert.assertEquals("s3_zip", testLoadSpec.get("type"));
     Assert.assertEquals(indexPath, testLoadSpec.get("key"));
+  }
+
+  @Test
+  public void testPreferNewestSegment() throws Exception
+  {
+    baseKey = "replicaDataSource";
+
+    config = new S3DataSegmentPusherConfig();
+    config.setBucket(bucket);
+    config.setBaseKey(baseKey);
+
+    descriptor1 = S3Utils.descriptorPathForSegmentPath(baseKey + "/interval10/v1/0/older/");
+    descriptor2 = S3Utils.descriptorPathForSegmentPath(baseKey + "/interval10/v1/0/newer/");
+
+    indexZip1 = S3Utils.indexZipForSegmentPath(descriptor1);
+    indexZip2 = S3Utils.indexZipForSegmentPath(descriptor2);
+
+    mockS3Client.putObject(bucket, new S3Object(descriptor1, mapper.writeValueAsString(SEGMENT_1)));
+    mockS3Client.putObject(bucket, new S3Object(indexZip1, "dummy"));
+    mockS3Client.putObject(bucket, new S3Object(descriptor2, mapper.writeValueAsString(SEGMENT_1)));
+    mockS3Client.putObject(bucket, new S3Object(indexZip2, "dummy"));
+
+    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
+    final Set<DataSegment> segments = s3DataSegmentFinder.findSegments("", false);
+
+    Assert.assertEquals(1, segments.size());
   }
 
   private String getDescriptorPath(DataSegment segment)

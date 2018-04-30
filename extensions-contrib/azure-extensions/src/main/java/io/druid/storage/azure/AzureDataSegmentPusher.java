@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
-
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -92,9 +91,9 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     return descriptorFile;
   }
 
-  public Map<String, String> getAzurePaths(final DataSegment segment)
+  public Map<String, String> getAzurePaths(final DataSegment segment, final boolean useUniquePath)
   {
-    final String storageDir = this.getStorageDir(segment);
+    final String storageDir = this.getStorageDir(segment, useUniquePath);
 
     return ImmutableMap.of(
         "index", StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
@@ -109,13 +108,12 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final long size,
       final File compressedSegmentData,
       final File descriptorFile,
-      final Map<String, String> azurePaths,
-      final boolean replaceExisting
+      final Map<String, String> azurePaths
   )
       throws StorageException, IOException, URISyntaxException
   {
-    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"), replaceExisting);
-    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"), replaceExisting);
+    azureStorage.uploadBlob(compressedSegmentData, config.getContainer(), azurePaths.get("index"));
+    azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"));
 
     final DataSegment outSegment = segment
         .withSize(size)
@@ -132,7 +130,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean replaceExisting)
+  public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean useUniquePath)
       throws IOException
   {
     log.info("Uploading [%s] to Azure.", indexFilesDir);
@@ -146,7 +144,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
       final File descFile = descriptorFile = createSegmentDescriptorFile(jsonMapper, segment);
-      final Map<String, String> azurePaths = getAzurePaths(segment);
+      final Map<String, String> azurePaths = getAzurePaths(segment, useUniquePath);
 
       return AzureUtils.retryAzureOperation(
           new Callable<DataSegment>()
@@ -154,7 +152,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
             @Override
             public DataSegment call() throws Exception
             {
-              return uploadDataSegment(segment, version, size, outFile, descFile, azurePaths, replaceExisting);
+              return uploadDataSegment(segment, version, size, outFile, descFile, azurePaths);
             }
           },
           config.getMaxTries()
