@@ -30,10 +30,10 @@ import java.util.Map;
 
 /**
  */
-public class TimeAndDimsKeySizeTest
+public class IncrementalIndexRowSizeTest
 {
   @Test
-  public void testTimeAndDimsKeySizeBasic()
+  public void testIncrementalIndexRowSizeBasic()
   {
     IncrementalIndex index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
@@ -47,7 +47,7 @@ public class TimeAndDimsKeySizeTest
   }
 
   @Test
-  public void testTimeAndDimsKeySizeArr()
+  public void testIncrementalIndexRowSizeArr()
   {
     IncrementalIndex index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
@@ -67,7 +67,7 @@ public class TimeAndDimsKeySizeTest
   }
 
   @Test
-  public void testTimeAndDimsKeySizeComplex()
+  public void testIncrementalIndexRowSizeComplex()
   {
     IncrementalIndex index = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))

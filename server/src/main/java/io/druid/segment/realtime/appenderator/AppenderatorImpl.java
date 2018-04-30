@@ -250,15 +250,15 @@ public class AppenderatorImpl implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    StringBuilder persistReason = new StringBuilder();
+    List<String> persistReasons = Lists.newArrayList();
 
     if (!sink.canAppendRow()) {
       persist = true;
-      persistReason.append(" No more rows can be appended to sink");
+      persistReasons.add("No more rows can be appended to sink");
     }
     if (System.currentTimeMillis() > nextFlush) {
       persist = true;
-      persistReason.append(StringUtils.format(
+      persistReasons.add(StringUtils.format(
           " current time[%d] is greater than nextFlush[%d],",
           System.currentTimeMillis(),
           nextFlush
@@ -266,7 +266,7 @@ public class AppenderatorImpl implements Appenderator
     }
     if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
-      persistReason.append(StringUtils.format(
+      persistReasons.add(StringUtils.format(
           " rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d],",
           rowsCurrentlyInMemory.get(),
           tuningConfig.getMaxRowsInMemory()
@@ -276,7 +276,7 @@ public class AppenderatorImpl implements Appenderator
         && bytesCurrentlyInMemory.get()
            >= TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())) {
       persist = true;
-      persistReason.append(StringUtils.format(
+      persistReasons.add(StringUtils.format(
           " bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())
@@ -285,13 +285,12 @@ public class AppenderatorImpl implements Appenderator
     if (persist) {
       if (allowIncrementalPersists) {
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
-        log.info("Persisting rows in memory due to: [%s]", persistReason.toString());
+        log.info("Persisting rows in memory due to: [%s]", String.join(",", persistReasons));
         persistAll(committerSupplier == null ? null : committerSupplier.get());
       } else {
         isPersistRequired = true;
       }
     }
-
     return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired, addResult.getParseException());
   }
 

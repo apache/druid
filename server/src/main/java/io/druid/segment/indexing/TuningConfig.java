@@ -34,5 +34,8 @@ public interface TuningConfig
   int DEFAULT_MAX_PARSE_EXCEPTIONS = Integer.MAX_VALUE;
   int DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS = 0;
   int DEFAULT_MAX_ROWS_IN_MEMORY = 1_000_000;
+  // We initially estimated this to be 1/3(max jvm memory), but bytesCurrentlyInMemory only
+  // tracks active index and not the index being flushed to disk, to account for that
+  // we doubled default to 1/6(max jvm memory)
   long DEFAULT_MAX_BYTES_IN_MEMORY = Runtime.getRuntime().maxMemory() / 6;
 }
