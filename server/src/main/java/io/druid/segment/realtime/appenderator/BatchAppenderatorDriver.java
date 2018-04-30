@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.ListenableFutures;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.timeline.DataSegment;
 
@@ -64,10 +65,11 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   public BatchAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      UsedSegmentChecker usedSegmentChecker
+      UsedSegmentChecker usedSegmentChecker,
+      DataSegmentKiller dataSegmentKiller
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker);
+    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
   }
 
   /**
@@ -133,7 +135,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
         .collect(Collectors.toList());
 
     final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
-        pushInBackground(null, segmentIdentifierList),
+        pushInBackground(null, segmentIdentifierList, false),
         this::dropInBackground
     );
 

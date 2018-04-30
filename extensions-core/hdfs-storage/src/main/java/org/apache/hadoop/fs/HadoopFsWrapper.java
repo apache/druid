@@ -44,17 +44,16 @@ public class HadoopFsWrapper
    *
    * @param from
    * @param to
-   * @param replaceExisting if existing files should be overwritten
    *
-   * @return true if operation succeeded, false if replaceExisting == false and destination already exists
+   * @return true if operation succeeded, false if destination already exists
    *
    * @throws IOException if trying to overwrite a non-empty directory
    */
-  public static boolean rename(FileSystem fs, Path from, Path to, boolean replaceExisting)
+  public static boolean rename(FileSystem fs, Path from, Path to)
   {
     try {
       // Note: Using reflection instead of simpler
-      // fs.rename(from, to, replaceExisting ? Options.Rename.OVERWRITE : Options.Rename.NONE);
+      // fs.rename(from, to, Options.Rename.NONE);
       // due to the issues discussed in https://github.com/druid-io/druid/pull/3787
       Method renameMethod = findRenameMethodRecursively(fs.getClass());
       renameMethod.invoke(fs, from, to, new Options.Rename[]{Options.Rename.NONE});

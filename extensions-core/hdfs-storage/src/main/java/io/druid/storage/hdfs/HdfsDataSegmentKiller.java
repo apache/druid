@@ -19,6 +19,7 @@
 
 package io.druid.storage.hdfs;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -57,65 +58,53 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
     final Path segmentPath = getPath(segment);
-    log.info("killing segment[%s] mapped to path[%s]", segment.getIdentifier(), segmentPath);
+    log.info("Killing segment[%s] mapped to path[%s]", segment.getIdentifier(), segmentPath);
 
     try {
-      String segmentLocation = segmentPath.getName();
+      String filename = segmentPath.getName();
       final FileSystem fs = segmentPath.getFileSystem(config);
-      if (!segmentLocation.endsWith(".zip")) {
+      if (!filename.endsWith(".zip")) {
         throw new SegmentLoadingException("Unknown file type[%s]", segmentPath);
       } else {
 
         if (!fs.exists(segmentPath)) {
-          log.warn("Segment Path [%s] does not exist. It appears to have been deleted already.", segmentPath);
+          log.warn("Segment path [%s] does not exist", segmentPath);
           return;
         }
 
-        String[] zipParts = segmentLocation.split("_");
-        // for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
-        if (zipParts.length == 2
-            && zipParts[1].equals("index.zip")
-            && StringUtils.isNumeric(zipParts[0])) {
-          if (!fs.delete(segmentPath, false)) {
-            throw new SegmentLoadingException(
-                "Unable to kill segment, failed to delete [%s]",
-                segmentPath.toString()
-            );
-          }
-          Path descriptorPath = new Path(
-              segmentPath.getParent(),
-              io.druid.java.util.common.StringUtils.format("%s_descriptor.json", zipParts[0])
-          );
-          //delete partitionNumber_descriptor.json
-          if (!fs.delete(descriptorPath, false)) {
-            throw new SegmentLoadingException(
-                "Unable to kill segment, failed to delete [%s]",
-                descriptorPath.toString()
-            );
-          }
-          //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
-          // max depth to look is 2, i.e version directory and interval.
-          mayBeDeleteParentsUpto(fs, segmentPath, 2);
+        // There are 3 supported path formats:
+        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
+        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_index.zip
+        //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_index.zip
+        String[] zipParts = filename.split("_");
 
-        } else { //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/
-          // index.zip
-          if (!fs.delete(segmentPath, false)) {
-            throw new SegmentLoadingException(
-                "Unable to kill segment, failed to delete [%s]",
-                segmentPath.toString()
-            );
-          }
-          Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
-          if (!fs.delete(descriptorPath, false)) {
-            throw new SegmentLoadingException(
-                "Unable to kill segment, failed to delete [%s]",
-                descriptorPath.toString()
-            );
-          }
-          //for segments stored as hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/index.zip
-          //max depth to look is 3, i.e partition number directory,version directory and interval.
-          mayBeDeleteParentsUpto(fs, segmentPath, 3);
+        Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
+        if (zipParts.length > 1) {
+          Preconditions.checkState(zipParts.length <= 3 &&
+                                   StringUtils.isNumeric(zipParts[0]) &&
+                                   "index.zip".equals(zipParts[zipParts.length - 1]),
+                                   "Unexpected segmentPath format [%s]", segmentPath
+          );
+
+          descriptorPath = new Path(
+              segmentPath.getParent(),
+              io.druid.java.util.common.StringUtils.format(
+                  "%s_%sdescriptor.json",
+                  zipParts[0],
+                  zipParts.length == 2 ? "" : zipParts[1] + "_"
+              )
+          );
         }
+
+        if (!fs.delete(segmentPath, false)) {
+          throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
+        }
+
+        if (!fs.delete(descriptorPath, false)) {
+          throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", descriptorPath.toString());
+        }
+
+        removeEmptyParentDirectories(fs, segmentPath, zipParts.length > 1 ? 2 : 3);
       }
     }
     catch (IOException e) {
@@ -131,11 +120,11 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     fs.delete(storageDirectory, true);
   }
 
-  private void mayBeDeleteParentsUpto(final FileSystem fs, final Path segmentPath, final int maxDepthTobeDeleted)
+  private void removeEmptyParentDirectories(final FileSystem fs, final Path segmentPath, final int depth)
   {
     Path path = segmentPath;
     try {
-      for (int i = 1; i <= maxDepthTobeDeleted; i++) {
+      for (int i = 1; i <= depth; i++) {
         path = path.getParent();
         if (fs.listStatus(path).length != 0 || !fs.delete(path, false)) {
           break;

@@ -186,10 +186,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 
       // Upload file
 
-      // The merge task does not support replicas where different tasks could generate segments with the
-      // same identifier but potentially different contents. In case of conflict, favor the most recently pushed
-      // segment (replaceExisting == true).
-      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment, true);
+      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment, false);
 
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
