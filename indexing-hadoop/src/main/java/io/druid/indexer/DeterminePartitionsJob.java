@@ -485,7 +485,8 @@ public class DeterminePartitionsJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       final int index = bytes.getInt();
-      if (config.get("mapred.job.tracker").equals("local")) {
+      String jobTrackerAddress = JobHelper.getJobTrackerAddress(config);
+      if ("local".equals(jobTrackerAddress)) {
         return index % numPartitions;
       } else {
         if (index >= numPartitions) {
