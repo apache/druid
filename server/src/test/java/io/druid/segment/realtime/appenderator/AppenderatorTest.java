@@ -117,7 +117,8 @@ public class AppenderatorTest
       // push all
       final SegmentsAndMetadata segmentsAndMetadata = appenderator.push(
           appenderator.getSegments(),
-          committerSupplier.get()
+          committerSupplier.get(),
+          false
       ).get();
       Assert.assertEquals(ImmutableMap.of("x", "3"), (Map<String, String>) segmentsAndMetadata.getCommitMetadata());
       Assert.assertEquals(

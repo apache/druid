@@ -366,7 +366,7 @@ public class JobHelper
 
     return succeeded;
   }
-  
+
   public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = true;

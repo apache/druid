@@ -22,10 +22,9 @@ package io.druid.segment.data;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.WriteOutBytes;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
 import io.druid.segment.serde.MetaSerdeHelper;
-import it.unimi.dsi.fastutil.ints.IntList;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.writeout.WriteOutBytes;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -104,19 +103,18 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
   }
 
   @Override
-  protected void addValues(IntList ints) throws IOException
+  public void addValues(IndexedInts ints) throws IOException
   {
     if (numBytesForMaxWritten) {
       throw new IllegalStateException("written out already");
     }
-    if (ints != null) {
-      for (int i = 0; i < ints.size(); i++) {
-        int value = ints.getInt(i);
-        Preconditions.checkState(value >= 0 && value <= maxId);
-        writeInt.write(valuesOut, value);
-      }
+    for (int i = 0, size = ints.size(); i < size; i++) {
+      int value = ints.get(i);
+      Preconditions.checkState(value >= 0 && value <= maxId);
+      writeInt.write(valuesOut, value);
     }
     headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
+
     ++numWritten;
   }
 

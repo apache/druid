@@ -722,6 +722,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         ),
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        toolbox.getDataSegmentKiller(),
         toolbox.getObjectMapper(),
         metrics
     );

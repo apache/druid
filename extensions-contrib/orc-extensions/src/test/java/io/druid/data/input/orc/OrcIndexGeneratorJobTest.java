@@ -45,7 +45,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexIndexableAdapter;
-import io.druid.segment.Rowboat;
+import io.druid.segment.RowIterator;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.DataSegment;
@@ -309,11 +309,11 @@ public class OrcIndexGeneratorJobTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        for (Rowboat row : adapter.getRows()) {
-          Object[] metrics = row.getMetrics();
-
-          rowCount++;
-          Assert.assertTrue(metrics.length == 2);
+        try (RowIterator rowIt = adapter.getRows()) {
+          while (rowIt.moveToNext()) {
+            rowCount++;
+            Assert.assertEquals(2, rowIt.getPointer().getNumMetrics());
+          }
         }
       }
       Assert.assertEquals(rowCount, data.size());
