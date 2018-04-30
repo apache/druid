@@ -55,7 +55,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   }
 
   /**
-   * This method is synchronized because it can be used during indexing,
+   * This method uses synchronization because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    */
@@ -75,7 +75,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
   }
 
   /**
-   * This method is synchronized because it can be used during indexing,
+   * This method uses synchronization because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
    * https://github.com/druid-io/druid/pull/3956
    * The returned sketch is a separate instance of ArrayOfDoublesCompactSketch

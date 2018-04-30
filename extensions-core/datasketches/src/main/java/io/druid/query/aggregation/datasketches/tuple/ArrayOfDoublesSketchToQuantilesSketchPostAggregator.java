@@ -114,6 +114,9 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
     if (!super.equals(o)) {
       return false;
     }
+    if (!(o instanceof ArrayOfDoublesSketchToQuantilesSketchPostAggregator)) {
+      return false;
+    }
     final ArrayOfDoublesSketchToQuantilesSketchPostAggregator that = (ArrayOfDoublesSketchToQuantilesSketchPostAggregator) o;
     if (column != that.column) {
       return false;

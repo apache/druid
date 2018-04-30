@@ -92,6 +92,9 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends Array
     if (!super.equals(o)) {
       return false;
     }
+    if (!(o instanceof ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator)) {
+      return false;
+    }
     final ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator that = (ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator) o;
     if (numStdDevs != that.numStdDevs) {
       return false;
