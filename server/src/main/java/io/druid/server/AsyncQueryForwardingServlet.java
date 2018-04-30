@@ -45,6 +45,7 @@ import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthenticatorMapper;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
@@ -317,13 +318,16 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // will log that on the remote node.
     clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
 
-    authenticatorMapper.getAuthenticatorChain()
-                       .stream()
-                       .forEach(authenticator -> authenticator.decorateProxyRequest(
-                           clientRequest,
-                           proxyResponse,
-                           proxyRequest
-                       ));
+    // Check if there is an authentication result and use it to decorate the proxy request if needed.
+    AuthenticationResult authenticationResult = (AuthenticationResult) clientRequest.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT);
+    if (authenticationResult != null) {
+      authenticatorMapper.getAuthenticatorMap().get(authenticationResult.getAuthorizerName()).decorateProxyRequest(
+          clientRequest,
+          proxyResponse,
+          proxyRequest
+      );
+    }
     super.sendProxyRequest(
         clientRequest,
         proxyResponse,
