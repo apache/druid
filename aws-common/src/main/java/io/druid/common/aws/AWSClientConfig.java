@@ -29,6 +29,9 @@ public class AWSClientConfig
   @JsonProperty
   private boolean enablePathStyleAccess = S3ClientOptions.DEFAULT_PATH_STYLE_ACCESS;
 
+  @JsonProperty
+  protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
+
   public boolean isDisableChunkedEncoding()
   {
     return disableChunkedEncoding;
@@ -37,5 +40,10 @@ public class AWSClientConfig
   public boolean isEnablePathStyleAccess()
   {
     return enablePathStyleAccess;
+  }
+
+  public boolean isForceGlobalBucketAccessEnabled()
+  {
+    return forceGlobalBucketAccessEnabled;
   }
 }

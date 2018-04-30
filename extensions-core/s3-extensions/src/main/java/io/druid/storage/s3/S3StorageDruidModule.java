@@ -125,7 +125,7 @@ public class S3StorageDruidModule implements DruidModule
         .withClientConfiguration(setProxyConfig(configuration, proxyConfig))
         .withChunkedEncodingDisabled(clientConfig.isDisableChunkedEncoding())
         .withPathStyleAccessEnabled(clientConfig.isEnablePathStyleAccess())
-        .enableForceGlobalBucketAccess();
+        .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
 
     if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
       builder.setEndpointConfiguration(
