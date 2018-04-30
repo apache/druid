@@ -31,6 +31,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 public class LocalDataSegmentKillerTest
 {
@@ -90,6 +91,28 @@ public class LocalDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(new File(partition012Dir, "index.zip").toString()));
 
+    Assert.assertFalse(dataSourceDir.exists());
+  }
+
+  @Test
+  public void testKillUniquePath() throws Exception
+  {
+    final LocalDataSegmentKiller killer = new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig());
+    final String uuid = UUID.randomUUID().toString().substring(0, 5);
+    final File dataSourceDir = temporaryFolder.newFolder("dataSource");
+    final File intervalDir = new File(dataSourceDir, "interval");
+    final File versionDir = new File(intervalDir, "1");
+    final File partitionDir = new File(versionDir, "0");
+    final File uuidDir = new File(partitionDir, uuid);
+
+    makePartitionDirWithIndex(uuidDir);
+
+    killer.kill(getSegmentWithPath(new File(uuidDir, "index.zip").toString()));
+
+    Assert.assertFalse(uuidDir.exists());
+    Assert.assertFalse(partitionDir.exists());
+    Assert.assertFalse(versionDir.exists());
+    Assert.assertFalse(intervalDir.exists());
     Assert.assertFalse(dataSourceDir.exists());
   }
 

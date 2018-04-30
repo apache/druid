@@ -91,10 +91,10 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     return findStorageLocationIfLoaded(segment) != null;
   }
 
-  public StorageLocation findStorageLocationIfLoaded(final DataSegment segment)
+  private StorageLocation findStorageLocationIfLoaded(final DataSegment segment)
   {
     for (StorageLocation location : getSortedList(locations)) {
-      File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment));
+      File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
       if (localStorageDir.exists()) {
         return location;
       }
@@ -127,7 +127,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
   {
     StorageLocation loc = findStorageLocationIfLoaded(segment);
-    String storageDir = DataSegmentPusher.getDefaultStorageDir(segment);
+    String storageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
 
     if (loc == null) {
       loc = loadSegmentWithRetry(segment, storageDir);
@@ -232,11 +232,11 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       // in this case, findStorageLocationIfLoaded() will think segment is located in the failed storageDir which is actually not.
       // So we should always clean all possible locations here
       for (StorageLocation location : getSortedList(locations)) {
-        File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment));
+        File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
         if (localStorageDir.exists()) {
           // Druid creates folders of the form dataSource/interval/version/partitionNum.
           // We need to clean up all these directories if they are all empty.
-          File cacheFile = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment));
+          File cacheFile = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
           cleanupCacheFiles(location.getPath(), cacheFile);
           location.removeSegment(segment);
         }
@@ -272,7 +272,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     }
   }
 
-  public List<StorageLocation> getSortedList(List<StorageLocation> locs)
+  private List<StorageLocation> getSortedList(List<StorageLocation> locs)
   {
     List<StorageLocation> locations = new ArrayList<>(locs);
     Collections.sort(locations, COMPARATOR);

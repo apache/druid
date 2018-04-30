@@ -127,7 +127,8 @@ public class HdfsDataSegmentPusherTest
     testUsingSchemeForMultipleSegments("file", 3);
   }
 
-  private void testUsingScheme(final String scheme) throws Exception
+  @Test
+  public void testUsingUniqueFilePath() throws Exception
   {
     Configuration conf = new Configuration(true);
 
@@ -142,11 +143,7 @@ public class HdfsDataSegmentPusherTest
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
     final File storageDirectory = tempFolder.newFolder();
 
-    config.setStorageDirectory(
-        scheme != null
-        ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
-        : storageDirectory.getAbsolutePath()
-    );
+    config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
 
     DataSegment segmentToPush = new DataSegment(
@@ -163,49 +160,11 @@ public class HdfsDataSegmentPusherTest
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush, true);
 
-
-    String indexUri = StringUtils.format(
-        "%s/%s/%d_index.zip",
-        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-        pusher.getStorageDir(segmentToPush),
-        segmentToPush.getShardSpec().getPartitionNum()
+    String matcher = ".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index\\.zip";
+    Assert.assertTrue(
+        segment.getLoadSpec().get("path").toString(),
+        segment.getLoadSpec().get("path").toString().matches(matcher)
     );
-
-    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
-    Assert.assertEquals(segmentToPush, segment);
-    Assert.assertEquals(ImmutableMap.of(
-        "type",
-        "hdfs",
-        "path",
-        indexUri
-    ), segment.getLoadSpec());
-    // rename directory after push
-    final String segmentPath = pusher.getStorageDir(segment);
-
-    File indexFile = new File(StringUtils.format(
-        "%s/%s/%d_index.zip",
-        storageDirectory,
-        segmentPath,
-        segment.getShardSpec().getPartitionNum()
-    ));
-    Assert.assertTrue(indexFile.exists());
-    File descriptorFile = new File(StringUtils.format(
-        "%s/%s/%d_descriptor.json",
-        storageDirectory,
-        segmentPath,
-        segment.getShardSpec().getPartitionNum()
-    ));
-    Assert.assertTrue(descriptorFile.exists());
-
-    // push twice will fail and temp dir cleaned
-    File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
-    outDir.setReadOnly();
-    try {
-      pusher.push(segmentDir, segmentToPush, true);
-    }
-    catch (IOException e) {
-      Assert.fail("should not throw exception");
-    }
   }
 
   private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments) throws Exception
@@ -246,12 +205,12 @@ public class HdfsDataSegmentPusherTest
     }
 
     for (int i = 0; i < numberOfSegments; i++) {
-      final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], true);
+      final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], false);
 
       String indexUri = StringUtils.format(
           "%s/%s/%d_index.zip",
           FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-          pusher.getStorageDir(segments[i]),
+          pusher.getStorageDir(segments[i], false),
           segments[i].getShardSpec().getPartitionNum()
       );
 
@@ -264,7 +223,7 @@ public class HdfsDataSegmentPusherTest
           indexUri
       ), pushedSegment.getLoadSpec());
       // rename directory after push
-      String segmentPath = pusher.getStorageDir(pushedSegment);
+      String segmentPath = pusher.getStorageDir(pushedSegment, false);
 
       File indexFile = new File(StringUtils.format(
           "%s/%s/%d_index.zip",
@@ -293,7 +252,7 @@ public class HdfsDataSegmentPusherTest
           indexUri
       ), fromDescriptorFileDataSegment.getLoadSpec());
       // rename directory after push
-      segmentPath = pusher.getStorageDir(fromDescriptorFileDataSegment);
+      segmentPath = pusher.getStorageDir(fromDescriptorFileDataSegment, false);
 
       indexFile = new File(StringUtils.format(
           "%s/%s/%d_index.zip",
@@ -308,11 +267,92 @@ public class HdfsDataSegmentPusherTest
       File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
       outDir.setReadOnly();
       try {
-        pusher.push(segmentDir, segments[i], true);
+        pusher.push(segmentDir, segments[i], false);
       }
       catch (IOException e) {
         Assert.fail("should not throw exception");
       }
+    }
+  }
+
+  private void testUsingScheme(final String scheme) throws Exception
+  {
+    Configuration conf = new Configuration(true);
+
+    // Create a mock segment on disk
+    File segmentDir = tempFolder.newFolder();
+    File tmp = new File(segmentDir, "version.bin");
+
+    final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
+    Files.write(data, tmp);
+    final long size = data.length;
+
+    HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
+    final File storageDirectory = tempFolder.newFolder();
+
+    config.setStorageDirectory(
+        scheme != null
+        ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
+        : storageDirectory.getAbsolutePath()
+    );
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+
+    DataSegment segmentToPush = new DataSegment(
+        "foo",
+        Intervals.of("2015/2016"),
+        "0",
+        Maps.<String, Object>newHashMap(),
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        NoneShardSpec.instance(),
+        0,
+        size
+    );
+
+    DataSegment segment = pusher.push(segmentDir, segmentToPush, false);
+
+
+    String indexUri = StringUtils.format(
+        "%s/%s/%d_index.zip",
+        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+        pusher.getStorageDir(segmentToPush, false),
+        segmentToPush.getShardSpec().getPartitionNum()
+    );
+
+    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
+    Assert.assertEquals(segmentToPush, segment);
+    Assert.assertEquals(ImmutableMap.of(
+        "type",
+        "hdfs",
+        "path",
+        indexUri
+    ), segment.getLoadSpec());
+    // rename directory after push
+    final String segmentPath = pusher.getStorageDir(segment, false);
+
+    File indexFile = new File(StringUtils.format(
+        "%s/%s/%d_index.zip",
+        storageDirectory,
+        segmentPath,
+        segment.getShardSpec().getPartitionNum()
+    ));
+    Assert.assertTrue(indexFile.exists());
+    File descriptorFile = new File(StringUtils.format(
+        "%s/%s/%d_descriptor.json",
+        storageDirectory,
+        segmentPath,
+        segment.getShardSpec().getPartitionNum()
+    ));
+    Assert.assertTrue(descriptorFile.exists());
+
+    // push twice will fail and temp dir cleaned
+    File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
+    outDir.setReadOnly();
+    try {
+      pusher.push(segmentDir, segmentToPush, false);
+    }
+    catch (IOException e) {
+      Assert.fail("should not throw exception");
     }
   }
 
@@ -371,7 +411,7 @@ public class HdfsDataSegmentPusherTest
         1
     );
 
-    String storageDir = hdfsDataSegmentPusher.getStorageDir(segment);
+    String storageDir = hdfsDataSegmentPusher.getStorageDir(segment, false);
     Assert.assertEquals("something/20111001T000000.000Z_20111002T000000.000Z/brand_new_version", storageDir);
 
   }

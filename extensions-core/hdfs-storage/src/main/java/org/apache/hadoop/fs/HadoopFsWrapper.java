@@ -41,16 +41,15 @@ public class HadoopFsWrapper
    *
    * @param from
    * @param to
-   * @param replaceExisting if existing files should be overwritten
    *
-   * @return true if operation succeeded, false if replaceExisting == false and destination already exists
+   * @return true if operation succeeded, false if destination already exists
    *
    * @throws IOException if trying to overwrite a non-empty directory
    */
-  public static boolean rename(FileSystem fs, Path from, Path to, boolean replaceExisting) throws IOException
+  public static boolean rename(FileSystem fs, Path from, Path to) throws IOException
   {
     try {
-      fs.rename(from, to, replaceExisting ? Options.Rename.OVERWRITE : Options.Rename.NONE);
+      fs.rename(from, to, Options.Rename.NONE);
       return true;
     }
     catch (FileAlreadyExistsException ex) {

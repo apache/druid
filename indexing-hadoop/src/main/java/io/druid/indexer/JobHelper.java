@@ -91,6 +91,7 @@ public class JobHelper
   {
     return new Path(base, "classpath");
   }
+
   public static final String INDEX_ZIP = "index.zip";
   public static final String DESCRIPTOR_JSON = "descriptor.json";
 
@@ -568,8 +569,10 @@ public class JobHelper
       DataSegmentPusher dataSegmentPusher
   )
   {
-    return new Path(prependFSIfNullScheme(fs, basePath),
-                    dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName));
+    return new Path(
+        prependFSIfNullScheme(fs, basePath),
+        dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName)
+    );
   }
 
   public static Path makeTmpPath(
@@ -582,9 +585,10 @@ public class JobHelper
   {
     return new Path(
         prependFSIfNullScheme(fs, basePath),
-        StringUtils.format("./%s.%d",
-                           dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
-                           taskAttemptID.getId()
+        StringUtils.format(
+            "./%s.%d",
+            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+            taskAttemptID.getId()
         )
     );
   }

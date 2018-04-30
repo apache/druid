@@ -185,7 +185,8 @@ public class SameIntervalMergeTaskTest
                 return null;
               }
             },
-            new NoopServiceEmitter(), new DataSegmentPusher()
+            new NoopServiceEmitter(),
+            new DataSegmentPusher()
             {
               @Deprecated
               @Override
@@ -201,12 +202,13 @@ public class SameIntervalMergeTaskTest
               }
 
               @Override
-              public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+              public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
               {
                 // the merged segment is pushed to storage
                 segments.add(segment);
                 return segment;
               }
+
               @Override
               public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
               {

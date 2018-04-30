@@ -52,19 +52,21 @@ public class LocalDataSegmentKiller implements DataSegmentKiller
 
     try {
       if (path.getName().endsWith(".zip")) {
-
         // path format -- > .../dataSource/interval/version/partitionNum/xxx.zip
-        File partitionNumDir = path.getParentFile();
-        FileUtils.deleteDirectory(partitionNumDir);
+        // or .../dataSource/interval/version/partitionNum/UUID/xxx.zip
 
-        //try to delete other directories if possible
-        File versionDir = partitionNumDir.getParentFile();
-        if (versionDir.delete()) {
-          File intervalDir = versionDir.getParentFile();
-          if (intervalDir.delete()) {
-            File dataSourceDir = intervalDir.getParentFile();
-            dataSourceDir.delete();
+        File parentDir = path.getParentFile();
+        FileUtils.deleteDirectory(parentDir);
+
+        // possibly recursively delete empty parent directories up to 'dataSource'
+        parentDir = parentDir.getParentFile();
+        int maxDepth = 4; // if for some reason there's no datasSource directory, stop recursing somewhere reasonable
+        while (parentDir != null && --maxDepth >= 0) {
+          if (!parentDir.delete() || segment.getDataSource().equals(parentDir.getName())) {
+            break;
           }
+
+          parentDir = parentDir.getParentFile();
         }
       } else {
         throw new SegmentLoadingException("Unknown file type[%s]", path);

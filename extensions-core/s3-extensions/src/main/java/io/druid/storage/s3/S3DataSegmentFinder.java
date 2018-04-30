@@ -21,9 +21,8 @@ package io.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -35,9 +34,11 @@ import org.jets3t.service.model.StorageObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class S3DataSegmentFinder implements DataSegmentFinder
 {
@@ -62,7 +63,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
   @Override
   public Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor) throws SegmentLoadingException
   {
-    final Set<DataSegment> segments = Sets.newHashSet();
+    final Map<String, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
 
     try {
       Iterator<StorageObject> objectsIterator = S3Utils.storageObjectsIterator(
@@ -103,7 +104,12 @@ public class S3DataSegmentFinder implements DataSegmentFinder
                   s3Client.putObject(config.getBucket(), newDescJsonObject);
                 }
               }
-              segments.add(dataSegment);
+
+              DataSegmentFinder.putInMapRetainingNewest(
+                  timestampedSegments,
+                  dataSegment,
+                  indexObject.getLastModifiedDate() == null ? 0 : indexObject.getLastModifiedDate().getTime()
+              );
             }
           } else {
             throw new SegmentLoadingException(
@@ -124,6 +130,6 @@ public class S3DataSegmentFinder implements DataSegmentFinder
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
       Throwables.propagate(e);
     }
-    return segments;
+    return timestampedSegments.values().stream().map(x -> x.lhs).collect(Collectors.toSet());
   }
 }
