@@ -50,8 +50,7 @@ import java.util.Map;
 
 /**
  */
-public class
-HdfsDataSegmentPusher implements DataSegmentPusher
+public class HdfsDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(HdfsDataSegmentPusher.class);
 
