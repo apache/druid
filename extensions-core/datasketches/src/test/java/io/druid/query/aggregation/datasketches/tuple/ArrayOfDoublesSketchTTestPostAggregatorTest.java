@@ -17,7 +17,7 @@
  * under the License.
  */
 
- package io.druid.query.aggregation.datasketches.tuple;
+package io.druid.query.aggregation.datasketches.tuple;
 
 import java.util.Arrays;
 
@@ -31,7 +31,8 @@ public class ArrayOfDoublesSketchTTestPostAggregatorTest
 {
 
   @Test
-  public void equalsAndHashCode() {
+  public void equalsAndHashCode()
+  {
     final PostAggregator postAgg1 = new ArrayOfDoublesSketchTTestPostAggregator(
         "a",
         Arrays.asList(new ConstantPostAggregator("", 0), new ConstantPostAggregator("", 0))

@@ -17,7 +17,7 @@
  * under the License.
  */
 
- package io.druid.query.aggregation.datasketches.tuple;
+package io.druid.query.aggregation.datasketches.tuple;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,7 +29,8 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregatorTest
 {
 
   @Test
-  public void equalsAndHashCode() {
+  public void equalsAndHashCode()
+  {
     final PostAggregator postAgg1 = new ArrayOfDoublesSketchToQuantilesSketchPostAggregator(
         "a",
         new ConstantPostAggregator("", 0),
