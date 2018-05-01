@@ -20,6 +20,9 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
@@ -53,22 +56,30 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
   private final Configuration hadoopConfig;
   private final ObjectMapper jsonMapper;
-  private final String fullyQualifiedStorageDirectory;
+
+  // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
+  // Please see https://github.com/druid-io/druid/pull/5684
+  private final Supplier<String> fullyQualifiedStorageDirectory;
 
   @Inject
-  public HdfsDataSegmentPusher(
-      HdfsDataSegmentPusherConfig config,
-      Configuration hadoopConfig,
-      ObjectMapper jsonMapper
-  ) throws IOException
+  public HdfsDataSegmentPusher(HdfsDataSegmentPusherConfig config, Configuration hadoopConfig, ObjectMapper jsonMapper)
   {
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;
     Path storageDir = new Path(config.getStorageDirectory());
-    this.fullyQualifiedStorageDirectory = FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
-                                                    .makeQualified(storageDir)
-                                                    .toUri()
-                                                    .toString();
+    this.fullyQualifiedStorageDirectory = Suppliers.memoize(
+        () -> {
+          try {
+            return FileSystem.newInstance(storageDir.toUri(), hadoopConfig)
+                             .makeQualified(storageDir)
+                             .toUri()
+                             .toString();
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+    );
 
     log.info("Configured HDFS as deep storage");
   }
@@ -83,24 +94,26 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return fullyQualifiedStorageDirectory;
+    return fullyQualifiedStorageDirectory.get();
   }
 
   @Override
-  public DataSegment push(File inDir, DataSegment segment, boolean replaceExisting) throws IOException
+  public DataSegment push(final File inDir, final DataSegment segment, final boolean useUniquePath) throws IOException
   {
-    final String storageDir = this.getStorageDir(segment);
+    // For HDFS, useUniquePath does not affect the directory tree but instead affects the filename, which is of the form
+    // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths.
+    final String storageDir = this.getStorageDir(segment, false);
 
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getIdentifier(),
-        fullyQualifiedStorageDirectory,
+        fullyQualifiedStorageDirectory.get(),
         storageDir
     );
 
     Path tmpIndexFile = new Path(StringUtils.format(
         "%s/%s/%s/%s_index.zip",
-        fullyQualifiedStorageDirectory,
+        fullyQualifiedStorageDirectory.get(),
         segment.getDataSource(),
         UUIDUtils.generateUuid(),
         segment.getShardSpec().getPartitionNum()
@@ -114,17 +127,20 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     final DataSegment dataSegment;
     try (FSDataOutputStream out = fs.create(tmpIndexFile)) {
       size = CompressionUtils.zip(inDir, out);
+      final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
       final Path outIndexFile = new Path(StringUtils.format(
-          "%s/%s/%d_index.zip",
-          fullyQualifiedStorageDirectory,
+          "%s/%s/%d_%sindex.zip",
+          fullyQualifiedStorageDirectory.get(),
           storageDir,
-          segment.getShardSpec().getPartitionNum()
+          segment.getShardSpec().getPartitionNum(),
+          uniquePrefix
       ));
       final Path outDescriptorFile = new Path(StringUtils.format(
-          "%s/%s/%d_descriptor.json",
-          fullyQualifiedStorageDirectory,
+          "%s/%s/%d_%sdescriptor.json",
+          fullyQualifiedStorageDirectory.get(),
           storageDir,
-          segment.getShardSpec().getPartitionNum()
+          segment.getShardSpec().getPartitionNum(),
+          uniquePrefix
       ));
 
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
@@ -143,8 +159,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
 
       // Create parent if it does not exist, recreation is not an error
       fs.mkdirs(outIndexFile.getParent());
-      copyFilesWithChecks(fs, tmpDescriptorFile, outDescriptorFile, replaceExisting);
-      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile, replaceExisting);
+      copyFilesWithChecks(fs, tmpDescriptorFile, outDescriptorFile);
+      copyFilesWithChecks(fs, tmpIndexFile, outIndexFile);
     }
     finally {
       try {
@@ -160,19 +176,17 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     return dataSegment;
   }
 
-  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to, final boolean replaceExisting)
-      throws IOException
+  private void copyFilesWithChecks(final FileSystem fs, final Path from, final Path to) throws IOException
   {
-    if (!HadoopFsWrapper.rename(fs, from, to, replaceExisting)) {
+    if (!HadoopFsWrapper.rename(fs, from, to)) {
       if (fs.exists(to)) {
         log.info(
-            "Unable to rename temp Index file[%s] to final segment path [%s]. "
-            + "It is already pushed by a replica task.",
+            "Unable to rename temp file [%s] to segment path [%s], it may have already been pushed by a replica task.",
             from,
             to
         );
       } else {
-        throw new IOE("Failed to rename temp Index file[%s] and final segment path[%s] is not present.", from, to);
+        throw new IOE("Failed to rename temp file [%s] and final segment path [%s] is not present.", from, to);
       }
     }
   }
@@ -207,8 +221,17 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
    */
 
   @Override
-  public String getStorageDir(DataSegment segment)
+  public String getStorageDir(DataSegment segment, boolean useUniquePath)
   {
+    // This is only called by HdfsDataSegmentPusher.push(), which will always set useUniquePath to false since any
+    // 'uniqueness' will be applied not to the directory but to the filename along with the shard number. This is done
+    // to avoid performance issues due to excessive HDFS directories. Hence useUniquePath is ignored here and we
+    // expect it to be false.
+    Preconditions.checkArgument(
+        !useUniquePath,
+        "useUniquePath must be false for HdfsDataSegmentPusher.getStorageDir()"
+    );
+
     return JOINER.join(
         segment.getDataSource(),
         StringUtils.format(
@@ -223,9 +246,10 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public String makeIndexPathName(DataSegment dataSegment, String indexName)
   {
+    // This is only called from Hadoop batch which doesn't require unique segment paths so set useUniquePath=false
     return StringUtils.format(
         "./%s/%d_%s",
-        this.getStorageDir(dataSegment),
+        this.getStorageDir(dataSegment, false),
         dataSegment.getShardSpec().getPartitionNum(),
         indexName
     );

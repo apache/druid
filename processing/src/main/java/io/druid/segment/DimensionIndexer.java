@@ -24,7 +24,7 @@ import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.TimeAndDimsHolder;
+import io.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 
@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
  * Processing related interface
  *
  * A DimensionIndexer is a per-dimension stateful object that encapsulates type-specific operations and data structures
- * used during the in-memory ingestion process (i.e., work done by IncrementalIndex).
+ * used during the in-memory ingestion process (i.e., work done by {@link IncrementalIndex}).
  *
  * Ingested row values are passed to a DimensionIndexer, which will update its internal data structures such as
  * a value->ID dictionary as row values are seen.
@@ -59,8 +59,8 @@ import javax.annotation.Nullable;
  * The first ordering will be referred to as "Unsorted" in the documentation for this interface, and
  * the second ordering will be referred to as "Sorted".
  *
- * The unsorted ordering is used during ingestion, within the IncrementalIndex's TimeAndDims keys; the encodings
- * are built as rows are ingested, taking the order in which new dimension values are seen.
+ * The unsorted ordering is used during ingestion, within the {@link io.druid.segment.incremental.IncrementalIndexRow}
+ * keys; the encodings are built as rows are ingested, taking the order in which new dimension values are seen.
  *
  * The generation of a sorted encoding takes place during segment creation when indexes are merged/persisted.
  * The sorted ordering will be used for dimension value arrays in that context and when reading from
@@ -112,7 +112,7 @@ public interface DimensionIndexer
 
   /**
    * Given a single row value or list of row values (for multi-valued dimensions), update any internal data structures
-   * with the ingested values and return the row values as an array to be used within a TimeAndDims key.
+   * with the ingested values and return the row values as an array to be used within a Row key.
    *
    * For example, the dictionary-encoded String-type column will return an int[] containing a dictionary ID.
    *
@@ -193,29 +193,32 @@ public interface DimensionIndexer
    * Return an object used to read values from this indexer's column as Strings.
    *
    * @param spec Specifies the output name of a dimension and any extraction functions to be applied.
-   * @param currEntry Provides access to the current TimeAndDims object in the Cursor
+   * @param currEntry Provides access to the current Row object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
   DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   );
 
   /**
    * Return an object used to read values from this indexer's column.
    *
-   * @param currEntry Provides access to the current TimeAndDims object in the Cursor
+   * @param currEntry Provides access to the current Row object in the Cursor
    * @param desc Descriptor object for this dimension within an IncrementalIndex
    * @return A new object that reads rows from currEntry
    */
-  ColumnValueSelector<?> makeColumnValueSelector(TimeAndDimsHolder currEntry, IncrementalIndex.DimensionDesc desc);
+  ColumnValueSelector<?> makeColumnValueSelector(
+      IncrementalIndexRowHolder currEntry,
+      IncrementalIndex.DimensionDesc desc
+  );
 
   /**
-   * Compares the row values for this DimensionIndexer's dimension from a TimeAndDims key.
+   * Compares the row values for this DimensionIndexer's dimension from a Row key.
    *
-   * The dimension value arrays within a TimeAndDims key always use the "unsorted" ordering for encoded values.
+   * The dimension value arrays within a Row key always use the "unsorted" ordering for encoded values.
    *
    * The row values are passed to this function as an Object, the implementer should cast them to the type
    * appropriate for this dimension.
@@ -230,26 +233,29 @@ public interface DimensionIndexer
    *
    * Refer to StringDimensionIndexer.compareUnsortedEncodedKeyComponents() for a reference implementation.
    *
-   * @param lhs dimension value array from a TimeAndDims key
-   * @param rhs dimension value array from a TimeAndDims key
+   * @param lhs dimension value array from a Row key
+   * @param rhs dimension value array from a Row key
    * @return comparison of the two arrays
    */
   int compareUnsortedEncodedKeyComponents(@Nullable EncodedKeyComponentType lhs, @Nullable EncodedKeyComponentType rhs);
 
 
   /**
-   * Check if two row value arrays from TimeAndDims keys are equal.
+   * Check if two row value arrays from Row keys are equal.
    *
-   * @param lhs dimension value array from a TimeAndDims key
-   * @param rhs dimension value array from a TimeAndDims key
+   * @param lhs dimension value array from a Row key
+   * @param rhs dimension value array from a Row key
    * @return true if the two arrays are equal
    */
-  boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable EncodedKeyComponentType lhs, @Nullable EncodedKeyComponentType rhs);
+  boolean checkUnsortedEncodedKeyComponentsEqual(
+      @Nullable EncodedKeyComponentType lhs,
+      @Nullable EncodedKeyComponentType rhs
+  );
 
 
   /**
-   * Given a row value array from a TimeAndDims key, generate a hashcode.
-   * @param key dimension value array from a TimeAndDims key
+   * Given a row value array from a Row key, generate a hashcode.
+   * @param key dimension value array from a Row key
    * @return hashcode of the array
    */
   int getUnsortedEncodedKeyComponentHashCode(@Nullable EncodedKeyComponentType key);
@@ -258,37 +264,33 @@ public interface DimensionIndexer
   boolean ARRAY = false;
 
   /**
-   * Given a row value array from a TimeAndDims key, as described in the documentation for
+   * Given a row value array from a Row key, as described in the documentation for
    * compareUnsortedEncodedKeyComponents(), convert the unsorted encoded values to a list or array of actual values.
    *
    * If the key has one element, this method should return a single Object instead of an array or list, ignoring
    * the asList parameter.
    *
-   * @param key dimension value array from a TimeAndDims key
+   * @param key dimension value array from a Row key
    * @param asList if true, return an array; if false, return a list
    * @return single value, array, or list containing the actual values corresponding to the encoded values
    *         in the input array
    */
   Object convertUnsortedEncodedKeyComponentToActualArrayOrList(EncodedKeyComponentType key, boolean asList);
 
-
   /**
-   * Given a row value array from a TimeAndDims key, as described in the documentation for
-   * compareUnsortedEncodedKeyComponents(), convert the unsorted encoded values to an array of sorted encoded values
-   * (i.e., sorted by their corresponding actual values)
-   *
-   * @param key dimension value array from a TimeAndDims key
-   * @return array containing the sorted encoded values corresponding to the unsorted encoded values in the input array
+   * Converts dictionary-encoded row values from unspecified (random) encoding order, to sorted encoding. This step
+   * is needed to be able to correctly map per-segment encoded values to global values on the next conversion step,
+   * {@link DimensionMerger#convertSortedSegmentRowValuesToMergedRowValues}. The latter method requires sorted encoding
+   * values on the input, because {@link DimensionMerger#writeMergedValueDictionary} takes sorted lookups as it's input.
    */
-  EncodedKeyComponentType convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(EncodedKeyComponentType key);
-
+  ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues);
 
   /**
    * Helper function for building bitmap indexes for integer-encoded dimensions.
    *
    * Called by IncrementalIndexAdapter as it iterates through its sequence of rows.
    *
-   * Given a row value array from a TimeAndDims key, with the current row number indicated by "rowNum",
+   * Given a row value array from a Row key, with the current row number indicated by "rowNum",
    * set the index for "rowNum" in the bitmap index for each value that appears in the row value array.
    *
    * For example, if key is an int[] array with values [1,3,4] for a dictionary-encoded String dimension,
@@ -299,7 +301,7 @@ public interface DimensionIndexer
    * If a dimension type does not support bitmap indexes, this function will not be called
    * and can be left unimplemented.
    *
-   * @param key dimension value array from a TimeAndDims key
+   * @param key dimension value array from a Row key
    * @param rowNum current row number
    * @param bitmapIndexes array of bitmaps, indexed by integer dimension value
    * @param factory bitmap factory

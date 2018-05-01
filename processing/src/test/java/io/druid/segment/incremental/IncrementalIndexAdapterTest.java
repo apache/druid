@@ -21,7 +21,7 @@ package io.druid.segment.incremental;
 
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
-import io.druid.segment.Rowboat;
+import io.druid.segment.RowIterator;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
@@ -74,36 +74,13 @@ public class IncrementalIndexAdapterTest
                   .getBitmapFactory()
     );
 
-    Iterable<Rowboat> boats = incrementalAdapter.getRows();
-    List<Rowboat> boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
+    RowIterator rows = incrementalAdapter.getRows();
+    List<Integer> rowNums = new ArrayList<>();
+    while (rows.moveToNext()) {
+      rowNums.add(rows.getPointer().getRowNum());
     }
-    Assert.assertEquals(2, boatList.size());
-    Assert.assertEquals(0, boatList.get(0).getRowNum());
-    Assert.assertEquals(1, boatList.get(1).getRowNum());
-
-    /* Iterate through the Iterable a few times, check that boat row numbers are correct afterwards */
-    boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
-    boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
-    boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
-    boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
-
-    Assert.assertEquals(2, boatList.size());
-    Assert.assertEquals(0, boatList.get(0).getRowNum());
-    Assert.assertEquals(1, boatList.get(1).getRowNum());
-
+    Assert.assertEquals(2, rowNums.size());
+    Assert.assertEquals(0, (long) rowNums.get(0));
+    Assert.assertEquals(1, (long) rowNums.get(1));
   }
 }

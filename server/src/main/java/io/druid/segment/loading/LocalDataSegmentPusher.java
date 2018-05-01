@@ -32,7 +32,6 @@ import org.apache.commons.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
@@ -71,10 +70,11 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(File dataSegmentFile, DataSegment segment, boolean replaceExisting) throws IOException
+  public DataSegment push(final File dataSegmentFile, final DataSegment segment, final boolean useUniquePath)
+      throws IOException
   {
     final File baseStorageDir = config.getStorageDirectory();
-    final File outDir = new File(baseStorageDir, this.getStorageDir(segment));
+    final File outDir = new File(baseStorageDir, this.getStorageDir(segment, useUniquePath));
 
     log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getIdentifier(), outDir.toString());
 
@@ -109,31 +109,15 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       );
 
       FileUtils.forceMkdir(outDir);
-      if (replaceExisting) {
-        final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
-        final File descriptorFileTarget = new File(outDir, tmpDescriptorFile.getName());
+      final File indexFileTarget = new File(outDir, tmpIndexFile.getName());
+      final File descriptorFileTarget = new File(outDir, tmpDescriptorFile.getName());
 
-        if (!tmpIndexFile.renameTo(indexFileTarget)) {
-          throw new IOE("Failed to rename [%s] to [%s]", tmpIndexFile, indexFileTarget);
-        }
+      if (!tmpIndexFile.renameTo(indexFileTarget)) {
+        throw new IOE("Failed to rename [%s] to [%s]", tmpIndexFile, indexFileTarget);
+      }
 
-        if (!tmpDescriptorFile.renameTo(descriptorFileTarget)) {
-          throw new IOE("Failed to rename [%s] to [%s]", tmpDescriptorFile, descriptorFileTarget);
-        }
-      } else {
-        try {
-          Files.move(tmpIndexFile.toPath(), outDir.toPath().resolve(tmpIndexFile.toPath().getFileName()));
-        }
-        catch (FileAlreadyExistsException e) {
-          log.info("[%s] already exists at [%s], ignore if replication is configured", INDEX_FILENAME, outDir);
-        }
-        try {
-          Files.move(tmpDescriptorFile.toPath(), outDir.toPath().resolve(tmpDescriptorFile.toPath().getFileName()));
-        }
-        catch (FileAlreadyExistsException e) {
-          log.info("[%s] already exists at [%s], ignore if replication is configured", DESCRIPTOR_FILENAME, outDir);
-          dataSegment = jsonMapper.readValue(new File(outDir, DESCRIPTOR_FILENAME), DataSegment.class);
-        }
+      if (!tmpDescriptorFile.renameTo(descriptorFileTarget)) {
+        throw new IOE("Failed to rename [%s] to [%s]", tmpDescriptorFile, descriptorFileTarget);
       }
 
       return dataSegment;

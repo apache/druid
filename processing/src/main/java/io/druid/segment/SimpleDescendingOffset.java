@@ -23,31 +23,34 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Offset;
 import io.druid.segment.data.ReadableOffset;
 
-public class NoFilterOffset extends Offset
+public class SimpleDescendingOffset extends Offset
 {
   private final int rowCount;
-  private final boolean descending;
   private final int initialOffset;
   private int currentOffset;
 
-  NoFilterOffset(int initialOffset, int rowCount, boolean descending)
+  SimpleDescendingOffset(int rowCount)
   {
+    this(rowCount - 1, rowCount);
+  }
+
+  private SimpleDescendingOffset(int initialOffset, int rowCount)
+  {
+    this.rowCount = rowCount;
     this.initialOffset = initialOffset;
     this.currentOffset = initialOffset;
-    this.rowCount = rowCount;
-    this.descending = descending;
   }
 
   @Override
   public void increment()
   {
-    currentOffset++;
+    currentOffset--;
   }
 
   @Override
   public boolean withinBounds()
   {
-    return currentOffset < rowCount;
+    return currentOffset >= 0;
   }
 
   @Override
@@ -65,24 +68,24 @@ public class NoFilterOffset extends Offset
   @Override
   public Offset clone()
   {
-    return new NoFilterOffset(currentOffset, rowCount, descending);
+    return new SimpleDescendingOffset(currentOffset, rowCount);
   }
 
   @Override
   public int getOffset()
   {
-    return descending ? rowCount - currentOffset - 1 : currentOffset;
+    return currentOffset;
   }
 
   @Override
   public String toString()
   {
-    return currentOffset + "/" + rowCount + (descending ? "(DSC)" : "");
+    return currentOffset + "/" + rowCount + "(DSC)";
   }
 
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("descending", descending);
+    // nothing to inspect
   }
 }

@@ -65,7 +65,7 @@ public class AzureTaskLogsTest extends EasyMockSupport
     try {
       final File logFile = new File(tmpDir, "log");
 
-      azureStorage.uploadBlob(logFile, container, prefix + "/" + taskid + "/log", true);
+      azureStorage.uploadBlob(logFile, container, prefix + "/" + taskid + "/log");
       expectLastCall();
 
       replayAll();

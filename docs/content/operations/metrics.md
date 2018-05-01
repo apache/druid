@@ -129,10 +129,12 @@ Note: If the JVM does not support CPU time measurement for the current thread, i
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`task/run/time`|Milliseconds taken to run task.|dataSource, taskType, taskStatus.|Varies.|
-|`segment/added/bytes`|Size in bytes of new segments created.|dataSource, taskType, interval.|Varies.|
-|`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.|dataSource, taskType, interval.|Varies.|
-|`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.|dataSource, taskType, interval.|Varies.|
+|`task/run/time`|Milliseconds taken to run a task.|dataSource, taskId, taskType, taskStatus.|Varies.|
+|`task/action/log/time`|Milliseconds taken to log a task action to the audit log.|dataSource, taskId, taskType|< 1000 (subsecond)|
+|`task/action/run/time`|Milliseconds taken to execute a task action.|dataSource, taskId, taskType|Varies from subsecond to a few seconds, based on action type.|
+|`segment/added/bytes`|Size in bytes of new segments created.|dataSource, taskId, taskType, interval.|Varies.|
+|`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.|dataSource, taskId, taskType, interval.|Varies.|
+|`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.|dataSource, taskId, taskType, interval.|Varies.|
 
 ## Coordination
 

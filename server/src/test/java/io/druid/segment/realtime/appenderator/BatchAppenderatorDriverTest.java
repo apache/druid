@@ -27,10 +27,13 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver.SegmentsForSequence;
 import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockSupport;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,7 +44,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class BatchAppenderatorDriverTest
+public class BatchAppenderatorDriverTest extends EasyMockSupport
 {
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
@@ -69,22 +72,29 @@ public class BatchAppenderatorDriverTest
   private SegmentAllocator allocator;
   private AppenderatorTester appenderatorTester;
   private BatchAppenderatorDriver driver;
+  private DataSegmentKiller dataSegmentKiller;
 
   @Before
   public void setup()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
+    dataSegmentKiller = createStrictMock(DataSegmentKiller.class);
     driver = new BatchAppenderatorDriver(
         appenderatorTester.getAppenderator(),
         allocator,
-        new TestUsedSegmentChecker(appenderatorTester)
+        new TestUsedSegmentChecker(appenderatorTester),
+        dataSegmentKiller
     );
+
+    EasyMock.replay(dataSegmentKiller);
   }
 
   @After
   public void tearDown() throws Exception
   {
+    EasyMock.verify(dataSegmentKiller);
+
     driver.clear();
     driver.close();
   }

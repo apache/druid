@@ -46,7 +46,7 @@ public class TestDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
+  public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
   {
     pushedSegments.add(segment);
     return segment;

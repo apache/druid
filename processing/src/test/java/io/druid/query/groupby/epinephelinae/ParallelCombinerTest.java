@@ -19,10 +19,7 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.collections.ResourceHolder;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -36,12 +33,10 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ParallelCombinerTest
 {
@@ -49,22 +44,6 @@ public class ParallelCombinerTest
   private static final ExecutorService SERVICE = Execs.multiThreaded(THREAD_NUM, "parallel-combiner-test-%d");
   private static final TestResourceHolder TEST_RESOURCE_HOLDER = new TestResourceHolder(512);
   private static final KeySerdeFactory<Long> KEY_SERDE_FACTORY = new TestKeySerdeFactory();
-
-  private static final Supplier<ResourceHolder<ByteBuffer>> COMBINE_BUFFER_SUPPLIER =
-      new Supplier<ResourceHolder<ByteBuffer>>()
-      {
-        private final AtomicBoolean called = new AtomicBoolean(false);
-
-        @Override
-        public ResourceHolder<ByteBuffer> get()
-        {
-          if (called.compareAndSet(false, true)) {
-            return TEST_RESOURCE_HOLDER;
-          } else {
-            throw new IAE("should be called once");
-          }
-        }
-      };
 
   private static final class TestIterator implements CloseableIterator<Entry<Long>>
   {
@@ -112,7 +91,7 @@ public class ParallelCombinerTest
   public void testCombine() throws IOException
   {
     final ParallelCombiner<Long> combiner = new ParallelCombiner<>(
-        COMBINE_BUFFER_SUPPLIER,
+        TEST_RESOURCE_HOLDER,
         new AggregatorFactory[]{new CountAggregatorFactory("cnt").getCombiningFactory()},
         KEY_SERDE_FACTORY,
         MoreExecutors.listeningDecorator(SERVICE),

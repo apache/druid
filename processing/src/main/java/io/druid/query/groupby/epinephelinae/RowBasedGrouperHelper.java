@@ -30,7 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -137,7 +137,7 @@ public class RowBasedGrouperHelper
       final Map<String, ValueType> rawInputRowSignature,
       final GroupByQueryConfig config,
       final Supplier<ByteBuffer> bufferSupplier,
-      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
+      @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
@@ -216,7 +216,7 @@ public class RowBasedGrouperHelper
       grouper = new ConcurrentGrouper<>(
           querySpecificConfig,
           bufferSupplier,
-          combineBufferSupplier,
+          combineBufferHolder,
           keySerdeFactory,
           combineKeySerdeFactory,
           columnSelectorFactory,

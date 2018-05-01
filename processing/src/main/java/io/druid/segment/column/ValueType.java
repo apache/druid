@@ -27,6 +27,12 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.DoubleWrappingDimensionSelector;
 import io.druid.segment.FloatWrappingDimensionSelector;
 import io.druid.segment.LongWrappingDimensionSelector;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
+import io.druid.segment.selector.settable.SettableDimensionValueSelector;
+import io.druid.segment.selector.settable.SettableDoubleColumnValueSelector;
+import io.druid.segment.selector.settable.SettableFloatColumnValueSelector;
+import io.druid.segment.selector.settable.SettableLongColumnValueSelector;
+import io.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 
 /**
  * Should be the same as {@link io.druid.data.input.impl.DimensionSchema.ValueType}.
@@ -43,6 +49,12 @@ public enum ValueType
     {
       return new FloatWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
     }
+
+    @Override
+    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    {
+      return new SettableFloatColumnValueSelector();
+    }
   },
   DOUBLE {
     @Override
@@ -52,6 +64,12 @@ public enum ValueType
     )
     {
       return new DoubleWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
+    }
+
+    @Override
+    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    {
+      return new SettableDoubleColumnValueSelector();
     }
   },
   LONG {
@@ -63,9 +81,27 @@ public enum ValueType
     {
       return new LongWrappingDimensionSelector(numericColumnValueSelector, extractionFn);
     }
+
+    @Override
+    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    {
+      return new SettableLongColumnValueSelector();
+    }
   },
-  STRING,
-  COMPLEX;
+  STRING {
+    @Override
+    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    {
+      return new SettableDimensionValueSelector();
+    }
+  },
+  COMPLEX {
+    @Override
+    public SettableColumnValueSelector makeSettableColumnValueSelector()
+    {
+      return new SettableObjectColumnValueSelector();
+    }
+  };
 
   public DimensionSelector makeNumericWrappingDimensionSelector(
       ColumnValueSelector numericColumnValueSelector,
@@ -74,6 +110,8 @@ public enum ValueType
   {
     throw new UnsupportedOperationException("Not a numeric value type: " + name());
   }
+
+  public abstract SettableColumnValueSelector makeSettableColumnValueSelector();
 
   public boolean isNumeric()
   {

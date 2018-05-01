@@ -448,13 +448,6 @@ public class RealtimePlumber implements Plumber
 
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
 
-              // The realtime plumber can generate segments with the same identifier (i.e. replica tasks) but does not
-              // have any strict requirement that the contents of these segments be identical. It is possible that two
-              // tasks generate a segment with the same identifier containing different data, and in this situation we
-              // want to favor the data from the task which pushed first. This is because it is possible that one
-              // historical could load the segment after the first task pushed and another historical load the same
-              // segment after the second task pushed. If the second task's segment overwrote the first one, the second
-              // historical node would be serving different data from the first. Hence set replaceExisting == false.
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
                   sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),

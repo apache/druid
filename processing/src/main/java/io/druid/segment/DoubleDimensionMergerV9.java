@@ -24,72 +24,18 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.IOException;
-import java.nio.IntBuffer;
-import java.util.List;
-
-public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
+public class DoubleDimensionMergerV9 extends NumericDimensionMergerV9
 {
-  protected String dimensionName;
-  protected final IndexSpec indexSpec;
-  private GenericColumnSerializer serializer;
 
-  public DoubleDimensionMergerV9(
-      String dimensionName,
-      IndexSpec indexSpec,
-      SegmentWriteOutMedium segmentWriteOutMedium
-  )
+  DoubleDimensionMergerV9(String dimensionName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
-    this.dimensionName = dimensionName;
-    this.indexSpec = indexSpec;
-
-    try {
-      setupEncodedValueWriter(segmentWriteOutMedium);
-    }
-    catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
-  }
-
-  private void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
-  {
-    this.serializer = IndexMergerV9.createDoubleColumnSerializer(
-        segmentWriteOutMedium,
-        dimensionName,
-        indexSpec
-    );
-
-    serializer.open();
+    super(dimensionName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters)
+  GenericColumnSerializer setupEncodedValueWriter()
   {
-    // double columns do not have additional metadata
-  }
-
-  @Override
-  public Double convertSegmentRowValuesToMergedRowValues(Double segmentRow, int segmentIndexNumber)
-  {
-    return segmentRow;
-  }
-
-  @Override
-  public void processMergedRow(Double rowValues) throws IOException
-  {
-    serializer.serialize(rowValues);
-  }
-
-  @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions)
-  {
-    // double columns do not have indexes
-  }
-
-  @Override
-  public boolean canSkip()
-  {
-    return false;
+    return IndexMergerV9.createDoubleColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
   }
 
   @Override

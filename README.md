@@ -39,10 +39,15 @@ If you find any bugs, please file a [GitHub issue](https://github.com/druid-io/d
 
 ### Community
 
-Community support is available on the [druid-user mailing
-list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com).
+The Druid community is in the process of migrating to Apache by way of the Apache Incubator. Eventually, as we proceed
+along this path, our site will move from http://druid.io/ to https://druid.apache.org/.
 
-Development discussions occur on the [druid-development list](https://groups.google.com/forum/#!forum/druid-development)(druid-development@googlegroups.com).
+Community support is available on the
+[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user)(druid-user@googlegroups.com), which
+is hosted at Google Groups.
+
+Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
+you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
 
 We also have a couple people hanging out on IRC in `#druid-dev` on
 `irc.freenode.net`.

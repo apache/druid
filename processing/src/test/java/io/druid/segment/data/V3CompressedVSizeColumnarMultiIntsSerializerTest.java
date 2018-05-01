@@ -134,7 +134,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           );
       writer.open();
       for (int[] val : vals) {
-        writer.add(val);
+        writer.addValues(new ArrayBasedIndexedInts(val));
       }
       long writtenLength = writer.getSerializedSize();
       final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
@@ -256,10 +256,11 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
           compressionStrategy,
           genericIndexed
       );
-      V3CompressedVSizeColumnarMultiIntsSerializer writer = new V3CompressedVSizeColumnarMultiIntsSerializer(offsetWriter, valueWriter);
+      V3CompressedVSizeColumnarMultiIntsSerializer writer =
+          new V3CompressedVSizeColumnarMultiIntsSerializer(offsetWriter, valueWriter);
       writer.open();
       for (int[] val : vals) {
-        writer.add(val);
+        writer.addValues(new ArrayBasedIndexedInts(val));
       }
 
       final SmooshedWriter channel = smoosher.addWithSmooshedWriter("test", writer.getSerializedSize());
@@ -268,10 +269,8 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
       smoosher.close();
       SmooshedFileMapper mapper = Smoosh.map(tmpDirectory);
 
-      V3CompressedVSizeColumnarMultiIntsSupplier supplierFromByteBuffer = V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
-          mapper.mapFile("test"),
-          byteOrder
-      );
+      V3CompressedVSizeColumnarMultiIntsSupplier supplierFromByteBuffer =
+          V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(mapper.mapFile("test"), byteOrder);
       ColumnarMultiInts columnarMultiInts = supplierFromByteBuffer.get();
       assertEquals(columnarMultiInts.size(), vals.size());
       for (int i = 0; i < vals.size(); ++i) {
