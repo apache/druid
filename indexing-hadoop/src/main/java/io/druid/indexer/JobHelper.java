@@ -831,4 +831,14 @@ public class JobHelper
       throw Throwables.propagate(e);
     }
   }
+
+  public static String getJobTrackerAddress(Configuration config)
+  {
+    String jobTrackerAddress = config.get("mapred.job.tracker");
+    if (jobTrackerAddress == null) {
+      // New Property name for Hadoop 3.0 and later versions
+      jobTrackerAddress = config.get("mapreduce.jobtracker.address");
+    }
+    return jobTrackerAddress;
+  }
 }

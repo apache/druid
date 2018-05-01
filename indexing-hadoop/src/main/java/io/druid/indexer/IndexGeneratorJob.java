@@ -535,7 +535,7 @@ public class IndexGeneratorJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
-      if ("local".equals(config.get("mapreduce.jobtracker.address")) || "local".equals(config.get("mapred.job.tracker"))) {
+      if ("local".equals(JobHelper.getJobTrackerAddress(config))) {
         return shardNum % numPartitions;
       } else {
         if (shardNum >= numPartitions) {
