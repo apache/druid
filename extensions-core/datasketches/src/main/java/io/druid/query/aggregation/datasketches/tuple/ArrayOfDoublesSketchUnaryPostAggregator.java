@@ -70,7 +70,7 @@ public abstract class ArrayOfDoublesSketchUnaryPostAggregator extends ArrayOfDou
     if (!super.equals(o)) {
       return false;
     }
-    if (!(o instanceof ArrayOfDoublesSketchUnaryPostAggregator)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
     final ArrayOfDoublesSketchUnaryPostAggregator that = (ArrayOfDoublesSketchUnaryPostAggregator) o;

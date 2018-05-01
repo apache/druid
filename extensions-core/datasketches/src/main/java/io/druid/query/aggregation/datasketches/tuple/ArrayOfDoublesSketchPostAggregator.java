@@ -65,7 +65,7 @@ public abstract class ArrayOfDoublesSketchPostAggregator implements PostAggregat
       return false;
     }
     final ArrayOfDoublesSketchPostAggregator that = (ArrayOfDoublesSketchPostAggregator) o;
-    return !name.equals(that.getName());
+    return name.equals(that.getName());
   }
 
   @Override
