@@ -190,10 +190,9 @@ public class AppenderatorTest
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 1), committerSupplier);
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.persist(ImmutableList.of(IDENTIFIERS.get(1)), committerSupplier.get());
-      Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.close();
+      appenderator.persistAll(committerSupplier.get());
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.close();
     }
   }
 
@@ -237,12 +236,12 @@ public class AppenderatorTest
       Assert.assertEquals(4, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), IR("2000", "bob", 1), committerSupplier, false);
       Assert.assertEquals(5, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.persist(ImmutableList.of(IDENTIFIERS.get(1)), committerSupplier.get());
-      Assert.assertEquals(3, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.close();
+      appenderator.persistAll(committerSupplier.get());
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
+      appenderator.close();
     }
   }
+
   @Test
   public void testRestoreFromDisk() throws Exception
   {
