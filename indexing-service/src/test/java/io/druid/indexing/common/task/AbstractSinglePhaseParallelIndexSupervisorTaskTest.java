@@ -42,6 +42,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.LocalDataSegmentPusher;
 import io.druid.segment.loading.LocalDataSegmentPusherConfig;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -216,7 +217,18 @@ public class AbstractSinglePhaseParallelIndexSupervisorTaskTest extends Ingestio
             },
             getObjectMapper()
         ),
-        null,
+        new DataSegmentKiller()
+        {
+          @Override
+          public void kill(DataSegment segment)
+          {
+          }
+
+          @Override
+          public void killAll()
+          {
+          }
+        },
         null,
         null,
         null,
