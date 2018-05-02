@@ -402,6 +402,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
+    //maxBytesInMemory only applies to OnHeapIncrementalIndex
     public Builder setMaxBytesInMemory(final long maxBytesInMemory)
     {
       this.maxBytesInMemory = maxBytesInMemory;

@@ -113,12 +113,13 @@ public final class IncrementalIndexRow
   }
 
   /**
-   * bytesInMemory estimates the size of TimeAndDims key, it takes into account the timestamp(long),
+   * bytesInMemory estimates the size of IncrementalIndexRow key, it takes into account the timestamp(long),
    * dims(Object Array) and dimensionDescsList(List). Each of these are calculated as follows:
    * <ul>
    * <li> timestamp : Long.BYTES
    * <li> dims array : Integer.BYTES * array length + Long.BYTES (dims object) + dimsKeySize(passed via constructor)
    * <li> dimensionDescList : Long.BYTES (shared pointer)
+   * <li> dimsKeySize : this value is passed in based on the key type (int, long, double, String etc.)
    * </ul>
    *
    * @return long estimated bytesInMemory

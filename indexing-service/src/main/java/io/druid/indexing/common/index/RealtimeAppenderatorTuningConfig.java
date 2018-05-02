@@ -39,7 +39,6 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 {
   private static final int defaultMaxRowsInMemory = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final int defaultMaxRowsPerSegment = 5_000_000;
-  private static final long defaultMaxBytesInMemory = TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = NoneShardSpec.instance();
@@ -94,6 +93,8 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? defaultMaxRowsPerSegment : maxRowsPerSegment;
+    // initializing this to 0, it will be lazily intialized to a value
+    // @see server.src.main.java.io.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod

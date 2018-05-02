@@ -85,6 +85,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -250,7 +251,7 @@ public class AppenderatorImpl implements Appenderator
 
     boolean isPersistRequired = false;
     boolean persist = false;
-    List<String> persistReasons = Lists.newArrayList();
+    List<String> persistReasons = new ArrayList();
 
     if (!sink.canAppendRow()) {
       persist = true;
@@ -272,7 +273,7 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (tuningConfig.getMaxBytesInMemory() != -1
+    if (tuningConfig.getMaxBytesInMemory() > 0
         && bytesCurrentlyInMemory.get()
            >= TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())) {
       persist = true;
@@ -622,13 +623,6 @@ public class AppenderatorImpl implements Appenderator
   /**
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
    * be run in the single-threaded pushExecutor.
-<<<<<<< HEAD
-   * <p>
-   * Note that this calls DataSegmentPusher.push() with replaceExisting == true which is appropriate for the indexing
-   * tasks it is currently being used for (local indexing and Kafka indexing). If this is going to be used by an
-   * indexing task type that requires replaceExisting == false, this setting will need to be pushed to the caller.
-=======
->>>>>>> 8ec2d2fe1855109014c2246a7d67b0e32c09d3f7
    *
    * @param identifier sink identifier
    * @param sink       sink to push

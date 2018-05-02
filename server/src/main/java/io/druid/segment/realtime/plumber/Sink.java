@@ -54,7 +54,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sink implements Iterable<FireHydrant>
 {
-
   private static final IncrementalIndexAddResult ADD_FAILED = new IncrementalIndexAddResult(-1, -1, null);
 
   private final Object hydrantLock = new Object();
@@ -255,7 +254,6 @@ public class Sink implements Iterable<FireHydrant>
       return currHydrant.getIndex().size();
     }
   }
-
 
   public long getBytesInMemory()
   {
