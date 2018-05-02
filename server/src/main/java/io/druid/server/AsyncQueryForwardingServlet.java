@@ -332,7 +332,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
             proxyRequest
         );
       } else {
-        log.error("Can not find authenticator for Authenticator name [%s]", authenticationResult.getAuthenticatedBy());
+        log.error("Can not find Authenticator with Name [%s]", authenticationResult.getAuthenticatedBy());
       }
     }
     super.sendProxyRequest(
