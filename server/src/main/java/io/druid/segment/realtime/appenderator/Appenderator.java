@@ -37,9 +37,9 @@ import java.util.List;
  * both of those. It can also push data to deep storage. But, it does not decide which segments data should go into.
  * It also doesn't publish segments to the metadata store or monitor handoff; you have to do that yourself!
  * <p>
- * You can provide a {@link Committer} or a Supplier of one when you call one of the methods that adds, persists, or
- * pushes data. The Committer should represent all data you have given to the Appenderator so far. This Committer will
- * be used when that data has been persisted to disk.
+ * You can provide a {@link Committer} or a Supplier of one when you call one of the methods that {@link #add},
+ * {@link #persistAll}, or {@link #push}. The Committer should represent all data you have given to the Appenderator so
+ * far. This Committer will be used when that data has been persisted to disk.
  */
 public interface Appenderator extends QuerySegmentWalker, Closeable
 {
@@ -74,8 +74,9 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Committer is guaranteed to be *created* synchronously with the call to add, but will actually be used
    * asynchronously.
    * <p>
-   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
-   * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
+   * If committer is not provided, no metadata is persisted. If it's provided, {@link #add}, {@link #clear},
+   * {@link #persistAll}, and {@link #push} methods should all be called from the same thread to keep the metadata
+   * committed by Committer in sync.
    *
    * @param identifier               the segment into which this row should be added
    * @param row                      the row to add
@@ -129,8 +130,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * for some reason, rows have been added that we do not actually want to hand off. Blocks until all data has been
    * cleared. This may take some time, since all pending persists must finish first.
    * <p>
-   * The add, clear, persist, persistAll, and push methods should all be called from the same thread to keep the
-   * metadata committed by Committer in sync.
+   * {@link #add}, {@link #clear}, {@link #persistAll}, and {@link #push} methods should all be called from the same
+   * thread to keep the metadata committed by Committer in sync.
    */
   void clear() throws InterruptedException;
 
@@ -154,8 +155,9 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * be used asynchronously. Any metadata returned by the committer will be associated with the data persisted to
    * disk.
    * <p>
-   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
-   * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
+   * If committer is not provided, no metadata is persisted. If it's provided, {@link #add}, {@link #clear},
+   * {@link #persistAll}, and {@link #push} methods should all be called from the same thread to keep the metadata
+   * committed by Committer in sync.
    *
    * @param committer a committer associated with all data that has been added so far
    *
@@ -169,8 +171,9 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * <p>
    * After this method is called, you cannot add new data to any segments that were previously under construction.
    * <p>
-   * If committer is not provided, no metadata is persisted. If it's provided, the add, clear, persist, persistAll,
-   * and push methods should all be called from the same thread to keep the metadata committed by Committer in sync.
+   * If committer is not provided, no metadata is persisted. If it's provided, {@link #add}, {@link #clear},
+   * {@link #persistAll}, and {@link #push} methods should all be called from the same thread to keep the metadata
+   * committed by Committer in sync.
    *
    * @param identifiers list of segments to push
    * @param committer   a committer associated with all data that has been added so far
