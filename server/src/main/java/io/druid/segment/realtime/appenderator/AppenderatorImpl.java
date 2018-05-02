@@ -450,13 +450,13 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public ListenableFuture<Object> persist(Collection<SegmentIdentifier> identifiers, @Nullable Committer committer)
+  public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     final Map<String, Integer> currentHydrants = Maps.newHashMap();
     final List<Pair<FireHydrant, SegmentIdentifier>> indexesToPersist = Lists.newArrayList();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
-    for (SegmentIdentifier identifier : identifiers) {
+    for (SegmentIdentifier identifier : sinks.keySet()) {
       final Sink sink = sinks.get(identifier);
       if (sink == null) {
         throw new ISE("No sink for identifier: %s", identifier);
@@ -560,13 +560,6 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
-  {
-    // Submit persistAll task to the persistExecutor
-    return persist(sinks.keySet(), committer);
-  }
-
-  @Override
   public ListenableFuture<SegmentsAndMetadata> push(
       final Collection<SegmentIdentifier> identifiers,
       @Nullable final Committer committer,
@@ -584,7 +577,9 @@ public class AppenderatorImpl implements Appenderator
     }
 
     return Futures.transform(
-        persist(identifiers, committer),
+        // We should always persist all segments regardless of the input because metadata should be committed for all
+        // segments.
+        persistAll(committer),
         (Function<Object, SegmentsAndMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = Lists.newArrayList();
 
