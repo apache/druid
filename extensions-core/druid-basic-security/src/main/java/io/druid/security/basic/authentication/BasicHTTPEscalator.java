@@ -28,9 +28,10 @@ import io.druid.java.util.http.client.auth.BasicCredentials;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
 
-@JsonTypeName("basic")
+@JsonTypeName(BasicHTTPEscalator.BASIC)
 public class BasicHTTPEscalator implements Escalator
 {
+  public static final String BASIC = "basic";
   private final String internalClientUsername;
   private final String internalClientPassword;
   private final String authorizerName;
@@ -59,6 +60,6 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientUsername, authorizerName, "basic", null);
+    return new AuthenticationResult(internalClientUsername, authorizerName, BASIC, null);
   }
 }

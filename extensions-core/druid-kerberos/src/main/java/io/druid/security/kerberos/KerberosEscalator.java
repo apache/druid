@@ -27,10 +27,11 @@ import io.druid.java.util.http.client.HttpClient;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
 
-@JsonTypeName("kerberos")
+@JsonTypeName(KerberosEscalator.KERBEROS)
 public class KerberosEscalator implements Escalator
 {
   private static final Logger log = new Logger(KerberosAuthenticator.class);
+  public static final String KERBEROS = "kerberos";
 
   private final String internalClientPrincipal;
   private final String internalClientKeytab;
@@ -57,7 +58,7 @@ public class KerberosEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientPrincipal, authorizerName, "kerberos", null);
+    return new AuthenticationResult(internalClientPrincipal, authorizerName, KERBEROS, null);
   }
 
 }
