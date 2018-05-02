@@ -39,7 +39,7 @@ public class AuthenticationResult
 
 
   /**
-   * Name of authentiator whom created the results
+   * Name of authenticator whom created the results
    */
   private final String authenticatedBy;
   /**
@@ -76,7 +76,7 @@ public class AuthenticationResult
     return context;
   }
 
-  public String getAuthentiatedBy()
+  public String getAuthenticatedBy()
   {
     return authenticatedBy;
   }

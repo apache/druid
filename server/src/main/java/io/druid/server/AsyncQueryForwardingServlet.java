@@ -322,15 +322,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // Check if there is an authentication result and use it to decorate the proxy request if needed.
     AuthenticationResult authenticationResult = (AuthenticationResult) clientRequest.getAttribute(
         AuthConfig.DRUID_AUTHENTICATION_RESULT);
-    if (authenticationResult != null && authenticationResult.getAuthentiatedBy() != null) {
+    if (authenticationResult != null && authenticationResult.getAuthenticatedBy() != null) {
       Authenticator authenticator = authenticatorMapper.getAuthenticatorMap()
-                                                       .get(authenticationResult.getAuthentiatedBy());
+                                                       .get(authenticationResult.getAuthenticatedBy());
       if (authenticator != null) {
         authenticator.decorateProxyRequest(
             clientRequest,
             proxyResponse,
             proxyRequest
         );
+      } else {
+        log.error("Can not find authenticator for Authenticator name [%s]", authenticationResult.getAuthenticatedBy());
       }
     }
     super.sendProxyRequest(

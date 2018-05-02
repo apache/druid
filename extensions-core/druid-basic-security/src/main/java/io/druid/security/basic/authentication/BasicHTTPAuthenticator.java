@@ -105,7 +105,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     }
 
     if (checkCredentials(user, password.toCharArray())) {
-      return new AuthenticationResult(user, name, name, null);
+      return new AuthenticationResult(user, authorizerName, name, null);
     } else {
       return null;
     }
