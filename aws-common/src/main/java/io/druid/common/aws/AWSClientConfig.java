@@ -16,42 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.common.aws;
 
+import com.amazonaws.services.s3.S3ClientOptions;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class AWSProxyConfig
+public class AWSClientConfig
 {
   @JsonProperty
-  private String host;
+  private boolean disableChunkedEncoding = S3ClientOptions.DEFAULT_CHUNKED_ENCODING_DISABLED;
 
   @JsonProperty
-  private int port = -1; // AWS's default proxy port is -1
+  private boolean enablePathStyleAccess = S3ClientOptions.DEFAULT_PATH_STYLE_ACCESS;
 
   @JsonProperty
-  private String username;
+  protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
 
-  @JsonProperty
-  private String password;
-
-  public String getHost()
+  public boolean isDisableChunkedEncoding()
   {
-    return host;
+    return disableChunkedEncoding;
   }
 
-  public int getPort()
+  public boolean isEnablePathStyleAccess()
   {
-    return port;
+    return enablePathStyleAccess;
   }
 
-  public String getUsername()
+  public boolean isForceGlobalBucketAccessEnabled()
   {
-    return username;
-  }
-
-  public String getPassword()
-  {
-    return password;
+    return forceGlobalBucketAccessEnabled;
   }
 }
