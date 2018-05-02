@@ -24,12 +24,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.segment.IndexIO;
+import io.druid.timeline.partition.MultipleDimensionShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
@@ -155,6 +157,27 @@ public class DataSegmentTest
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(new SingleDimensionShardSpec("bar", "abc", "def", 1))
                                            .build();
+
+    Assert.assertEquals(
+        "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z_1",
+        segment.getIdentifier()
+    );
+  }
+
+  @Test
+  public void testIdentifierWithNonzeroMultiDimPartition()
+  {
+    final DataSegment segment = DataSegment.builder()
+        .dataSource("foo")
+        .interval(Intervals.of("2012-01-01/2012-01-02"))
+        .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+        .shardSpec(
+            new MultipleDimensionShardSpec(
+                Lists.newArrayList("bar"),
+                Range.closedOpen("abc", "def"),
+                Lists.newArrayList(Range.closedOpen("abc", "def")),
+                1)
+        ).build();
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z_1",

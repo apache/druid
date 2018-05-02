@@ -23,25 +23,37 @@ package io.druid.indexer.partitions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import io.druid.indexer.DeterminePartitionsJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.Jobby;
-
-import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
-public class SingleDimensionPartitionsSpec extends DimensionPartitionsSpec
+public class DimensionPartitionsSpec extends AbstractPartitionsSpec
 {
+  private final List<String> partitionDimensions;
+
   @JsonCreator
-  public SingleDimensionPartitionsSpec(
-      @JsonProperty("partitionDimension") @Nullable String partitionDimension,
-      @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
-      @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
-      @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
+  public DimensionPartitionsSpec(
+      List<String> partitionDimensions,
+      Long targetPartitionSize,
+      Long maxPartitionSize,
+      Boolean assumeGrouped
   )
   {
-    super(Lists.newArrayList(partitionDimension), targetPartitionSize, maxPartitionSize, assumeGrouped);
+    super(targetPartitionSize, maxPartitionSize, assumeGrouped, null);
+    this.partitionDimensions = partitionDimensions == null ? ImmutableList.of() : partitionDimensions;
+  }
+
+  @Override
+  public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
+  {
+    return new DeterminePartitionsJob(config);
+  }
+
+  @Override
+  @JsonProperty
+  public List<String> getPartitionDimensions()
+  {
+    return partitionDimensions;
   }
 }

@@ -43,6 +43,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
+import io.druid.timeline.partition.MultipleDimensionShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
@@ -99,6 +100,64 @@ public class IndexGeneratorJobTest
             {
                 false,
                 "single",
+                "2014-10-22T00:00:00Z/P2D",
+                new String[][][]{
+                    {
+                        {null, "c.example.com"},
+                        {"c.example.com", "e.example.com"},
+                        {"e.example.com", "g.example.com"},
+                        {"g.example.com", "i.example.com"},
+                        {"i.example.com", null}
+                    },
+                    {
+                        {null, "c.example.com"},
+                        {"c.example.com", "e.example.com"},
+                        {"e.example.com", "g.example.com"},
+                        {"g.example.com", "i.example.com"},
+                        {"i.example.com", null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102200,a.example.com,100",
+                    "2014102200,b.exmaple.com,50",
+                    "2014102200,c.example.com,200",
+                    "2014102200,d.example.com,250",
+                    "2014102200,e.example.com,123",
+                    "2014102200,f.example.com,567",
+                    "2014102200,g.example.com,11",
+                    "2014102200,h.example.com,251",
+                    "2014102200,i.example.com,963",
+                    "2014102200,j.example.com,333",
+                    "2014102300,a.example.com,100",
+                    "2014102300,b.exmaple.com,50",
+                    "2014102300,c.example.com,200",
+                    "2014102300,d.example.com,250",
+                    "2014102300,e.example.com,123",
+                    "2014102300,f.example.com,567",
+                    "2014102300,g.example.com,11",
+                    "2014102300,h.example.com,251",
+                    "2014102300,i.example.com,963",
+                    "2014102300,j.example.com,333"
+                ),
+                null,
+                new StringInputRowParser(
+                    new CSVParseSpec(
+                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
+                        null,
+                        ImmutableList.of("timestamp", "host", "visited_num"),
+                        false,
+                        0
+                    ),
+                    null
+                ),
+                null,
+                aggs1,
+                "website"
+            },
+            {
+                false,
+                "multiple",
                 "2014-10-22T00:00:00Z/P2D",
                 new String[][][]{
                     {
@@ -467,6 +526,8 @@ public class IndexGeneratorJobTest
     mapper = HadoopDruidIndexerConfig.JSON_MAPPER;
     mapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     mapper.registerSubtypes(new NamedType(SingleDimensionShardSpec.class, "single"));
+    mapper.registerSubtypes(new NamedType(MultipleDimensionShardSpec.class, "multiple"));
+
 
     dataFile = temporaryFolder.newFile();
     tmpDir = temporaryFolder.newFolder();
@@ -545,6 +606,15 @@ public class IndexGeneratorJobTest
       int partitionNum = 0;
       for (String[] shardInfo : (String[][]) shardInfoForEachShard) {
         specs.add(new SingleDimensionShardSpec("host", shardInfo[0], shardInfo[1], partitionNum++));
+      }
+    } else if (partitionType.equals("multiple")) {
+      int partitionNum = 0;
+      for (String[] shardInfo : (String[][]) shardInfoForEachShard) {
+        specs.add(new MultipleDimensionShardSpec(
+            Lists.newArrayList("host"),
+            MultipleDimensionShardSpec.computeRange(Lists.newArrayList(shardInfo[0]), Lists.newArrayList(shardInfo[1])),
+            Lists.newArrayList(MultipleDimensionShardSpec.computeRange(Lists.newArrayList(shardInfo[0]), Lists.newArrayList(shardInfo[1]))),
+            partitionNum++));
       }
     } else {
       throw new RE("Invalid partition type:[%s]", partitionType);
@@ -647,6 +717,32 @@ public class IndexGeneratorJobTest
           SingleDimensionShardSpec spec = (SingleDimensionShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals(singleDimensionShardInfo[0], spec.getStart());
           Assert.assertEquals(singleDimensionShardInfo[1], spec.getEnd());
+        } else if (partitionType.equals("multiple")) {
+          String[] multipleDimensionShardInfo = (String[]) shardInfo[partitionNum];
+          MultipleDimensionShardSpec spec = (MultipleDimensionShardSpec) dataSegment.getShardSpec();
+          Assert.assertEquals(
+              MultipleDimensionShardSpec.computeRange(
+                  Lists.newArrayList(multipleDimensionShardInfo[0]),
+                  Lists.newArrayList(multipleDimensionShardInfo[1])
+              ),
+              spec.getRange()
+          );
+
+          Assert.assertEquals(
+              MultipleDimensionShardSpec.computeRange(
+                  Lists.newArrayList(multipleDimensionShardInfo[0]),
+                  Lists.newArrayList(multipleDimensionShardInfo[1])
+              ),
+              spec.getDimensionMinMax().get(0)
+          );
+
+          Assert.assertEquals(
+              MultipleDimensionShardSpec.computeRange(
+                  Lists.newArrayList(multipleDimensionShardInfo[0]),
+                  Lists.newArrayList(multipleDimensionShardInfo[1])
+              ),
+              spec.getDimensionMinMax().get(0)
+          );
         } else {
           throw new RE("Invalid partition type:[%s]", partitionType);
         }

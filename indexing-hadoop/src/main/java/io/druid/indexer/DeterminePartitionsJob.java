@@ -20,32 +20,32 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Range;
 import com.google.common.io.Closeables;
 import io.druid.collections.CombiningIterable;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
+import io.druid.indexer.partitions.DimensionPartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.timeline.partition.MultipleDimensionShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
-import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -75,7 +75,8 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +100,8 @@ public class DeterminePartitionsJob implements Jobby
 
   private static final Joiner TAB_JOINER = HadoopDruidIndexerConfig.TAB_JOINER;
   private static final Splitter TAB_SPLITTER = HadoopDruidIndexerConfig.TAB_SPLITTER;
+  public static final Joiner COMMA_JOINER = Joiner.on(",").useForNull("");
+  public static final Splitter COMMA_SPLITTER = Splitter.on(",");
 
   private final HadoopDruidIndexerConfig config;
 
@@ -357,8 +360,8 @@ public class DeterminePartitionsJob implements Jobby
     protected void setup(Context context)
     {
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
-      SingleDimensionPartitionsSpec spec = (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
-      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimension());
+      DimensionPartitionsSpec spec = (DimensionPartitionsSpec) config.getPartitionsSpec();
+      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimensions());
     }
 
     @Override
@@ -389,8 +392,8 @@ public class DeterminePartitionsJob implements Jobby
     {
       super.setup(context);
       final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
-      final SingleDimensionPartitionsSpec spec = (SingleDimensionPartitionsSpec) config.getPartitionsSpec();
-      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimension());
+      final DimensionPartitionsSpec spec = (DimensionPartitionsSpec) config.getPartitionsSpec();
+      helper = new DeterminePartitionsDimSelectionMapperHelper(config, spec.getPartitionDimensions());
     }
 
     @Override
@@ -415,13 +418,13 @@ public class DeterminePartitionsJob implements Jobby
   public static class DeterminePartitionsDimSelectionMapperHelper
   {
     private final HadoopDruidIndexerConfig config;
-    private final String partitionDimension;
+    private final List<String> partitionDimensions;
     private final Map<Long, Integer> intervalIndexes;
 
-    public DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config, String partitionDimension)
+    public DeterminePartitionsDimSelectionMapperHelper(HadoopDruidIndexerConfig config, List<String> partitionDimensions)
     {
       this.config = config;
-      this.partitionDimension = partitionDimension;
+      this.partitionDimensions = partitionDimensions;
 
       final ImmutableMap.Builder<Long, Integer> timeIndexBuilder = ImmutableMap.builder();
       int idx = 0;
@@ -454,22 +457,45 @@ public class DeterminePartitionsJob implements Jobby
       final byte[] groupKey = buf.array();
 
       // Emit row-counter value.
-      write(context, groupKey, new DimValueCount("", "", 1));
+      write(context, groupKey, new DimValueCount(Collections.emptyList(), Collections.emptyList(), 1));
 
-      for (final Map.Entry<String, Iterable<String>> dimAndValues : dims.entrySet()) {
-        final String dim = dimAndValues.getKey();
+      // If parition dimensions is empty, then write DVC for each dim, so that is can be used to compute best dim
+      // to partition on.
+      if (partitionDimensions.isEmpty()) {
+        // Handle auto partitioning
+        for (final Map.Entry<String, Iterable<String>> dimAndValues : dims.entrySet()) {
+          final String dim = dimAndValues.getKey();
 
-        if (partitionDimension == null || partitionDimension.equals(dim)) {
-          final Iterable<String> dimValues = dimAndValues.getValue();
+          if (partitionDimensions.isEmpty() || partitionDimensions.contains(dim)) {
+            final Iterable<String> dimValues = dimAndValues.getValue();
 
-          if (Iterables.size(dimValues) == 1) {
-            // Emit this value.
-            write(context, groupKey, new DimValueCount(dim, Iterables.getOnlyElement(dimValues), 1));
-          } else {
-            // This dimension is unsuitable for partitioning. Poison it by emitting a negative value.
-            write(context, groupKey, new DimValueCount(dim, "", -1));
+            if (Iterables.size(dimValues) == 1) {
+              // Emit this value.
+              write(
+                  context,
+                  groupKey,
+                  new DimValueCount(
+                      ImmutableList.of(dim),
+                      ImmutableList.of(Iterables.getOnlyElement(dimValues)),
+                      1
+                  )
+              );
+            } else {
+              // This dimension is unsuitable for partitioning. Poison it by emitting a negative value.
+              write(context, groupKey, new DimValueCount(ImmutableList.of(dim), Collections.emptyList(), -1));
+            }
           }
         }
+      } else {
+        List<String> dimValues = new ArrayList<>();
+        for (String dim : partitionDimensions) {
+          if (Iterables.size(dims.get(dim)) != 1) {
+            throw new ISE("Dimension [%s] is not suitable for partioning becuase it is multi values, exiting ...", dim);
+          }
+          dimValues.add(Iterables.getOnlyElement(dims.get(dim)));
+        }
+
+        write(context, groupKey, new DimValueCount(partitionDimensions, dimValues, 1));
       }
     }
   }
@@ -550,36 +576,17 @@ public class DeterminePartitionsJob implements Jobby
       return new CombiningIterable<>(
           Iterables.transform(
               input,
-              new Function<Text, DimValueCount>()
-              {
-                @Override
-                public DimValueCount apply(Text input)
-                {
-                  return DimValueCount.fromText(input);
-                }
-              }
+              text -> DimValueCount.fromText(text)
           ),
-          new Comparator<DimValueCount>()
-          {
-            @Override
-            public int compare(DimValueCount o1, DimValueCount o2)
-            {
-              return ComparisonChain.start().compare(o1.dim, o2.dim).compare(o1.value, o2.value).result();
+          (dvc1, dvc2) -> dvc1.dims.equals(dvc2.dims) && dvc1.values.equals(dvc2.values) ? 0 : 1,
+          (arg1, arg2) -> {
+            if (arg2 == null) {
+              return arg1;
             }
-          },
-          new BinaryFn<DimValueCount, DimValueCount, DimValueCount>()
-          {
-            @Override
-            public DimValueCount apply(DimValueCount arg1, DimValueCount arg2)
-            {
-              if (arg2 == null) {
-                return arg1;
-              }
 
-              // Respect "poisoning" (negative values mean we can't use this dimension)
-              final int newNumRows = (arg1.numRows >= 0 && arg2.numRows >= 0 ? arg1.numRows + arg2.numRows : -1);
-              return new DimValueCount(arg1.dim, arg1.value, newNumRows);
-            }
+            // Respect "poisoning" (negative values mean we can't use this dimension)
+            final int newNumRows = (arg1.numRows >= 0 && arg2.numRows >= 0 ? arg1.numRows + arg2.numRows : -1);
+            return new DimValueCount(arg1.dims, arg1.values, newNumRows);
           }
       );
     }
@@ -622,33 +629,34 @@ public class DeterminePartitionsJob implements Jobby
       final DimValueCount firstDvc = iterator.next();
       final int totalRows = firstDvc.numRows;
 
-      if (!firstDvc.dim.equals("") || !firstDvc.value.equals("")) {
+      if (!firstDvc.dims.isEmpty() || firstDvc.values.isEmpty()) {
         throw new IllegalStateException("WTF?! Expected total row indicator on first k/v pair!");
       }
 
       // "iterator" will now take us over many candidate dimensions
       DimPartitions currentDimPartitions = null;
       DimPartition currentDimPartition = null;
-      String currentDimPartitionStart = null;
+      Range currentRange = null;
+      List<Range> currentMinMax = new ArrayList<>();
       boolean currentDimSkip = false;
 
       // We'll store possible partitions in here
-      final Map<String, DimPartitions> dimPartitionss = Maps.newHashMap();
+      final Map<List<String>, DimPartitions> dimPartitionss = Maps.newHashMap();
 
       while (iterator.hasNext()) {
         final DimValueCount dvc = iterator.next();
 
-        if (currentDimPartitions == null || !currentDimPartitions.dim.equals(dvc.dim)) {
+        if (currentDimPartitions == null || !currentDimPartitions.dims.equals(dvc.dims)) {
           // Starting a new dimension! Exciting!
-          currentDimPartitions = new DimPartitions(dvc.dim);
+          currentDimPartitions = new DimPartitions(dvc.dims);
           currentDimPartition = new DimPartition();
-          currentDimPartitionStart = null;
+          currentRange = null;
           currentDimSkip = false;
         }
 
         // Respect poisoning
         if (!currentDimSkip && dvc.numRows < 0) {
-          log.info("Cannot partition on multi-value dimension: %s", dvc.dim);
+          log.info("Cannot partition on multi-value dimension: %s", dvc.dims);
           currentDimSkip = true;
         }
 
@@ -658,10 +666,10 @@ public class DeterminePartitionsJob implements Jobby
 
         // See if we need to cut a new partition ending immediately before this dimension value
         if (currentDimPartition.rows > 0 && currentDimPartition.rows + dvc.numRows >= config.getTargetPartitionSize()) {
-          final ShardSpec shardSpec = new SingleDimensionShardSpec(
-              currentDimPartitions.dim,
-              currentDimPartitionStart,
-              dvc.value,
+          final ShardSpec shardSpec = new MultipleDimensionShardSpec(
+              currentDimPartitions.dims,
+              MultipleDimensionShardSpec.computeRange(currentRange, dvc.values),
+              currentMinMax,
               currentDimPartitions.partitions.size()
           );
 
@@ -675,16 +683,19 @@ public class DeterminePartitionsJob implements Jobby
           currentDimPartition.shardSpec = shardSpec;
           currentDimPartitions.partitions.add(currentDimPartition);
           currentDimPartition = new DimPartition();
-          currentDimPartitionStart = dvc.value;
+          currentRange = MultipleDimensionShardSpec.createSingletonRange(dvc.values);
+          currentMinMax = new ArrayList<>();
         }
+
+        // Update min/Max for
+        updateDimMinMax(currentMinMax, dvc.values);
 
         // Update counters
         currentDimPartition.cardinality++;
         currentDimPartition.rows += dvc.numRows;
 
-        if (!iterator.hasNext() || !currentDimPartitions.dim.equals(iterator.peek().dim)) {
+        if (!iterator.hasNext() || !currentDimPartitions.dims.equals(iterator.peek().dims)) {
           // Finalize the current dimension
-
           if (currentDimPartition.rows > 0) {
             // One more shard to go
             final ShardSpec shardSpec;
@@ -698,12 +709,20 @@ public class DeterminePartitionsJob implements Jobby
                     currentDimPartitions.partitions.size() - 1
                 );
 
-                final SingleDimensionShardSpec previousShardSpec = (SingleDimensionShardSpec) previousDimPartition.shardSpec;
+                final MultipleDimensionShardSpec previousShardSpec = (MultipleDimensionShardSpec) previousDimPartition.shardSpec;
 
-                shardSpec = new SingleDimensionShardSpec(
-                    currentDimPartitions.dim,
-                    previousShardSpec.getStart(),
-                    null,
+                // Combine dimMinMax
+                List<Range> combinedMinMax = new ArrayList(previousShardSpec.getDimensionMinMax());
+                for (int i = 0; i < Math.min(combinedMinMax.size(), currentMinMax.size()); i++) {
+                  if (currentMinMax.get(i) != null) {
+                    combinedMinMax.set(i, combinedMinMax.get(i).span(currentMinMax.get(i)));
+                  }
+                }
+
+                shardSpec = new MultipleDimensionShardSpec(
+                    currentDimPartitions.dims,
+                    MultipleDimensionShardSpec.computeRange(previousShardSpec.getRange(), null),
+                    combinedMinMax,
                     previousShardSpec.getPartitionNum()
                 );
 
@@ -713,10 +732,10 @@ public class DeterminePartitionsJob implements Jobby
                 currentDimPartition.cardinality += previousDimPartition.cardinality;
               } else {
                 // Create new shard
-                shardSpec = new SingleDimensionShardSpec(
-                    currentDimPartitions.dim,
-                    currentDimPartitionStart,
-                    null,
+                shardSpec = new MultipleDimensionShardSpec(
+                    currentDimPartitions.dims,
+                    MultipleDimensionShardSpec.computeRange(currentRange, null),
+                    currentMinMax,
                     currentDimPartitions.partitions.size()
                 );
               }
@@ -735,13 +754,13 @@ public class DeterminePartitionsJob implements Jobby
 
           log.info(
               "Completed dimension[%s]: %,d possible shards with %,d unique values",
-              currentDimPartitions.dim,
+              currentDimPartitions.dims,
               currentDimPartitions.partitions.size(),
               currentDimPartitions.getCardinality()
           );
 
           // Add ourselves to the partitions map
-          dimPartitionss.put(currentDimPartitions.dim, currentDimPartitions);
+          dimPartitionss.put(currentDimPartitions.dims, currentDimPartitions);
         }
       }
 
@@ -759,7 +778,7 @@ public class DeterminePartitionsJob implements Jobby
         if (dimPartitions.getRows() != totalRows) {
           log.info(
               "Dimension[%s] is not present in all rows (row count %,d != expected row count %,d)",
-              dimPartitions.dim,
+              dimPartitions.dims,
               dimPartitions.getRows(),
               totalRows
           );
@@ -771,7 +790,7 @@ public class DeterminePartitionsJob implements Jobby
         boolean oversized = false;
         for (final DimPartition partition : dimPartitions.partitions) {
           if (partition.rows > config.getMaxPartitionSize()) {
-            log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dim, partition.shardSpec);
+            log.info("Dimension[%s] has an oversized shard: %s", dimPartitions.dims, partition.shardSpec);
             oversized = true;
           }
         }
@@ -809,14 +828,8 @@ public class DeterminePartitionsJob implements Jobby
                                              : minDistancePartitions;
 
       final List<ShardSpec> chosenShardSpecs = Lists.transform(
-          chosenPartitions.partitions, new Function<DimPartition, ShardSpec>()
-          {
-            @Override
-            public ShardSpec apply(DimPartition dimPartition)
-            {
-              return dimPartition.shardSpec;
-            }
-          }
+          chosenPartitions.partitions,
+          dimPartition -> dimPartition.shardSpec
       );
 
       log.info("Chosen partitions:");
@@ -871,12 +884,12 @@ public class DeterminePartitionsJob implements Jobby
 
   private static class DimPartitions
   {
-    public final String dim;
+    public final List<String> dims;
     public final List<DimPartition> partitions = Lists.newArrayList();
 
-    private DimPartitions(String dim)
+    private DimPartitions(List<String> dims)
     {
-      this.dim = dim;
+      this.dims = dims;
     }
 
     public int getCardinality()
@@ -918,30 +931,31 @@ public class DeterminePartitionsJob implements Jobby
 
   private static class DimValueCount
   {
-    public final String dim;
-    public final String value;
+    public final List<String> dims;
+    public final List<String> values;
     public final int numRows;
 
-    private DimValueCount(String dim, String value, int numRows)
+    private DimValueCount(List<String> dims, List <String> values, int numRows)
     {
-      this.dim = dim;
-      this.value = value;
+      this.dims = dims;
+      this.values = values;
       this.numRows = numRows;
     }
 
     public Text toText()
     {
-      return new Text(TAB_JOINER.join(dim, String.valueOf(numRows), value));
+      return new Text(TAB_JOINER.join(COMMA_JOINER.join(dims), String.valueOf(numRows), COMMA_JOINER.join(values)));
     }
 
     public static DimValueCount fromText(Text text)
     {
       final Iterator<String> splits = TAB_SPLITTER.limit(3).split(text.toString()).iterator();
-      final String dim = splits.next();
+      final List<String> dims = Lists.newArrayList(COMMA_SPLITTER.split(splits.next()));
       final int numRows = Integer.parseInt(splits.next());
-      final String value = splits.next();
+      final List<String> values = Lists.newArrayList(COMMA_SPLITTER.split(splits.next()));
+      values.replaceAll(value -> value.isEmpty() ? null : value);
 
-      return new DimValueCount(dim, value, numRows);
+      return new DimValueCount(dims, values, numRows);
     }
   }
 
@@ -954,11 +968,27 @@ public class DeterminePartitionsJob implements Jobby
   {
     context.write(
         new SortableBytes(
-            groupKey, TAB_JOINER.join(dimValueCount.dim, dimValueCount.value).getBytes(
-            HadoopDruidIndexerConfig.JAVA_NATIVE_CHARSET
-        )
+            groupKey,
+            TAB_JOINER.join(
+                COMMA_JOINER.join(dimValueCount.dims),
+                COMMA_JOINER.join(dimValueCount.values)
+            ).getBytes(
+                HadoopDruidIndexerConfig.JAVA_NATIVE_CHARSET
+            )
         ).toBytesWritable(),
         dimValueCount.toText()
     );
+  }
+
+  private static void updateDimMinMax(List<Range> dimensionMinMax, List<String> values)
+  {
+    for (int i = 0; i < values.size(); i++) {
+      Range valueRange = Range.singleton(values.get(i));
+      if (dimensionMinMax.get(i) == null) {
+        dimensionMinMax.set(i, valueRange);
+      } else {
+        dimensionMinMax.set(i, dimensionMinMax.get(i).span(valueRange));
+      }
+    }
   }
 }

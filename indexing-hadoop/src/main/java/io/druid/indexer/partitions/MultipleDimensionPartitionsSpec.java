@@ -22,26 +22,19 @@ package io.druid.indexer.partitions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import io.druid.indexer.DeterminePartitionsJob;
-import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.indexer.Jobby;
-
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 
-public class SingleDimensionPartitionsSpec extends DimensionPartitionsSpec
+public class MultipleDimensionPartitionsSpec extends DimensionPartitionsSpec
 {
   @JsonCreator
-  public SingleDimensionPartitionsSpec(
-      @JsonProperty("partitionDimension") @Nullable String partitionDimension,
+  public MultipleDimensionPartitionsSpec(
+      @JsonProperty("partitionDimension") @Nullable List<String> partitionDimensions,
       @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize,
       @JsonProperty("maxPartitionSize") @Nullable Long maxPartitionSize,
       @JsonProperty("assumeGrouped") @Nullable Boolean assumeGrouped
   )
   {
-    super(Lists.newArrayList(partitionDimension), targetPartitionSize, maxPartitionSize, assumeGrouped);
+    super(partitionDimensions, targetPartitionSize, maxPartitionSize, assumeGrouped);
   }
 }

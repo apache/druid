@@ -213,7 +213,7 @@ public class HadoopIngestionSpecTest
     Assert.assertTrue("partitionsSpec", partitionsSpec instanceof SingleDimensionPartitionsSpec);
     Assert.assertEquals(
         "getPartitionDimension",
-        ((SingleDimensionPartitionsSpec) partitionsSpec).getPartitionDimension(),
+        partitionsSpec.getPartitionDimensions(),
         "foo"
     );
   }

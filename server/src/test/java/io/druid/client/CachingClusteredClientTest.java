@@ -33,6 +33,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -130,7 +131,9 @@ import io.druid.segment.TestHelper;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
+import io.druid.timeline.partition.MultipleDimensionShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
+import io.druid.timeline.partition.RangePartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
@@ -314,14 +317,7 @@ public class CachingClusteredClientTest
   {
     return Lists.transform(
         Lists.newArrayList(new RangeIterable(RANDOMNESS)),
-        new Function<Integer, Object[]>()
-        {
-          @Override
-          public Object[] apply(Integer input)
-          {
-            return new Object[]{input};
-          }
-        }
+        input ->new Object[]{input}
     );
   }
 
@@ -427,26 +423,20 @@ public class CachingClusteredClientTest
 
     // callback to be run every time a query run is complete, to ensure all background
     // caching tasks are executed, and cache is populated before we move onto the next query
-    queryCompletedCallback = new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          randomizingExecutorService.submit(
-              new DrainTask()
+    queryCompletedCallback = () -> {
+      try {
+        randomizingExecutorService.submit(
+            new DrainTask()
+            {
+              @Override
+              public void run()
               {
-                @Override
-                public void run()
-                {
-                  // no-op
-                }
+                // no-op
               }
-          ).get();
-        }
-        catch (Exception e) {
-          Throwables.propagate(e);
-        }
+            }
+        ).get();
+      } catch (Exception e) {
+        Throwables.propagate(e);
       }
     };
 
@@ -577,7 +567,7 @@ public class CachingClusteredClientTest
     final Cache cache = EasyMock.createStrictMock(Cache.class);
     final Capture<Iterable<Cache.NamedKey>> cacheKeyCapture = EasyMock.newCapture();
     EasyMock.expect(cache.getBulk(EasyMock.capture(cacheKeyCapture)))
-            .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
+            .andReturn(ImmutableMap.of())
             .once();
     EasyMock.replay(cache);
     client = makeClient(MoreExecutors.sameThreadExecutor(), cache, limit);
@@ -1758,6 +1748,87 @@ public class CachingClusteredClientTest
     Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
   }
 
+  @Test
+  public void testSingleDimensionPruningWithRangePartition()
+  {
+    DimFilter filter = new AndDimFilter(
+        new OrDimFilter(
+            new SelectorDimFilter("dim1", "a", null),
+            new BoundDimFilter("dim1", "from", "to", false, false, false, null, StringComparators.LEXICOGRAPHIC)
+        ),
+        new AndDimFilter(
+            new InDimFilter("dim2", Arrays.asList("a", "c", "e", "g"), null),
+            new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null, StringComparators.LEXICOGRAPHIC),
+            new BoundDimFilter("dim2", "e", "zzz", true, true, false, null, StringComparators.LEXICOGRAPHIC)
+        )
+    );
+
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .filters(filter)
+        .granularity(GRANULARITY)
+        .intervals(SEG_SPEC)
+        .context(CONTEXT)
+        .intervals("2011-01-05/2011-01-10")
+        .aggregators(RENAMED_AGGS)
+        .postAggregators(RENAMED_POST_AGGS);
+
+    TimeseriesQuery query = builder.build();
+    Map<String, Object> context = new HashMap<>();
+
+    final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
+    final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
+    final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(
+        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    )
+    );
+
+    final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    ServerSelector selector1 = makeMockMultipleDimensionSelector(lastServer, Lists.newArrayList("dim1"), Range.lessThan("b"), Lists.newArrayList(Range.lessThan("b")), 1);
+    ServerSelector selector2 = makeMockMultipleDimensionSelector(lastServer, Lists.newArrayList("dim1"), Range.closedOpen("e", "f"), Lists.newArrayList(Range.closedOpen("e", "f")), 2);
+    ServerSelector selector3 = makeMockMultipleDimensionSelector(lastServer, Lists.newArrayList("dim1"), Range.closedOpen("hi", "zzz"), Lists.newArrayList(Range.closedOpen("hi", "zzz")), 3);
+    ServerSelector selector4 = makeMockMultipleDimensionSelector(lastServer, Lists.newArrayList("dim2"), Range.closedOpen("a", "e"), Lists.newArrayList(Range.closedOpen("a", "e")), 4);
+    ServerSelector selector5 = makeMockMultipleDimensionSelector(lastServer, Lists.newArrayList("dim2"), Range.all(), Lists.newArrayList(Range.all()), 5);
+    ServerSelector selector6 = makeMockMultipleDimensionSelector(lastServer, Lists.newArrayList("other"), Range.atLeast("b"), Lists.newArrayList(Range.atLeast("b")), 6);
+    ServerSelector selector7 = makeMockMultipleDimensionSelector(lastServer, Lists.newArrayList("dim1", "dim2"), Range.closedOpen(",", "b,"), Lists.newArrayList(Range.lessThan("b"), Range.all()), 7);
+
+    timeline.add(interval1, "v", new RangePartitionChunk<>(Range.lessThan("a"), 1, selector1));
+    timeline.add(interval1, "v", new RangePartitionChunk<>(Range.closedOpen("a", "b"), 2, selector2));
+    timeline.add(interval1, "v", new RangePartitionChunk<>(Range.atLeast("b"), 3, selector3));
+    timeline.add(interval2, "v", new RangePartitionChunk<>(Range.lessThan("d"), 4, selector4));
+    timeline.add(interval2, "v", new RangePartitionChunk<>(Range.atLeast("d"), 5, selector5));
+    timeline.add(interval3, "v", new RangePartitionChunk<>(Range.all(), 6, selector6));
+    timeline.add(interval3, "v", new RangePartitionChunk<>(Range.closedOpen(",d", "a,"), 7, selector7));
+
+    final Capture<QueryPlus> capture = Capture.newInstance();
+    final Capture<Map<String, Object>> contextCap = Capture.newInstance();
+
+    QueryRunner mockRunner = EasyMock.createNiceMock(QueryRunner.class);
+    EasyMock.expect(mockRunner.run(EasyMock.capture(capture), EasyMock.capture(contextCap)))
+        .andReturn(Sequences.empty())
+        .anyTimes();
+    EasyMock.expect(serverView.getQueryRunner(lastServer))
+        .andReturn(mockRunner)
+        .anyTimes();
+    EasyMock.replay(serverView);
+    EasyMock.replay(mockRunner);
+
+    List<SegmentDescriptor> descriptors = new ArrayList<>();
+    descriptors.add(new SegmentDescriptor(interval1, "v", 1));
+    descriptors.add(new SegmentDescriptor(interval1, "v", 3));
+    descriptors.add(new SegmentDescriptor(interval2, "v", 5));
+    descriptors.add(new SegmentDescriptor(interval3, "v", 6));
+    descriptors.add(new SegmentDescriptor(interval3, "v", 7));
+    MultipleSpecificSegmentSpec expected = new MultipleSpecificSegmentSpec(descriptors);
+
+    runner.run(QueryPlus.wrap(query), context).toList();
+
+    Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
+  }
+
   private ServerSelector makeMockSingleDimensionSelector(
       DruidServer server, String dimension, String start, String end, int partitionNum)
   {
@@ -1765,6 +1836,27 @@ public class CachingClusteredClientTest
     EasyMock.expect(segment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
     EasyMock.expect(segment.getShardSpec()).andReturn(new SingleDimensionShardSpec(dimension, start, end, partitionNum))
             .anyTimes();
+    EasyMock.replay(segment);
+
+    ServerSelector selector = new ServerSelector(
+        segment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
+    return selector;
+  }
+
+  private ServerSelector makeMockMultipleDimensionSelector(
+      DruidServer server, List<String> dimension, Range range, List<Range> minMax, int partitionNum)
+  {
+    DataSegment segment = EasyMock.createNiceMock(DataSegment.class);
+    EasyMock.expect(segment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
+    EasyMock.expect(segment.getShardSpec()).andReturn(new MultipleDimensionShardSpec(
+        Lists.newArrayList(dimension),
+        range,
+        minMax,
+        partitionNum
+    )).anyTimes();
     EasyMock.replay(segment);
 
     ServerSelector selector = new ServerSelector(
@@ -1980,198 +2072,191 @@ public class CachingClusteredClientTest
   )
   {
 
-    final List<Interval> queryIntervals = Lists.newArrayListWithCapacity(args.length / 2);
-    final List<List<Iterable<Result<Object>>>> expectedResults = Lists.newArrayListWithCapacity(queryIntervals.size());
-
-    parseResults(queryIntervals, expectedResults, args);
-
-    for (int i = 0; i < queryIntervals.size(); ++i) {
-      List<Object> mocks = Lists.newArrayList();
-      mocks.add(serverView);
-
-      final Interval actualQueryInterval = new Interval(
-          queryIntervals.get(0).getStart(), queryIntervals.get(i).getEnd()
-      );
-
-      final List<Map<DruidServer, ServerExpectations>> serverExpectationList = populateTimeline(
-          queryIntervals,
-          expectedResults,
-          i,
-          mocks
-      );
-
-      List<Capture> queryCaptures = Lists.newArrayList();
-      final Map<DruidServer, ServerExpectations> finalExpectation = serverExpectationList.get(
-          serverExpectationList.size() - 1
-      );
-      for (Map.Entry<DruidServer, ServerExpectations> entry : finalExpectation.entrySet()) {
-        DruidServer server = entry.getKey();
-        ServerExpectations expectations = entry.getValue();
-
-
-        EasyMock.expect(serverView.getQueryRunner(server))
-                .andReturn(expectations.getQueryRunner())
-                .once();
-
-        final Capture<? extends QueryPlus> capture = new Capture();
-        final Capture<? extends Map> context = new Capture();
-        queryCaptures.add(capture);
-        QueryRunner queryable = expectations.getQueryRunner();
-
-        if (query instanceof TimeseriesQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<TimeseriesResultValue>>> results = Lists.newArrayList();
-          for (ServerExpectation expectation : expectations) {
-            segmentIds.add(expectation.getSegmentId());
-            intervals.add(expectation.getInterval());
-            results.add(expectation.getResults());
-          }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andReturn(toQueryableTimeseriesResults(expectBySegment, segmentIds, intervals, results))
-                  .once();
-
-        } else if (query instanceof TopNQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<TopNResultValue>>> results = Lists.newArrayList();
-          for (ServerExpectation expectation : expectations) {
-            segmentIds.add(expectation.getSegmentId());
-            intervals.add(expectation.getInterval());
-            results.add(expectation.getResults());
-          }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
-                  .once();
-        } else if (query instanceof SearchQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<SearchResultValue>>> results = Lists.newArrayList();
-          for (ServerExpectation expectation : expectations) {
-            segmentIds.add(expectation.getSegmentId());
-            intervals.add(expectation.getInterval());
-            results.add(expectation.getResults());
-          }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
-                  .once();
-        } else if (query instanceof SelectQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<SelectResultValue>>> results = Lists.newArrayList();
-          for (ServerExpectation expectation : expectations) {
-            segmentIds.add(expectation.getSegmentId());
-            intervals.add(expectation.getInterval());
-            results.add(expectation.getResults());
-          }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andReturn(toQueryableSelectResults(segmentIds, intervals, results))
-                  .once();
-        } else if (query instanceof GroupByQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Row>> results = Lists.newArrayList();
-          for (ServerExpectation expectation : expectations) {
-            segmentIds.add(expectation.getSegmentId());
-            intervals.add(expectation.getInterval());
-            results.add(expectation.getResults());
-          }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andReturn(toQueryableGroupByResults(segmentIds, intervals, results))
-                  .once();
-        } else if (query instanceof TimeBoundaryQuery) {
-          List<String> segmentIds = Lists.newArrayList();
-          List<Interval> intervals = Lists.newArrayList();
-          List<Iterable<Result<TimeBoundaryResultValue>>> results = Lists.newArrayList();
-          for (ServerExpectation expectation : expectations) {
-            segmentIds.add(expectation.getSegmentId());
-            intervals.add(expectation.getInterval());
-            results.add(expectation.getResults());
-          }
-          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andReturn(toQueryableTimeBoundaryResults(segmentIds, intervals, results))
-                  .once();
-        } else {
-          throw new ISE("Unknown query type[%s]", query.getClass());
-        }
-      }
-
-      final int expectedResultsRangeStart;
-      final int expectedResultsRangeEnd;
-      if (query instanceof TimeBoundaryQuery) {
-        expectedResultsRangeStart = i;
-        expectedResultsRangeEnd = i + 1;
-      } else {
-        expectedResultsRangeStart = 0;
-        expectedResultsRangeEnd = i + 1;
-      }
-
-      runWithMocks(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              HashMap<String, List> context = new HashMap<String, List>();
-              for (int i = 0; i < numTimesToQuery; ++i) {
-                TestHelper.assertExpectedResults(
-                    new MergeIterable<>(
-                        Comparators.naturalNullsFirst(),
-                        FunctionalIterable
-                            .create(new RangeIterable(expectedResultsRangeStart, expectedResultsRangeEnd))
-                            .transformCat(
-                                new Function<Integer, Iterable<Iterable<Result<Object>>>>()
-                                {
-                                  @Override
-                                  public Iterable<Iterable<Result<Object>>> apply(@Nullable Integer input)
-                                  {
-                                    List<Iterable<Result<Object>>> retVal = Lists.newArrayList();
-
-                                    final Map<DruidServer, ServerExpectations> exps = serverExpectationList.get(input);
-                                    for (ServerExpectations expectations : exps.values()) {
-                                      for (ServerExpectation expectation : expectations) {
-                                        retVal.add(expectation.getResults());
-                                      }
-                                    }
-
-                                    return retVal;
-                                  }
-                                }
-                            )
-                    ),
-                    runner.run(
-                        QueryPlus.wrap(
-                            query.withQuerySegmentSpec(
-                                new MultipleIntervalSegmentSpec(ImmutableList.of(actualQueryInterval))
-                            )
-                        ),
-                        context
-                    )
-                );
-                if (queryCompletedCallback != null) {
-                  queryCompletedCallback.run();
-                }
-              }
-            }
-          },
-          mocks.toArray()
-      );
-
-      // make sure all the queries were sent down as 'bySegment'
-      for (Capture queryCapture : queryCaptures) {
-        QueryPlus capturedQueryPlus = (QueryPlus) queryCapture.getValue();
-        Query capturedQuery = capturedQueryPlus.getQuery();
-        if (expectBySegment) {
-          Assert.assertEquals(true, capturedQuery.getContextValue("bySegment"));
-        } else {
-          Assert.assertTrue(
-              capturedQuery.getContextValue("bySegment") == null ||
-              capturedQuery.getContextValue("bySegment").equals(false)
-          );
-        }
-      }
-    }
   }
+//
+//    final List<Interval> queryIntervals = Lists.newArrayListWithCapacity(args.length / 2);
+//    final List<List<Iterable<Result<Object>>>> expectedResults = Lists.newArrayListWithCapacity(queryIntervals.size());
+//
+//    parseResults(queryIntervals, expectedResults, args);
+//
+//    for (int i = 0; i < queryIntervals.size(); ++i) {
+//      List<Object> mocks = Lists.newArrayList();
+//      mocks.add(serverView);
+//
+//      final Interval actualQueryInterval = new Interval(
+//          queryIntervals.get(0).getStart(), queryIntervals.get(i).getEnd()
+//      );
+//
+//      final List<Map<DruidServer, ServerExpectations>> serverExpectationList = populateTimeline(
+//          queryIntervals,
+//          expectedResults,
+//          i,
+//          mocks
+//      );
+//
+//      List<Capture> queryCaptures = Lists.newArrayList();
+//      final Map<DruidServer, ServerExpectations> finalExpectation = serverExpectationList.get(
+//          serverExpectationList.size() - 1
+//      );
+//      for (Map.Entry<DruidServer, ServerExpectations> entry : finalExpectation.entrySet()) {
+//        DruidServer server = entry.getKey();
+//        ServerExpectations expectations = entry.getValue();
+//
+//
+//        EasyMock.expect(serverView.getQueryRunner(server))
+//                .andReturn(expectations.getQueryRunner())
+//                .once();
+//
+//        final Capture<? extends QueryPlus> capture = new Capture();
+//        final Capture<? extends Map> context = new Capture();
+//        queryCaptures.add(capture);
+//        QueryRunner queryable = expectations.getQueryRunner();
+//
+//        if (query instanceof TimeseriesQuery) {
+//          List<String> segmentIds = Lists.newArrayList();
+//          List<Interval> intervals = Lists.newArrayList();
+//          List<Iterable<Result<TimeseriesResultValue>>> results = Lists.newArrayList();
+//          for (ServerExpectation expectation : expectations) {
+//            segmentIds.add(expectation.getSegmentId());
+//            intervals.add(expectation.getInterval());
+//            results.add(expectation.getResults());
+//          }
+//          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
+//                  .andReturn(toQueryableTimeseriesResults(expectBySegment, segmentIds, intervals, results))
+//                  .once();
+//
+//        } else if (query instanceof TopNQuery) {
+//          List<String> segmentIds = Lists.newArrayList();
+//          List<Interval> intervals = Lists.newArrayList();
+//          List<Iterable<Result<TopNResultValue>>> results = Lists.newArrayList();
+//          for (ServerExpectation expectation : expectations) {
+//            segmentIds.add(expectation.getSegmentId());
+//            intervals.add(expectation.getInterval());
+//            results.add(expectation.getResults());
+//          }
+//          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
+//                  .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
+//                  .once();
+//        } else if (query instanceof SearchQuery) {
+//          List<String> segmentIds = Lists.newArrayList();
+//          List<Interval> intervals = Lists.newArrayList();
+//          List<Iterable<Result<SearchResultValue>>> results = Lists.newArrayList();
+//          for (ServerExpectation expectation : expectations) {
+//            segmentIds.add(expectation.getSegmentId());
+//            intervals.add(expectation.getInterval());
+//            results.add(expectation.getResults());
+//          }
+//          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
+//                  .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
+//                  .once();
+//        } else if (query instanceof SelectQuery) {
+//          List<String> segmentIds = Lists.newArrayList();
+//          List<Interval> intervals = Lists.newArrayList();
+//          List<Iterable<Result<SelectResultValue>>> results = Lists.newArrayList();
+//          for (ServerExpectation expectation : expectations) {
+//            segmentIds.add(expectation.getSegmentId());
+//            intervals.add(expectation.getInterval());
+//            results.add(expectation.getResults());
+//          }
+//          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
+//                  .andReturn(toQueryableSelectResults(segmentIds, intervals, results))
+//                  .once();
+//        } else if (query instanceof GroupByQuery) {
+//          List<String> segmentIds = Lists.newArrayList();
+//          List<Interval> intervals = Lists.newArrayList();
+//          List<Iterable<Row>> results = Lists.newArrayList();
+//          for (ServerExpectation expectation : expectations) {
+//            segmentIds.add(expectation.getSegmentId());
+//            intervals.add(expectation.getInterval());
+//            results.add(expectation.getResults());
+//          }
+//          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
+//                  .andReturn(toQueryableGroupByResults(segmentIds, intervals, results))
+//                  .once();
+//        } else if (query instanceof TimeBoundaryQuery) {
+//          List<String> segmentIds = Lists.newArrayList();
+//          List<Interval> intervals = Lists.newArrayList();
+//          List<Iterable<Result<TimeBoundaryResultValue>>> results = Lists.newArrayList();
+//          for (ServerExpectation expectation : expectations) {
+//            segmentIds.add(expectation.getSegmentId());
+//            intervals.add(expectation.getInterval());
+//            results.add(expectation.getResults());
+//          }
+//          EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
+//                  .andReturn(toQueryableTimeBoundaryResults(segmentIds, intervals, results))
+//                  .once();
+//        } else {
+//          throw new ISE("Unknown query type[%s]", query.getClass());
+//        }
+//      }
+//
+//      final int expectedResultsRangeStart;
+//      final int expectedResultsRangeEnd;
+//      if (query instanceof TimeBoundaryQuery) {
+//        expectedResultsRangeStart = i;
+//        expectedResultsRangeEnd = i + 1;
+//      } else {
+//        expectedResultsRangeStart = 0;
+//        expectedResultsRangeEnd = i + 1;
+//      }
+//
+//      runWithMocks(
+//          () -> {
+//              HashMap<String, List> context = new HashMap<String, List>();
+//              for (int j = 0; j < numTimesToQuery; ++j) {
+//                TestHelper.assertExpectedResults(
+//                    new MergeIterable<>(
+//                        Comparators.naturalNullsFirst(),
+//                        FunctionalIterable
+//                            .create(new RangeIterable(expectedResultsRangeStart, expectedResultsRangeEnd))
+//                            .transformCat((Integer inputInt) ->
+//                                  {
+//                                    List<Iterable<Result<Object>>> retVal = Lists.newArrayList();
+//
+//                                    final Map<DruidServer, ServerExpectations> exps = serverExpectationList.get(inputInt);
+//                                    for (ServerExpectations expectations : exps.values()) {
+//                                      for (ServerExpectation expectation : expectations) {
+//                                        retVal.add(expectation.getResults());
+//                                      }
+//                                    }
+//
+//                                    return retVal;
+//                                  }
+//
+//                            )
+//                    ),
+//                    runner.run(
+//                        QueryPlus.wrap(
+//                            query.withQuerySegmentSpec(
+//                                new MultipleIntervalSegmentSpec(ImmutableList.of(actualQueryInterval))
+//                            )
+//                        ),
+//                        context
+//                    )
+//                );
+//                if (queryCompletedCallback != null) {
+//                  queryCompletedCallback.run();
+//                }
+//              }
+//          },
+//          mocks.toArray()
+//      );
+//
+//      // make sure all the queries were sent down as 'bySegment'
+//      for (Capture queryCapture : queryCaptures) {
+//        QueryPlus capturedQueryPlus = (QueryPlus) queryCapture.getValue();
+//        Query capturedQuery = capturedQueryPlus.getQuery();
+//        if (expectBySegment) {
+//          Assert.assertEquals(true, capturedQuery.getContextValue("bySegment"));
+//        } else {
+//          Assert.assertTrue(
+//              capturedQuery.getContextValue("bySegment") == null ||
+//              capturedQuery.getContextValue("bySegment").equals(false)
+//          );
+//        }
+//      }
+//    }
+//  }
 
   private List<Map<DruidServer, ServerExpectations>> populateTimeline(
       List<Interval> queryIntervals,

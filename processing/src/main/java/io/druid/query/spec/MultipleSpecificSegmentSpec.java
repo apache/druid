@@ -21,7 +21,6 @@ package io.druid.query.spec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.query.Query;
@@ -64,14 +63,7 @@ public class MultipleSpecificSegmentSpec implements QuerySegmentSpec
     intervals = JodaUtils.condenseIntervals(
         Iterables.transform(
             descriptors,
-            new Function<SegmentDescriptor, Interval>()
-            {
-              @Override
-              public Interval apply(SegmentDescriptor input)
-              {
-                return input.getInterval();
-              }
-            }
+            input -> input.getInterval()
         )
     );
 
