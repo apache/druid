@@ -22,15 +22,17 @@ package io.druid.storage.s3;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.common.aws.AWSClientConfig;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.common.aws.AWSEndpointConfig;
 import io.druid.common.aws.AWSProxyConfig;
@@ -80,6 +82,7 @@ public class S3StorageDruidModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.s3", AWSClientConfig.class);
     JsonConfigProvider.bind(binder, "druid.s3.proxy", AWSProxyConfig.class);
     JsonConfigProvider.bind(binder, "druid.s3.endpoint", AWSEndpointConfig.class);
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
@@ -111,25 +114,26 @@ public class S3StorageDruidModule implements DruidModule
   public AmazonS3 getAmazonS3Client(
       AWSCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
-      AWSEndpointConfig endpointConfig
+      AWSEndpointConfig endpointConfig,
+      AWSClientConfig clientConfig
   )
   {
-    // AmazonS3ClientBuilder can't be used because it makes integration tests failed
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
-    final AmazonS3Client client = new AmazonS3Client(provider, setProxyConfig(configuration, proxyConfig));
+    final AmazonS3ClientBuilder builder = AmazonS3Client
+        .builder()
+        .withCredentials(provider)
+        .withClientConfiguration(setProxyConfig(configuration, proxyConfig))
+        .withChunkedEncodingDisabled(clientConfig.isDisableChunkedEncoding())
+        .withPathStyleAccessEnabled(clientConfig.isEnablePathStyleAccess())
+        .withForceGlobalBucketAccessEnabled(clientConfig.isForceGlobalBucketAccessEnabled());
 
     if (StringUtils.isNotEmpty(endpointConfig.getUrl())) {
-      if (StringUtils.isNotEmpty(endpointConfig.getServiceName()) &&
-          StringUtils.isNotEmpty(endpointConfig.getSigningRegion())) {
-        client.setEndpoint(endpointConfig.getUrl(), endpointConfig.getServiceName(), endpointConfig.getSigningRegion());
-      } else {
-        client.setEndpoint(endpointConfig.getUrl());
-      }
+      builder.setEndpointConfiguration(
+          new EndpointConfiguration(endpointConfig.getUrl(), endpointConfig.getSigningRegion())
+      );
     }
 
-    client.setS3ClientOptions(S3ClientOptions.builder().enableForceGlobalBucketAccess().build());
-
-    return client;
+    return builder.build();
   }
 
   private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
