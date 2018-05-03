@@ -108,7 +108,7 @@ public class TaskSerdeTest
     Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
-    Assert.assertEquals(75000, tuningConfig.getMaxRowsInMemory());
+    Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(null, tuningConfig.getNumShards());
     Assert.assertEquals(5000000, (int) tuningConfig.getTargetPartitionSize());
   }
@@ -195,6 +195,7 @@ public class TaskSerdeTest
                 10000,
                 10,
                 null,
+                null,
                 9999,
                 null,
                 indexSpec,
@@ -277,6 +278,7 @@ public class TaskSerdeTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -537,6 +539,7 @@ public class TaskSerdeTest
 
             new RealtimeTuningConfig(
                 1,
+                null,
                 new Period("PT10M"),
                 null,
                 null,

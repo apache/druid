@@ -89,7 +89,7 @@ public class AppenderatorTester implements AutoCloseable
       final int maxRowsInMemory
   )
   {
-    this(maxRowsInMemory, null, false);
+    this(maxRowsInMemory, -1, null, false);
   }
 
   public AppenderatorTester(
@@ -97,11 +97,21 @@ public class AppenderatorTester implements AutoCloseable
       final boolean enablePushFailure
   )
   {
-    this(maxRowsInMemory, null, enablePushFailure);
+    this(maxRowsInMemory, -1, null, enablePushFailure);
   }
 
   public AppenderatorTester(
       final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
+  }
+
+  public AppenderatorTester(
+      final int maxRowsInMemory,
+      long maxSizeInBytes,
       final File basePersistDirectory,
       final boolean enablePushFailure
   )
@@ -131,9 +141,10 @@ public class AppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-
+    maxSizeInBytes = maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes;
     tuningConfig = new RealtimeTuningConfig(
         maxRowsInMemory,
+        maxSizeInBytes,
         null,
         null,
         basePersistDirectory,
@@ -265,6 +276,11 @@ public class AppenderatorTester implements AutoCloseable
         MapCache.create(2048),
         new CacheConfig()
     );
+  }
+
+  private long getDefaultMaxBytesInMemory()
+  {
+    return (Runtime.getRuntime().totalMemory()) / 3;
   }
 
   public DataSchema getSchema()

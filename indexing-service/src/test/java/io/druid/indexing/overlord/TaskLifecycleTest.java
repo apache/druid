@@ -674,6 +674,7 @@ public class TaskLifecycleTest
                 null,
                 null,
                 null,
+                null,
                 indexSpec,
                 3,
                 true,
@@ -749,6 +750,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -1137,6 +1139,7 @@ public class TaskLifecycleTest
                 null,
                 null,
                 null,
+                null,
                 indexSpec,
                 null,
                 false,
@@ -1260,6 +1263,7 @@ public class TaskLifecycleTest
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         1000,
+        null,
         new Period("P1Y"),
         null, //default window period of 10 minutes
         null, // base persist dir ignored by Realtime Index task

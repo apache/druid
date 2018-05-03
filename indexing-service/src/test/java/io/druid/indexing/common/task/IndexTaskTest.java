@@ -631,7 +631,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfig(2, 2, 2L, null, false, false, true),
+            createTuningConfig(2, 2, null, 2L, null, false, false, true),
             false
         ),
         null,
@@ -675,7 +675,7 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, 2L, null, false, true, true),
+            createTuningConfig(3, 2, null, 2L, null, false, true, true),
             false
         ),
         null,
@@ -718,7 +718,7 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, 2L, null, false, false, true),
+            createTuningConfig(3, 2, null, 2L, null, false, false, true),
             false
         ),
         null,
@@ -790,7 +790,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, false, false, false), // ignore parse exception,
+        createTuningConfig(2, null, null, null, null, false, false, false), // ignore parse exception,
         false
     );
 
@@ -842,7 +842,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, false, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, false, false, true), // report parse exception
         false
     );
 
@@ -890,6 +890,7 @@ public class IndexTaskTest
 
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         2,
+        null,
         null,
         null,
         null,
@@ -1012,6 +1013,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         indexSpec,
         null,
         true,
@@ -1113,6 +1115,7 @@ public class IndexTaskTest
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         2,
+        null,
         null,
         null,
         null,
@@ -1245,7 +1248,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, 1, null, null, false, true, true), // report parse exception
+        createTuningConfig(2, 1, null, null, null, false, true, true), // report parse exception
         false
     );
 
@@ -1314,7 +1317,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, false, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, false, false, true), // report parse exception
         false
     );
 
@@ -1553,6 +1556,7 @@ public class IndexTaskTest
         targetPartitionSize,
         1,
         null,
+        null,
         numShards,
         forceExtendableShardSpecs,
         forceGuaranteedRollup,
@@ -1563,6 +1567,7 @@ public class IndexTaskTest
   private static IndexTuningConfig createTuningConfig(
       Integer targetPartitionSize,
       Integer maxRowsInMemory,
+      Long maxBytesInMemory,
       Long maxTotalRows,
       Integer numShards,
       boolean forceExtendableShardSpecs,
@@ -1573,6 +1578,7 @@ public class IndexTaskTest
     return new IndexTask.IndexTuningConfig(
         targetPartitionSize,
         maxRowsInMemory,
+        maxBytesInMemory,
         maxTotalRows,
         null,
         numShards,

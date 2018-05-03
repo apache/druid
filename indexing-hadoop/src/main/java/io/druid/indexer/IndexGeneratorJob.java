@@ -51,6 +51,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -288,6 +289,7 @@ public class IndexGeneratorJob implements Jobby
         .setIndexSchema(indexSchema)
         .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows())
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
+        .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
         .buildOnheap();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {

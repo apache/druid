@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -144,6 +145,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
+      AtomicLong sizeInBytes, // ignored, added to make abstract class method impl happy
       IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -238,7 +240,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
     rowContainer.set(null);
-    return new AddToFactsResult(numEntries.get(), new ArrayList<>());
+    return new AddToFactsResult(numEntries.get(), 0, new ArrayList<>());
   }
 
   @Override
