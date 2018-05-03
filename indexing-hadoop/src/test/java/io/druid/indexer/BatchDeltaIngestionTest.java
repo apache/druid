@@ -119,7 +119,7 @@ public class BatchDeltaIngestionTest
             "ingestionSpec",
             ImmutableMap.of(
                 "dataSource",
-                "xyz",
+                "testds",
                 "interval",
                 INTERVAL_FULL
             ),
@@ -180,7 +180,7 @@ public class BatchDeltaIngestionTest
         "ingestionSpec",
         ImmutableMap.of(
             "dataSource",
-            "xyz",
+            "testds",
             "interval",
             INTERVAL_FULL
         ),
@@ -239,7 +239,7 @@ public class BatchDeltaIngestionTest
             "ingestionSpec",
             ImmutableMap.of(
                 "dataSource",
-                "xyz",
+                "testds",
                 "interval",
                 INTERVAL_FULL
             ),
@@ -314,7 +314,7 @@ public class BatchDeltaIngestionTest
                     "ingestionSpec",
                     ImmutableMap.of(
                         "dataSource",
-                        "xyz",
+                        "testds",
                         "interval",
                         INTERVAL_FULL
                     ),

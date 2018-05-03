@@ -19,7 +19,6 @@
 
 package io.druid.indexer.path;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -60,6 +59,7 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -67,12 +67,14 @@ import java.util.Map;
  */
 public class DatasourcePathSpecTest
 {
-  private DatasourceIngestionSpec ingestionSpec;
-  private List<WindowedDataSegment> segments;
+  private DatasourceIngestionSpec ingestionSpec1;
+  private DatasourceIngestionSpec ingestionSpec2;
+  private List<WindowedDataSegment> segments1;
+  private List<WindowedDataSegment> segments2;
 
   public DatasourcePathSpecTest()
   {
-    this.ingestionSpec = new DatasourceIngestionSpec(
+    this.ingestionSpec1 = new DatasourceIngestionSpec(
         "test",
         Intervals.of("2000/3000"),
         null,
@@ -84,10 +86,22 @@ public class DatasourcePathSpecTest
         null
     );
 
-    segments = ImmutableList.of(
+    this.ingestionSpec2 = new DatasourceIngestionSpec(
+        "test2",
+        Intervals.of("2000/3000"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null
+    );
+
+    segments1 = ImmutableList.of(
         WindowedDataSegment.of(
             new DataSegment(
-                ingestionSpec.getDataSource(),
+                ingestionSpec1.getDataSource(),
                 Intervals.of("2000/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
@@ -103,7 +117,7 @@ public class DatasourcePathSpecTest
         ),
         WindowedDataSegment.of(
             new DataSegment(
-                ingestionSpec.getDataSource(),
+                ingestionSpec1.getDataSource(),
                 Intervals.of("2050/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
@@ -115,6 +129,25 @@ public class DatasourcePathSpecTest
                 NoneShardSpec.instance(),
                 9,
                 12335
+            )
+        )
+    );
+
+    segments2 = ImmutableList.of(
+        WindowedDataSegment.of(
+            new DataSegment(
+                ingestionSpec2.getDataSource(),
+                Intervals.of("2000/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "local",
+                    "path", "/tmp2/index.zip"
+                ),
+                ImmutableList.of("product2"),
+                ImmutableList.of("visited_sum2", "unique_hosts2"),
+                NoneShardSpec.instance(),
+                9,
+                12334
             )
         )
     );
@@ -137,7 +170,9 @@ public class DatasourcePathSpecTest
               {
                 binder.bind(UsedSegmentLister.class).toInstance(segmentList);
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null, null, true, false)
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("dummy-node", null, null, null, true, false)
                 );
               }
             }
@@ -149,7 +184,7 @@ public class DatasourcePathSpecTest
     DatasourcePathSpec expected = new DatasourcePathSpec(
         jsonMapper,
         null,
-        ingestionSpec,
+        ingestionSpec1,
         Long.valueOf(10),
         false
     );
@@ -159,7 +194,7 @@ public class DatasourcePathSpecTest
     expected = new DatasourcePathSpec(
         jsonMapper,
         null,
-        ingestionSpec,
+        ingestionSpec1,
         null,
         false
     );
@@ -168,8 +203,8 @@ public class DatasourcePathSpecTest
 
     expected = new DatasourcePathSpec(
         jsonMapper,
-        segments,
-        ingestionSpec,
+        segments1,
+        ingestionSpec1,
         null,
         false
     );
@@ -178,8 +213,8 @@ public class DatasourcePathSpecTest
 
     expected = new DatasourcePathSpec(
         jsonMapper,
-        segments,
-        ingestionSpec,
+        segments1,
+        ingestionSpec1,
         null,
         true
     );
@@ -194,10 +229,18 @@ public class DatasourcePathSpecTest
 
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    DatasourcePathSpec pathSpec = new DatasourcePathSpec(
+    DatasourcePathSpec pathSpec1 = new DatasourcePathSpec(
         mapper,
-        segments,
-        ingestionSpec,
+        segments1,
+        ingestionSpec1,
+        null,
+        false
+    );
+
+    DatasourcePathSpec pathSpec2 = new DatasourcePathSpec(
+        mapper,
+        segments2,
+        ingestionSpec2,
         null,
         false
     );
@@ -207,25 +250,29 @@ public class DatasourcePathSpecTest
     EasyMock.expect(job.getConfiguration()).andReturn(config).anyTimes();
     EasyMock.replay(job);
 
-    pathSpec.addInputPaths(hadoopIndexerConfig, job);
-    List<WindowedDataSegment> actualSegments = mapper.readValue(
-        config.get(DatasourceInputFormat.CONF_INPUT_SEGMENTS),
-        new TypeReference<List<WindowedDataSegment>>()
-        {
-        }
-    );
+    pathSpec1.addInputPaths(hadoopIndexerConfig, job);
+    pathSpec2.addInputPaths(hadoopIndexerConfig, job);
 
-    Assert.assertEquals(segments, actualSegments);
-
-    DatasourceIngestionSpec actualIngestionSpec = mapper.readValue(
-        config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA),
-        DatasourceIngestionSpec.class
-    );
     Assert.assertEquals(
-        ingestionSpec
+        ImmutableList.of(ingestionSpec1.getDataSource(), ingestionSpec2.getDataSource()),
+        DatasourceInputFormat.getDataSources(config)
+    );
+
+    Assert.assertEquals(segments1, DatasourceInputFormat.getSegments(config, ingestionSpec1.getDataSource()));
+    Assert.assertEquals(segments2, DatasourceInputFormat.getSegments(config, ingestionSpec2.getDataSource()));
+
+    Assert.assertEquals(
+        ingestionSpec1
             .withDimensions(ImmutableList.of("product"))
             .withMetrics(ImmutableList.of("visited_sum")),
-        actualIngestionSpec
+        DatasourceInputFormat.getIngestionSpec(config, ingestionSpec1.getDataSource())
+    );
+
+    Assert.assertEquals(
+        ingestionSpec2
+            .withDimensions(ImmutableList.of("product2"))
+            .withMetrics(ImmutableList.of("visited_sum")),
+        DatasourceInputFormat.getIngestionSpec(config, ingestionSpec2.getDataSource())
     );
   }
 
@@ -239,7 +286,7 @@ public class DatasourcePathSpecTest
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
         mapper,
         null,
-        ingestionSpec,
+        ingestionSpec1,
         null,
         false
     );
@@ -261,22 +308,22 @@ public class DatasourcePathSpecTest
     pathSpec = new DatasourcePathSpec(
         mapper,
         null,
-        ingestionSpec.withIgnoreWhenNoSegments(true),
+        ingestionSpec1.withIgnoreWhenNoSegments(true),
         null,
         false
     );
     pathSpec.addInputPaths(hadoopIndexerConfig, job);
 
-    Assert.assertNull(config.get(DatasourceInputFormat.CONF_INPUT_SEGMENTS));
-    Assert.assertNull(config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA));
+    Assert.assertEquals(Collections.emptyList(), DatasourceInputFormat.getDataSources(config));
   }
 
+  @SuppressWarnings("unchecked")
   private HadoopDruidIndexerConfig makeHadoopDruidIndexerConfig()
   {
     return new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
             new DataSchema(
-                ingestionSpec.getDataSource(),
+                ingestionSpec1.getDataSource(),
                 HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
