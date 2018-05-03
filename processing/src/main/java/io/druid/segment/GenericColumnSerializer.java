@@ -29,5 +29,5 @@ public interface GenericColumnSerializer extends Serializer
 {
   void open() throws IOException;
 
-  void serialize(Object obj) throws IOException;
+  void serialize(ColumnValueSelector selector) throws IOException;
 }

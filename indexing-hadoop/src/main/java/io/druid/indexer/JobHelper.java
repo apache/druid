@@ -366,7 +366,7 @@ public class JobHelper
 
     return succeeded;
   }
-  
+
   public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = true;
@@ -830,5 +830,15 @@ public class JobHelper
       log.error(e, "Failed to cleanup path[%s]", path);
       throw Throwables.propagate(e);
     }
+  }
+
+  public static String getJobTrackerAddress(Configuration config)
+  {
+    String jobTrackerAddress = config.get("mapred.job.tracker");
+    if (jobTrackerAddress == null) {
+      // New Property name for Hadoop 3.0 and later versions
+      jobTrackerAddress = config.get("mapreduce.jobtracker.address");
+    }
+    return jobTrackerAddress;
   }
 }

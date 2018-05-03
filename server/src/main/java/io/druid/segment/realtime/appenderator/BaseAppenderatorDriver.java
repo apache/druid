@@ -39,6 +39,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.joda.time.DateTime;
 
@@ -128,6 +129,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
   private final SegmentAllocator segmentAllocator;
   private final UsedSegmentChecker usedSegmentChecker;
+  private final DataSegmentKiller dataSegmentKiller;
 
   protected final Appenderator appenderator;
   // sequenceName -> segmentsForSequence
@@ -141,12 +143,14 @@ public abstract class BaseAppenderatorDriver implements Closeable
   BaseAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      UsedSegmentChecker usedSegmentChecker
+      UsedSegmentChecker usedSegmentChecker,
+      DataSegmentKiller dataSegmentKiller
   )
   {
     this.appenderator = Preconditions.checkNotNull(appenderator, "appenderator");
     this.segmentAllocator = Preconditions.checkNotNull(segmentAllocator, "segmentAllocator");
     this.usedSegmentChecker = Preconditions.checkNotNull(usedSegmentChecker, "usedSegmentChecker");
+    this.dataSegmentKiller = Preconditions.checkNotNull(dataSegmentKiller, "dataSegmentKiller");
     this.executor = MoreExecutors.listeningDecorator(Execs.singleThreaded("publish-%d"));
   }
 
@@ -332,24 +336,32 @@ public abstract class BaseAppenderatorDriver implements Closeable
    *
    * @param wrappedCommitter   should not be null if you want to persist intermediate states
    * @param segmentIdentifiers identifiers of the segments to be pushed
+   * @param useUniquePath      true if the segment should be written to a path with a unique identifier
    *
    * @return a future for pushing segments
    */
   ListenableFuture<SegmentsAndMetadata> pushInBackground(
       @Nullable final WrappedCommitter wrappedCommitter,
-      final Collection<SegmentIdentifier> segmentIdentifiers
+      final Collection<SegmentIdentifier> segmentIdentifiers,
+      final boolean useUniquePath
   )
   {
     log.info("Pushing segments in background: [%s]", Joiner.on(", ").join(segmentIdentifiers));
 
     return Futures.transform(
-        appenderator.push(segmentIdentifiers, wrappedCommitter),
+        appenderator.push(segmentIdentifiers, wrappedCommitter, useUniquePath),
         (Function<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> {
           // Sanity check
           final Set<SegmentIdentifier> pushedSegments = segmentsAndMetadata.getSegments().stream()
                                                                            .map(SegmentIdentifier::fromDataSegment)
                                                                            .collect(Collectors.toSet());
           if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
+            log.warn(
+                "Removing segments from deep storage because sanity check failed: %s", segmentsAndMetadata.getSegments()
+            );
+
+            segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+
             throw new ISE(
                 "WTF?! Pushed different segments than requested. Pushed[%s], requested[%s].",
                 pushedSegments,
@@ -437,13 +449,25 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     .collect(Collectors.toSet());
                 if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
                                       .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
+                  log.info(
+                      "Removing our segments from deep storage because someone else already published them: %s",
+                      segmentsAndMetadata.getSegments()
+                  );
+                  segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+
                   log.info("Our segments really do exist, awaiting handoff.");
                 } else {
                   throw new ISE("Failed to publish segments[%s]", segmentsAndMetadata.getSegments());
                 }
               }
             }
-            catch (IOException e) {
+            catch (Exception e) {
+              log.warn(
+                  "Removing segments from deep storage after failed publish: %s",
+                  segmentsAndMetadata.getSegments()
+              );
+              segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+
               throw Throwables.propagate(e);
             }
           }

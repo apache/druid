@@ -65,7 +65,7 @@ public interface Row extends Comparable<Row>
 
   /**
    * Returns the raw dimension value for the given column name. This is different from {@link #getDimension} which
-   * all values to strings before returning them.
+   * converts all values to strings before returning them.
    *
    * @param dimension the column name of the dimension requested
    *

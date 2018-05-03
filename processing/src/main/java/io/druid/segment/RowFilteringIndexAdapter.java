@@ -19,23 +19,22 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
-import java.util.Map;
+import java.util.List;
+import java.util.function.Predicate;
 
 /**
  */
-public class RowboatFilteringIndexAdapter implements IndexableAdapter
+public class RowFilteringIndexAdapter implements IndexableAdapter
 {
-  private final IndexableAdapter baseAdapter;
-  private final Predicate<Rowboat> filter;
+  private final QueryableIndexIndexableAdapter baseAdapter;
+  private final Predicate<RowPointer> filter;
 
-  public RowboatFilteringIndexAdapter(IndexableAdapter baseAdapter, Predicate<Rowboat> filter)
+  public RowFilteringIndexAdapter(QueryableIndexIndexableAdapter baseAdapter, Predicate<RowPointer> filter)
   {
     this.baseAdapter = baseAdapter;
     this.filter = filter;
@@ -54,27 +53,51 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getDimensionNames()
+  public List<String> getDimensionNames()
   {
     return baseAdapter.getDimensionNames();
   }
 
   @Override
-  public Indexed<String> getMetricNames()
+  public List<String> getMetricNames()
   {
     return baseAdapter.getMetricNames();
   }
 
   @Override
-  public Indexed<Comparable> getDimValueLookup(String dimension)
+  public <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension)
   {
     return baseAdapter.getDimValueLookup(dimension);
   }
 
   @Override
-  public Iterable<Rowboat> getRows()
+  public TransformableRowIterator getRows()
   {
-    return Iterables.filter(baseAdapter.getRows(), filter);
+    QueryableIndexIndexableAdapter.RowIteratorImpl baseRowIterator = baseAdapter.getRows();
+    return new ForwardingRowIterator(baseRowIterator)
+    {
+      /**
+       * This memoization is needed to conform to {@link RowIterator#getPointer()} specification.
+       */
+      private boolean memoizedOffset = false;
+
+      @Override
+      public boolean moveToNext()
+      {
+        while (baseRowIterator.moveToNext()) {
+          if (filter.test(baseRowIterator.getPointer())) {
+            baseRowIterator.memoizeOffset();
+            memoizedOffset = true;
+            return true;
+          }
+        }
+        // Setting back to the last valid offset in this iterator, as required by RowIterator.getPointer() spec.
+        if (memoizedOffset) {
+          baseRowIterator.resetToMemoizedOffset();
+        }
+        return false;
+      }
+    };
   }
 
   @Override
@@ -99,11 +122,5 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return baseAdapter.getMetadata();
-  }
-
-  @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
-  {
-    return baseAdapter.getDimensionHandlers();
   }
 }

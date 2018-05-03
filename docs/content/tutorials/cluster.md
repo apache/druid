@@ -46,7 +46,7 @@ Very large clusters should consider selecting larger servers.
 
 We recommend running your favorite Linux distribution. You will also need:
 
-  * Java 8 or better
+  * Java 8
 
 Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
 does not have a recent enough version of Java, WebUpd8 offers [packages for those

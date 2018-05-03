@@ -16,33 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.common.aws;
 
-package io.druid.segment.incremental;
+import com.amazonaws.services.s3.S3ClientOptions;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * This interface is the core "pointer" interface that is used to create {@link io.druid.segment.ColumnValueSelector}s
- * over incremental index. It's counterpart for historical segments is {@link io.druid.segment.data.Offset}.
- */
-public class TimeAndDimsHolder
+public class AWSClientConfig
 {
-  IncrementalIndex.TimeAndDims currEntry = null;
+  @JsonProperty
+  private boolean disableChunkedEncoding = S3ClientOptions.DEFAULT_CHUNKED_ENCODING_DISABLED;
 
-  public IncrementalIndex.TimeAndDims get()
+  @JsonProperty
+  private boolean enablePathStyleAccess = S3ClientOptions.DEFAULT_PATH_STYLE_ACCESS;
+
+  @JsonProperty
+  protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
+
+  public boolean isDisableChunkedEncoding()
   {
-    return currEntry;
+    return disableChunkedEncoding;
   }
 
-  public void set(IncrementalIndex.TimeAndDims currEntry)
+  public boolean isEnablePathStyleAccess()
   {
-    this.currEntry = currEntry;
+    return enablePathStyleAccess;
   }
 
-  /**
-   * This method doesn't have well-defined semantics ("value" of what?), should be removed in favor of chaining
-   * get().getRowIndex().
-   */
-  public int getValue()
+  public boolean isForceGlobalBucketAccessEnabled()
   {
-    return currEntry.getRowIndex();
+    return forceGlobalBucketAccessEnabled;
   }
 }

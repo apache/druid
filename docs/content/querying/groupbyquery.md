@@ -204,13 +204,30 @@ The default number of initial buckets is 1024 and the default max load factor of
 
 ##### Parallel combine
 
-Once a historical finishes aggregation using the hash table, it sorts aggregates and merge them before sending to the broker for N-way merge aggregation in the broker. By default, historicals use all their available processing threads (configured by `druid.processing.numThreads`) for aggregation, but use a single thread for sorting and merging aggregates which is an http thread to send data to brokers.
+Once a historical finishes aggregation using the hash table, it sorts the aggregated results and merges them before sending to the
+broker for N-way merge aggregation in the broker. By default, historicals use all their available processing threads
+(configured by `druid.processing.numThreads`) for aggregation, but use a single thread for sorting and merging
+aggregates which is an http thread to send data to brokers.
 
-This is to prevent some heavy groupBy queries from blocking other queries. In Druid, the processing threads are shared between all submitted queries and they are _not interruptible_. It means, if a heavy query takes all available processing threads, all other queries might be blocked until the heavy query is finished. GroupBy queries usually take longer time than timeseries or topN queries, they should release processing threads as soon as possible.
+This is to prevent some heavy groupBy queries from blocking other queries. In Druid, the processing threads are shared
+between all submitted queries and they are _not interruptible_. It means, if a heavy query takes all available
+processing threads, all other queries might be blocked until the heavy query is finished. GroupBy queries usually take
+longer time than timeseries or topN queries, they should release processing threads as soon as possible.
 
-However, you might care about the performance of some really heavy groupBy queries. Usually, the performance bottleneck of heavy groupBy queries is merging sorted aggregates. In such cases, you can use processing threads for it as well. This is called _parallel combine_. To enable parallel combine, see `numParallelCombineThreads` in [Advanced groupBy v2 configurations](#groupby-v2-configurations). Note that parallel combine can be enabled only when data is actually spilled (see [Memory tuning and resource limits](#memory-tuning-and-resource-limits)).
+However, you might care about the performance of some really heavy groupBy queries. Usually, the performance bottleneck
+of heavy groupBy queries is merging sorted aggregates. In such cases, you can use processing threads for it as well.
+This is called _parallel combine_. To enable parallel combine, see `numParallelCombineThreads` in
+[Advanced groupBy v2 configurations](#groupby-v2-configurations). Note that parallel combine can be enabled only when
+data is actually spilled (see [Memory tuning and resource limits](#memory-tuning-and-resource-limits)).
 
-Once parallel combine is enabled, the groupBy v2 engine can create a combining tree for merging sorted aggregates. Each intermediate node of the tree is a thread merging aggregates from the child nodes. The leaf node threads read and merge aggregates from hash tables including spilled ones. Usually, leaf nodes are slower than intermediate nodes because they need to read data from disk. As a result, less threads are used for intermediate nodes by default. You can change the degree of intermeidate nodes. See `intermediateCombineDegree` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
+Once parallel combine is enabled, the groupBy v2 engine can create a combining tree for merging sorted aggregates. Each
+intermediate node of the tree is a thread merging aggregates from the child nodes. The leaf node threads read and merge
+aggregates from hash tables including spilled ones. Usually, leaf nodes are slower than intermediate nodes because they
+need to read data from disk. As a result, less threads are used for intermediate nodes by default. You can change the
+degree of intermediate nodes. See `intermediateCombineDegree` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
+
+Please note that each historical needs two merge buffers to process a groupBy v2 query with parallel combine: one for
+computing intermediate aggregates from each segment and another for combining intermediate aggregates in parallel.
 
 
 #### Alternatives

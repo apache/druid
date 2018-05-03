@@ -158,7 +158,15 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public String getColumnTypeName(String column)
   {
     final String metricType = index.getMetricType(column);
-    return metricType != null ? metricType : getColumnCapabilities(column).getType().toString();
+    if (metricType != null) {
+      return metricType;
+    }
+    ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
+    if (columnCapabilities != null) {
+      return columnCapabilities.getType().toString();
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -186,24 +194,15 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     if (!interval.overlaps(dataInterval)) {
       return Sequences.empty();
     }
-
     final Interval actualInterval = interval.overlap(dataInterval);
-
-    Iterable<Interval> iterable = gran.getIterable(actualInterval);
+    Iterable<Interval> intervals = gran.getIterable(actualInterval);
     if (descending) {
-      iterable = Lists.reverse(ImmutableList.copyOf(iterable));
+      intervals = Lists.reverse(ImmutableList.copyOf(intervals));
     }
 
     return Sequences
-        .simple(iterable)
+        .simple(intervals)
         .map(i -> new IncrementalIndexCursor(virtualColumns, descending, filter, i, actualInterval, gran));
-  }
-
-  private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor)
-  {
-    return filter == null
-           ? BooleanValueMatcher.of(true)
-           : filter.makeMatcher(cursor.getColumnSelectorFactory());
   }
 
   @Override
@@ -214,12 +213,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
   private class IncrementalIndexCursor implements Cursor
   {
-    private TimeAndDimsHolder currEntry;
+    private IncrementalIndexRowHolder currEntry;
     private final ColumnSelectorFactory columnSelectorFactory;
     private final ValueMatcher filterMatcher;
     private final int maxRowIndex;
-    private Iterator<IncrementalIndex.TimeAndDims> baseIter;
-    private Iterable<IncrementalIndex.TimeAndDims> cursorIterable;
+    private Iterator<IncrementalIndexRow> baseIter;
+    private Iterable<IncrementalIndexRow> cursorIterable;
     private boolean emptyRange;
     private final DateTime time;
     private int numAdvanced;
@@ -234,9 +233,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         Granularity gran
     )
     {
-      currEntry = new TimeAndDimsHolder();
+      currEntry = new IncrementalIndexRowHolder();
       columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(index, virtualColumns, descending, currEntry);
-      filterMatcher = makeFilterMatcher(filter, this);
+      filterMatcher = filter == null ? BooleanValueMatcher.of(true) : filter.makeMatcher(columnSelectorFactory);
       numAdvanced = -1;
       maxRowIndex = index.getLastRowIndex();
       final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
@@ -274,7 +273,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       while (baseIter.hasNext()) {
         BaseQuery.checkInterrupted();
 
-        IncrementalIndex.TimeAndDims entry = baseIter.next();
+        IncrementalIndexRow entry = baseIter.next();
         if (beyondMaxRowIndex(entry.getRowIndex())) {
           continue;
         }
@@ -302,7 +301,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           return;
         }
 
-        IncrementalIndex.TimeAndDims entry = baseIter.next();
+        IncrementalIndexRow entry = baseIter.next();
         if (beyondMaxRowIndex(entry.getRowIndex())) {
           continue;
         }
@@ -354,7 +353,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
       boolean foundMatched = false;
       while (baseIter.hasNext()) {
-        IncrementalIndex.TimeAndDims entry = baseIter.next();
+        IncrementalIndexRow entry = baseIter.next();
         if (beyondMaxRowIndex(entry.getRowIndex())) {
           numAdvanced++;
           continue;

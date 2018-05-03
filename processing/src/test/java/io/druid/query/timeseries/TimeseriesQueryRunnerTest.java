@@ -486,6 +486,56 @@ public class TimeseriesQueryRunnerTest
   }
 
   @Test
+  public void testTimeseriesIntervalOutOfRanges()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.emptyInterval)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum
+                                      )
+                                  )
+                                  .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
+                                  .descending(descending)
+                                  .context(ImmutableMap.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, false))
+                                  .build();
+    List<Result<TimeseriesResultValue>> expectedResults = new ArrayList<>();
+
+    expectedResults.add(
+        new Result<>(
+            QueryRunnerTestHelper.emptyInterval.getIntervals().get(0).getStart(),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "rows",
+                    0L,
+                    "index",
+                    0L,
+                    QueryRunnerTestHelper.addRowsIndexConstantMetric,
+                    1.0
+                )
+            )
+        )
+    );
+
+    // Must create a toolChest so we can run mergeResults (which creates the zeroed-out row).
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+
+    // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
+    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
+        toolChest.mergeResults(runner),
+        toolChest
+    );
+
+    final List results = finalRunner.run(QueryPlus.wrap(query), CONTEXT).toList();
+    TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
   public void testTimeseriesWithVirtualColumn()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

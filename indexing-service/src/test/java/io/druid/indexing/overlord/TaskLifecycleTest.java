@@ -482,7 +482,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
+      public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
       {
         pushedSegments++;
         return segment;
@@ -1071,7 +1071,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting)
+      public DataSegment push(File file, DataSegment dataSegment, boolean useUniquePath)
       {
         throw new RuntimeException("FAILURE");
       }

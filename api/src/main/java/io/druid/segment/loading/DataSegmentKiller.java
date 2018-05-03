@@ -20,16 +20,41 @@
 package io.druid.segment.loading;
 
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
 
-/**
- */
 @ExtensionPoint
 public interface DataSegmentKiller
 {
-  void kill(DataSegment segments) throws SegmentLoadingException;
-  void killAll() throws IOException;
+  Logger log = new Logger(DataSegmentKiller.class);
 
+  /**
+   * Removes segment files (index and metadata) from deep storage.
+   * @param segment the segment to kill
+   * @throws SegmentLoadingException if the segment could not be completely removed
+   */
+  void kill(DataSegment segment) throws SegmentLoadingException;
+
+  /**
+   * A more stoic killer who doesn't throw a tantrum if things get messy. Use when killing segments for best-effort
+   * cleanup.
+   * @param segment the segment to kill
+   */
+  default void killQuietly(DataSegment segment)
+  {
+    try {
+      kill(segment);
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to kill segment %s", segment);
+    }
+  }
+
+  /**
+   * Like a nuke. Use wisely. Used by the 'reset-cluster' command, and of the built-in deep storage implementations, it
+   * is only implemented by local and HDFS.
+   */
+  void killAll() throws IOException;
 }

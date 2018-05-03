@@ -36,6 +36,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Set;
 
@@ -204,12 +205,6 @@ public class LocalDataSegmentFinderTest
     Assert.assertEquals(serializedSegment4_1, FileUtils.readFileToString(descriptor4_1));
   }
 
-  private String getDescriptorPath(DataSegment segment)
-  {
-    final File indexzip = new File(String.valueOf(segment.getLoadSpec().get("path")));
-    return indexzip.getParent() + "/" + DESCRIPTOR_JSON;
-  }
-
   @Test(expected = SegmentLoadingException.class)
   public void testFindSegmentsFail() throws SegmentLoadingException
   {
@@ -218,5 +213,45 @@ public class LocalDataSegmentFinderTest
 
     final LocalDataSegmentFinder localDataSegmentFinder = new LocalDataSegmentFinder(mapper);
     localDataSegmentFinder.findSegments(dataSourceDir.getAbsolutePath(), false);
+  }
+
+  @Test
+  public void testPreferNewestSegment() throws Exception
+  {
+    dataSourceDir = temporaryFolder.newFolder();
+    descriptor1 = new File(dataSourceDir.getAbsolutePath() + "/interval10/v10/0/older", DESCRIPTOR_JSON);
+    descriptor2 = new File(dataSourceDir.getAbsolutePath() + "/interval10/v10/0/newer", DESCRIPTOR_JSON);
+
+    descriptor1.getParentFile().mkdirs();
+    descriptor2.getParentFile().mkdirs();
+
+    mapper.writeValue(descriptor1, SEGMENT_1);
+    mapper.writeValue(descriptor2, SEGMENT_1);
+
+    indexZip1 = new File(descriptor1.getParentFile(), INDEX_ZIP);
+    indexZip2 = new File(descriptor2.getParentFile(), INDEX_ZIP);
+
+    FileOutputStream fos1 = new FileOutputStream(indexZip1);
+    fos1.getFD().sync();
+    fos1.close();
+
+    Thread.sleep(1000);
+
+    FileOutputStream fos2 = new FileOutputStream(indexZip2);
+    fos2.getFD().sync();
+    fos2.close();
+
+    final Set<DataSegment> segments = new LocalDataSegmentFinder(mapper).findSegments(
+        dataSourceDir.getAbsolutePath(), false
+    );
+
+    Assert.assertEquals(1, segments.size());
+    Assert.assertEquals(indexZip2.getAbsolutePath(), segments.iterator().next().getLoadSpec().get("path"));
+  }
+
+  private String getDescriptorPath(DataSegment segment)
+  {
+    final File indexzip = new File(String.valueOf(segment.getLoadSpec().get("path")));
+    return indexzip.getParent() + "/" + DESCRIPTOR_JSON;
   }
 }

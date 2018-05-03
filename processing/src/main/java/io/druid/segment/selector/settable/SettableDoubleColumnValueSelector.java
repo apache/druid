@@ -17,41 +17,38 @@
  * under the License.
  */
 
-package io.druid.sql.calcite.aggregation;
+package io.druid.segment.selector.settable;
 
-import io.druid.query.aggregation.PostAggregator;
+import io.druid.common.config.NullHandling;
+import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DoubleColumnSelector;
 
-/**
- * Can create PostAggregators with specific output names.
- */
-public abstract class PostAggregatorFactory
+public class SettableDoubleColumnValueSelector implements SettableColumnValueSelector<Double>, DoubleColumnSelector
 {
-  public abstract PostAggregator factorize(String outputName);
+  private boolean isNull;
+  private double value;
 
   @Override
-  public boolean equals(Object o)
+  public void setValueFrom(ColumnValueSelector selector)
   {
-    if (this == o) {
-      return true;
+    isNull = selector.isNull();
+    if (!isNull) {
+      value = selector.getDouble();
+    } else {
+      value = 0;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    PostAggregatorFactory that = (PostAggregatorFactory) o;
-
-    return factorize(null).equals(that.factorize(null));
   }
 
   @Override
-  public int hashCode()
+  public double getDouble()
   {
-    return factorize(null).hashCode();
+    assert NullHandling.replaceWithDefault() || !isNull;
+    return value;
   }
 
   @Override
-  public String toString()
+  public boolean isNull()
   {
-    return factorize(null).toString();
+    return isNull;
   }
 }

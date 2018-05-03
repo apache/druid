@@ -1937,6 +1937,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        toolbox.getDataSegmentKiller(),
         toolbox.getObjectMapper(),
         metrics
     );

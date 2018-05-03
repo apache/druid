@@ -33,18 +33,18 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
+import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.metadata.EntryExistsException;
-import io.druid.query.DruidMetrics;
 
 import java.util.Collection;
 import java.util.List;
@@ -449,9 +449,8 @@ public class TaskQueue
    */
   private ListenableFuture<TaskStatus> attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
   {
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension("dataSource", task.getDataSource())
-        .setDimension("taskType", task.getType());
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
     Futures.addCallback(
         statusFuture,
@@ -489,7 +488,7 @@ public class TaskQueue
 
               // Emit event and log, if the task is done
               if (status.isComplete()) {
-                metricBuilder.setDimension(DruidMetrics.TASK_STATUS, status.getStatusCode().toString());
+                IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
                 emitter.emit(metricBuilder.build("task/run/time", status.getDuration()));
 
                 log.info(

@@ -20,6 +20,7 @@
 package io.druid.segment.column;
 
 import com.google.common.base.Supplier;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
 
 /**
  */
@@ -91,5 +92,11 @@ class SimpleColumn implements Column
   public SpatialIndex getSpatialIndex()
   {
     return spatialIndex == null ? null : spatialIndex.get();
+  }
+
+  @Override
+  public SettableColumnValueSelector makeSettableColumnValueSelector()
+  {
+    return getCapabilities().getType().makeSettableColumnValueSelector();
   }
 }

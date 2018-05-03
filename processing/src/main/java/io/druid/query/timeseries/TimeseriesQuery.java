@@ -46,6 +46,7 @@ import java.util.Objects;
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   static final String CTX_GRAND_TOTAL = "grandTotal";
+  public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
 
   private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;
@@ -126,7 +127,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public boolean isSkipEmptyBuckets()
   {
-    return getContextBoolean("skipEmptyBuckets", false);
+    return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
   @Override
