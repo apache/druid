@@ -64,7 +64,15 @@ public class TestAWSCredentialsProvider
     assertEquals(credentials.getAWSSecretKey(), "secretKeySample");
 
     // try to create
-    s3Module.getAmazonS3Client(provider, new AWSProxyConfig(), new AWSEndpointConfig(), new AWSClientConfig());
+    s3Module.getAmazonS3Client(
+        provider,
+        new AWSProxyConfig(),
+        new AWSEndpointConfig(),
+        new AWSClientConfig(),
+        new S3StorageConfig(),
+        new S3SSEKmsConfig(),
+        new S3SSECustomConfig()
+    );
   }
 
   @Test
@@ -89,6 +97,14 @@ public class TestAWSCredentialsProvider
     assertEquals(sessionCredentials.getSessionToken(), "sessionTokenSample");
 
     // try to create
-    s3Module.getAmazonS3Client(provider, new AWSProxyConfig(), new AWSEndpointConfig(), new AWSClientConfig());
+    s3Module.getAmazonS3Client(
+        provider,
+        new AWSProxyConfig(),
+        new AWSEndpointConfig(),
+        new AWSClientConfig(),
+        new S3StorageConfig(),
+        new S3SSEKmsConfig(),
+        new S3SSECustomConfig()
+    );
   }
 }
