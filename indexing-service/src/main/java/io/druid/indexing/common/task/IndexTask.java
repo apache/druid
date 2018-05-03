@@ -1346,7 +1346,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       this.targetPartitionSize = initializeTargetPartitionSize(numShards, targetPartitionSize);
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-      // initializing this to 0, it will be lazily intialized to a value
+      // initializing this to 0, it will be lazily initialized to a value
       // @see server.src.main.java.io.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.maxTotalRows = initializeMaxTotalRows(numShards, maxTotalRows);
