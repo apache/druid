@@ -26,14 +26,14 @@ import java.util.SortedSet;
 
 /**
  */
-public class StatsDMetric
+public class StatsDDimension
 {
   public final SortedSet<String> dimensions;
   public final Type type;
   public final boolean convertRange;
 
   @JsonCreator
-  public StatsDMetric(
+  public StatsDDimension(
       @JsonProperty("dimensions") SortedSet<String> dimensions,
       @JsonProperty("type") Type type,
       @JsonProperty("convertRange") boolean convertRange

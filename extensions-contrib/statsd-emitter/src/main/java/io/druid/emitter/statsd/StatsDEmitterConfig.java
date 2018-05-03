@@ -23,11 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
-/**
- */
+import java.util.Objects;
+
 public class StatsDEmitterConfig
 {
-
   @JsonProperty
   private final String hostname;
   @JsonProperty
@@ -42,6 +41,8 @@ public class StatsDEmitterConfig
   private final String dimensionMapPath;
   @JsonProperty
   private final String blankHolder;
+  @JsonProperty
+  private final StatsDEventHandler eventHandler;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -51,7 +52,8 @@ public class StatsDEmitterConfig
       @JsonProperty("separator") String separator,
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
-      @JsonProperty("blankHolder") String blankHolder
+      @JsonProperty("blankHolder") String blankHolder,
+      @JsonProperty("eventHandler") StatsDEventHandler eventHandler
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -61,6 +63,7 @@ public class StatsDEmitterConfig
     this.includeHost = includeHost != null ? includeHost : false;
     this.dimensionMapPath = dimensionMapPath;
     this.blankHolder = blankHolder != null ? blankHolder : "-";
+    this.eventHandler = eventHandler != null ? eventHandler : new DefaultStatsDEventHandler(); // for backwards compatibility
   }
 
   @Override
@@ -72,39 +75,22 @@ public class StatsDEmitterConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     StatsDEmitterConfig that = (StatsDEmitterConfig) o;
-
-    if (hostname != null ? !hostname.equals(that.hostname) : that.hostname != null) {
-      return false;
-    }
-    if (port != null ? !port.equals(that.port) : that.port != null) {
-      return false;
-    }
-    if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) {
-      return false;
-    }
-    if (separator != null ? !separator.equals(that.separator) : that.separator != null) {
-      return false;
-    }
-    if (includeHost != null ? !includeHost.equals(that.includeHost) : that.includeHost != null) {
-      return false;
-    }
-    return dimensionMapPath != null ? dimensionMapPath.equals(that.dimensionMapPath) : that.dimensionMapPath == null;
-
+    return Objects.equals(hostname, that.hostname) &&
+           Objects.equals(port, that.port) &&
+           Objects.equals(prefix, that.prefix) &&
+           Objects.equals(separator, that.separator) &&
+           Objects.equals(includeHost, that.includeHost) &&
+           Objects.equals(dimensionMapPath, that.dimensionMapPath) &&
+           Objects.equals(blankHolder, that.blankHolder) &&
+           Objects.equals(eventHandler, that.eventHandler);
   }
 
   @Override
   public int hashCode()
   {
-    int result = hostname != null ? hostname.hashCode() : 0;
-    result = 31 * result + (port != null ? port.hashCode() : 0);
-    result = 31 * result + (prefix != null ? prefix.hashCode() : 0);
-    result = 31 * result + (separator != null ? separator.hashCode() : 0);
-    result = 31 * result + (includeHost != null ? includeHost.hashCode() : 0);
-    result = 31 * result + (dimensionMapPath != null ? dimensionMapPath.hashCode() : 0);
-    result = 31 * result + (blankHolder != null ? blankHolder.hashCode() : 0);
-    return result;
+
+    return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath, blankHolder, eventHandler);
   }
 
   @JsonProperty
@@ -147,5 +133,11 @@ public class StatsDEmitterConfig
   public String getBlankHolder()
   {
     return blankHolder;
+  }
+
+  @JsonProperty
+  public StatsDEventHandler getEventHandler()
+  {
+    return eventHandler;
   }
 }
