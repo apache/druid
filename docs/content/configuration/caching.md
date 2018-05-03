@@ -49,7 +49,7 @@ Below are the configuration options known to this module:
 |`runtime.properties`|Description|Default|
 |--------------------|-----------|-------|
 |`druid.cache.type`| Set this to `caffeine` or leave out parameter|`caffeine`|
-|`druid.cache.sizeInBytes`|The maximum size of the cache in bytes on heap.|None (unlimited)|
+|`druid.cache.sizeInBytes`|The maximum size of the cache in bytes on heap.|min(1GB, Runtime.maxMemory / 10)|
 |`druid.cache.expireAfter`|The time (in ms) after an access for which a cache entry may be expired|None (no time limit)|
 |`druid.cache.cacheExecutorFactory`|The executor factory to use for Caffeine maintenance. One of `COMMON_FJP`, `SINGLE_THREAD`, or `SAME_THREAD`|ForkJoinPool common pool (`COMMON_FJP`)|
 |`druid.cache.evictOnClose`|If a close of a namespace (ex: removing a segment from a node) should cause an eager eviction of associated cache values|`false`|
