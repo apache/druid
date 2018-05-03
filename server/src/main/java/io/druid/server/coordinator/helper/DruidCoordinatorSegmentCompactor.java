@@ -93,7 +93,11 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                                                     // This guarantees that at least one slot is available if
                                                     // compaction is enabled and numRunningCompactTasks is 0.
                                                     Math.max(1, compactionTaskCapacity);
-        LOG.info("Running tasks [%d/%d]", numNonCompleteCompactionTasks, compactionTaskCapacity);
+        LOG.info(
+            "Found [%d] available task slots for compaction out of [%d] max compaction task capacity",
+            numAvailableCompactionTaskSlots,
+            compactionTaskCapacity
+        );
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
         } else {
