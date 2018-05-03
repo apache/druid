@@ -72,10 +72,10 @@ public class CaffeineCache implements io.druid.client.cache.Cache
     }
     builder
         .weigher((NamedKey key, byte[] value) -> value.length
-                                                    + key.key.length
-                                                    + key.namespace.length() * Character.BYTES
-                                                    + FIXED_COST)
-           .executor(executor);
+                                                 + key.key.length
+                                                 + key.namespace.length() * Character.BYTES
+                                                 + FIXED_COST)
+        .executor(executor);
     return new CaffeineCache(builder.build(), config);
   }
 
