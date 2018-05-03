@@ -43,7 +43,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
 {
   private static final Logger log = new Logger(CaffeineCache.class);
   private static final int FIXED_COST = 8; // Minimum cost in "weight" per entry;
-  private static final int MAX_DEFAULT_BYTES = 1024 * 1024;
+  private static final int MAX_DEFAULT_BYTES = 1024 * 1024 * 1024;
   private static final LZ4Factory LZ4_FACTORY = LZ4Factory.fastestInstance();
   private static final LZ4FastDecompressor LZ4_DECOMPRESSOR = LZ4_FACTORY.fastDecompressor();
   private static final LZ4Compressor LZ4_COMPRESSOR = LZ4_FACTORY.fastCompressor();
