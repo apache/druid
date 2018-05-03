@@ -73,7 +73,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
 
-  private final Object lock = new Object();
+  // Synchronizes removals from segmentsToDelete
+  private final Object segmentDeleteLock = new Object();
+
+  // Synchronizes start/stop of this object.
+  private final Object startStopLock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final SegmentLoaderConfig config;
@@ -137,7 +141,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @LifecycleStart
   public void start() throws IOException
   {
-    synchronized (lock) {
+    synchronized (startStopLock) {
       if (started) {
         return;
       }
@@ -159,7 +163,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @LifecycleStop
   public void stop()
   {
-    synchronized (lock) {
+    synchronized (startStopLock) {
       if (!started) {
         return;
       }
@@ -296,7 +300,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
            things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
            cost of acquiring lock by doing the "contains" check outside the synchronized block.
          */
-        synchronized (lock) {
+        synchronized (segmentDeleteLock) {
           segmentsToDelete.remove(segment);
         }
       }
@@ -423,7 +427,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         public void run()
         {
           try {
-            synchronized (lock) {
+            synchronized (segmentDeleteLock) {
               if (segmentsToDelete.remove(segment)) {
                 segmentManager.dropSegment(segment);
 
