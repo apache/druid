@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -59,21 +60,21 @@ public class DatasourceRecordReaderTest
     InputSplit split = new DatasourceInputSplit(Lists.newArrayList(WindowedDataSegment.of(segment)), null);
 
     Configuration config = new Configuration();
-    config.set(
-        DatasourceInputFormat.CONF_DRUID_SCHEMA,
-        HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
-            new DatasourceIngestionSpec(
-                segment.getDataSource(),
-                segment.getInterval(),
-                null,
-                null,
-                null,
-                segment.getDimensions(),
-                segment.getMetrics(),
-                false,
-                null
-            )
-        )
+    DatasourceInputFormat.addDataSource(
+        config,
+        new DatasourceIngestionSpec(
+            segment.getDataSource(),
+            segment.getInterval(),
+            null,
+            null,
+            null,
+            segment.getDimensions(),
+            segment.getMetrics(),
+            false,
+            null
+        ),
+        Collections.emptyList(),
+        0
     );
 
     TaskAttemptContext context = EasyMock.createNiceMock(TaskAttemptContext.class);
