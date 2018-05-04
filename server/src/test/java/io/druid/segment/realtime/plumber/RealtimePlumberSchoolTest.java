@@ -212,6 +212,7 @@ public class RealtimePlumberSchoolTest
         false,
         null,
         null,
+        null,
         null
     );
 
@@ -272,7 +273,8 @@ public class RealtimePlumberSchoolTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions()
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
@@ -317,7 +319,8 @@ public class RealtimePlumberSchoolTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions()
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
     plumber.startJob();
@@ -372,7 +375,8 @@ public class RealtimePlumberSchoolTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions()
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     );
     plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());

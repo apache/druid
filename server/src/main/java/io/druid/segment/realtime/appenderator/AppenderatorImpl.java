@@ -355,7 +355,8 @@ public class AppenderatorImpl implements Appenderator
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-          tuningConfig.isReportParseExceptions()
+          tuningConfig.isReportParseExceptions(),
+          null
       );
 
       try {
@@ -1027,6 +1028,7 @@ public class AppenderatorImpl implements Appenderator
             tuningConfig.getMaxRowsInMemory(),
             TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
             tuningConfig.isReportParseExceptions(),
+            null,
             hydrants
         );
         sinks.put(identifier, currSink);
