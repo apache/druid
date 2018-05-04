@@ -43,7 +43,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @JsonTypeName("cachedNamespace")
-  public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
+public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);
 
