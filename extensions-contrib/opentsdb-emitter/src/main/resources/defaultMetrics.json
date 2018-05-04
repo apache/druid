@@ -54,6 +54,9 @@
   "ingest/events/unparseable": [
     "dataSource"
   ],
+  "ingest/events/duplicate": [
+    "dataSource"
+  ],
   "ingest/events/processed": [
     "dataSource"
   ],
