@@ -74,12 +74,7 @@ public class SqlFetcher<T> extends Fetcher<T>
   @Override
   protected long download(T object, File outFile) throws IOException
   {
-    try {
-      openObjectFunction.open(object, outFile);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    openObjectFunction.open(object, outFile);
     return outFile.length();
   }
 

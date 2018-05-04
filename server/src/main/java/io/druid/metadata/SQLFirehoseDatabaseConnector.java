@@ -47,7 +47,7 @@ public abstract class SQLFirehoseDatabaseConnector
       return RetryUtils.retry(() -> getDBI().withHandle(callback), myShouldRetry, MAX_RETRIES);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

@@ -57,7 +57,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
   private final ObjectMapper objectMapper;
   @JsonProperty
   private final SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector;
-  private final Boolean foldCase;
+  private final boolean foldCase;
 
   @JsonCreator
   public SqlFirehoseFactory(
@@ -66,7 +66,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
-      @JsonProperty("foldCase") Boolean foldCase,
+      @JsonProperty("foldCase") boolean foldCase,
       @JsonProperty("database") SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector,
       @JacksonInject @Smile ObjectMapper objectMapper
   )
@@ -83,7 +83,7 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
     this.sqls = sqls;
     this.objectMapper = objectMapper;
     this.sqlFirehoseDatabaseConnector = sqlFirehoseDatabaseConnector;
-    this.foldCase = (foldCase == null ? false : foldCase);
+    this.foldCase = foldCase;
     this.connectorConfig = null;
   }
 

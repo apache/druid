@@ -115,7 +115,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
           jp = objectMapper.getFactory().createParser(inputStream);
         }
         final JsonToken nextToken = jp.nextToken();
-        if (nextToken == JsonToken.START_OBJECT || nextToken != JsonToken.START_ARRAY) {
+        if (nextToken != JsonToken.START_ARRAY) {
           throw new IAE("First token should be START_ARRAY", jp.getCurrentToken());
         } else {
           jp.nextToken();
