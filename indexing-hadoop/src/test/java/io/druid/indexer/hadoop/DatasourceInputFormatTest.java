@@ -23,14 +23,16 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import io.druid.indexer.JobHelper;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,8 +53,10 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -62,7 +66,8 @@ public class DatasourceInputFormatTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private List<WindowedDataSegment> segments;
+  private List<WindowedDataSegment> segments1;
+  private List<WindowedDataSegment> segments2;
   private List<LocatedFileStatus> locations;
   private JobConf config;
   private JobContext context;
@@ -70,7 +75,7 @@ public class DatasourceInputFormatTest
   @Before
   public void setUp() throws Exception
   {
-    segments = ImmutableList.of(
+    segments1 = ImmutableList.of(
         WindowedDataSegment.of(
             new DataSegment(
                 "test1",
@@ -89,7 +94,7 @@ public class DatasourceInputFormatTest
         ),
         WindowedDataSegment.of(
             new DataSegment(
-                "test2",
+                "test1",
                 Intervals.of("2050/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
@@ -105,7 +110,7 @@ public class DatasourceInputFormatTest
         ),
         WindowedDataSegment.of(
             new DataSegment(
-                "test3",
+                "test1",
                 Intervals.of("2030/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
@@ -121,9 +126,29 @@ public class DatasourceInputFormatTest
         )
     );
 
-    Path path1 = new Path(JobHelper.getURIFromSegment(segments.get(0).getSegment()));
-    Path path2 = new Path(JobHelper.getURIFromSegment(segments.get(1).getSegment()));
-    Path path3 = new Path(JobHelper.getURIFromSegment(segments.get(2).getSegment()));
+    segments2 = ImmutableList.of(
+        WindowedDataSegment.of(
+            new DataSegment(
+                "test2",
+                Intervals.of("2000/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "local",
+                    "path", "/tmp/index4.zip"
+                ),
+                ImmutableList.of("host"),
+                ImmutableList.of("visited_sum", "unique_hosts"),
+                NoneShardSpec.instance(),
+                9,
+                2
+            )
+        )
+    );
+
+    Path path1 = new Path(JobHelper.getURIFromSegment(segments1.get(0).getSegment()));
+    Path path2 = new Path(JobHelper.getURIFromSegment(segments1.get(1).getSegment()));
+    Path path3 = new Path(JobHelper.getURIFromSegment(segments1.get(2).getSegment()));
+    Path path4 = new Path(JobHelper.getURIFromSegment(segments2.get(0).getSegment()));
 
     // dummy locations for test
     locations = ImmutableList.of(
@@ -140,7 +165,7 @@ public class DatasourceInputFormatTest
                 new BlockLocation(null, new String[]{"s1", "s2"}, 0, 1000),
                 new BlockLocation(null, new String[]{"s1", "s3"}, 1000, 1200),
                 new BlockLocation(null, new String[]{"s2", "s3"}, 2200, 1100),
-                new BlockLocation(null, new String[]{"s1", "s2"}, 3300, 700),
+                new BlockLocation(null, new String[]{"s1", "s2"}, 3300, 700)
             }
         ),
         new LocatedFileStatus(
@@ -148,21 +173,56 @@ public class DatasourceInputFormatTest
             new BlockLocation[]{
                 new BlockLocation(null, new String[]{"s2", "s3"}, 0, 500)
             }
+        ),
+        new LocatedFileStatus(
+            500, false, 0, 0, 0, 0, null, null, null, null, path4,
+            new BlockLocation[]{
+                new BlockLocation(null, new String[]{"s2", "s3"}, 0, 500)
+            }
         )
     );
 
-    config = new JobConf();
-    config.set(
-        DatasourceInputFormat.CONF_INPUT_SEGMENTS,
-        new DefaultObjectMapper().writeValueAsString(segments)
-    );
-
+    config = populateConfiguration(new JobConf(), segments1, 0);
     context = EasyMock.createMock(JobContext.class);
     EasyMock.expect(context.getConfiguration()).andReturn(config);
     EasyMock.replay(context);
   }
 
-  private Supplier<InputFormat> testFormatter = new Supplier<InputFormat>() {
+  private static <T extends Configuration> T populateConfiguration(
+      final T conf,
+      final List<WindowedDataSegment> segments,
+      final long maxSplitSize
+  )
+      throws IOException
+  {
+    DatasourceInputFormat.addDataSource(
+        conf,
+        new DatasourceIngestionSpec(
+            Iterators.getOnlyElement(segments.stream().map(s -> s.getSegment().getDataSource()).distinct().iterator()),
+            null,
+            Collections.singletonList(
+                JodaUtils.umbrellaInterval(
+                    segments.stream()
+                            .map(WindowedDataSegment::getInterval)
+                            .collect(Collectors.toList())
+                )
+            ),
+            null,
+            null,
+            null,
+            null,
+            false,
+            null
+        ),
+        segments,
+        maxSplitSize
+    );
+
+    return conf;
+  }
+
+  private Supplier<InputFormat> testFormatter = new Supplier<InputFormat>()
+  {
     @Override
     public InputFormat get()
     {
@@ -202,25 +262,47 @@ public class DatasourceInputFormatTest
     DatasourceInputFormat inputFormat = new DatasourceInputFormat().setSupplier(testFormatter);
     List<InputSplit> splits = inputFormat.getSplits(context);
 
-    Assert.assertEquals(segments.size(), splits.size());
-    for (int i = 0; i < segments.size(); i++) {
+    Assert.assertEquals(segments1.size(), splits.size());
+    for (int i = 0; i < segments1.size(); i++) {
       DatasourceInputSplit split = (DatasourceInputSplit) splits.get(i);
-      Assert.assertEquals(segments.get(i), split.getSegments().get(0));
+      Assert.assertEquals(segments1.get(i), split.getSegments().get(0));
     }
-    Assert.assertArrayEquals(new String[] {"s1", "s2"}, splits.get(0).getLocations());
-    Assert.assertArrayEquals(new String[] {"s1", "s2"}, splits.get(1).getLocations());
-    Assert.assertArrayEquals(new String[] {"s2", "s3"}, splits.get(2).getLocations());
+    Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(0).getLocations());
+    Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(1).getLocations());
+    Assert.assertArrayEquals(new String[]{"s2", "s3"}, splits.get(2).getLocations());
+  }
+
+  @Test
+  public void testGetSplitsTwoDataSources() throws Exception
+  {
+    config.clear();
+    populateConfiguration(populateConfiguration(config, segments1, 999999), segments2, 999999);
+    List<InputSplit> splits = new DatasourceInputFormat().setSupplier(testFormatter).getSplits(context);
+
+    Assert.assertEquals(2, splits.size());
+    Assert.assertEquals(
+        Sets.newHashSet(segments1),
+        Sets.newHashSet((((DatasourceInputSplit) splits.get(0)).getSegments()))
+    );
+    Assert.assertEquals(
+        Sets.newHashSet(segments2),
+        Sets.newHashSet((((DatasourceInputSplit) splits.get(1)).getSegments()))
+    );
+
+    Assert.assertArrayEquals(new String[]{"s2", "s1", "s3"}, splits.get(0).getLocations());
+    Assert.assertArrayEquals(new String[]{"s2", "s3"}, splits.get(1).getLocations());
   }
 
   @Test
   public void testGetSplitsAllCombined() throws Exception
   {
-    config.set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, "999999");
+    config.clear();
+    populateConfiguration(config, segments1, 999999);
     List<InputSplit> splits = new DatasourceInputFormat().setSupplier(testFormatter).getSplits(context);
 
     Assert.assertEquals(1, splits.size());
     Assert.assertEquals(
-        Sets.newHashSet(segments),
+        Sets.newHashSet(segments1),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(0)).getSegments()))
     );
 
@@ -230,19 +312,20 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetSplitsCombineInTwo() throws Exception
   {
-    config.set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, "6");
+    config.clear();
+    populateConfiguration(config, segments1, 6);
     List<InputSplit> splits = new DatasourceInputFormat().setSupplier(testFormatter).getSplits(context);
 
     Assert.assertEquals(2, splits.size());
 
     Assert.assertEquals(
-        Sets.newHashSet(segments.get(0), segments.get(2)),
+        Sets.newHashSet(segments1.get(0), segments1.get(2)),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(0)).getSegments()))
     );
     Assert.assertArrayEquals(new String[]{"s2", "s1", "s3"}, splits.get(0).getLocations());
 
     Assert.assertEquals(
-        Sets.newHashSet(segments.get(1)),
+        Sets.newHashSet(segments1.get(1)),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(1)).getSegments()))
     );
     Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(1).getLocations());
@@ -251,26 +334,27 @@ public class DatasourceInputFormatTest
   @Test
   public void testGetSplitsCombineCalculated() throws Exception
   {
-    config.set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, "-1");
+    config.clear();
+    populateConfiguration(config, segments1, -1);
     config.setNumMapTasks(3);
     List<InputSplit> splits = new DatasourceInputFormat().setSupplier(testFormatter).getSplits(context);
 
     Assert.assertEquals(3, splits.size());
 
     Assert.assertEquals(
-        Sets.newHashSet(segments.get(0)),
+        Sets.newHashSet(segments1.get(0)),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(0)).getSegments()))
     );
     Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(0).getLocations());
 
     Assert.assertEquals(
-        Sets.newHashSet(segments.get(2)),
+        Sets.newHashSet(segments1.get(2)),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(1)).getSegments()))
     );
     Assert.assertArrayEquals(new String[]{"s2", "s3"}, splits.get(1).getLocations());
 
     Assert.assertEquals(
-        Sets.newHashSet(segments.get(1)),
+        Sets.newHashSet(segments1.get(1)),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(2)).getSegments()))
     );
     Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(2).getLocations());
@@ -302,12 +386,7 @@ public class DatasourceInputFormatTest
         )
     );
 
-    final JobConf myConfig = new JobConf();
-    myConfig.set(
-        DatasourceInputFormat.CONF_INPUT_SEGMENTS,
-        new DefaultObjectMapper().writeValueAsString(mySegments)
-    );
-
+    final JobConf myConfig = populateConfiguration(new JobConf(), mySegments, 0L);
     final JobContext myContext = EasyMock.createMock(JobContext.class);
     EasyMock.expect(myContext.getConfiguration()).andReturn(myConfig);
     EasyMock.replay(myContext);
@@ -367,7 +446,7 @@ public class DatasourceInputFormatTest
 
     Assert.assertEquals(
         0,
-        DatasourceInputFormat.getLocations(segments.subList(0, 1), fio, config).count()
+        DatasourceInputFormat.getLocations(segments1.subList(0, 1), fio, config).count()
     );
   }
 
@@ -383,7 +462,7 @@ public class DatasourceInputFormatTest
     );
 
     EasyMock.expect(fio.getSplits(config, 1)).andReturn(
-        new org.apache.hadoop.mapred.InputSplit[] {split}
+        new org.apache.hadoop.mapred.InputSplit[]{split}
     );
     EasyMock.expect(split.getLocations()).andThrow(new IOException("testing"));
 
@@ -391,7 +470,7 @@ public class DatasourceInputFormatTest
 
     Assert.assertEquals(
         0,
-        DatasourceInputFormat.getLocations(segments.subList(0, 1), fio, config).count()
+        DatasourceInputFormat.getLocations(segments1.subList(0, 1), fio, config).count()
     );
   }
 
@@ -407,25 +486,25 @@ public class DatasourceInputFormatTest
     );
 
     EasyMock.expect(fio.getSplits(config, 1)).andReturn(
-        new org.apache.hadoop.mapred.InputSplit[] {split}
+        new org.apache.hadoop.mapred.InputSplit[]{split}
     );
-    EasyMock.expect(split.getLocations()).andReturn(new String[] {"s1", "s2"});
+    EasyMock.expect(split.getLocations()).andReturn(new String[]{"s1", "s2"});
 
     EasyMock.expect(fio.getSplits(config, 1)).andReturn(
-        new org.apache.hadoop.mapred.InputSplit[] {split}
+        new org.apache.hadoop.mapred.InputSplit[]{split}
     );
-    EasyMock.expect(split.getLocations()).andReturn(new String[] {"s3"});
+    EasyMock.expect(split.getLocations()).andReturn(new String[]{"s3"});
 
     EasyMock.expect(fio.getSplits(config, 1)).andReturn(
-        new org.apache.hadoop.mapred.InputSplit[] {split}
+        new org.apache.hadoop.mapred.InputSplit[]{split}
     );
-    EasyMock.expect(split.getLocations()).andReturn(new String[] {"s4", "s2"});
+    EasyMock.expect(split.getLocations()).andReturn(new String[]{"s4", "s2"});
 
     EasyMock.replay(fio, split);
 
     Assert.assertArrayEquals(
-        new String[] {"s1", "s2", "s3", "s4", "s2"},
-        DatasourceInputFormat.getLocations(segments, fio, config).toArray(String[]::new)
+        new String[]{"s1", "s2", "s3", "s4", "s2"},
+        DatasourceInputFormat.getLocations(segments1, fio, config).toArray(String[]::new)
     );
   }
 }

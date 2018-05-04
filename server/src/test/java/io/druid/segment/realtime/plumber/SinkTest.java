@@ -31,6 +31,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireHydrant;
 import org.joda.time.DateTime;
@@ -61,6 +62,7 @@ public class SinkTest
     final String version = DateTimes.nowUtc().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         100,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -83,6 +85,7 @@ public class SinkTest
         tuningConfig.getShardSpec(),
         version,
         tuningConfig.getMaxRowsInMemory(),
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions()
     );
 

@@ -93,6 +93,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -237,6 +238,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final List<DimensionDesc> dimensionDescsList;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
+  private final AtomicLong bytesInMemory = new AtomicLong();
 
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
@@ -333,6 +335,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private boolean concurrentEventAdd;
     private boolean sortFacts;
     private int maxRowCount;
+    private long maxBytesInMemory;
 
     public Builder()
     {
@@ -342,6 +345,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       concurrentEventAdd = false;
       sortFacts = true;
       maxRowCount = 0;
+      maxBytesInMemory = 0;
     }
 
     public Builder setIndexSchema(final IncrementalIndexSchema incrementalIndexSchema)
@@ -398,6 +402,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return this;
     }
 
+    //maxBytesInMemory only applies to OnHeapIncrementalIndex
+    public Builder setMaxBytesInMemory(final long maxBytesInMemory)
+    {
+      this.maxBytesInMemory = maxBytesInMemory;
+      return this;
+    }
+
     public IncrementalIndex buildOnheap()
     {
       if (maxRowCount <= 0) {
@@ -410,7 +421,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
-          maxRowCount
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -457,6 +469,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
+      AtomicLong sizeInBytes,
       IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -504,11 +517,17 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   static class AddToFactsResult
   {
     private int rowCount;
+    private final long bytesInMemory;
     private List<String> parseExceptionMessages;
 
-    AddToFactsResult(int rowCount, List<String> parseExceptionMessages)
+    public AddToFactsResult(
+        int rowCount,
+        long bytesInMemory,
+        List<String> parseExceptionMessages
+    )
     {
       this.rowCount = rowCount;
+      this.bytesInMemory = bytesInMemory;
       this.parseExceptionMessages = parseExceptionMessages;
     }
 
@@ -517,7 +536,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return rowCount;
     }
 
-    List<String> getParseExceptionMessages()
+    public long getBytesInMemory()
+    {
+      return bytesInMemory;
+    }
+
+    public List<String> getParseExceptionMessages()
     {
       return parseExceptionMessages;
     }
@@ -571,6 +595,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         reportParseExceptions,
         row,
         numEntries,
+        bytesInMemory,
         incrementalIndexRowResult.getIncrementalIndexRow(),
         in,
         rowSupplier,
@@ -582,7 +607,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         incrementalIndexRowResult.getParseExceptionMessages(),
         addToFactsResult.getParseExceptionMessages()
     );
-    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), parseException);
+    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), addToFactsResult.getBytesInMemory(), parseException);
   }
 
   @VisibleForTesting
@@ -597,6 +622,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     Object[] dims;
     List<Object> overflow = null;
+    long dimsKeySize = 0;
     List<String> parseExceptionMessages = new ArrayList<>();
     synchronized (dimensionDescs) {
       dims = new Object[dimensionDescs.size()];
@@ -635,7 +661,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         catch (ParseException pe) {
           parseExceptionMessages.add(pe.getMessage());
         }
-
+        dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
         // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() &&
             dimsKey != null &&
@@ -679,10 +705,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (row.getTimestamp() != null) {
       truncated = gran.bucketStart(row.getTimestamp()).getMillis();
     }
-    IncrementalIndexRow incrementalIndexRow = new IncrementalIndexRow(
+    IncrementalIndexRow incrementalIndexRow = IncrementalIndexRow.createTimeAndDimswithDimsKeySize(
         Math.max(truncated, minTimestamp),
         dims,
-        dimensionDescsList
+        dimensionDescsList,
+        dimsKeySize
     );
     return new IncrementalIndexRowResult(incrementalIndexRow, parseExceptionMessages);
   }
@@ -738,6 +765,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   public int size()
   {
     return numEntries.get();
+  }
+
+  public long getBytesInMemory()
+  {
+    return bytesInMemory.get();
   }
 
   private long getMinTimeMillis()

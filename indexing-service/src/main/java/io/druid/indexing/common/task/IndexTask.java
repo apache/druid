@@ -76,9 +76,9 @@ import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
-import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
+import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -1231,7 +1231,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
   @JsonTypeName("index")
   public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   {
-    private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
     private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
@@ -1244,6 +1243,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private final Integer targetPartitionSize;
     private final int maxRowsInMemory;
+    private final long maxBytesInMemory;
     private final Long maxTotalRows;
     private final Integer numShards;
     private final IndexSpec indexSpec;
@@ -1276,6 +1276,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
         @JsonProperty("rowFlushBoundary") @Nullable Integer rowFlushBoundary_forBackCompatibility, // DEPRECATED
         @JsonProperty("numShards") @Nullable Integer numShards,
@@ -1297,6 +1298,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       this(
           targetPartitionSize,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
+          maxBytesInMemory != null ? maxBytesInMemory : 0,
           maxTotalRows,
           numShards,
           indexSpec,
@@ -1315,12 +1317,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
         @Nullable Integer targetPartitionSize,
         @Nullable Integer maxRowsInMemory,
+        @Nullable Long maxBytesInMemory,
         @Nullable Long maxTotalRows,
         @Nullable Integer numShards,
         @Nullable IndexSpec indexSpec,
@@ -1342,7 +1345,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
 
       this.targetPartitionSize = initializeTargetPartitionSize(numShards, targetPartitionSize);
-      this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+      // initializing this to 0, it will be lazily initialized to a value
+      // @see server.src.main.java.io.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+      this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.maxTotalRows = initializeMaxTotalRows(numShards, maxTotalRows);
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -1396,6 +1402,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       return new IndexTuningConfig(
           targetPartitionSize,
           maxRowsInMemory,
+          maxBytesInMemory,
           maxTotalRows,
           numShards,
           indexSpec,
@@ -1423,6 +1430,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public int getMaxRowsInMemory()
     {
       return maxRowsInMemory;
+    }
+
+    @JsonProperty
+    @Override
+    public long getMaxBytesInMemory()
+    {
+      return maxBytesInMemory;
     }
 
     @JsonProperty
