@@ -151,7 +151,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 The supervisor task provides some HTTP endpoints to get running status.
 
-##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}//mode`
+##### `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/mode`
 
 Returns 'parallel' if the indexing task is running in parallel. Otherwise, it returns 'sequential'.
 
