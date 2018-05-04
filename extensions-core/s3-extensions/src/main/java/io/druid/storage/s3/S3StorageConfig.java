@@ -29,7 +29,7 @@ public class S3StorageConfig
    * Server-side encryption type. We use a short name to match the configuration prefix with {@link S3SSEKmsConfig} and
    * {@link S3SSECustomConfig}.
    *
-   * @see S3StorageDruidModule#configureS3DataSegmentPuller.java
+   * @see S3StorageDruidModule#configure
    */
   @JsonProperty
   private String sse = NoopServerSideEncryption.NAME;
