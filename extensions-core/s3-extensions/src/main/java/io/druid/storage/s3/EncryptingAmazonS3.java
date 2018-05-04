@@ -41,7 +41,7 @@ import java.nio.charset.StandardCharsets;
  * {@link AmazonS3#copyObject}, {@link AmazonS3#getObject}, and {@link AmazonS3#getObjectMetadata} methods should be
  * wrapped using ServerSideEncryption.
  *
- * Additional methods can be added to this class if needed, but subclassing AmazonS3Client is disencouraged to reduce
+ * Additional methods can be added to this class if needed, but subclassing AmazonS3Client is discouraged to reduce
  * human mistakes like some methods are not encoded properly.
  */
 public class EncryptingAmazonS3
