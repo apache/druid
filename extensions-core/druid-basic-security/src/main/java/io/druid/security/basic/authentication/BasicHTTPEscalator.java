@@ -28,10 +28,9 @@ import io.druid.java.util.http.client.auth.BasicCredentials;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
 
-@JsonTypeName(BasicHTTPEscalator.BASIC)
+@JsonTypeName("basic")
 public class BasicHTTPEscalator implements Escalator
 {
-  public static final String BASIC = "basic";
   private final String internalClientUsername;
   private final String internalClientPassword;
   private final String authorizerName;
@@ -60,6 +59,8 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientUsername, authorizerName, BASIC, null);
+    // if you found your self asking why the authenticatedBy field is set to null please read this:
+    // https://github.com/druid-io/druid/pull/5706#discussion_r185940889
+    return new AuthenticationResult(internalClientUsername, authorizerName, null, null);
   }
 }

@@ -27,11 +27,10 @@ import io.druid.java.util.http.client.HttpClient;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
 
-@JsonTypeName(KerberosEscalator.KERBEROS)
+@JsonTypeName("kerberos")
 public class KerberosEscalator implements Escalator
 {
   private static final Logger log = new Logger(KerberosAuthenticator.class);
-  public static final String KERBEROS = "kerberos";
 
   private final String internalClientPrincipal;
   private final String internalClientKeytab;
@@ -58,7 +57,9 @@ public class KerberosEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientPrincipal, authorizerName, KERBEROS, null);
+    // if you found your self asking why the authenticatedBy field is set to null please read this:
+    // https://github.com/druid-io/druid/pull/5706#discussion_r185940889
+    return new AuthenticationResult(internalClientPrincipal, authorizerName, null, null);
   }
 
 }

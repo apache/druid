@@ -40,7 +40,11 @@ public class AuthenticationResult
 
   /**
    * Name of authenticator whom created the results
+   *
+   * If you found your self asking why the authenticatedBy field can be null please read this
+   * https://github.com/druid-io/druid/pull/5706#discussion_r185940889
    */
+  @Nullable
   private final String authenticatedBy;
   /**
    * parameter containing additional context information from an Authenticator
