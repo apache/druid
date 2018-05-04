@@ -16,32 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.common.aws;
 
-package io.druid.segment.realtime.appenderator;
+import com.amazonaws.services.s3.S3ClientOptions;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.IndexSpec;
-import org.joda.time.Period;
-
-import javax.annotation.Nullable;
-import java.io.File;
-
-public interface AppenderatorConfig
+public class AWSClientConfig
 {
-  boolean isReportParseExceptions();
+  @JsonProperty
+  private boolean disableChunkedEncoding = S3ClientOptions.DEFAULT_CHUNKED_ENCODING_DISABLED;
 
-  int getMaxRowsInMemory();
+  @JsonProperty
+  private boolean enablePathStyleAccess = S3ClientOptions.DEFAULT_PATH_STYLE_ACCESS;
 
-  long getMaxBytesInMemory();
+  @JsonProperty
+  protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
 
-  int getMaxPendingPersists();
+  public boolean isDisableChunkedEncoding()
+  {
+    return disableChunkedEncoding;
+  }
 
-  Period getIntermediatePersistPeriod();
+  public boolean isEnablePathStyleAccess()
+  {
+    return enablePathStyleAccess;
+  }
 
-  IndexSpec getIndexSpec();
-
-  File getBasePersistDirectory();
-
-  @Nullable
-  SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
+  public boolean isForceGlobalBucketAccessEnabled()
+  {
+    return forceGlobalBucketAccessEnabled;
+  }
 }

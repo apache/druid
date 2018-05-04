@@ -1966,6 +1966,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
         1000,
+        null,
         maxRowsPerSegment,
         new Period("P1Y"),
         null,
@@ -2008,6 +2009,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
         1000,
+        null,
         maxRowsPerSegment,
         new Period("P1Y"),
         null,

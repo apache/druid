@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sink implements Iterable<FireHydrant>
 {
-  private static final IncrementalIndexAddResult ADD_FAILED = new IncrementalIndexAddResult(-1, null);
+  private static final IncrementalIndexAddResult ADD_FAILED = new IncrementalIndexAddResult(-1, -1, null);
 
   private final Object hydrantLock = new Object();
   private final Interval interval;
@@ -62,6 +62,7 @@ public class Sink implements Iterable<FireHydrant>
   private final ShardSpec shardSpec;
   private final String version;
   private final int maxRowsInMemory;
+  private final long maxBytesInMemory;
   private final boolean reportParseExceptions;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
   private final LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
@@ -75,6 +76,7 @@ public class Sink implements Iterable<FireHydrant>
       ShardSpec shardSpec,
       String version,
       int maxRowsInMemory,
+      long maxBytesInMemory,
       boolean reportParseExceptions
   )
   {
@@ -83,6 +85,7 @@ public class Sink implements Iterable<FireHydrant>
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
@@ -94,6 +97,7 @@ public class Sink implements Iterable<FireHydrant>
       ShardSpec shardSpec,
       String version,
       int maxRowsInMemory,
+      long maxBytesInMemory,
       boolean reportParseExceptions,
       List<FireHydrant> hydrants
   )
@@ -103,6 +107,7 @@ public class Sink implements Iterable<FireHydrant>
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
 
     int maxCount = -1;
@@ -250,6 +255,18 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
+  public long getBytesInMemory()
+  {
+    synchronized (hydrantLock) {
+      IncrementalIndex index = currHydrant.getIndex();
+      if (index == null) {
+        return 0;
+      }
+
+      return currHydrant.getIndex().getBytesInMemory();
+    }
+  }
+
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
@@ -264,6 +281,7 @@ public class Sink implements Iterable<FireHydrant>
         .setIndexSchema(indexSchema)
         .setReportParseExceptions(reportParseExceptions)
         .setMaxRowCount(maxRowsInMemory)
+        .setMaxBytesInMemory(maxBytesInMemory)
         .buildOnheap();
 
     final FireHydrant old;

@@ -84,6 +84,7 @@ public class HadoopDruidIndexerConfigTest
             ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(), specs),
             null,
             null,
+            null,
             false,
             false,
             false,
@@ -158,6 +159,7 @@ public class HadoopDruidIndexerConfigTest
                                                                   2
                                                               ))
             ),
+            null,
             null,
             null,
             false,

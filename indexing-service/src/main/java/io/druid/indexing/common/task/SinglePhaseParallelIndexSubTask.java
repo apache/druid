@@ -43,7 +43,6 @@ import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SurrogateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
-import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
@@ -256,10 +255,10 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link IndexTask.IndexTuningConfig#targetPartitionSize}
+   * If the number of rows in a segment exceeds {@link SinglePhaseParallelIndexTuningConfig#targetPartitionSize}
    * </li>
    * <li>
-   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link IndexTask.IndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link SinglePhaseParallelIndexTuningConfig#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -291,7 +290,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     }
 
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-    final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
+    final SinglePhaseParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
 
@@ -397,14 +396,20 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     }
   }
 
-  private static boolean exceedMaxRowsInSegment(int numRowsInSegment, IndexTuningConfig indexTuningConfig)
+  private static boolean exceedMaxRowsInSegment(
+      int numRowsInSegment,
+      SinglePhaseParallelIndexTuningConfig indexTuningConfig
+  )
   {
     // maxRowsInSegment should be null if numShards is set in indexTuningConfig
     final Integer maxRowsInSegment = indexTuningConfig.getTargetPartitionSize();
     return maxRowsInSegment != null && maxRowsInSegment <= numRowsInSegment;
   }
 
-  private static boolean exceedMaxRowsInAppenderator(long numRowsInAppenderator, IndexTuningConfig indexTuningConfig)
+  private static boolean exceedMaxRowsInAppenderator(
+      long numRowsInAppenderator,
+      SinglePhaseParallelIndexTuningConfig indexTuningConfig
+  )
   {
     // maxRowsInAppenderator should be null if numShards is set in indexTuningConfig
     final Long maxRowsInAppenderator = indexTuningConfig.getMaxTotalRows();
@@ -415,7 +420,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
-      IndexTuningConfig tuningConfig
+      SinglePhaseParallelIndexTuningConfig tuningConfig
   )
   {
     return Appenderators.createOffline(

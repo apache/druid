@@ -16,32 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.segment.indexing;
 
-package io.druid.segment.realtime.appenderator;
-
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import io.druid.segment.IndexSpec;
-import org.joda.time.Period;
-
-import javax.annotation.Nullable;
-import java.io.File;
-
-public interface AppenderatorConfig
+public class TuningConfigs
 {
-  boolean isReportParseExceptions();
+  private TuningConfigs()
+  {
+  }
 
-  int getMaxRowsInMemory();
-
-  long getMaxBytesInMemory();
-
-  int getMaxPendingPersists();
-
-  Period getIntermediatePersistPeriod();
-
-  IndexSpec getIndexSpec();
-
-  File getBasePersistDirectory();
-
-  @Nullable
-  SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory();
+  public static long getMaxBytesInMemoryOrDefault(final long maxBytesInMemory)
+  {
+    // In the main tuningConfig class constructor, we set the maxBytes to 0 if null to avoid setting
+    // maxBytes to max jvm memory of the process that starts first. Instead we set the default based on
+    // the actual task node's jvm memory.
+    return maxBytesInMemory == 0 ? TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY : maxBytesInMemory;
+  }
 }

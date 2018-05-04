@@ -26,22 +26,30 @@ import javax.annotation.Nullable;
 public class IncrementalIndexAddResult
 {
   private final int rowCount;
+  private final long bytesInMemory;
 
   @Nullable
   private final ParseException parseException;
 
   public IncrementalIndexAddResult(
       int rowCount,
+      long bytesInMemory,
       @Nullable ParseException parseException
   )
   {
     this.rowCount = rowCount;
+    this.bytesInMemory = bytesInMemory;
     this.parseException = parseException;
   }
 
   public int getRowCount()
   {
     return rowCount;
+  }
+
+  public long getBytesInMemory()
+  {
+    return bytesInMemory;
   }
 
   @Nullable

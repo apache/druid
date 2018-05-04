@@ -43,6 +43,7 @@ import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -105,6 +106,7 @@ public class YeOldePlumberSchool implements PlumberSchool
         config.getShardSpec(),
         version,
         config.getMaxRowsInMemory(),
+        TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
         config.isReportParseExceptions()
     );
 

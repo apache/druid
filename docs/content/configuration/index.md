@@ -346,7 +346,7 @@ You can enable caching of results at the broker, historical, or realtime level u
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
+|`druid.cache.type`|`local`, `memcached`, `hybrid`, `caffeine`|The type of cache to use for queries.|`caffeine`|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.unCacheable</code>|All druid query types|All query types to not cache.|["groupBy", "select"]|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|true, false|Whether to use cache for getting query results.|false|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|true, false|Whether to populate cache.|false|

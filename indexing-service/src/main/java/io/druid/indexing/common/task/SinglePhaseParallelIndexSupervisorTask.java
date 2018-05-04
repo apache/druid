@@ -397,6 +397,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
     return new IndexTuningConfig(
         tuningConfig.getTargetPartitionSize(),
         tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.getMaxBytesInMemory(),
         tuningConfig.getMaxTotalRows(),
         null,
         tuningConfig.getNumShards(),

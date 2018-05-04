@@ -35,25 +35,21 @@ public class AWSProxyConfig
   @JsonProperty
   private String password;
 
-  @JsonProperty
   public String getHost()
   {
     return host;
   }
 
-  @JsonProperty
   public int getPort()
   {
     return port;
   }
 
-  @JsonProperty
   public String getUsername()
   {
     return username;
   }
 
-  @JsonProperty
   public String getPassword()
   {
     return password;

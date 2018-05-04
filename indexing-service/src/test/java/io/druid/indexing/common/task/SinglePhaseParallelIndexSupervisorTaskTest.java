@@ -221,6 +221,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
             null,
             null,
             null,
+            null,
             2,
             null,
             null,

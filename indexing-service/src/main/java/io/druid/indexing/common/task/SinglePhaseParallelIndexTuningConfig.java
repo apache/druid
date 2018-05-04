@@ -68,6 +68,7 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -76,6 +77,7 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
   public SinglePhaseParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+      @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Nullable Integer numShards,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
@@ -97,6 +99,7 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
     super(
         targetPartitionSize,
         maxRowsInMemory,
+        maxBytesInMemory,
         maxTotalRows,
         null,
         numShards,

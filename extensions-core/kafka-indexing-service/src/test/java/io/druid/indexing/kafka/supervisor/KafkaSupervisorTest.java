@@ -185,6 +185,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     tuningConfig = new KafkaSupervisorTuningConfig(
         1000,
+        null,
         50000,
         new Period("P1Y"),
         new File("/test"),

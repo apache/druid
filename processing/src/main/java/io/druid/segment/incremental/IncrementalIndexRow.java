@@ -45,6 +45,7 @@ public final class IncrementalIndexRow
    * {@link IncrementalIndex.RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
    */
   private int rowIndex;
+  private long dimsKeySize;
 
   IncrementalIndexRow(
       long timestamp,
@@ -68,6 +69,29 @@ public final class IncrementalIndexRow
     this.rowIndex = rowIndex;
   }
 
+  private IncrementalIndexRow(
+      long timestamp,
+      Object[] dims,
+      List<IncrementalIndex.DimensionDesc> dimensionDescsList,
+      long dimsKeySize
+  )
+  {
+    this.timestamp = timestamp;
+    this.dims = dims;
+    this.dimensionDescsList = dimensionDescsList;
+    this.dimsKeySize = dimsKeySize;
+  }
+
+  static IncrementalIndexRow createTimeAndDimswithDimsKeySize(
+      long timestamp,
+      Object[] dims,
+      List<IncrementalIndex.DimensionDesc> dimensionDescsList,
+      long dimsKeySize
+  )
+  {
+    return new IncrementalIndexRow(timestamp, dims, dimensionDescsList, dimsKeySize);
+  }
+
   public long getTimestamp()
   {
     return timestamp;
@@ -86,6 +110,25 @@ public final class IncrementalIndexRow
   void setRowIndex(int rowIndex)
   {
     this.rowIndex = rowIndex;
+  }
+
+  /**
+   * bytesInMemory estimates the size of IncrementalIndexRow key, it takes into account the timestamp(long),
+   * dims(Object Array) and dimensionDescsList(List). Each of these are calculated as follows:
+   * <ul>
+   * <li> timestamp : Long.BYTES
+   * <li> dims array : Integer.BYTES * array length + Long.BYTES (dims object) + dimsKeySize(passed via constructor)
+   * <li> dimensionDescList : Long.BYTES (shared pointer)
+   * <li> dimsKeySize : this value is passed in based on the key type (int, long, double, String etc.)
+   * </ul>
+   *
+   * @return long estimated bytesInMemory
+   */
+  public long estimateBytesInMemory()
+  {
+    long sizeInBytes = Long.BYTES + Integer.BYTES * dims.length + Long.BYTES + Long.BYTES;
+    sizeInBytes += dimsKeySize;
+    return sizeInBytes;
   }
 
   @Override

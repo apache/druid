@@ -430,6 +430,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
             null,
             null,
             null,
+            null,
             NUM_SUB_TASKS,
             null,
             null,
