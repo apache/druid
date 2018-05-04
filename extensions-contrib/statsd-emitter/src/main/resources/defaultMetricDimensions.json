@@ -32,6 +32,7 @@
 
   "ingest/events/thrownAway" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/persist/count" : { "dimensions" : ["dataSource"], "type" : "count" },

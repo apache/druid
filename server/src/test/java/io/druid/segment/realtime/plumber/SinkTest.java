@@ -19,9 +19,12 @@
 
 package io.druid.segment.realtime.plumber;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
@@ -77,6 +80,7 @@ public class SinkTest
         null,
         null,
         null,
+        null,
         null
     );
     final Sink sink = new Sink(
@@ -86,7 +90,8 @@ public class SinkTest
         version,
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions()
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     );
 
     sink.add(
@@ -196,5 +201,88 @@ public class SinkTest
     Assert.assertEquals(Intervals.of("2013-01-01/PT1M"), sink.getCurrHydrant().getIndex().getInterval());
 
     Assert.assertEquals(2, Iterators.size(sink.iterator()));
+  }
+
+  @Test
+  public void testDedup() throws Exception
+  {
+    final DataSchema schema = new DataSchema(
+        "test",
+        null,
+        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
+        null,
+        new DefaultObjectMapper()
+    );
+
+    final Interval interval = Intervals.of("2013-01-01/2013-01-02");
+    final String version = DateTimes.nowUtc().toString();
+    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
+        100,
+        null,
+        new Period("P1Y"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0,
+        0,
+        null,
+        null,
+        null,
+        null,
+        "dedupColumn"
+    );
+    final Sink sink = new Sink(
+        interval,
+        schema,
+        tuningConfig.getShardSpec(),
+        version,
+        tuningConfig.getMaxRowsInMemory(),
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
+    );
+
+    int rows = sink.add(new MapBasedInputRow(
+        DateTimes.of("2013-01-01"),
+        ImmutableList.of("field", "dedupColumn"),
+        ImmutableMap.<String, Object>of("field1", "value1", "dedupColumn", "v1")
+    ), false).getRowCount();
+    Assert.assertTrue(rows > 0);
+
+    // dedupColumn is null
+    rows = sink.add(new MapBasedInputRow(
+        DateTimes.of("2013-01-01"),
+        ImmutableList.of("field", "dedupColumn"),
+        ImmutableMap.<String, Object>of("field1", "value2")
+    ), false).getRowCount();
+    Assert.assertTrue(rows > 0);
+
+    // dedupColumn is null
+    rows = sink.add(new MapBasedInputRow(
+        DateTimes.of("2013-01-01"),
+        ImmutableList.of("field", "dedupColumn"),
+        ImmutableMap.<String, Object>of("field1", "value3")
+    ), false).getRowCount();
+    Assert.assertTrue(rows > 0);
+
+    rows = sink.add(new MapBasedInputRow(
+        DateTimes.of("2013-01-01"),
+        ImmutableList.of("field", "dedupColumn"),
+        ImmutableMap.<String, Object>of("field1", "value4", "dedupColumn", "v2")
+    ), false).getRowCount();
+    Assert.assertTrue(rows > 0);
+
+    rows = sink.add(new MapBasedInputRow(
+        DateTimes.of("2013-01-01"),
+        ImmutableList.of("field", "dedupColumn"),
+        ImmutableMap.<String, Object>of("field1", "value5", "dedupColumn", "v1")
+    ), false).getRowCount();
+    Assert.assertTrue(rows == -2);
   }
 }

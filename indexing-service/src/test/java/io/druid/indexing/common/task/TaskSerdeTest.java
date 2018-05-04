@@ -554,6 +554,7 @@ public class TaskSerdeTest
                 true,
                 null,
                 null,
+                null,
                 null
             )
         ),

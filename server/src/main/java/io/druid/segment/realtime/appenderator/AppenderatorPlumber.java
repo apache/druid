@@ -29,20 +29,21 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.common.guava.ThreadRenamingCallable;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -145,23 +146,21 @@ public class AppenderatorPlumber implements Plumber
   }
 
   @Override
-  public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
   {
     final SegmentIdentifier identifier = getSegmentIdentifier(row.getTimestampFromEpoch());
     if (identifier == null) {
-      return -1;
+      return Plumber.THROWAWAY;
     }
 
-    final int numRows;
-
     try {
-      numRows = appenderator.add(identifier, row, committerSupplier).getNumRowsInSegment();
+      final Appenderator.AppenderatorAddResult addResult = appenderator.add(identifier, row, committerSupplier);
       lastCommitterSupplier = committerSupplier;
-      return numRows;
+      return new IncrementalIndexAddResult(addResult.getNumRowsInSegment(), 0, addResult.getParseException());
     }
     catch (SegmentNotWritableException e) {
       // Segment already started handoff
-      return -1;
+      return Plumber.NOT_WRITABLE;
     }
   }
 

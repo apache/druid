@@ -65,6 +65,7 @@ import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -215,6 +216,7 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
         null
     );
     plumber = new TestPlumber(new Sink(
@@ -224,7 +226,8 @@ public class RealtimeManagerTest
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions()
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     ));
 
     realtimeManager = new RealtimeManager(
@@ -245,7 +248,8 @@ public class RealtimeManagerTest
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions()
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     ));
 
     realtimeManager2 = new RealtimeManager(
@@ -277,6 +281,7 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -294,6 +299,7 @@ public class RealtimeManagerTest
         null,
         0,
         0,
+        null,
         null,
         null,
         null,
@@ -1034,19 +1040,19 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+    public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
     {
       if (row == null) {
-        return -1;
+        return Plumber.THROWAWAY;
       }
 
       Sink sink = getSink(row.getTimestampFromEpoch());
 
       if (sink == null) {
-        return -1;
+        return Plumber.THROWAWAY;
       }
 
-      return sink.add(row, false).getRowCount();
+      return sink.add(row, false);
     }
 
     public Sink getSink(long timestamp)

@@ -159,6 +159,7 @@ public class AppenderatorTester implements AutoCloseable
         null,
         null,
         null,
+        null,
         null
     );
 

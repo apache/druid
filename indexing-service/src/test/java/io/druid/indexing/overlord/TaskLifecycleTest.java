@@ -1278,6 +1278,7 @@ public class TaskLifecycleTest
         null,
         null,
         null,
+        null,
         null
     );
     FireDepartment fireDepartment = new FireDepartment(dataSchema, realtimeIOConfig, realtimeTuningConfig);
