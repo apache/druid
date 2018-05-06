@@ -22,9 +22,12 @@ package io.druid.server.security;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
+import org.eclipse.jetty.client.api.Request;
 
 import javax.annotation.Nullable;
 import javax.servlet.Filter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -93,4 +96,23 @@ public interface Authenticator extends ServletFilterHolder
    */
   @Nullable
   AuthenticationResult authenticateJDBCContext(Map<String, Object> context);
+
+
+  /**
+   * This is used to add some Headers or Authentication token/results that can be used by down stream target host.
+   * Such token can be used to authenticate the user down stream, in cases where to original credenitals
+   * are not forwardable as is and therefore the need to attach some authentication tokens by the proxy.
+   *
+   * @param clientRequest original client request processed by the upstream chain of authenticator
+   * @param proxyResponse proxy Response
+   * @param proxyRequest actual proxy request targeted to a given broker
+   */
+  default void decorateProxyRequest(
+      final HttpServletRequest clientRequest,
+      final HttpServletResponse proxyResponse,
+      final Request proxyRequest
+  )
+  {
+    //noop
+  }
 }

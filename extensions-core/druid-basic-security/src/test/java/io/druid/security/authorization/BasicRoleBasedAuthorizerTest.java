@@ -116,7 +116,7 @@ public class BasicRoleBasedAuthorizerTest
 
     updater.setPermissions(AUTHORIZER_NAME, "druidRole", permissions);
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
 
     Access access = authorizer.authorize(
         authenticationResult,

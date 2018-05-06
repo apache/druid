@@ -48,7 +48,7 @@ public class UnsecuredResourceFilter implements Filter
     // but the value doesn't matter since we skip authorization checks for requests that go through this filter
     servletRequest.setAttribute(
         AuthConfig.DRUID_AUTHENTICATION_RESULT,
-        new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)
+        new AuthenticationResult(AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, AuthConfig.ALLOW_ALL_NAME, null)
     );
 
     // This request will not go to an Authorizer, so we need to set this for PreResponseAuthorizationCheckFilter
