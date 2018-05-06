@@ -170,7 +170,7 @@ public class CalciteTests
           @Override
           public AuthenticationResult authenticateJDBCContext(Map<String, Object> context)
           {
-            return new AuthenticationResult((String) context.get("user"), AuthConfig.ALLOW_ALL_NAME, null);
+            return new AuthenticationResult((String) context.get("user"), AuthConfig.ALLOW_ALL_NAME, null, null);
           }
         }
     );
@@ -191,13 +191,13 @@ public class CalciteTests
   public static final AuthenticationResult REGULAR_USER_AUTH_RESULT = new AuthenticationResult(
       AuthConfig.ALLOW_ALL_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null
+      null, null
   );
 
   public static final AuthenticationResult SUPER_USER_AUTH_RESULT = new AuthenticationResult(
       TEST_SUPERUSER_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null
+      null, null
   );
 
   private static final String TIMESTAMP_COLUMN = "t";
