@@ -135,6 +135,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
     }
 
+    // getSegments() should return an empty set if announceHistoricalSegments() failed
     for (DataSegment segment : retVal.getSegments()) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
       toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
