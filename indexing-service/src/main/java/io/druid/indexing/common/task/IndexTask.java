@@ -30,7 +30,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
@@ -48,6 +47,7 @@ import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -62,7 +62,6 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-import io.druid.query.DruidMetrics;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IOConfig;
@@ -843,12 +842,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
     buildSegmentsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(buildSegmentsFireDepartmentMetrics);
 
     if (toolbox.getMonitorScheduler() != null) {
-      toolbox.getMonitorScheduler().addMonitor(
-          new RealtimeMetricsMonitor(
-              ImmutableList.of(fireDepartmentForMetrics),
-              ImmutableMap.of(DruidMetrics.TASK_ID, new String[]{getId()})
-          )
-      );
+      final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
+      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
     }
 
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();

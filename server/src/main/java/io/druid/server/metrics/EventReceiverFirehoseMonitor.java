@@ -48,7 +48,7 @@ public class EventReceiverFirehoseMonitor extends AbstractMonitor
     this.register = eventReceiverFirehoseRegister;
     this.dimensions = MonitorsConfig.extractDimensions(
         props,
-        Lists.newArrayList(DruidMetrics.DATASOURCE, DruidMetrics.TASK_ID)
+        Lists.newArrayList(DruidMetrics.DATASOURCE, DruidMetrics.TASK_ID, DruidMetrics.TASK_TYPE)
     );
   }
 
