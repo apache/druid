@@ -82,7 +82,7 @@ public class S3DataSegmentPusherTest
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
   {
-    EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     final AccessControlList acl = new AccessControlList();
     acl.setOwner(new Owner("ownerId", "owner"));

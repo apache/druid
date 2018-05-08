@@ -39,7 +39,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     S3ObjectSummary object0 = new S3ObjectSummary(), object1 = new S3ObjectSummary();
 
@@ -81,7 +81,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     final ListObjectsV2Result result = new ListObjectsV2Result();
     result.setKeyCount(0);
@@ -109,7 +109,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     S3ObjectSummary object0 = new S3ObjectSummary();
 
@@ -146,7 +146,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     S3ObjectSummary object0 = new S3ObjectSummary();
 

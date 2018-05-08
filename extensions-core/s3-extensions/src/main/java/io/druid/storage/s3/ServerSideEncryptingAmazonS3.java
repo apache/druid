@@ -30,11 +30,11 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import io.druid.java.util.common.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * {@link AmazonS3} wrapper with {@link ServerSideEncryption}. Every {@link AmazonS3#putObject},
@@ -44,12 +44,12 @@ import java.nio.charset.StandardCharsets;
  * Additional methods can be added to this class if needed, but subclassing AmazonS3Client is discouraged to reduce
  * human mistakes like some methods are not encoded properly.
  */
-public class EncryptingAmazonS3
+public class ServerSideEncryptingAmazonS3
 {
   private final AmazonS3 amazonS3;
   private final ServerSideEncryption serverSideEncryption;
 
-  public EncryptingAmazonS3(AmazonS3 amazonS3, ServerSideEncryption serverSideEncryption)
+  public ServerSideEncryptingAmazonS3(AmazonS3 amazonS3, ServerSideEncryption serverSideEncryption)
   {
     this.amazonS3 = amazonS3;
     this.serverSideEncryption = serverSideEncryption;
@@ -90,7 +90,7 @@ public class EncryptingAmazonS3
 
   public PutObjectResult putObject(String bucket, String key, String content)
   {
-    final InputStream in = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+    final InputStream in = new ByteArrayInputStream(StringUtils.toUtf8(content));
     return putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata()));
   }
 

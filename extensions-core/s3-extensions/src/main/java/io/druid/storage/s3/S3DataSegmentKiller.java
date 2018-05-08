@@ -35,10 +35,10 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
 
-  private final EncryptingAmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
 
   @Inject
-  public S3DataSegmentKiller(EncryptingAmazonS3 s3Client)
+  public S3DataSegmentKiller(ServerSideEncryptingAmazonS3 s3Client)
   {
     this.s3Client = s3Client;
   }

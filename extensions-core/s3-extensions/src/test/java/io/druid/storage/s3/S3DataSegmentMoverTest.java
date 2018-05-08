@@ -180,7 +180,7 @@ public class S3DataSegmentMoverTest
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
-  private static class MockAmazonS3Client extends EncryptingAmazonS3
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     Map<String, Set<String>> storage = Maps.newHashMap();
     boolean copied = false;

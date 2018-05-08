@@ -43,11 +43,11 @@ public class S3TaskLogs implements TaskLogs
 {
   private static final Logger log = new Logger(S3TaskLogs.class);
 
-  private final EncryptingAmazonS3 service;
+  private final ServerSideEncryptingAmazonS3 service;
   private final S3TaskLogsConfig config;
 
   @Inject
-  public S3TaskLogs(EncryptingAmazonS3 service, S3TaskLogsConfig config)
+  public S3TaskLogs(ServerSideEncryptingAmazonS3 service, S3TaskLogsConfig config)
   {
     this.service = service;
     this.config = config;

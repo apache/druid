@@ -46,13 +46,13 @@ public class S3DataSegmentFinder implements DataSegmentFinder
 {
   private static final Logger log = new Logger(S3DataSegmentFinder.class);
 
-  private final EncryptingAmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final ObjectMapper jsonMapper;
   private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentFinder(
-      EncryptingAmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
       ObjectMapper jsonMapper
   )

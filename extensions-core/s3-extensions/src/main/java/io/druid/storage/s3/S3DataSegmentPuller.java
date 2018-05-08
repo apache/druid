@@ -65,10 +65,10 @@ public class S3DataSegmentPuller implements URIDataPuller
   protected static final String BUCKET = "bucket";
   protected static final String KEY = "key";
 
-  protected final EncryptingAmazonS3 s3Client;
+  protected final ServerSideEncryptingAmazonS3 s3Client;
 
   @Inject
-  public S3DataSegmentPuller(EncryptingAmazonS3 s3Client)
+  public S3DataSegmentPuller(ServerSideEncryptingAmazonS3 s3Client)
   {
     this.s3Client = s3Client;
   }

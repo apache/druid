@@ -55,7 +55,7 @@ public class S3DataSegmentPullerTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     final S3ObjectSummary objectSummary = new S3ObjectSummary();
     objectSummary.setBucketName(bucket);
@@ -85,7 +85,7 @@ public class S3DataSegmentPullerTest
   {
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
-    final EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
     final byte[] value = bucket.getBytes("utf8");
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
@@ -142,7 +142,7 @@ public class S3DataSegmentPullerTest
   {
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
-    final EncryptingAmazonS3 s3Client = EasyMock.createStrictMock(EncryptingAmazonS3.class);
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
     final byte[] value = bucket.getBytes("utf8");
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");

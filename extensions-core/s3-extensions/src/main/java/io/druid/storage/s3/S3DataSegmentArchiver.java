@@ -39,7 +39,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
   @Inject
   public S3DataSegmentArchiver(
       @Json ObjectMapper mapper,
-      EncryptingAmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentArchiverConfig archiveConfig,
       S3DataSegmentPusherConfig restoreConfig
   )

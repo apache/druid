@@ -65,7 +65,7 @@ public class S3DataSegmentArchiverTest
     }
   };
   private static final S3DataSegmentPusherConfig PUSHER_CONFIG = new S3DataSegmentPusherConfig();
-  private static final EncryptingAmazonS3 S3_SERVICE = new EncryptingAmazonS3(
+  private static final ServerSideEncryptingAmazonS3 S3_SERVICE = new ServerSideEncryptingAmazonS3(
       EasyMock.createStrictMock(AmazonS3Client.class),
       new NoopServerSideEncryption()
   );

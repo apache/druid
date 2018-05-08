@@ -40,7 +40,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
   private static final int MAX_LISTING_KEYS = 1000;
 
   @Inject
-  public S3TimestampVersionedDataFinder(EncryptingAmazonS3 s3Client)
+  public S3TimestampVersionedDataFinder(ServerSideEncryptingAmazonS3 s3Client)
   {
     super(s3Client);
   }

@@ -115,7 +115,7 @@ public class S3DataSegmentFinderTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  EncryptingAmazonS3 mockS3Client;
+  ServerSideEncryptingAmazonS3 mockS3Client;
   S3DataSegmentPusherConfig config;
 
   private String bucket;
@@ -351,7 +351,7 @@ public class S3DataSegmentFinderTest
     return S3Utils.descriptorPathForSegmentPath(String.valueOf(segment.getLoadSpec().get("key")));
   }
 
-  private static class MockAmazonS3Client extends EncryptingAmazonS3
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     private final File baseDir;
     private final Map<String, Map<String, ObjectMetadata>> storage = Maps.newHashMap();

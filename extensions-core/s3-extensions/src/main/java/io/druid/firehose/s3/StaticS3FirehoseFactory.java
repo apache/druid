@@ -36,7 +36,7 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.storage.s3.EncryptingAmazonS3;
+import io.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import io.druid.storage.s3.S3Utils;
 
 import java.io.IOException;
@@ -57,13 +57,13 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
   private static final int MAX_LISTING_LENGTH = 1024;
 
-  private final EncryptingAmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final List<URI> uris;
   private final List<URI> prefixes;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject("s3Client") EncryptingAmazonS3 s3Client,
+      @JacksonInject("s3Client") ServerSideEncryptingAmazonS3 s3Client,
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("prefixes") List<URI> prefixes,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,

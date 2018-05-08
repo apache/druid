@@ -34,7 +34,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import io.druid.initialization.DruidModule;
-import io.druid.storage.s3.EncryptingAmazonS3;
+import io.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import io.druid.storage.s3.NoopServerSideEncryption;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,7 +47,7 @@ import java.util.List;
  */
 public class StaticS3FirehoseFactoryTest
 {
-  private static final EncryptingAmazonS3 SERVICE = new EncryptingAmazonS3(
+  private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
       new AmazonS3Client(),
       new NoopServerSideEncryption()
   );
@@ -110,7 +110,7 @@ public class StaticS3FirehoseFactoryTest
     }
 
     @Provides
-    public EncryptingAmazonS3 getAmazonS3Client()
+    public ServerSideEncryptingAmazonS3 getAmazonS3Client()
     {
       return SERVICE;
     }

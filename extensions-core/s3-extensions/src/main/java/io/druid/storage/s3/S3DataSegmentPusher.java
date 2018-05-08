@@ -44,12 +44,16 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
-  private final EncryptingAmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public S3DataSegmentPusher(EncryptingAmazonS3 s3Client, S3DataSegmentPusherConfig config, ObjectMapper jsonMapper)
+  public S3DataSegmentPusher(
+      ServerSideEncryptingAmazonS3 s3Client,
+      S3DataSegmentPusherConfig config,
+      ObjectMapper jsonMapper
+  )
   {
     this.s3Client = s3Client;
     this.config = config;

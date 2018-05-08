@@ -114,7 +114,7 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public EncryptingAmazonS3 getAmazonS3Client(
+  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
       AWSCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
@@ -139,7 +139,10 @@ public class S3StorageDruidModule implements DruidModule
       );
     }
 
-    return new EncryptingAmazonS3(builder.build(), getServerSideEncryption(storageConfig, kmsConfig, customConfig));
+    return new ServerSideEncryptingAmazonS3(
+        builder.build(),
+        getServerSideEncryption(storageConfig, kmsConfig, customConfig)
+    );
   }
 
   private static ServerSideEncryption getServerSideEncryption(
