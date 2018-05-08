@@ -170,7 +170,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if ((numEntries.get() >= maxRowCount || (maxBytesInMemory > 0 && sizeInBytes.get() >= maxBytesInMemory))
+      if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
           && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX
           && !skipMaxRowsInMemoryCheck) {
         throw new IndexSizeExceededException(
