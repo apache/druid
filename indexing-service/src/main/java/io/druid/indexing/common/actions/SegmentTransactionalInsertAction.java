@@ -129,8 +129,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-      .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-      .setDimension(DruidMetrics.TASK_TYPE, task.getType());
+        .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
+        .setDimension(DruidMetrics.TASK_TYPE, task.getType());
 
     if (retVal.isSuccess()) {
       toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
