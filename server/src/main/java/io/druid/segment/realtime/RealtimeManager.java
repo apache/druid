@@ -49,6 +49,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentSpec;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
@@ -335,14 +336,17 @@ public class RealtimeManager implements QuerySegmentWalker
           return false;
         }
         InputRow inputRow = null;
-        int numRows = 0;
         try {
           inputRow = firehose.currRow();
           if (inputRow != null) {
-            numRows = plumber.add(inputRow, committerSupplier);
-            if (numRows < 0) {
+            IncrementalIndexAddResult addResult = plumber.add(inputRow, committerSupplier);
+            int numRows = addResult.getRowCount();
+            if (numRows == -2) {
+              metrics.incrementDedup();
+              log.debug("Throwing away duplicate event[%s]", inputRow);
+            } else if (numRows < 0) {
               metrics.incrementThrownAway();
-              log.debug("Throwing away event[%s]", inputRow);
+              log.debug("Throwing away event[%s] due to %s", inputRow, addResult.getReasonOfNotAdded());
             } else {
               metrics.incrementProcessed();
             }

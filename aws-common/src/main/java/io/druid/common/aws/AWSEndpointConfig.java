@@ -21,30 +21,25 @@ package io.druid.common.aws;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.annotation.Nullable;
+
 public class AWSEndpointConfig
 {
+  @Nullable
   @JsonProperty
   private String url;
 
-  @JsonProperty
-  private String serviceName;
-
+  @Nullable
   @JsonProperty
   private String signingRegion;
 
-  @JsonProperty
+  @Nullable
   public String getUrl()
   {
     return url;
   }
 
-  @JsonProperty
-  public String getServiceName()
-  {
-    return serviceName;
-  }
-
-  @JsonProperty
+  @Nullable
   public String getSigningRegion()
   {
     return signingRegion;

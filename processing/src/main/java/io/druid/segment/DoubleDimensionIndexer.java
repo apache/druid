@@ -27,7 +27,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.TimeAndDimsHolder;
+import io.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -45,6 +45,12 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
     return DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+  }
+
+  @Override
+  public long estimateEncodedKeyComponentSize(Double key)
+  {
+    return Double.BYTES;
   }
 
   @Override
@@ -80,7 +86,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -89,7 +95,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -164,9 +170,9 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   }
 
   @Override
-  public Double convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(Double key)
+  public ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues)
   {
-    return key;
+    return selectorWithUnsortedValues;
   }
 
   @Override

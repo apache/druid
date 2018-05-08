@@ -72,6 +72,17 @@ public class S3DataSegmentPusherTest
   @Test
   public void testPush() throws Exception
   {
+    testPushInternal(false, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/index\\.zip");
+  }
+
+  @Test
+  public void testPushUseUniquePath() throws Exception
+  {
+    testPushInternal(true, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip");
+  }
+
+  private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
+  {
     AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
 
     final AccessControlList acl = new AccessControlList();
@@ -131,14 +142,15 @@ public class S3DataSegmentPusherTest
         size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, true);
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, useUniquePath);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(1, (int) segment.getBinaryVersion());
     Assert.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
-    Assert.assertEquals(
-        "key/foo/2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z/0/0/index.zip",
-        segment.getLoadSpec().get("key"));
+    Assert.assertTrue(
+        segment.getLoadSpec().get("key").toString(),
+        segment.getLoadSpec().get("key").toString().matches(matcher)
+    );
     Assert.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
 
     // Verify that the pushed S3Object contains the correct data

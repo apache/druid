@@ -54,6 +54,7 @@ import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
 import io.druid.server.security.AllowAllAuthorizer;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.server.security.Authorizer;
 import io.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
@@ -250,7 +251,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         new NoopServiceEmitter(),
         requestLogLine -> { /* noop */ },
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory(jsonMapper),
+        new AuthenticatorMapper(ImmutableMap.of())
     )
     {
       @Override
@@ -341,7 +343,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
               requestLogLine -> { /* noop */ },
-              new DefaultGenericQueryMetricsFactory(jsonMapper)
+              new DefaultGenericQueryMetricsFactory(jsonMapper),
+              new AuthenticatorMapper(ImmutableMap.of())
           )
           {
             @Override

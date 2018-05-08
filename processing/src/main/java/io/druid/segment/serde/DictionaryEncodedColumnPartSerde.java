@@ -54,7 +54,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-
 public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 {
   private static final int NO_FLAGS = 0;

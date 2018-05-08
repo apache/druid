@@ -125,8 +125,8 @@ public class OverlordResourceTest
 
   public void expectAuthorizationTokenCheck()
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
-
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -203,7 +203,7 @@ public class OverlordResourceTest
     expectAuthorizationTokenCheck();
 
     List<String> tasksIds = ImmutableList.of("id_1", "id_2", "id_3");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>> expect(taskRunner.getRunningTasks()).andReturn(
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem(tasksIds.get(0), null),
             new MockTaskRunnerWorkItem(tasksIds.get(1), null),
@@ -245,7 +245,7 @@ public class OverlordResourceTest
     Assert.assertTrue(taskRunner.getRunningTasks().size() == 3);
     List<TaskStatusPlus> responseObjects = (List) overlordResource
           .getCompleteTasks(null, req).getEntity();
-    
+
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
     Assert.assertEquals(tasksIds.get(2), responseObjects.get(1).getId());
@@ -367,13 +367,13 @@ public class OverlordResourceTest
     );
     Assert.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
   }
-  
+
   @Test
   public void testGetRunningTasksByDataSource()
   {
 
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>> expect(taskRunner.getRunningTasks()).andReturn(
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem(tasksIds.get(0), null),
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)));
@@ -398,7 +398,7 @@ public class OverlordResourceTest
     expectAuthorizationTokenCheck();
 
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
-    EasyMock.<Collection<? extends TaskRunnerWorkItem>> expect(taskRunner.getRunningTasks()).andReturn(
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem(tasksIds.get(0), null),
             new MockTaskRunnerWorkItem(tasksIds.get(1), null)));
@@ -412,7 +412,7 @@ public class OverlordResourceTest
     Assert.assertTrue(taskStorageQueryAdapter.getTask("id_2").isPresent());
     List<TaskRunnerWorkItem> responseObjects = (List) overlordResource.getRunningTasksByDataSource("ds_NA", req)
         .getEntity();
-    
+
     Assert.assertEquals(0, responseObjects.size());
   }
 

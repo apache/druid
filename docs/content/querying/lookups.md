@@ -332,7 +332,7 @@ The return value will be the json representation of the factory.
 ```
 
 # Configuration
-See the [coordinator configuration guilde](../configuration/coordinator.html) for coordinator configuration
+See the [coordinator configuration guide](../configuration/coordinator.html) for coordinator configuration.
 
 To configure a Broker / Router / Historical / Peon to announce itself as part of a lookup tier, use the `druid.zk.paths.lookupTier` property.
 

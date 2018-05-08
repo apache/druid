@@ -30,7 +30,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
@@ -48,6 +47,7 @@ import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -62,7 +62,6 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
-import io.druid.query.DruidMetrics;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IOConfig;
@@ -76,9 +75,9 @@ import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
-import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
+import io.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import io.druid.segment.realtime.appenderator.SegmentAllocator;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -843,12 +842,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
     buildSegmentsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(buildSegmentsFireDepartmentMetrics);
 
     if (toolbox.getMonitorScheduler() != null) {
-      toolbox.getMonitorScheduler().addMonitor(
-          new RealtimeMetricsMonitor(
-              ImmutableList.of(fireDepartmentForMetrics),
-              ImmutableMap.of(DruidMetrics.TASK_ID, new String[]{getId()})
-          )
-      );
+      final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
+      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
     }
 
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
@@ -1105,7 +1100,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
     return new BatchAppenderatorDriver(
         appenderator,
         segmentAllocator,
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient())
+        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        toolbox.getDataSegmentKiller()
     );
   }
 
@@ -1230,7 +1226,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
   @JsonTypeName("index")
   public static class IndexTuningConfig implements TuningConfig, AppenderatorConfig
   {
-    private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
     private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
@@ -1243,6 +1238,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private final Integer targetPartitionSize;
     private final int maxRowsInMemory;
+    private final long maxBytesInMemory;
     private final Long maxTotalRows;
     private final Integer numShards;
     private final IndexSpec indexSpec;
@@ -1275,6 +1271,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
         @JsonProperty("rowFlushBoundary") @Nullable Integer rowFlushBoundary_forBackCompatibility, // DEPRECATED
         @JsonProperty("numShards") @Nullable Integer numShards,
@@ -1296,6 +1293,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       this(
           targetPartitionSize,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
+          maxBytesInMemory != null ? maxBytesInMemory : 0,
           maxTotalRows,
           numShards,
           indexSpec,
@@ -1314,12 +1312,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
         @Nullable Integer targetPartitionSize,
         @Nullable Integer maxRowsInMemory,
+        @Nullable Long maxBytesInMemory,
         @Nullable Long maxTotalRows,
         @Nullable Integer numShards,
         @Nullable IndexSpec indexSpec,
@@ -1341,7 +1340,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
 
       this.targetPartitionSize = initializeTargetPartitionSize(numShards, targetPartitionSize);
-      this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+      // initializing this to 0, it will be lazily initialized to a value
+      // @see server.src.main.java.io.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+      this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.maxTotalRows = initializeMaxTotalRows(numShards, maxTotalRows);
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -1395,6 +1397,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       return new IndexTuningConfig(
           targetPartitionSize,
           maxRowsInMemory,
+          maxBytesInMemory,
           maxTotalRows,
           numShards,
           indexSpec,
@@ -1422,6 +1425,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public int getMaxRowsInMemory()
     {
       return maxRowsInMemory;
+    }
+
+    @JsonProperty
+    @Override
+    public long getMaxBytesInMemory()
+    {
+      return maxBytesInMemory;
     }
 
     @JsonProperty

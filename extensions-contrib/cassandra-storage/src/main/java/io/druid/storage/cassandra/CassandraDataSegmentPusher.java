@@ -75,13 +75,12 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, DataSegment segment, final boolean replaceExisting)
-      throws IOException
+  public DataSegment push(final File indexFilesDir, DataSegment segment, final boolean useUniquePath) throws IOException
   {
     log.info("Writing [%s] to C*", indexFilesDir);
     String key = JOINER.join(
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
-        this.getStorageDir(segment)
+        this.getStorageDir(segment, useUniquePath)
     );
 
     // Create index
@@ -92,20 +91,16 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
     int version = SegmentUtils.getVersionFromDir(indexFilesDir);
 
     try {
-      if (!replaceExisting && doesObjectExist(indexStorage, key)) {
-        log.info("Skipping push because key [%s] exists && replaceExisting == false", key);
-      } else {
-        long start = System.currentTimeMillis();
-        ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
-                      .withConcurrencyLevel(CONCURRENCY).call();
-        byte[] json = jsonMapper.writeValueAsBytes(segment);
-        MutationBatch mutation = this.keyspace.prepareMutationBatch();
-        mutation.withRow(descriptorStorage, key)
-                .putColumn("lastmodified", System.currentTimeMillis(), null)
-                .putColumn("descriptor", json, null);
-        mutation.execute();
-        log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
-      }
+      long start = System.currentTimeMillis();
+      ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
+                    .withConcurrencyLevel(CONCURRENCY).call();
+      byte[] json = jsonMapper.writeValueAsBytes(segment);
+      MutationBatch mutation = this.keyspace.prepareMutationBatch();
+      mutation.withRow(descriptorStorage, key)
+              .putColumn("lastmodified", System.currentTimeMillis(), null)
+              .putColumn("descriptor", json, null);
+      mutation.execute();
+      log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
     }
     catch (Exception e) {
       throw new IOException(e);

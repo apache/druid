@@ -21,6 +21,7 @@ package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
@@ -52,6 +53,14 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
       "/status/health"
   );
 
+  private final AuthConfig authConfig;
+
+  @Inject
+  public MiddleManagerJettyServerInitializer(AuthConfig authConfig)
+  {
+    this.authConfig = authConfig;
+  }
+
   @Override
   public void initialize(Server server, Injector injector)
   {
@@ -67,10 +76,12 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 

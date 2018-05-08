@@ -47,9 +47,11 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -61,76 +63,15 @@ public class TopNQueryQueryToolChestTest
   @Test
   public void testCacheStrategy() throws Exception
   {
-    CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy =
-        new TopNQueryQueryToolChest(null, null).getCacheStrategy(
-            new TopNQuery(
-                new TableDataSource("dummy"),
-                VirtualColumns.EMPTY,
-                new DefaultDimensionSpec("test", "test"),
-                new NumericTopNMetricSpec("metric1"),
-                3,
-                new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
-                null,
-                Granularities.ALL,
-                ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
-                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
-                null
-            )
-        );
+    doTestCacheStrategy(ValueType.STRING, "val1");
+    doTestCacheStrategy(ValueType.FLOAT, 2.1f);
+    doTestCacheStrategy(ValueType.DOUBLE, 2.1d);
+    doTestCacheStrategy(ValueType.LONG, 2L);
+  }
 
-    final Result<TopNResultValue> result1 = new Result<>(
-        // test timestamps that result in integer size millis
-        DateTimes.utc(123L),
-        new TopNResultValue(
-            Arrays.asList(
-                ImmutableMap.<String, Object>of(
-                    "test", "val1",
-                    "metric1", 2
-                )
-            )
-        )
-    );
-
-    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
-        result1
-    );
-
-    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    Object fromCacheValue = objectMapper.readValue(
-        objectMapper.writeValueAsBytes(preparedValue),
-        strategy.getCacheObjectClazz()
-    );
-
-    Result<TopNResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
-
-    Assert.assertEquals(result1, fromCacheResult);
-
-    final Result<TopNResultValue> result2 = new Result<>(
-        // test timestamps that result in integer size millis
-        DateTimes.utc(123L),
-        new TopNResultValue(
-            Arrays.asList(
-                ImmutableMap.<String, Object>of(
-                    "test", "val1",
-                    "metric1", 2,
-                    "post", 10
-                )
-            )
-        )
-    );
-
-    Object preparedResultCacheValue = strategy.prepareForCache(true).apply(
-        result2
-    );
-
-    Object fromResultCacheValue = objectMapper.readValue(
-        objectMapper.writeValueAsBytes(preparedResultCacheValue),
-        strategy.getCacheObjectClazz()
-    );
-
-    Result<TopNResultValue> fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
-    Assert.assertEquals(result2, fromResultCacheResult);
-
+  @Test
+  public void testCacheStrategyWithFloatDimension() throws Exception
+  {
   }
 
   @Test
@@ -240,6 +181,79 @@ public class TopNQueryQueryToolChestTest
     new TopNQueryQueryToolChest.ThresholdAdjustingQueryRunner(mockRunner, config)
         .run(QueryPlus.wrap(query3), ImmutableMap.<String, Object>of());
     Assert.assertEquals(2000, mockRunner.query.getThreshold());
+  }
+
+  private void doTestCacheStrategy(final ValueType valueType, final Object dimValue) throws IOException
+  {
+    CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy =
+        new TopNQueryQueryToolChest(null, null).getCacheStrategy(
+            new TopNQuery(
+                new TableDataSource("dummy"),
+                VirtualColumns.EMPTY,
+                new DefaultDimensionSpec("test", "test", valueType),
+                new NumericTopNMetricSpec("metric1"),
+                3,
+                new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+                null,
+                Granularities.ALL,
+                ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
+                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
+                null
+            )
+        );
+
+    final Result<TopNResultValue> result1 = new Result<>(
+        // test timestamps that result in integer size millis
+        DateTimes.utc(123L),
+        new TopNResultValue(
+            Arrays.asList(
+                ImmutableMap.<String, Object>of(
+                    "test", dimValue,
+                    "metric1", 2
+                )
+            )
+        )
+    );
+
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(
+        result1
+    );
+
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    Object fromCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    Result<TopNResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
+
+    Assert.assertEquals(result1, fromCacheResult);
+
+    final Result<TopNResultValue> result2 = new Result<>(
+        // test timestamps that result in integer size millis
+        DateTimes.utc(123L),
+        new TopNResultValue(
+            Arrays.asList(
+                ImmutableMap.<String, Object>of(
+                    "test", dimValue,
+                    "metric1", 2,
+                    "post", 10
+                )
+            )
+        )
+    );
+
+    Object preparedResultCacheValue = strategy.prepareForCache(true).apply(
+        result2
+    );
+
+    Object fromResultCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedResultCacheValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    Result<TopNResultValue> fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
+    Assert.assertEquals(result2, fromResultCacheResult);
   }
 
   static class MockQueryRunner implements QueryRunner<Result<TopNResultValue>>

@@ -74,8 +74,11 @@ public class S3DataSegmentMover implements DataSegmentMover
       final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
       final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
 
-      final String targetS3Path = S3Utils.constructSegmentPath(targetS3BaseKey, DataSegmentPusher.getDefaultStorageDir(segment));
-      String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
+      final String targetS3Path = S3Utils.constructSegmentPath(
+          targetS3BaseKey,
+          DataSegmentPusher.getDefaultStorageDir(segment, false)
+      );
+      final String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
 
       if (targetS3Bucket.isEmpty()) {
         throw new SegmentLoadingException("Target S3 bucket is not specified");

@@ -94,6 +94,7 @@
       <property name="tokens" value="DOT"/>
       <property name="allowLineBreaks" value="false"/>
     </module>
+    <module name="GenericWhitespace"/>
 
     <module name="Indentation">
       <property name="basicOffset" value="2"/>

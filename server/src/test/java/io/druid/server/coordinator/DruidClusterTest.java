@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -74,14 +75,14 @@ public class DruidClusterTest
       "src1",
       new ImmutableDruidDataSource(
           "src1",
-          ImmutableMap.of(),
-          ImmutableMap.of()
+          Collections.emptyMap(),
+          new TreeMap<>()
       ),
       "src2",
       new ImmutableDruidDataSource(
           "src2",
-          ImmutableMap.of(),
-          ImmutableMap.of()
+          Collections.emptyMap(),
+          new TreeMap<>()
       )
   );
 

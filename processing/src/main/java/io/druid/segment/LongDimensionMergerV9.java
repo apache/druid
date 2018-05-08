@@ -19,77 +19,23 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Throwables;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.serde.ColumnPartSerde;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.IOException;
-import java.nio.IntBuffer;
-import java.util.List;
-
-public class LongDimensionMergerV9 implements DimensionMergerV9<Long>
+public class LongDimensionMergerV9 extends NumericDimensionMergerV9
 {
-  protected String dimensionName;
-  protected final IndexSpec indexSpec;
-  protected GenericColumnSerializer serializer;
 
-  LongDimensionMergerV9(
-      String dimensionName,
-      IndexSpec indexSpec,
-      SegmentWriteOutMedium segmentWriteOutMedium
-  )
+  LongDimensionMergerV9(String dimensionName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
-    this.dimensionName = dimensionName;
-    this.indexSpec = indexSpec;
-
-    try {
-      setupEncodedValueWriter(segmentWriteOutMedium);
-    }
-    catch (IOException ioe) {
-      Throwables.propagate(ioe);
-    }
-  }
-
-  protected void setupEncodedValueWriter(SegmentWriteOutMedium segmentWriteOutMedium) throws IOException
-  {
-    this.serializer = IndexMergerV9.createLongColumnSerializer(
-        segmentWriteOutMedium,
-        dimensionName,
-        indexSpec
-    );
-    serializer.open();
+    super(dimensionName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters)
+  GenericColumnSerializer setupEncodedValueWriter()
   {
-    // longs have no additional metadata
-  }
-
-  @Override
-  public Long convertSegmentRowValuesToMergedRowValues(Long segmentRow, int segmentIndexNumber)
-  {
-    return segmentRow;
-  }
-
-  @Override
-  public void processMergedRow(Long rowValues) throws IOException
-  {
-    serializer.serialize(rowValues);
-  }
-
-  @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions)
-  {
-    // longs have no indices to write
-  }
-
-  @Override
-  public boolean canSkip()
-  {
-    return false;
+    return IndexMergerV9.createLongColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
   }
 
   @Override

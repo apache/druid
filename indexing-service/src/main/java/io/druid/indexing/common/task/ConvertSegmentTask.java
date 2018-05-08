@@ -441,10 +441,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         // version, but is "newer" than said original version.
         DataSegment updatedSegment = segment.withVersion(StringUtils.format("%s_v%s", segment.getVersion(), outVersion));
 
-        // The convert segment task does not support replicas where different tasks could generate segments with the
-        // same identifier but potentially different contents. In case of conflict, favor the most recently pushed
-        // segment (replaceExisting == true).
-        updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment, true);
+        updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment, false);
 
         actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
       } else {

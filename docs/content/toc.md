@@ -13,7 +13,7 @@ layout: toc
 
 ## Data Ingestion
   * [Data Formats](/docs/VERSION/ingestion/data-formats.html)
-  * [Data Schema](/docs/VERSION/ingestion/index.html)
+  * [Ingestion Spec](/docs/VERSION/ingestion/index.html)
   * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Schema Changes](/docs/VERSION/ingestion/schema-changes.html)
   * [Batch File Ingestion](/docs/VERSION/ingestion/batch-ingestion.html)

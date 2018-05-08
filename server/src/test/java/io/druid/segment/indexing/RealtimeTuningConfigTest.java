@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.UUID;
 
 public class RealtimeTuningConfigTest
 {
@@ -37,6 +38,24 @@ public class RealtimeTuningConfigTest
     final RealtimeTuningConfig tuningConfig1 = RealtimeTuningConfig.makeDefaultTuningConfig(null);
     final RealtimeTuningConfig tuningConfig2 = RealtimeTuningConfig.makeDefaultTuningConfig(null);
     Assert.assertNotEquals(tuningConfig1.getBasePersistDirectory(), tuningConfig2.getBasePersistDirectory());
+  }
+
+  @Test
+  public void testErrorMessageIsMeaningfulWhenUnableToCreateTemporaryDirectory()
+  {
+    String propertyName = "java.io.tmpdir";
+    String originalValue = System.getProperty(propertyName);
+    try {
+      String nonExistedDirectory = "/tmp/" + UUID.randomUUID();
+      System.setProperty(propertyName, nonExistedDirectory);
+      RealtimeTuningConfig.makeDefaultTuningConfig(null);
+    }
+    catch (IllegalStateException e) {
+      Assert.assertTrue(e.getMessage().startsWith("Failed to create temporary directory in"));
+    }
+    finally {
+      System.setProperty(propertyName, originalValue);
+    }
   }
 
   @Test
@@ -71,7 +90,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(75000, config.getMaxRowsInMemory());
+    Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(0, config.getMergeThreadPriority());
     Assert.assertEquals(0, config.getPersistThreadPriority());
     Assert.assertEquals(new Period("PT10M"), config.getWindowPeriod());

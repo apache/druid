@@ -27,7 +27,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.TimeAndDimsHolder;
+import io.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -46,6 +46,12 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
     }
 
     return DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+  }
+
+  @Override
+  public long estimateEncodedKeyComponentSize(Float key)
+  {
+    return Float.BYTES;
   }
 
   @Override
@@ -81,7 +87,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -90,7 +96,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -167,9 +173,9 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public Float convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(Float key)
+  public ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues)
   {
-    return key;
+    return selectorWithUnsortedValues;
   }
 
   @Override

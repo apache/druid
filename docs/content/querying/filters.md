@@ -487,3 +487,11 @@ Filtering on a set of ISO 8601 intervals:
     ]
 }
 ```
+
+
+### Noop Filter
+The noop filter is a filter which applies no conditions to your query.  Useful if you need to disable other filters when queries are generated programatically. 
+
+```json
+{ "type" : "noop" }
+```

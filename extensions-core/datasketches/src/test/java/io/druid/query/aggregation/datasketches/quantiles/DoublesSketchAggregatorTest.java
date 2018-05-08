@@ -254,8 +254,7 @@ public class DoublesSketchAggregatorTest
     double[] histogram = (double[]) histogramObject;
     Assert.assertEquals(4, histogram.length);
     for (final double bin : histogram) {
-      Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
-      // distributed into 4 bins
+      Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly distributed into 4 bins
     }
   }
 
