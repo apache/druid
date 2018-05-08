@@ -42,7 +42,21 @@ import io.druid.indexing.common.task.Task;
 })
 public interface TaskAction<RetType>
 {
+  /**
+   * Returns the {@link TypeReference} for {@link RetType}. The returned type reference is used for
+   * serializing/deserializing this task action when it's called using {@link RemoteTaskActionClient}.
+   */
   TypeReference<RetType> getReturnTypeReference(); // T_T
+
+  /**
+   * Perform this task action. Only called by {@link LocalTaskActionClient}.
+   */
   RetType perform(Task task, TaskActionToolbox toolbox);
+
+  /**
+   * Returns true if it should be logged in metastore when this task is performed by {@link LocalTaskActionClient}.
+   *
+   * @see io.druid.metadata.MetadataStorageTablesConfig#taskActionsTable
+   */
   boolean isAudited();
 }

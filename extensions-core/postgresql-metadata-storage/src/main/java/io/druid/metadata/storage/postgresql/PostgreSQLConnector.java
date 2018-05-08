@@ -76,6 +76,12 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   }
 
   @Override
+  protected String getIntegerType()
+  {
+    return "INTEGER";
+  }
+
+  @Override
   public String getQuoteString()
   {
     return QUOTE_STRING;

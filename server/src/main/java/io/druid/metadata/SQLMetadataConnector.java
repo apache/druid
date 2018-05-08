@@ -103,6 +103,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected abstract String getSerialType();
 
   /**
+   * Returns the name of the 32 bit integer type.
+   */
+  protected abstract String getIntegerType();
+
+  /**
    * Returns the value that should be passed to statement.setFetchSize to ensure results
    * are streamed back from the database instead of fetching the entire result set in memory.
    *
@@ -335,11 +340,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  id %2$s NOT NULL,\n"
                 + "  %3$s_id VARCHAR(255) DEFAULT NULL,\n"
                 + "  log_payload_id VARCHAR(255) NOT NULL,\n"
-                + "  log_payload_order SMALLINT NOT NULL,\n"
-                + "  log_payload_part %4$s,\n"
+                + "  log_payload_order %4$s NOT NULL,\n"
+                + "  log_payload_part %5$s,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getSerialType(), entryTypeName, getPayloadType()
+                tableName,
+                getSerialType(),
+                entryTypeName,
+                getIntegerType(),
+                getPayloadType()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
         )
