@@ -41,7 +41,7 @@ public class GoogleUtils
   {
     if (t instanceof GoogleJsonResponseException) {
       final GoogleJsonResponseException e = (GoogleJsonResponseException) t;
-      return e.getStatusCode() == 429;// backoff warchild
+      return e.getStatusCode() == 429; // backoff warchild
     }
     return t instanceof IOException;
   }
