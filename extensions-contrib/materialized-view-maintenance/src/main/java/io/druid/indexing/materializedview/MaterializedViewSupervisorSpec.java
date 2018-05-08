@@ -170,6 +170,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getShardSpecs(),
         tuningConfig.getIndexSpec(),
         tuningConfig.getRowFlushBoundary(),
+        tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isLeaveIntermediate(),
         tuningConfig.isCleanupOnFailure(),
         tuningConfig.isOverwriteFiles(),
