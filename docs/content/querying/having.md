@@ -129,8 +129,6 @@ The grammar for an AND filter is as follows:
 }
 ```
 
-The having clauses in `havingSpecs` can be any other having clause defined on this page.
-
 #### OR
 
 The grammar for an OR filter is as follows:
@@ -142,17 +140,17 @@ The grammar for an OR filter is as follows:
 }
 ```
 
-The having clauses in `havingSpecs` can be any other having clause defined on this page.
-
 #### NOT
 
 The grammar for a NOT filter is as follows:
 
 ```json
 {
+    "queryType": "groupBy",
+    "dataSource": "sample_datasource",
+    
     "type": "not",
     "havingSpec": <having clause>
 }
 ```
 
-The having clause specified at `havingSpec` can be any other having clause defined on this page.
