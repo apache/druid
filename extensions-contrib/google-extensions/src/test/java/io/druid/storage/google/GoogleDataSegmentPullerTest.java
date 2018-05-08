@@ -19,6 +19,9 @@
 
 package io.druid.storage.google;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import io.druid.segment.loading.SegmentLoadingException;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMockSupport;
@@ -43,8 +46,12 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
     final File outDir = Files.createTempDirectory("druid").toFile();
     try {
       GoogleStorage storage = createMock(GoogleStorage.class);
-
-      expect(storage.get(bucket, path)).andThrow(new IOException(""));
+      final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+          JacksonFactory.getDefaultInstance(),
+          500,
+          "test"
+      );
+      expect(storage.get(bucket, path)).andThrow(exception);
 
       replayAll();
 

@@ -19,6 +19,9 @@
 
 package io.druid.storage.google;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.Intervals;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -79,8 +82,13 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test(expected = SegmentLoadingException.class)
   public void killWithErrorTest() throws SegmentLoadingException, IOException
   {
+    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+        JacksonFactory.getDefaultInstance(),
+        500,
+        "test"
+    );
     storage.delete(bucket, indexPath);
-    expectLastCall().andThrow(new IOException(""));
+    expectLastCall().andThrow(exception);
 
     replayAll();
 
