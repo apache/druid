@@ -260,7 +260,7 @@ public class AppenderatorImpl implements Appenderator
     if (System.currentTimeMillis() > nextFlush) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          " current time[%d] is greater than nextFlush[%d],",
+          "current time[%d] is greater than nextFlush[%d]",
           System.currentTimeMillis(),
           nextFlush
       ));
@@ -268,17 +268,17 @@ public class AppenderatorImpl implements Appenderator
     if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          " rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d],",
+          "rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d]",
           rowsCurrentlyInMemory.get(),
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (tuningConfig.getMaxBytesInMemory() > 0
+    if (tuningConfig.getMaxBytesInMemory() >= 0
         && bytesCurrentlyInMemory.get()
            >= TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          " bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
+          "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())
       ));
