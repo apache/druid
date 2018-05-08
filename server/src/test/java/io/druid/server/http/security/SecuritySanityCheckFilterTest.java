@@ -58,7 +58,9 @@ public class SecuritySanityCheckFilterTest
     FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("does-not-belong", "does-not-belong", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("does-not-belong", "does-not-belong",
+                                                                         null,
+                                                                         null);
 
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(true).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();

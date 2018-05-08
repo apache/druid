@@ -130,7 +130,7 @@ public class DatasourcesResourceTest
     ).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-      new AuthenticationResult("druid", "druid", null)
+      new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
@@ -144,7 +144,7 @@ public class DatasourcesResourceTest
     ).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).once();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
@@ -178,7 +178,7 @@ public class DatasourcesResourceTest
   @Test
   public void testSecuredGetFullQueryableDataSources() throws Exception
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
     // first request
     EasyMock.expect(server.getDataSources()).andReturn(
       ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
@@ -279,7 +279,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
