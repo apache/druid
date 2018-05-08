@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +44,7 @@ import java.util.Map;
 public class MapLookupExtractor extends LookupExtractor
 {
   private final Map<String, String> map;
+  private final Map<String, String> reverseMap;
 
   private final boolean isOneToOne;
 
@@ -52,8 +54,18 @@ public class MapLookupExtractor extends LookupExtractor
       @JsonProperty("isOneToOne") boolean isOneToOne
   )
   {
-    this.map = Preconditions.checkNotNull(map, "map");
+
+    Preconditions.checkNotNull(map, "map");
+
     this.isOneToOne = isOneToOne;
+
+    if (this.isOneToOne) {
+      this.map = HashBiMap.create(map);
+      this.reverseMap = ((HashBiMap<String, String>) this.map).inverse();
+    } else {
+      this.map = map;
+      this.reverseMap = null;
+    }
   }
 
   @JsonProperty
@@ -72,14 +84,14 @@ public class MapLookupExtractor extends LookupExtractor
   @Override
   public List<String> unapply(final String value)
   {
-    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
-    {
-      @Override public boolean apply(@Nullable String key)
-      {
-        return map.get(key).equals(Strings.nullToEmpty(value));
-      }
-    }).keySet());
+    String valueToLookup = Strings.nullToEmpty(value);
 
+    if (this.reverseMap != null) {
+      String val = this.reverseMap.get(valueToLookup);
+      return (val != null) ? Collections.singletonList(val) : Collections.emptyList();
+    } else {
+      return Lists.newArrayList(Maps.filterKeys(map, key -> map.get(key).equals(valueToLookup)).keySet());
+    }
   }
 
   @Override
