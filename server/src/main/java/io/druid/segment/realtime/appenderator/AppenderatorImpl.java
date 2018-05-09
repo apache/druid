@@ -187,7 +187,6 @@ public class AppenderatorImpl implements Appenderator
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
 
-
   @Override
   public String getDataSource()
   {
