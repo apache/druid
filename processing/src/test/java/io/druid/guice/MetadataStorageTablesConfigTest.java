@@ -71,7 +71,7 @@ public class MetadataStorageTablesConfigTest
         config.getEntryTable(MetadataStorageTablesConfig.TASK_ENTRY_TYPE)
     );
     Assert.assertEquals(
-        props.getProperty("druid.metadata.storage.tables.taskLog"),
+        props.getProperty("druid.metadata.storage.tables.taskActions"),
         config.getLogTable(MetadataStorageTablesConfig.TASK_ENTRY_TYPE)
     );
     Assert.assertEquals(

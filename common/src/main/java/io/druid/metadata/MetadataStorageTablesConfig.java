@@ -85,7 +85,7 @@ public class MetadataStorageTablesConfig
       @JsonProperty("rules") String rulesTable,
       @JsonProperty("config") String configTable,
       @JsonProperty("tasks") String tasksTable,
-      @JsonProperty("taskActionLog") String taskActionLog,
+      @JsonProperty("taskActions") String taskActions,
       @JsonProperty("taskLock") String taskLockTable,
       @JsonProperty("audit") String auditTable,
       @JsonProperty("supervisors") String supervisorTable
@@ -99,7 +99,7 @@ public class MetadataStorageTablesConfig
     this.configTable = makeTableName(configTable, "config");
 
     this.tasksTable = makeTableName(tasksTable, "tasks");
-    this.taskActionsTable = makeTableName(taskActionLog, "taskactions");
+    this.taskActionsTable = makeTableName(taskActions, "taskactions");
     this.taskLockTable = makeTableName(taskLockTable, "tasklocks");
     entryTables.put(TASK_ENTRY_TYPE, this.tasksTable);
     logTables.put(TASK_ENTRY_TYPE, this.taskActionsTable);
