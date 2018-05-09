@@ -22,6 +22,7 @@ package io.druid.query.filter;
 /**
  * FloatPredicate is only supported in Java 8+, so use this to avoid boxing when a float predicate is needed.
  */
+// All implementations are currently lambda expressions and intellij inspections wrongly complains about unused variable.
 @SuppressWarnings("unused")
 public interface DruidFloatPredicate
 {

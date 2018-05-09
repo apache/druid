@@ -923,7 +923,7 @@ public class RowBasedGrouperHelper
     }
   }
 
-  static long estimateStringKeySize(String key)
+  static long estimateStringKeySize(@Nullable String key)
   {
     long length = key == null ? 0 : key.length();
     return length * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;

@@ -31,20 +31,7 @@ public class FloatValueMatcherColumnSelectorStrategy
   {
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
     if (matchVal == null) {
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          return selector.isNull();
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          inspector.visit("selector", selector);
-        }
-      };
+      return ValueMatcher.nullValueMatcher(selector);
     }
 
     final int matchValIntBits = Float.floatToIntBits(matchVal);

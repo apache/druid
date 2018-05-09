@@ -31,20 +31,7 @@ public class LongValueMatcherColumnSelectorStrategy
   {
     final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
     if (matchVal == null) {
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          return selector.isNull();
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          inspector.visit("selector", selector);
-        }
-      };
+      return ValueMatcher.nullValueMatcher(selector);
     }
     final long matchValLong = matchVal;
     return new ValueMatcher()

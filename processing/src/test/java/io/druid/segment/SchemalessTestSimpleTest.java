@@ -117,7 +117,8 @@ public class SchemalessTestSimpleTest
   public SchemalessTestSimpleTest(Segment segment, boolean coalesceAbsentAndEmptyDims)
   {
     this.segment = segment;
-    this.coalesceAbsentAndEmptyDims = coalesceAbsentAndEmptyDims;
+    // Empty and empty dims are equivalent only when replaceWithDefault is true
+    this.coalesceAbsentAndEmptyDims = coalesceAbsentAndEmptyDims && NullHandling.replaceWithDefault();
   }
 
   @Test

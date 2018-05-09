@@ -1087,43 +1087,73 @@ public class IndexMergerTestBase
       final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
       final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
-      Assert.assertEquals(
-          ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
-          ImmutableList.copyOf(adapter.getDimensionNames())
-      );
+      if (NullHandling.replaceWithDefault()) {
+        Assert.assertEquals(
+            ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+            ImmutableList.copyOf(adapter.getDimensionNames())
+        );
+      } else {
+        Assert.assertEquals(
+            ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+            ImmutableList.copyOf(adapter.getDimensionNames())
+        );
+      }
       Assert.assertEquals(4, rowList.size());
-      Assert.assertEquals(
-          Arrays.asList(null, "310", null, null, null, null, "910"),
-          rowList.get(0).dimensionValues()
-      );
-      Assert.assertEquals(
-          Arrays.asList("210", "311", null, null, "710", "810", "911"),
-          rowList.get(1).dimensionValues()
-      );
-      Assert.assertEquals(
-          Arrays.asList(null, null, "520", "620", "720", "820", "920"),
-          rowList.get(2).dimensionValues()
-      );
-      Assert.assertEquals(
-          Arrays.asList(null, null, null, "621", null, "821", "921"),
-          rowList.get(3).dimensionValues()
-      );
+      if (NullHandling.replaceWithDefault()) {
+        Assert.assertEquals(
+            Arrays.asList(null, "310", null, null, null, null, "910"),
+            rowList.get(0).dimensionValues()
+        );
+        Assert.assertEquals(
+            Arrays.asList("210", "311", null, null, "710", "810", "911"),
+            rowList.get(1).dimensionValues()
+        );
+        Assert.assertEquals(
+            Arrays.asList(null, null, "520", "620", "720", "820", "920"),
+            rowList.get(2).dimensionValues()
+        );
+        Assert.assertEquals(
+            Arrays.asList(null, null, null, "621", null, "821", "921"),
+            rowList.get(3).dimensionValues()
+        );
 
-      checkBitmapIndex(Arrays.asList(0, 2, 3), adapter.getBitmapIndex("d2", null));
+        checkBitmapIndex(Arrays.asList(0, 2, 3), adapter.getBitmapIndex("d2", null));
+        checkBitmapIndex(Arrays.asList(0, 1, 3), adapter.getBitmapIndex("d5", null));
+        checkBitmapIndex(Arrays.asList(0, 3), adapter.getBitmapIndex("d7", null));
+      } else {
+        Assert.assertEquals(
+            Arrays.asList("", "", "310", null, null, "", null, "910"),
+            rowList.get(0).dimensionValues()
+        );
+        Assert.assertEquals(
+            Arrays.asList(null, "210", "311", null, null, "710", "810", "911"),
+            rowList.get(1).dimensionValues()
+        );
+        Assert.assertEquals(
+            Arrays.asList(null, null, null, "520", "620", "720", "820", "920"),
+            rowList.get(2).dimensionValues()
+        );
+        Assert.assertEquals(
+            Arrays.asList(null, null, null, "", "621", "", "821", "921"),
+            rowList.get(3).dimensionValues()
+        );
+        checkBitmapIndex(Arrays.asList(2, 3), adapter.getBitmapIndex("d2", null));
+        checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("d5", null));
+        checkBitmapIndex(Collections.emptyList(), adapter.getBitmapIndex("d7", null));
+      }
+
       checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d2", "210"));
 
       checkBitmapIndex(Arrays.asList(2, 3), adapter.getBitmapIndex("d3", null));
       checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("d3", "310"));
       checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d3", "311"));
 
-      checkBitmapIndex(Arrays.asList(0, 1, 3), adapter.getBitmapIndex("d5", null));
       checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d5", "520"));
 
       checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("d6", null));
       checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d6", "620"));
       checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d6", "621"));
 
-      checkBitmapIndex(Arrays.asList(0, 3), adapter.getBitmapIndex("d7", null));
       checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("d7", "710"));
       checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("d7", "720"));
 
@@ -1230,15 +1260,33 @@ public class IndexMergerTestBase
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
 
-    Assert.assertEquals(
-        ImmutableList.of("d3", "d6", "d8", "d9"),
-        ImmutableList.copyOf(adapter.getDimensionNames())
-    );
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(
+          ImmutableList.of("d3", "d6", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+    } else {
+      Assert.assertEquals(
+          ImmutableList.of("d1", "d2", "d3", "d5", "d6", "d7", "d8", "d9"),
+          ImmutableList.copyOf(adapter.getDimensionNames())
+      );
+    }
+
     Assert.assertEquals(4, rowList.size());
-    Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(0).dimensionValues());
-    Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(1).dimensionValues());
-    Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(2).dimensionValues());
-    Assert.assertEquals(Arrays.asList(null, "621", "821", "921"), rowList.get(3).dimensionValues());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(0).dimensionValues());
+      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(1).dimensionValues());
+      Assert.assertEquals(Arrays.asList("310", null, null, "910"), rowList.get(2).dimensionValues());
+      Assert.assertEquals(Arrays.asList(null, "621", "821", "921"), rowList.get(3).dimensionValues());
+    } else {
+      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(0).dimensionValues());
+      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(1).dimensionValues());
+      Assert.assertEquals(Arrays.asList("", "", "310", null, null, "", null, "910"), rowList.get(2).dimensionValues());
+      Assert.assertEquals(
+          Arrays.asList(null, null, null, "", "621", "", "821", "921"),
+          rowList.get(3).dimensionValues()
+      );
+    }
 
     checkBitmapIndex(Collections.singletonList(3), adapter.getBitmapIndex("d3", null));
     checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("d3", "310"));
@@ -1282,7 +1330,7 @@ public class IndexMergerTestBase
         new MapBasedInputRow(
             1,
             Arrays.asList("dimB", "dimA"),
-            ImmutableMap.of("dimB", "1", "dimA", "")
+            ImmutableMap.of("dimB", "1")
         )
     );
 
@@ -1290,7 +1338,7 @@ public class IndexMergerTestBase
         new MapBasedInputRow(
             1,
             Arrays.asList("dimB", "dimA"),
-            ImmutableMap.of("dimB", "", "dimA", "1")
+            ImmutableMap.of("dimA", "1")
         )
     );
 
@@ -1748,7 +1796,14 @@ public class IndexMergerTestBase
     Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(4, rowList.size());
 
-    Assert.assertEquals(Arrays.asList(0L, 0.0f, "Nully Row"), rowList.get(0).dimensionValues());
+    Assert.assertEquals(
+        Arrays.asList(
+            NullHandling.defaultLongValue(),
+            NullHandling.defaultFloatValue(),
+            "Nully Row"
+        ),
+        rowList.get(0).dimensionValues()
+    );
     Assert.assertEquals(Collections.singletonList(2L), rowList.get(0).metricValues());
 
     Assert.assertEquals(Arrays.asList(72L, 60000.789f, "World"), rowList.get(1).dimensionValues());
@@ -1830,13 +1885,13 @@ public class IndexMergerTestBase
     index1.add(new MapBasedInputRow(
         1L,
         Arrays.asList("d1", "d2"),
-        ImmutableMap.of("d1", "a", "d2", "", "A", 1)
+        ImmutableMap.of("d1", "a", "A", 1)
     ));
 
     index1.add(new MapBasedInputRow(
         1L,
         Arrays.asList("d1", "d2"),
-        ImmutableMap.of("d1", "b", "d2", "", "A", 1)
+        ImmutableMap.of("d1", "b", "A", 1)
     ));
 
     final File tempDir = temporaryFolder.newFolder();

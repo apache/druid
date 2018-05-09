@@ -1185,13 +1185,13 @@ public class SchemalessTestFullTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 10L)
-                            .put("index", 900.0D)
-                            .put("addRowsIndexConstant", 911.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", NullHandling.replaceWithDefault() ? 0.0D : 100.0D)
-                            .build()
+                    .put("rows", NullHandling.sqlCompatible() ? 11L : 10L)
+                    .put("index", 900.0D)
+                    .put("addRowsIndexConstant", NullHandling.sqlCompatible() ? 912.0D : 911.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", NullHandling.replaceWithDefault() ? 0.0D : 100.0D)
+                    .build()
             )
         )
     );

@@ -65,11 +65,19 @@ public class MapLookupExtractorTest
     );
 
     Assert.assertEquals(Arrays.asList("foo"), injectiveFn.unapply("bar"));
-    Assert.assertEquals(
-        "Null value should be equal to empty string",
-        Sets.newHashSet("null"),
-        Sets.newHashSet(injectiveFn.unapply((String) null))
-    );
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(
+          "Null value should be equal to empty string",
+          Sets.newHashSet("null"),
+          Sets.newHashSet(injectiveFn.unapply((String) null))
+      );
+    } else {
+      Assert.assertEquals(
+          "Null value should be equal to empty string",
+          Collections.emptySet(),
+          Sets.newHashSet(injectiveFn.unapply((String) null))
+      );
+    }
     Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(injectiveFn.unapply("empty_string")));
     Assert.assertEquals("not existing value returns empty list", Collections.EMPTY_LIST, injectiveFn.unapply("not There"));
   }
@@ -83,7 +91,6 @@ public class MapLookupExtractorTest
   @Test
   public void testApply()
   {
-
     Assert.assertEquals("bar", fn.apply("foo"));
   }
 

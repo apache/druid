@@ -32,20 +32,7 @@ public class DoubleValueMatcherColumnSelectorStrategy
   {
     final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value);
     if (matchVal == null) {
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          return selector.isNull();
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          inspector.visit("selector", selector);
-        }
-      };
+      return ValueMatcher.nullValueMatcher(selector);
     }
 
     final long matchValLongBits = Double.doubleToLongBits(matchVal);

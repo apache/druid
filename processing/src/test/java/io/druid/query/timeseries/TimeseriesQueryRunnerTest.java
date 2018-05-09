@@ -546,13 +546,13 @@ public class TimeseriesQueryRunnerTest
         new Result<>(
             QueryRunnerTestHelper.emptyInterval.getIntervals().get(0).getStart(),
             new TimeseriesResultValue(
-                ImmutableMap.of(
+                TestHelper.createExpectedMap(
                     "rows",
                     0L,
                     "index",
-                    0L,
+                    NullHandling.defaultLongValue(),
                     QueryRunnerTestHelper.addRowsIndexConstantMetric,
-                    1.0
+                    NullHandling.sqlCompatible() ? null : 1.0
                 )
             )
         )

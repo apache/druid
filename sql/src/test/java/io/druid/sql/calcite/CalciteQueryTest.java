@@ -303,7 +303,7 @@ public class CalciteQueryTest extends CalciteTestBase
                                .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
                                .build()),
         ImmutableList.of(
-            new Object[]{11.0, 0.0}
+            new Object[]{11.0, NullHandling.defaultDoubleValue()}
         )
     );
 
@@ -326,7 +326,7 @@ public class CalciteQueryTest extends CalciteTestBase
                                .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
                                .build()),
         ImmutableList.of(
-            new Object[]{11.0, 0.0}
+            new Object[]{11.0, NullHandling.defaultDoubleValue()}
         )
     );
 
