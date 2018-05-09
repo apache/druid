@@ -210,5 +210,3 @@ The grammar for a NOT filter is as follows:
         }
 }
 ```
-```
-
