@@ -66,6 +66,8 @@ public class MaterializedViewSupervisor implements Supervisor
   private static final EmittingLogger log = new EmittingLogger(MaterializedViewSupervisor.class);
   private static final Interval ALL_INTERVAL = Intervals.of("0000-01-01/3000-01-01");
   private static final int DEFAULT_MAX_TASK_COUNT = 1;
+  // there is a lag between derivatives and base dataSource, to prevent repeatedly building for some delay data. 
+  private static final long DEFAULT_MIN_DATA_LAG_MS = 24 * 2600 * 1000l;
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final SQLMetadataSegmentManager segmentManager;
@@ -76,6 +78,7 @@ public class MaterializedViewSupervisor implements Supervisor
   private final String dataSource;
   private final String supervisorId;
   private final int maxTaskCount;
+  private final long minDataLagMs;
   private final Map<Interval, HadoopIndexTask> runningTasks = Maps.newHashMap();
   private final Map<Interval, String> runningVersion = Maps.newHashMap();
   // taskLock is used to synchronize runningTask and runningVersion
@@ -111,6 +114,9 @@ public class MaterializedViewSupervisor implements Supervisor
     this.maxTaskCount = spec.getContext().containsKey("maxTaskCount")
         ? Integer.parseInt(String.valueOf(spec.getContext().get("maxTaskCount")))
         : DEFAULT_MAX_TASK_COUNT;
+    this.minDataLagMs = spec.getContext().containsKey("minDataLagMs")
+        ? Long.parseLong(String.valueOf(spec.getContext().get("minDataLagMs")))
+        : DEFAULT_MIN_DATA_LAG_MS;
   }
   
   @Override
@@ -263,9 +269,9 @@ public class MaterializedViewSupervisor implements Supervisor
         //if the number of running tasks reach the max task count, supervisor won't submit new tasks.
         return;
       }
-      Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = checkSegments();
-      SortedMap<Interval, String> sortedToBuildVersion = toBuildInterval.lhs;
-      Map<Interval, List<DataSegment>> baseSegments = toBuildInterval.rhs;
+      Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildIntervalAndBaseSegments = checkSegments();
+      SortedMap<Interval, String> sortedToBuildVersion = toBuildIntervalAndBaseSegments.lhs;
+      Map<Interval, List<DataSegment>> baseSegments = toBuildIntervalAndBaseSegments.rhs;
       missInterval = sortedToBuildVersion.keySet();
       submitTasks(sortedToBuildVersion, baseSegments);
     }
@@ -350,7 +356,6 @@ public class MaterializedViewSupervisor implements Supervisor
       Map<Interval, List<DataSegment>> baseSegments
   )
   {
-    
     for (Map.Entry<Interval, String> entry : sortedToBuildVersion.entrySet()) {
       if (runningTasks.size() < maxTaskCount) {
         HadoopIndexTask task = spec.createTask(entry.getKey(), entry.getValue(), baseSegments.get(entry.getKey()));
@@ -390,12 +395,20 @@ public class MaterializedViewSupervisor implements Supervisor
       List<Pair<DataSegment, String>> snapshot
   )
   {
+    Interval maxAllowedToBuildInterval = snapshot.parallelStream()
+        .map(pair -> pair.lhs)
+        .map(DataSegment::getInterval)
+        .max(Comparators.intervalsByStartThenEnd())
+        .get();
     Map<Interval, String> maxCreatedDate = Maps.newHashMap();
     Map<Interval, List<DataSegment>> segments = Maps.newHashMap();
     for (Pair<DataSegment, String> entry : snapshot) {
       DataSegment segment = entry.lhs;
       String createDate = entry.rhs;
       Interval interval = segment.getInterval();
+      if (!hasEnoughLag(interval, maxAllowedToBuildInterval)) {
+        continue;
+      }
       maxCreatedDate.put(
           interval, 
           DateTimes.max(
@@ -407,6 +420,24 @@ public class MaterializedViewSupervisor implements Supervisor
       segments.get(interval).add(segment);
     }
     return new Pair<>(maxCreatedDate, segments);
+  }
+
+
+  /**
+   * check whether the start millis of target interval is more than minDataLagMs lagging behind maxInterval's
+   * minDataLag is required to prevent repeatedly building data because of delay data.
+   *
+   * @param target
+   * @param maxInterval
+   * @return true if the start millis of target interval is more than minDataLagMs lagging behind maxInterval's
+   */
+  private boolean hasEnoughLag(Interval target, Interval maxInterval)
+  {
+    if ((target.getStartMillis() + minDataLagMs) > maxInterval.getStartMillis()) {
+      return false;
+    } else {
+      return true;
+    }
   }
   
   private void clearTasks() 

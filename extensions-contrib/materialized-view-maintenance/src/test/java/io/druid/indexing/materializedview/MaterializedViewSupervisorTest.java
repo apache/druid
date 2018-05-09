@@ -173,22 +173,6 @@ public class MaterializedViewSupervisorTest
             )
         )
     );
-    expectedSegments.put(
-        Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), 
-        Lists.newArrayList(
-            new DataSegment(
-                "base", 
-                Intervals.of("2015-01-02T00Z/2015-01-03T00Z"), 
-                "2015-01-03", 
-                ImmutableMap.<String, Object>of(), 
-                ImmutableList.of("dim1", "dim2"), 
-                ImmutableList.of("m1"), 
-                new HashBasedNumberedShardSpec(0, 1, null, null), 
-                9, 
-                1024
-            )
-        )
-    );
     Assert.assertEquals(expectedSegments, toBuildInterval.rhs);
   }
 }

@@ -85,7 +85,8 @@ public class DataSourceOptimizer
     String datasourceName = ((TableDataSource) query.getDataSource()).getName();
     // get all derivatives for datasource in query. The derivatives set is sorted by average size of 
     // per segment granularity.
-    ImmutableSortedSet<DerivativeDataSource> derivatives = DerivativeDataSourceManager.getDerivatives(datasourceName);
+    Set<DerivativeDataSource> derivatives = DerivativeDataSourceManager.getDerivatives(datasourceName);
+    
     if (derivatives.isEmpty()) {
       return Lists.newArrayList(query);
     }
@@ -118,7 +119,7 @@ public class DataSourceOptimizer
       List<Query> queries = Lists.newArrayList();
       List<Interval> remainingQueryIntervals = (List<Interval>) query.getIntervals();
       
-      for (DerivativeDataSource derivativeDataSource : derivativesWithRequiredFields) {
+      for (DerivativeDataSource derivativeDataSource : ImmutableSortedSet.copyOf(derivativesWithRequiredFields)) {
         final List<Interval> derivativeIntervals = remainingQueryIntervals.stream()
             .flatMap(interval -> serverView
                 .getTimeline((new TableDataSource(derivativeDataSource.getName())))

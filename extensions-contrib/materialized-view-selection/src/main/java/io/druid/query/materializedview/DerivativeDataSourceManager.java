@@ -22,7 +22,7 @@ package io.druid.query.materializedview;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -142,9 +142,9 @@ public class DerivativeDataSourceManager
     }
   }
 
-  public static ImmutableSortedSet<DerivativeDataSource> getDerivatives(String datasource)
+  public static ImmutableSet<DerivativeDataSource> getDerivatives(String datasource)
   {
-    return ImmutableSortedSet.copyOf(derivativesRef.get().getOrDefault(datasource, Sets.newTreeSet()));
+    return ImmutableSet.copyOf(derivativesRef.get().getOrDefault(datasource, Sets.newTreeSet()));
   }
 
   public static ImmutableMap<String, Set<DerivativeDataSource>> getAllDerivatives()
