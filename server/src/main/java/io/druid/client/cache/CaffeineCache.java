@@ -43,6 +43,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
 {
   private static final Logger log = new Logger(CaffeineCache.class);
   private static final int FIXED_COST = 8; // Minimum cost in "weight" per entry;
+  private static final int MAX_DEFAULT_BYTES = 1024 * 1024 * 1024;
   private static final LZ4Factory LZ4_FACTORY = LZ4Factory.fastestInstance();
   private static final LZ4FastDecompressor LZ4_DECOMPRESSOR = LZ4_FACTORY.fastDecompressor();
   private static final LZ4Compressor LZ4_COMPRESSOR = LZ4_FACTORY.fastCompressor();
@@ -50,7 +51,6 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   private final Cache<NamedKey, byte[]> cache;
   private final AtomicReference<CacheStats> priorStats = new AtomicReference<>(CacheStats.empty());
   private final CaffeineCacheConfig config;
-
 
   public static CaffeineCache create(final CaffeineCacheConfig config)
   {
@@ -66,14 +66,16 @@ public class CaffeineCache implements io.druid.client.cache.Cache
           .expireAfterAccess(config.getExpireAfter(), TimeUnit.MILLISECONDS);
     }
     if (config.getSizeInBytes() >= 0) {
-      builder
-          .maximumWeight(config.getSizeInBytes())
-          .weigher((NamedKey key, byte[] value) -> value.length
-                                                   + key.key.length
-                                                   + key.namespace.length() * Character.BYTES
-                                                   + FIXED_COST);
+      builder.maximumWeight(config.getSizeInBytes());
+    } else {
+      builder.maximumWeight(Math.min(MAX_DEFAULT_BYTES, Runtime.getRuntime().maxMemory() / 10));
     }
-    builder.executor(executor);
+    builder
+        .weigher((NamedKey key, byte[] value) -> value.length
+                                                 + key.key.length
+                                                 + key.namespace.length() * Character.BYTES
+                                                 + FIXED_COST)
+        .executor(executor);
     return new CaffeineCache(builder.build(), config);
   }
 

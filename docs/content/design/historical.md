@@ -3,7 +3,7 @@ layout: doc_page
 ---
 Historical Node
 ===============
-For Historical Node Configuration, see [Historial Configuration](../configuration/historical.html).
+For Historical Node Configuration, see [Historical Configuration](../configuration/historical.html).
 
 Historical nodes load up historical segments and expose them for querying.
 

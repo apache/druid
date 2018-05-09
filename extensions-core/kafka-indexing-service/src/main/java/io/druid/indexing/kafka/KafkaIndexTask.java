@@ -55,6 +55,7 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -78,7 +79,6 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.query.DruidMetrics;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -88,7 +88,6 @@ import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
-import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
@@ -514,12 +513,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
     metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
-    toolbox.getMonitorScheduler().addMonitor(
-        new RealtimeMetricsMonitor(
-            ImmutableList.of(fireDepartmentForMetrics),
-            ImmutableMap.of(DruidMetrics.TASK_ID, new String[]{getId()})
-        )
-    );
+    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics));
 
     LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
@@ -958,12 +952,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
     metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
-    toolbox.getMonitorScheduler().addMonitor(
-        new RealtimeMetricsMonitor(
-            ImmutableList.of(fireDepartmentForMetrics),
-            ImmutableMap.of(DruidMetrics.TASK_ID, new String[]{getId()})
-        )
-    );
+    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics));
 
     LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :

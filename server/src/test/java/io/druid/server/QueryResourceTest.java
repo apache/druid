@@ -80,7 +80,7 @@ public class QueryResourceTest
 {
   private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of());
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
 
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
   public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()

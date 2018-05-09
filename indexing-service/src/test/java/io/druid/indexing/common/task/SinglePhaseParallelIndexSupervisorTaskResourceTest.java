@@ -386,7 +386,7 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
     final HttpServletRequest request = EasyMock.niceMock(HttpServletRequest.class);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(new AuthenticationResult("test", "test", Collections.emptyMap()));
+            .andReturn(new AuthenticationResult("test", "test", "test", Collections.emptyMap()));
     EasyMock.replay(request);
     return request;
   }

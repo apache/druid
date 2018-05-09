@@ -24,10 +24,15 @@ import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 
 public interface Plumber
 {
+  IncrementalIndexAddResult THROWAWAY = new IncrementalIndexAddResult(-1, -1, null, "row too late");
+  IncrementalIndexAddResult NOT_WRITABLE = new IncrementalIndexAddResult(-1, -1, null, "not writable");
+  IncrementalIndexAddResult DUPLICATE = new IncrementalIndexAddResult(-2, -1, null, "duplicate row");
+
   /**
    * Perform any initial setup. Should be called before using any other methods, and should be paired
    * with a corresponding call to {@link #finishJob}.
@@ -40,10 +45,12 @@ public interface Plumber
    * @param row               the row to insert
    * @param committerSupplier supplier of a committer associated with all data that has been added, including this row
    *
-   * @return - positive numbers indicate how many summarized rows exist in the index for that timestamp,
+   * @return IncrementalIndexAddResult whose rowCount
+   * - positive numbers indicate how many summarized rows exist in the index for that timestamp,
    * -1 means a row was thrown away because it was too late
+   * -2 means a row was thrown away because it is duplicate
    */
-  int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException;
+  IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException;
 
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
