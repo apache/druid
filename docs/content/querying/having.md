@@ -124,8 +124,14 @@ The grammar for an AND filter is as follows:
 
 ```json
 {
-    "type": "and",
-    "havingSpecs": [<having clause>, <having clause>, ...]
+    "queryType": "groupBy",
+    "dataSource": "sample_datasource",
+    ...
+    "having": 
+        {
+            "type": "and",
+            "havingSpecs": [<having clause>, <having clause>, ...]
+        }
 }
 ```
 
@@ -135,8 +141,14 @@ The grammar for an OR filter is as follows:
 
 ```json
 {
-    "type": "or",
-    "havingSpecs": [<having clause>, <having clause>, ...]
+    "queryType": "groupBy",
+    "dataSource": "sample_datasource",
+    ...
+    "having": 
+        {
+            "type": "or",
+            "havingSpecs": [<having clause>, <having clause>, ...]
+        }
 }
 ```
 
@@ -148,9 +160,13 @@ The grammar for a NOT filter is as follows:
 {
     "queryType": "groupBy",
     "dataSource": "sample_datasource",
-    
-    "type": "not",
-    "havingSpec": <having clause>
+    ...
+    "having": 
+        {
+        "type": "not",
+        "havingSpec": <having clause>
+        }
 }
+```
 ```
 
