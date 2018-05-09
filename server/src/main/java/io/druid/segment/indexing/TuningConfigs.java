@@ -32,7 +32,7 @@ public class TuningConfigs
     long newMaxBytesInMemory = maxBytesInMemory;
     if (maxBytesInMemory == 0) {
       newMaxBytesInMemory = TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY;
-    } else if (maxBytesInMemory == -1) {
+    } else if (maxBytesInMemory < 0) {
       newMaxBytesInMemory = Long.MAX_VALUE;
     }
     return newMaxBytesInMemory;
