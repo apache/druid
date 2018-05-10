@@ -97,7 +97,7 @@ public class ArrayOfDoublesSketchBuildBufferAggregator implements BufferAggregat
     lock.lock();
     try {
       final ArrayOfDoublesUpdatableSketch sketch = ArrayOfDoublesSketches.wrapUpdatableSketch(region);
-      for (int i = 0; i < keys.size(); i++) {
+      for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {
         final String key = keySelector.lookupName(keys.get(i));
         sketch.update(key, values);
       }

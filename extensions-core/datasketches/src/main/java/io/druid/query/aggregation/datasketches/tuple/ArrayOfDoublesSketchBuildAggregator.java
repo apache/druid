@@ -67,7 +67,7 @@ public class ArrayOfDoublesSketchBuildAggregator implements Aggregator
       values[i] = valueSelectors[i].getDouble();
     }
     synchronized (this) {
-      for (int i = 0; i < keys.size(); i++) {
+      for (int i = 0, keysSize = keys.size(); i < keysSize; i++) {
         final String key = keySelector.lookupName(keys.get(i));
         sketch.update(key, values);
       }
