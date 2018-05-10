@@ -29,6 +29,12 @@ public class TuningConfigs
     // In the main tuningConfig class constructor, we set the maxBytes to 0 if null to avoid setting
     // maxBytes to max jvm memory of the process that starts first. Instead we set the default based on
     // the actual task node's jvm memory.
-    return maxBytesInMemory == 0 ? TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY : maxBytesInMemory;
+    long newMaxBytesInMemory = maxBytesInMemory;
+    if (maxBytesInMemory == 0) {
+      newMaxBytesInMemory = TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY;
+    } else if (maxBytesInMemory < 0) {
+      newMaxBytesInMemory = Long.MAX_VALUE;
+    }
+    return newMaxBytesInMemory;
   }
 }
