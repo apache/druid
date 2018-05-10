@@ -127,13 +127,19 @@ public class KerberosAuthenticator implements Authenticator
   )
   {
     this.node = node;
-    this.serverPrincipal = serverPrincipal;
     this.serverKeytab = serverKeytab;
     this.authToLocal = authToLocal == null ? "DEFAULT" : authToLocal;
     this.excludedPaths = excludedPaths == null ? DEFAULT_EXCLUDED_PATHS : excludedPaths;
     this.cookieSignatureSecret = cookieSignatureSecret;
     this.authorizerName = authorizerName;
     this.name = Preconditions.checkNotNull(name);
+
+    try {
+      this.serverPrincipal = SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost());
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -422,20 +428,12 @@ public class KerberosAuthenticator implements Authenticator
   public Map<String, String> getInitParameters()
   {
     Map<String, String> params = new HashMap<String, String>();
-    try {
-      params.put(
-          "kerberos.principal",
-          SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost())
-      );
-      params.put("kerberos.keytab", serverKeytab);
-      params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
-      params.put("kerberos.name.rules", authToLocal);
-      if (cookieSignatureSecret != null) {
-        params.put("signature.secret", cookieSignatureSecret);
-      }
-    }
-    catch (IOException e) {
-      Throwables.propagate(e);
+    params.put("kerberos.principal", serverPrincipal);
+    params.put("kerberos.keytab", serverKeytab);
+    params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
+    params.put("kerberos.name.rules", authToLocal);
+    if (cookieSignatureSecret != null) {
+      params.put("signature.secret", cookieSignatureSecret);
     }
     return params;
   }
@@ -583,8 +581,8 @@ public class KerberosAuthenticator implements Authenticator
             for (Object cred : serverCreds) {
               if (cred instanceof KeyTab) {
                 KeyTab serverKeyTab = (KeyTab) cred;
-                KerberosPrincipal serverPrincipal = new KerberosPrincipal(this.serverPrincipal);
-                KerberosKey[] serverKeys = serverKeyTab.getKeys(serverPrincipal);
+                KerberosPrincipal kerberosPrincipal = new KerberosPrincipal(serverPrincipal);
+                KerberosKey[] serverKeys = serverKeyTab.getKeys(kerberosPrincipal);
                 for (KerberosKey key : serverKeys) {
                   if (key.getKeyType() == eType) {
                     finalKey = new EncryptionKey(key.getKeyType(), key.getEncoded());
@@ -623,12 +621,10 @@ public class KerberosAuthenticator implements Authenticator
 
   private void initializeKerberosLogin() throws ServletException
   {
-    String principal;
     String keytab;
 
     try {
-      principal = SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost());
-      if (principal == null || principal.trim().length() == 0) {
+      if (serverPrincipal == null || serverPrincipal.trim().length() == 0) {
         throw new ServletException("Principal not defined in configuration");
       }
       keytab = serverKeytab;
@@ -640,16 +636,16 @@ public class KerberosAuthenticator implements Authenticator
       }
 
       Set<Principal> principals = new HashSet<Principal>();
-      principals.add(new KerberosPrincipal(principal));
+      principals.add(new KerberosPrincipal(serverPrincipal));
       Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
 
-      DruidKerberosConfiguration kerberosConfiguration = new DruidKerberosConfiguration(keytab, principal);
+      DruidKerberosConfiguration kerberosConfiguration = new DruidKerberosConfiguration(keytab, serverPrincipal);
 
-      log.info("Login using keytab " + keytab + ", for principal " + principal);
+      log.info("Login using keytab " + keytab + ", for principal " + serverPrincipal);
       loginContext = new LoginContext("", subject, null, kerberosConfiguration);
       loginContext.login();
 
-      log.info("Initialized, principal %s from keytab %s", principal, keytab);
+      log.info("Initialized, principal %s from keytab %s", serverPrincipal, keytab);
     }
     catch (Exception ex) {
       throw new ServletException(ex);
