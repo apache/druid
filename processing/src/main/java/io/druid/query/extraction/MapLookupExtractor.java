@@ -87,9 +87,10 @@ public class MapLookupExtractor extends LookupExtractor
 
     return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
     {
-      @Override public boolean apply(@Nullable String key)
+      @Override
+      public boolean apply(@Nullable String key)
       {
-        return map.get(key).equals(Strings.nullToEmpty(value));
+        return map.get(key).equals(value);
       }
     }).keySet());
 
