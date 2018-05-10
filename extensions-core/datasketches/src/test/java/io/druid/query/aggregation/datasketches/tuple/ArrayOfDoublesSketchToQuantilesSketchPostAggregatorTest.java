@@ -40,7 +40,7 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregatorTest
     @SuppressWarnings("ObjectEqualsNull")
     final boolean equalsNull = postAgg1.equals(null);
     Assert.assertFalse(equalsNull);
-    @SuppressWarnings("EqualsWithItself")
+    @SuppressWarnings({"EqualsWithItself", "SelfEquals"})
     final boolean equalsSelf = postAgg1.equals(postAgg1); 
     Assert.assertTrue(equalsSelf);
     Assert.assertEquals(postAgg1.hashCode(), postAgg1.hashCode());
