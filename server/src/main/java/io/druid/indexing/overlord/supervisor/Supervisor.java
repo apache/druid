@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord.supervisor;
 
+import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.overlord.DataSourceMetadata;
 
 import javax.annotation.Nullable;
@@ -40,7 +41,7 @@ public interface Supervisor
 
   default Map<String, Object> getStats()
   {
-    return null;
+    return ImmutableMap.of();
   }
 
   void reset(DataSourceMetadata dataSourceMetadata);

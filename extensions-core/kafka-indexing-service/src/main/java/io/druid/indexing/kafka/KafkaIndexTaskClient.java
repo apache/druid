@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -216,7 +215,7 @@ public class KafkaIndexTaskClient
     }
     catch (IOException | InterruptedException e) {
       log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -232,7 +231,7 @@ public class KafkaIndexTaskClient
       return KafkaIndexTask.Status.NOT_STARTED;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -250,7 +249,7 @@ public class KafkaIndexTaskClient
       return null;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -267,16 +266,16 @@ public class KafkaIndexTaskClient
           true
       );
       return response.getContent() == null || response.getContent().isEmpty()
-             ? null
+             ? ImmutableMap.of()
              : jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, Object>>()
              {
              });
     }
     catch (NoTaskLocationException e) {
-      return null;
+      return ImmutableMap.of();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -308,7 +307,7 @@ public class KafkaIndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -325,7 +324,7 @@ public class KafkaIndexTaskClient
       return EMPTY_TREE_MAP;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -353,7 +352,7 @@ public class KafkaIndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -381,7 +380,7 @@ public class KafkaIndexTaskClient
       return false;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -594,9 +593,11 @@ public class KafkaIndexTaskClient
           response = httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
         }
         catch (Exception e) {
-          Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
-          Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
-          throw Throwables.propagate(e);
+          if (e.getCause() instanceof IOException || e.getCause() instanceof ChannelException) {
+            throw e;
+          } else {
+            throw new RuntimeException(e);
+          }
         }
 
         int responseCode = response.getStatus().getCode();
@@ -645,10 +646,10 @@ public class KafkaIndexTaskClient
           // if retry=false, we probably aren't too concerned if the operation doesn't succeed (i.e. the request was
           // for informational purposes only) so don't log a scary stack trace
           log.info("submitRequest failed for [%s], with message [%s]", urlForLog, e.getMessage());
-          Throwables.propagate(e);
+          throw new RuntimeException(e);
         } else if (delay == null) {
           log.warn(e, "Retries exhausted for [%s], last exception:", urlForLog);
-          Throwables.propagate(e);
+          throw new RuntimeException(e);
         } else {
           try {
             final long sleepTime = delay.getMillis();
@@ -662,7 +663,7 @@ public class KafkaIndexTaskClient
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
-            Throwables.propagate(e2);
+            throw new RuntimeException(e2);
           }
         }
       }
@@ -673,7 +674,7 @@ public class KafkaIndexTaskClient
       }
       catch (Exception e) {
         log.warn(e, "Exception while sending request");
-        throw e;
+        throw new RuntimeException(e);
       }
     }
   }
