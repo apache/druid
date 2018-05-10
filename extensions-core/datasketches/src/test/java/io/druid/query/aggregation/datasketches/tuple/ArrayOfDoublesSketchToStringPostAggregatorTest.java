@@ -35,8 +35,12 @@ public class ArrayOfDoublesSketchToStringPostAggregatorTest
         "a",
         new ConstantPostAggregator("", 0)
     );
-    Assert.assertFalse(postAgg1.equals(null));
-    Assert.assertTrue(postAgg1.equals(postAgg1));
+    @SuppressWarnings("ObjectEqualsNull")
+    final boolean equalsNull = postAgg1.equals(null);
+    Assert.assertFalse(equalsNull);
+    @SuppressWarnings("EqualsWithItself")
+    final boolean equalsSelf = postAgg1.equals(postAgg1); 
+    Assert.assertTrue(equalsSelf);
     Assert.assertEquals(postAgg1.hashCode(), postAgg1.hashCode());
 
     // equals
