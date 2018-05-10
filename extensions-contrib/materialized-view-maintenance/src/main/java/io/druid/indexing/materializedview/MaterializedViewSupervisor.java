@@ -67,7 +67,7 @@ public class MaterializedViewSupervisor implements Supervisor
   private static final Interval ALL_INTERVAL = Intervals.of("0000-01-01/3000-01-01");
   private static final int DEFAULT_MAX_TASK_COUNT = 1;
   // there is a lag between derivatives and base dataSource, to prevent repeatedly building for some delay data. 
-  private static final long DEFAULT_MIN_DATA_LAG_MS = 24 * 2600 * 1000l;
+  private static final long DEFAULT_MIN_DATA_LAG_MS = 24 * 3600 * 1000L;
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final SQLMetadataSegmentManager segmentManager;
