@@ -65,8 +65,8 @@ Here's an example of a having-clause numeric filter:
     "having": 
         {
             "type": "greaterThan",
-            "aggregation": "myAggMetric",
-            "value": 100
+            "aggregation": "<aggregate_metric>",
+            "value": <numeric_value>
         }
 }
 ```
@@ -172,7 +172,18 @@ The grammar for an AND filter is as follows:
     "having": 
         {
             "type": "and",
-            "havingSpecs": [<having clause>, <having clause>, ...]
+            "havingSpecs": [        
+                {
+                    "type": "greaterThan",
+                    "aggregation": "<aggregate_metric>",
+                    "value": <numeric_value>
+                },
+                {
+                    "type": "lessThan",
+                    "aggregation": "<aggregate_metric>",
+                    "value": <numeric_value>
+                }
+            ]
         }
 }
 ```
@@ -189,7 +200,18 @@ The grammar for an OR filter is as follows:
     "having": 
         {
             "type": "or",
-            "havingSpecs": [<having clause>, <having clause>, ...]
+            "havingSpecs": [        
+                {
+                    "type": "greaterThan",
+                    "aggregation": "<aggregate_metric>",
+                    "value": <numeric_value>
+                },
+                {
+                    "type": "equalTo",
+                    "aggregation": "<aggregate_metric>",
+                    "value": <numeric_value>
+                }
+            ]
         }
 }
 ```
@@ -206,7 +228,12 @@ The grammar for a NOT filter is as follows:
     "having": 
         {
         "type": "not",
-        "havingSpec": <having clause>
+        "havingSpec":         
+            {
+            "type": "equalTo",
+            "aggregation": "<aggregate_metric>",
+            "value": <numeric_value>
+            }
         }
 }
 ```
