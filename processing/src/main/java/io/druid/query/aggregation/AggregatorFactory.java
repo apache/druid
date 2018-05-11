@@ -23,6 +23,7 @@ import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
 import io.druid.java.util.common.UOE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.PerSegmentQueryOptimizationContext;
 import io.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -140,6 +141,17 @@ public abstract class AggregatorFactory implements Cacheable
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
   public abstract int getMaxIntermediateSize();
+
+  /**
+   * Return a potentially optimized form of this AggregatorFactory for per-segment queries.
+   *
+   * @param optimizationContext
+   * @return
+   */
+  public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
+  {
+    return this;
+  }
 
   /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
