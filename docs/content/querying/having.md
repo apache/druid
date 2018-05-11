@@ -230,9 +230,9 @@ The grammar for a NOT filter is as follows:
         "type": "not",
         "havingSpec":         
             {
-            "type": "equalTo",
-            "aggregation": "<aggregate_metric>",
-            "value": <numeric_value>
+                "type": "equalTo",
+                "aggregation": "<aggregate_metric>",
+                "value": <numeric_value>
             }
         }
 }
