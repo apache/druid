@@ -78,6 +78,8 @@ public abstract class ArrayOfDoublesSketchMultiPostAggregator extends ArrayOfDou
     if (!super.equals(o)) {
       return false;
     }
+    // this check is used here instead of instanceof because this is an abstract class
+    // and subclasses not overriding equals should not be equal to each other
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
