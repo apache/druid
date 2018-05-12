@@ -69,9 +69,7 @@ public class TestAWSCredentialsProvider
         new AWSProxyConfig(),
         new AWSEndpointConfig(),
         new AWSClientConfig(),
-        new S3StorageConfig(),
-        new S3SSEKmsConfig(),
-        new S3SSECustomConfig()
+        new S3StorageConfig(new NoopServerSideEncryption())
     );
   }
 
@@ -102,9 +100,7 @@ public class TestAWSCredentialsProvider
         new AWSProxyConfig(),
         new AWSEndpointConfig(),
         new AWSClientConfig(),
-        new S3StorageConfig(),
-        new S3SSEKmsConfig(),
-        new S3SSECustomConfig()
+        new S3StorageConfig(new NoopServerSideEncryption())
     );
   }
 }

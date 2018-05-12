@@ -22,10 +22,20 @@ import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  * Server-side encryption decorator for Amazon S3.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @Type(name = "noop", value = NoopServerSideEncryption.class),
+    @Type(name = "s3", value = S3ServerSideEncryption.class),
+    @Type(name = "kms", value = KmsServerSideEncryption.class),
+    @Type(name = "custom", value = CustomServerSideEncryption.class)
+})
 public interface ServerSideEncryption
 {
   default PutObjectRequest decorate(PutObjectRequest request)

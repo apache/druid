@@ -40,7 +40,6 @@ import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.initialization.DruidModule;
-import io.druid.java.util.common.IAE;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.List;
@@ -119,9 +118,7 @@ public class S3StorageDruidModule implements DruidModule
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
       AWSClientConfig clientConfig,
-      S3StorageConfig storageConfig,
-      S3SSEKmsConfig kmsConfig,
-      S3SSECustomConfig customConfig
+      S3StorageConfig storageConfig
   )
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
@@ -141,27 +138,8 @@ public class S3StorageDruidModule implements DruidModule
 
     return new ServerSideEncryptingAmazonS3(
         builder.build(),
-        getServerSideEncryption(storageConfig, kmsConfig, customConfig)
+        storageConfig.getServerSideEncryption()
     );
-  }
-
-  private static ServerSideEncryption getServerSideEncryption(
-      S3StorageConfig storageConfig,
-      S3SSEKmsConfig kmsConfig,
-      S3SSECustomConfig customConfig
-  )
-  {
-    if (storageConfig.getSse().equalsIgnoreCase(NoopServerSideEncryption.NAME)) {
-      return new NoopServerSideEncryption();
-    } else if (storageConfig.getSse().equalsIgnoreCase(S3ServerSideEncryption.NAME)) {
-      return new S3ServerSideEncryption();
-    } else if (storageConfig.getSse().equalsIgnoreCase(KmsServerSideEncryption.NAME)) {
-      return new KmsServerSideEncryption(kmsConfig.getKeyId());
-    } else if (storageConfig.getSse().equalsIgnoreCase(CustomServerSideEncryption.NAME)) {
-      return new CustomServerSideEncryption(customConfig.getBase64EncodedKey());
-    } else {
-      throw new IAE("Unknown server side encryption[%s]", storageConfig.getSse());
-    }
   }
 
   private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)

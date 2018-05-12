@@ -24,8 +24,6 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 
 class S3ServerSideEncryption implements ServerSideEncryption
 {
-  static final String NAME = "s3";
-
   @Override
   public PutObjectRequest decorate(PutObjectRequest request)
   {

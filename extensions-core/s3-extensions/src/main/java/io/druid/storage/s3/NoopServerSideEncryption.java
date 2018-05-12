@@ -20,5 +20,4 @@ package io.druid.storage.s3;
 
 public class NoopServerSideEncryption implements ServerSideEncryption
 {
-  static final String NAME = "noop";
 }

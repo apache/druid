@@ -23,16 +23,17 @@ import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSECustomerKey;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 class CustomServerSideEncryption implements ServerSideEncryption
 {
-  static final String NAME = "custom";
-
   private final SSECustomerKey key;
 
-  CustomServerSideEncryption(String base64EncodedKey)
+  @JsonCreator
+  CustomServerSideEncryption(@JacksonInject S3SSECustomConfig config)
   {
-    this.key = new SSECustomerKey(base64EncodedKey);
+    this.key = new SSECustomerKey(config.getBase64EncodedKey());
   }
 
   @Override

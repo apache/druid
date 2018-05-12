@@ -18,6 +18,7 @@
  */
 package io.druid.storage.s3;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -31,11 +32,20 @@ public class S3StorageConfig
    *
    * @see S3StorageDruidModule#configure
    */
-  @JsonProperty
-  private String sse = NoopServerSideEncryption.NAME;
+  @JsonProperty("sse")
+  private final ServerSideEncryption serverSideEncryption;
 
-  public String getSse()
+  @JsonCreator
+  public S3StorageConfig(
+      @JsonProperty("sse") ServerSideEncryption serverSideEncryption
+  )
   {
-    return sse;
+    this.serverSideEncryption = serverSideEncryption == null ? new NoopServerSideEncryption() : serverSideEncryption;
+  }
+
+  @JsonProperty("sse")
+  public ServerSideEncryption getServerSideEncryption()
+  {
+    return serverSideEncryption;
   }
 }

@@ -21,19 +21,20 @@ package io.druid.storage.s3;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 import javax.annotation.Nullable;
 
 class KmsServerSideEncryption implements ServerSideEncryption
 {
-  static final String NAME = "kms";
-
   @Nullable
   private final String keyId;
 
-  KmsServerSideEncryption(@Nullable String keyId)
+  @JsonCreator
+  KmsServerSideEncryption(@JacksonInject S3SSEKmsConfig config)
   {
-    this.keyId = keyId;
+    this.keyId = config.getKeyId();
   }
 
   @Override
