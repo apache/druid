@@ -35,6 +35,7 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
+import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -44,7 +45,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -320,12 +320,8 @@ public class RealtimeIndexTask extends AbstractTask
         tuningConfig
     );
     this.metrics = fireDepartment.getMetrics();
-    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
-        ImmutableList.of(fireDepartment),
-        ImmutableMap.of(
-            DruidMetrics.TASK_ID, new String[]{getId()}
-        )
-    );
+    final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartment);
+
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means

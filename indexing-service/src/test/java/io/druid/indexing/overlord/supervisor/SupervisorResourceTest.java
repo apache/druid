@@ -116,7 +116,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
@@ -166,7 +166,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
@@ -350,7 +350,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
@@ -463,7 +463,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("wronguser", "druid", null)
+        new AuthenticationResult("wronguser", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
@@ -554,7 +554,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
@@ -652,7 +652,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("notdruid", "druid", null)
+        new AuthenticationResult("notdruid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();

@@ -105,22 +105,23 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/events/thrownAway`|Number of events rejected because they are outside the windowPeriod.|dataSource.|0|
-|`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|dataSource.|0|
-|`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|dataSource.|0|
-|`ingest/events/processed`|Number of events successfully processed per emission period.|dataSource.|Equal to your # of events per emission period.|
-|`ingest/rows/output`|Number of Druid rows persisted.|dataSource.|Your # of events with rollup.|
-|`ingest/persists/count`|Number of times persist occurred.|dataSource.|Depends on configuration.|
-|`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
-|`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
-|`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.|dataSource.|0 or very low|
-|`ingest/persists/failed`|Number of persists that failed.|dataSource.|0|
-|`ingest/handoff/failed`|Number of handoffs that failed.|dataSource.|0|
-|`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource.|Depends on configuration. Generally a few minutes at most.|
-|`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource.|Depends on configuration. Generally a few minutes at most.|
-|`ingest/handoff/count`|Number of handoffs that happened.|dataSource.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|
-|`ingest/sink/count`|Number of sinks not handoffed.|dataSource.|1~3|
-|`ingest/events/messageGap`|Time gap between the data time in event and current system time.|dataSource.|Greater than 0, depends on the time carried in event |
+|`ingest/events/thrownAway`|Number of events rejected because they are outside the windowPeriod.|dataSource, taskId, taskType.|0|
+|`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|dataSource, taskId, taskType.|0|
+|`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|dataSource, taskId, taskType.|0|
+|`ingest/events/processed`|Number of events successfully processed per emission period.|dataSource, taskId, taskType.|Equal to your # of events per
+emission period.|
+|`ingest/rows/output`|Number of Druid rows persisted.|dataSource, taskId, taskType.|Your # of events with rollup.|
+|`ingest/persists/count`|Number of times persist occurred.|dataSource, taskId, taskType.|Depends on configuration.|
+|`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.|dataSource, taskId, taskType.|0 or very low|
+|`ingest/persists/failed`|Number of persists that failed.|dataSource, taskId, taskType.|0|
+|`ingest/handoff/failed`|Number of handoffs that failed.|dataSource, taskId, taskType.|0|
+|`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource, taskId, taskType.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/handoff/count`|Number of handoffs that happened.|dataSource, taskId, taskType.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|
+|`ingest/sink/count`|Number of sinks not handoffed.|dataSource, taskId, taskType.|1~3|
+|`ingest/events/messageGap`|Time gap between the data time in event and current system time.|dataSource, taskId, taskType.|Greater than 0, depends on the time carried in event |
 |`ingest/kafka/lag`|Applicable for Kafka Indexing Service. Total lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 
 
@@ -201,8 +202,10 @@ The following metric is only available if the EventReceiverFirehoseMonitor modul
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/events/buffered`|Number of events queued in the EventReceiverFirehose's buffer|serviceName, dataSource, taskId, bufferCapacity.|Equal to current # of events in the buffer queue.|
-|`ingest/bytes/received`|Number of bytes received by the EventReceiverFirehose.|serviceName, dataSource, taskId.|Varies.|
+|`ingest/events/buffered`|Number of events queued in the EventReceiverFirehose's buffer|serviceName, dataSource, taskId, taskType, bufferCapacity
+.|Equal
+to current # of events in the buffer queue.|
+|`ingest/bytes/received`|Number of bytes received by the EventReceiverFirehose.|serviceName, dataSource, taskId, taskType.|Varies.|
 
 ## Sys
 

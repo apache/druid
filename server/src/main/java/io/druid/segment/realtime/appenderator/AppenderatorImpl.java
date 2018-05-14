@@ -126,6 +126,7 @@ public class AppenderatorImpl implements Appenderator
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
   );
+  private final long maxBytesTuningConfig;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
@@ -182,7 +183,7 @@ public class AppenderatorImpl implements Appenderator
         Preconditions.checkNotNull(cache, "cache"),
         cacheConfig
     );
-
+    maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
 
@@ -260,7 +261,7 @@ public class AppenderatorImpl implements Appenderator
     if (System.currentTimeMillis() > nextFlush) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          " current time[%d] is greater than nextFlush[%d],",
+          "current time[%d] is greater than nextFlush[%d]",
           System.currentTimeMillis(),
           nextFlush
       ));
@@ -268,19 +269,17 @@ public class AppenderatorImpl implements Appenderator
     if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          " rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d],",
+          "rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d]",
           rowsCurrentlyInMemory.get(),
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (tuningConfig.getMaxBytesInMemory() > 0
-        && bytesCurrentlyInMemory.get()
-           >= TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())) {
+    if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          " bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
+          "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory())
+          maxBytesTuningConfig
       ));
     }
     if (persist) {
@@ -354,7 +353,7 @@ public class AppenderatorImpl implements Appenderator
           identifier.getShardSpec(),
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
-          TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+          maxBytesTuningConfig,
           tuningConfig.isReportParseExceptions(),
           null
       );
@@ -1026,7 +1025,7 @@ public class AppenderatorImpl implements Appenderator
             identifier.getShardSpec(),
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
-            TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+            maxBytesTuningConfig,
             tuningConfig.isReportParseExceptions(),
             null,
             hydrants

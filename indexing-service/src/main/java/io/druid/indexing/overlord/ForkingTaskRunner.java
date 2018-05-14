@@ -373,6 +373,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                       task.getId()
                                   )
                               );
+                              command.add(
+                                  StringUtils.format(
+                                      "-D%s%s=%s",
+                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                                      DruidMetrics.TASK_TYPE,
+                                      task.getType()
+                                  )
+                              );
 
                               command.add(StringUtils.format("-Ddruid.host=%s", childHost));
                               command.add(StringUtils.format("-Ddruid.port=%d", childPort));
