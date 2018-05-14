@@ -249,5 +249,5 @@ public abstract class PrefetchSqlFirehoseFactory<T>
    */
   protected abstract InputStream openObjectStream(T object, File filename) throws IOException;
 
-  protected abstract Collection<T> initObjects() throws IOException;
+  protected abstract Collection<T> initObjects();
 }
