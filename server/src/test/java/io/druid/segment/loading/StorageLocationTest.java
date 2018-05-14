@@ -20,13 +20,18 @@
 package io.druid.segment.loading;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import com.google.common.jimfs.PathType;
 import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 
 /**
@@ -34,38 +39,47 @@ import java.util.Arrays;
 public class StorageLocationTest
 {
   @Test
-  public void testStorageLocationFreePercent()
+  public void testStorageLocationFreePercent() throws IOException
   {
     // free space ignored only maxSize matters
     StorageLocation locationPlain = fakeLocation(100_000, 5_000, 10_000, null);
     Assert.assertTrue(locationPlain.canHandle(makeSegment("2012/2013", 9_000)));
     Assert.assertFalse(locationPlain.canHandle(makeSegment("2012/2013", 11_000)));
+    locationPlain.getPath().getFileSystem().close();
 
     // enough space available maxSize is the limit
     StorageLocation locationFree = fakeLocation(100_000, 25_000, 10_000, 10.0);
     Assert.assertTrue(locationFree.canHandle(makeSegment("2012/2013", 9_000)));
     Assert.assertFalse(locationFree.canHandle(makeSegment("2012/2013", 11_000)));
+    locationFree.getPath().getFileSystem().close();
 
     // disk almost full percentage is the limit
     StorageLocation locationFull = fakeLocation(100_000, 15_000, 10_000, 10.0);
     Assert.assertTrue(locationFull.canHandle(makeSegment("2012/2013", 4_000)));
     Assert.assertFalse(locationFull.canHandle(makeSegment("2012/2013", 6_000)));
+    locationFull.getPath().getFileSystem().close();
   }
 
-  private StorageLocation fakeLocation(long total, long free, long max, Double percent)
+  private StorageLocation fakeLocation(long total, long free, long max, Double percent) throws IOException
   {
-    File file = EasyMock.mock(File.class);
-    EasyMock.expect(file.getTotalSpace()).andReturn(total).anyTimes();
-    EasyMock.expect(file.getFreeSpace()).andReturn(free).anyTimes();
-    EasyMock.replay(file);
-    return new StorageLocation(file, max, percent);
+    Configuration config = Configuration.builder(PathType.unix())
+                                        .setRoots("/")
+                                        .setWorkingDirectory("/")
+                                        .setAttributeViews("basic")
+                                        .setMaxSize(total)
+                                        .setBlockSize(1000)
+                                        .build();
+    Path path = Jimfs.newFileSystem(config).getPath("/");
+    Files.write(path.resolve("junk"), new byte[(int) (total - free)]); //TODO is there a better way?
+    Assert.assertEquals(free, Files.getFileStore(path).getUsableSpace());
+    return new StorageLocation(path, max, percent);
   }
 
   @Test
   public void testStorageLocation()
   {
     long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail, null);
+    StorageLocation loc = new StorageLocation(new File("/tmp").toPath(), expectedAvail, null);
 
     verifyLoc(expectedAvail, loc);
 
