@@ -96,6 +96,10 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
       return false;
     }
 
+    if (curr.isEnd()) {
+      return true;
+    }
+
     while (iter.hasNext()) {
       PartitionChunk<T> next = iter.next();
       if (!curr.abuts(next)) {
@@ -103,7 +107,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
       }
 
       if (next.isEnd()) {
-        endSeen = true;
+        return true;
       }
       curr = next;
     }
