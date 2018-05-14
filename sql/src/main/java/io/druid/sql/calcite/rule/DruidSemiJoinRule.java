@@ -115,15 +115,15 @@ public class DruidSemiJoinRule extends RelOptRule
       return;
     }
 
-    final Project rightPostProject = right.getPartialDruidQuery().getPostProject();
+    final Project rightAggregateProject = right.getPartialDruidQuery().getAggregateProject();
     int i = 0;
     for (int joinRef : joinInfo.rightSet()) {
       final int aggregateRef;
 
-      if (rightPostProject == null) {
+      if (rightAggregateProject == null) {
         aggregateRef = joinRef;
       } else {
-        final RexNode projectExp = rightPostProject.getChildExps().get(joinRef);
+        final RexNode projectExp = rightAggregateProject.getChildExps().get(joinRef);
         if (projectExp.isA(SqlKind.INPUT_REF)) {
           aggregateRef = ((RexInputRef) projectExp).getIndex();
         } else {

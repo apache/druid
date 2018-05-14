@@ -70,6 +70,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.having.DimFilterHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
@@ -119,6 +120,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -6525,6 +6527,45 @@ public class CalciteQueryTest extends CalciteTestBase
         ImmutableList.of(
             new Object[]{"друид", "ru", 1L},
             new Object[]{"דרואיד", "he", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testProjectAfterSort() throws Exception
+  {
+    testQuery(
+        "select dim1 from (select dim1, dim2, count(*) cnt from druid.foo group by dim1, dim2 order by cnt)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            DIMS(
+                                new DefaultDimensionSpec("dim1", "d0"),
+                                new DefaultDimensionSpec("dim2", "d1")
+                            )
+                        )
+                        .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                Collections.singletonList(
+                                    new OrderByColumnSpec("a0", Direction.ASCENDING, StringComparators.NUMERIC)
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"1"},
+            new Object[]{"10.1"},
+            new Object[]{"2"},
+            new Object[]{"abc"},
+            new Object[]{"def"}
         )
     );
   }

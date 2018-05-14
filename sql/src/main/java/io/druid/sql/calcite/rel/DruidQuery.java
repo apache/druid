@@ -89,6 +89,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -105,9 +106,11 @@ public class DruidQuery
   private final DimFilter filter;
   private final SelectProjection selectProjection;
   private final Grouping grouping;
+  private final SortProject sortProject;
+  private final DefaultLimitSpec limitSpec;
   private final RowSignature outputRowSignature;
   private final RelDataType outputRowType;
-  private final DefaultLimitSpec limitSpec;
+
   private final Query query;
 
   public DruidQuery(
@@ -128,15 +131,22 @@ public class DruidQuery
     this.selectProjection = computeSelectProjection(partialQuery, plannerContext, sourceRowSignature);
     this.grouping = computeGrouping(partialQuery, plannerContext, sourceRowSignature, rexBuilder);
 
+    final RowSignature sortingInputRowSignature;
+
     if (this.selectProjection != null) {
-      this.outputRowSignature = this.selectProjection.getOutputRowSignature();
+      sortingInputRowSignature = this.selectProjection.getOutputRowSignature();
     } else if (this.grouping != null) {
-      this.outputRowSignature = this.grouping.getOutputRowSignature();
+      sortingInputRowSignature = this.grouping.getOutputRowSignature();
     } else {
-      this.outputRowSignature = sourceRowSignature;
+      sortingInputRowSignature = sourceRowSignature;
     }
 
-    this.limitSpec = computeLimitSpec(partialQuery, this.outputRowSignature);
+    this.sortProject = computeSortProject(partialQuery, plannerContext, sortingInputRowSignature, grouping);
+
+    // outputRowSignature is used only for scan and select query, and thus sort and grouping must be null
+    this.outputRowSignature = sortingInputRowSignature;
+
+    this.limitSpec = computeLimitSpec(partialQuery, sortingInputRowSignature);
     this.query = computeQuery();
   }
 
@@ -235,7 +245,7 @@ public class DruidQuery
   )
   {
     final Aggregate aggregate = partialQuery.getAggregate();
-    final Project postProject = partialQuery.getPostProject();
+    final Project aggregateProject = partialQuery.getAggregateProject();
 
     if (aggregate == null) {
       return null;
@@ -265,49 +275,20 @@ public class DruidQuery
         plannerContext
     );
 
-    if (postProject == null) {
+    if (aggregateProject == null) {
       return Grouping.create(dimensions, aggregations, havingFilter, aggregateRowSignature);
     } else {
-      final List<String> rowOrder = new ArrayList<>();
-
-      int outputNameCounter = 0;
-      for (final RexNode postAggregatorRexNode : postProject.getChildExps()) {
-        // Attempt to convert to PostAggregator.
-        final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
-            plannerContext,
-            aggregateRowSignature,
-            postAggregatorRexNode
-        );
-
-        if (postAggregatorExpression == null) {
-          throw new CannotBuildQueryException(postProject, postAggregatorRexNode);
-        }
-
-        if (postAggregatorDirectColumnIsOk(aggregateRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
-          // Direct column access, without any type cast as far as Druid's runtime is concerned.
-          // (There might be a SQL-level type cast that we don't care about)
-          rowOrder.add(postAggregatorExpression.getDirectColumn());
-        } else {
-          final String postAggregatorName = "p" + outputNameCounter++;
-          final PostAggregator postAggregator = new ExpressionPostAggregator(
-              postAggregatorName,
-              postAggregatorExpression.getExpression(),
-              null,
-              plannerContext.getExprMacroTable()
-          );
-          aggregations.add(Aggregation.create(postAggregator));
-          rowOrder.add(postAggregator.getName());
-        }
-      }
+      final RowOrderAndPostAggregations rowOrderAndPostAggregations = computePostAggregations(plannerContext, aggregateRowSignature, aggregateProject, 0);
+      aggregations.addAll(rowOrderAndPostAggregations.postAggregations);
 
       // Remove literal dimensions that did not appear in the projection. This is useful for queries
       // like "SELECT COUNT(*) FROM tbl GROUP BY 'dummy'" which some tools can generate, and for which we don't
       // actually want to include a dimension 'dummy'.
-      final ImmutableBitSet postProjectBits = RelOptUtil.InputFinder.bits(postProject.getChildExps(), null);
+      final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(aggregateProject.getChildExps(), null);
       for (int i = dimensions.size() - 1; i >= 0; i--) {
         final DimensionExpression dimension = dimensions.get(i);
         if (Parser.parse(dimension.getDruidExpression().getExpression(), plannerContext.getExprMacroTable())
-                  .isLiteral() && !postProjectBits.get(i)) {
+                  .isLiteral() && !aggregateProjectBits.get(i)) {
           dimensions.remove(i);
         }
       }
@@ -316,9 +297,96 @@ public class DruidQuery
           dimensions,
           aggregations,
           havingFilter,
-          RowSignature.from(rowOrder, postProject.getRowType())
+          RowSignature.from(rowOrderAndPostAggregations.rowOrder, aggregateProject.getRowType())
       );
     }
+  }
+
+  @Nullable
+  private SortProject computeSortProject(
+      PartialDruidQuery partialQuery,
+      PlannerContext plannerContext,
+      RowSignature sortingInputRowSignature,
+      Grouping grouping
+  )
+  {
+    final Project sortProject = partialQuery.getSortProject();
+    if (sortProject == null) {
+      return null;
+    } else {
+      final List<PostAggregator> postAggregators = grouping.getPostAggregators();
+      final OptionalInt maybeMaxCounter = postAggregators
+          .stream()
+          .mapToInt(postAggregator -> Integer.parseInt(postAggregator.getName().substring(1)))
+          .max();
+
+      final RowOrderAndPostAggregations rowOrderAndPostAggregations = computePostAggregations(
+          plannerContext,
+          sortingInputRowSignature,
+          sortProject,
+          maybeMaxCounter.orElse(-1) + 1 // 0 if max doesn't exist
+      );
+
+      return new SortProject(
+          sortingInputRowSignature,
+          rowOrderAndPostAggregations.postAggregations,
+          RowSignature.from(rowOrderAndPostAggregations.rowOrder, sortProject.getRowType())
+      );
+    }
+  }
+
+  private static class RowOrderAndPostAggregations
+  {
+    private final List<String> rowOrder;
+    private final List<Aggregation> postAggregations;
+
+    RowOrderAndPostAggregations(List<String> rowOrder, List<Aggregation> postAggregations)
+    {
+      this.rowOrder = rowOrder;
+      this.postAggregations = postAggregations;
+    }
+  }
+
+  private static RowOrderAndPostAggregations computePostAggregations(
+      PlannerContext plannerContext,
+      RowSignature inputRowSignature,
+      Project project,
+      int outputNameCounter
+  )
+  {
+    final List<String> rowOrder = new ArrayList<>();
+    final List<Aggregation> aggregations = new ArrayList<>();
+
+    for (final RexNode postAggregatorRexNode : project.getChildExps()) {
+      // Attempt to convert to PostAggregator.
+      final DruidExpression postAggregatorExpression = Expressions.toDruidExpression(
+          plannerContext,
+          inputRowSignature,
+          postAggregatorRexNode
+      );
+
+      if (postAggregatorExpression == null) {
+        throw new CannotBuildQueryException(project, postAggregatorRexNode);
+      }
+
+      if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+        // Direct column access, without any type cast as far as Druid's runtime is concerned.
+        // (There might be a SQL-level type cast that we don't care about)
+        rowOrder.add(postAggregatorExpression.getDirectColumn());
+      } else {
+        final String postAggregatorName = "p" + outputNameCounter++;
+        final PostAggregator postAggregator = new ExpressionPostAggregator(
+            postAggregatorName,
+            postAggregatorExpression.getExpression(),
+            null,
+            plannerContext.getExprMacroTable()
+        );
+        aggregations.add(Aggregation.create(postAggregator));
+        rowOrder.add(postAggregator.getName());
+      }
+    }
+
+    return new RowOrderAndPostAggregations(rowOrder, aggregations);
   }
 
   /**
@@ -540,18 +608,26 @@ public class DruidQuery
   {
     final List<VirtualColumn> retVal = new ArrayList<>();
 
-    if (grouping != null) {
-      if (includeDimensions) {
-        for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
-          retVal.addAll(dimensionExpression.getVirtualColumns(macroTable));
+    if (selectProjection != null) {
+      retVal.addAll(selectProjection.getVirtualColumns());
+    } else {
+      if (sortProject != null) {
+        for (Aggregation aggregation : sortProject.getPostAggregators()) {
+          retVal.addAll(aggregation.getVirtualColumns());
         }
       }
 
-      for (Aggregation aggregation : grouping.getAggregations()) {
-        retVal.addAll(aggregation.getVirtualColumns());
+      if (grouping != null) {
+        if (includeDimensions) {
+          for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
+            retVal.addAll(dimensionExpression.getVirtualColumns(macroTable));
+          }
+        }
+
+        for (Aggregation aggregation : grouping.getAggregations()) {
+          retVal.addAll(aggregation.getVirtualColumns());
+        }
       }
-    } else if (selectProjection != null) {
-      retVal.addAll(selectProjection.getVirtualColumns());
     }
 
     return VirtualColumns.create(retVal);
@@ -565,6 +641,11 @@ public class DruidQuery
   public DefaultLimitSpec getLimitSpec()
   {
     return limitSpec;
+  }
+
+  public SortProject getSortProject()
+  {
+    return sortProject;
   }
 
   public RelDataType getOutputRowType()
@@ -667,7 +748,6 @@ public class DruidQuery
 
       if (limitSpec != null) {
         // If there is a limit spec, timeseries cannot LIMIT; and must be ORDER BY time (or nothing).
-
         if (limitSpec.isLimited()) {
           return null;
         }
@@ -797,6 +877,13 @@ public class DruidQuery
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
 
+    final List<PostAggregator> postAggregators = new ArrayList<>(grouping.getPostAggregators());
+    if (sortProject != null) {
+      postAggregators.addAll(
+          sortProject.getPostAggregators().stream().map(Aggregation::getPostAggregator).collect(Collectors.toList())
+      );
+    }
+
     return new GroupByQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
@@ -805,7 +892,7 @@ public class DruidQuery
         Granularities.ALL,
         grouping.getDimensionSpecs(),
         grouping.getAggregatorFactories(),
-        grouping.getPostAggregators(),
+        postAggregators,
         grouping.getHavingFilter() != null ? new DimFilterHavingSpec(grouping.getHavingFilter(), true) : null,
         limitSpec,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
