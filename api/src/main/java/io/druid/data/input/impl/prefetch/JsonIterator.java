@@ -35,6 +35,7 @@ import java.util.NoSuchElementException;
 
 /**
  * An iterator over an array of JSON objects. Uses {@link ObjectCodec} to deserialize regular Java objects.
+ *
  * @param <T> the type of object returned by this iterator
  */
 public class JsonIterator<T> implements Iterator<T>, Closeable
@@ -47,11 +48,10 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
   private final ObjectMapper objectMapper;
 
   /**
-   *
-   * @param typeRef the object type that the JSON object should be deserialized into
-   * @param inputStream stream containing an array of JSON objects
+   * @param typeRef        the object type that the JSON object should be deserialized into
+   * @param inputStream    stream containing an array of JSON objects
    * @param resourceCloser a {@code Closeable} implementation to release resources that the object is holding
-   * @param objectMapper object mapper, used for deserialization
+   * @param objectMapper   object mapper, used for deserialization
    */
   public JsonIterator(
       TypeReference typeRef,
@@ -63,18 +63,18 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
     this.typeRef = typeRef;
     this.inputStream = inputStream;
     this.resourceCloser = resourceCloser;
-    jp = null;
     this.objectMapper = objectMapper;
+    init();
   }
 
   /**
    * Returns {@code true} if there are more objects to be read.
+   *
    * @return {@code true} if there are more objects to be read, else return {@code false}
    */
   @Override
   public boolean hasNext()
   {
-    init();
     if (jp.isClosed()) {
       return false;
     }
@@ -87,6 +87,7 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
 
   /**
    * Retrieves the next deserialized object from the stream of JSON objects.
+   *
    * @return the next deserialized object from the stream of JSON ovbjects
    */
   @Override
@@ -107,24 +108,22 @@ public class JsonIterator<T> implements Iterator<T>, Closeable
 
   private void init()
   {
-    if (jp == null) {
-      try {
-        if (inputStream == null) {
-          throw new UnsupportedOperationException();
-        } else {
-          jp = objectMapper.getFactory().createParser(inputStream);
-        }
-        final JsonToken nextToken = jp.nextToken();
-        if (nextToken != JsonToken.START_ARRAY) {
-          throw new IAE("First token should be START_ARRAY", jp.getCurrentToken());
-        } else {
-          jp.nextToken();
-          objectCodec = jp.getCodec();
-        }
+    try {
+      if (inputStream == null) {
+        throw new UnsupportedOperationException();
+      } else {
+        jp = objectMapper.getFactory().createParser(inputStream);
       }
-      catch (IOException e) {
-        throw new RuntimeException(e);
+      final JsonToken nextToken = jp.nextToken();
+      if (nextToken != JsonToken.START_ARRAY) {
+        throw new IAE("First token should be START_ARRAY", jp.getCurrentToken());
+      } else {
+        jp.nextToken();
+        objectCodec = jp.getCodec();
       }
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
