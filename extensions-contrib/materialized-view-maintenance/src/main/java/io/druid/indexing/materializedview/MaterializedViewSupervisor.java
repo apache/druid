@@ -141,8 +141,7 @@ public class MaterializedViewSupervisor implements Supervisor
             {
               try {
                 DataSourceMetadata metadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
-                if (metadata != null 
-                    && metadata instanceof DerivativeDataSourceMetadata 
+                if (metadata instanceof DerivativeDataSourceMetadata 
                     && spec.getBaseDataSource().equals(((DerivativeDataSourceMetadata) metadata).getBaseDataSource())
                     && spec.getDimensions().equals(((DerivativeDataSourceMetadata) metadata).getDimensions())
                     && spec.getMetrics().equals(((DerivativeDataSourceMetadata) metadata).getMetrics())) {
@@ -222,7 +221,7 @@ public class MaterializedViewSupervisor implements Supervisor
     if (dataSourceMetadata == null) {
       // if oldMetadata is different from spec, tasks and segments will be removed when reset.
       DataSourceMetadata oldMetadata = metadataStorageCoordinator.getDataSourceMetadata(dataSource);
-      if (oldMetadata != null && oldMetadata instanceof DerivativeDataSourceMetadata) {
+      if (oldMetadata instanceof DerivativeDataSourceMetadata) {
         if (!((DerivativeDataSourceMetadata) oldMetadata).getBaseDataSource().equals(spec.getBaseDataSource()) ||
             !((DerivativeDataSourceMetadata) oldMetadata).getDimensions().equals(spec.getDimensions()) ||
             !((DerivativeDataSourceMetadata) oldMetadata).getMetrics().equals(spec.getMetrics())) {
