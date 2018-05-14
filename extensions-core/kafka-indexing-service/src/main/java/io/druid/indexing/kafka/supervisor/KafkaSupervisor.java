@@ -45,6 +45,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -228,6 +229,7 @@ public class KafkaSupervisor implements Supervisor
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
   private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
@@ -254,7 +256,8 @@ public class KafkaSupervisor implements Supervisor
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       final KafkaIndexTaskClientFactory taskClientFactory,
       final ObjectMapper mapper,
-      final KafkaSupervisorSpec spec
+      final KafkaSupervisorSpec spec,
+      final RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     this.taskStorage = taskStorage;
@@ -264,6 +267,7 @@ public class KafkaSupervisor implements Supervisor
     this.spec = spec;
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
@@ -1798,7 +1802,8 @@ public class KafkaSupervisor implements Supervisor
           kafkaIOConfig,
           context,
           null,
-          null
+          null,
+          rowIngestionMetersFactory
       );
 
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();

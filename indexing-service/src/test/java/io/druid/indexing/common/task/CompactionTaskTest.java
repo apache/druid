@@ -44,9 +44,11 @@ import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
@@ -134,6 +136,7 @@ public class CompactionTaskTest
   private static List<DataSegment> SEGMENTS;
   private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static Map<DataSegment, File> segmentMap;
+  private static RowIngestionMetersFactory rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
 
   private TaskToolbox toolbox;
 
@@ -298,7 +301,8 @@ public class CompactionTaskTest
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
@@ -326,7 +330,8 @@ public class CompactionTaskTest
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);

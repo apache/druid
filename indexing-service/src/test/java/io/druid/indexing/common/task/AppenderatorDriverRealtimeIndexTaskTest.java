@@ -63,6 +63,7 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.SegmentPublishResult;
@@ -269,6 +270,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private TaskToolboxFactory taskToolboxFactory;
   private File baseDir;
   private File reportsFile;
+  private RowIngestionMetersFactory rowIngestionMetersFactory;
 
   @Before
   public void setUp() throws IOException
@@ -360,9 +362,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -422,9 +424,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -487,9 +489,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2000, task.getRowIngestionMeters().getProcessed().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
+    Assert.assertEquals(2000, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2000, sumMetric(task, null, "rows"));
@@ -555,9 +557,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
-    Assert.assertEquals(1, task.getRowIngestionMeters().getThrownAway().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -675,10 +677,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
-    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
-    Assert.assertEquals(1, task.getRowIngestionMeters().getProcessedWithError().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
-    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRowIngestionMeters().getProcessedWithError());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(3, sumMetric(task, null, "rows"));
@@ -767,10 +769,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
-    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed().getCount());
-    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessedWithError().getCount());
-    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway().getCount());
-    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable().getCount());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessedWithError());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(4, sumMetric(task, null, "rows"));
@@ -1251,7 +1253,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         new RealtimeAppenderatorIngestionSpec(dataSchema, realtimeIOConfig, tuningConfig),
         null,
         null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        rowIngestionMetersFactory
     )
     {
       @Override
@@ -1413,6 +1416,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       }
     };
     final TestUtils testUtils = new TestUtils();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
     SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
     {
       @Override

@@ -19,28 +19,11 @@
 
 package io.druid.indexing.common.stats;
 
-import java.util.Map;
-
-public interface RowIngestionMeters
+public class DropwizardRowIngestionMetersFactory implements RowIngestionMetersFactory
 {
-  String PROCESSED = "processed";
-  String PROCESSED_WITH_ERROR = "processedWithError";
-  String UNPARSEABLE = "unparseable";
-  String THROWN_AWAY = "thrownAway";
-
-  long getProcessed();
-  void incrementProcessed();
-
-  long getProcessedWithError();
-  void incrementProcessedWithError();
-
-  long getUnparseable();
-  void incrementUnparseable();
-
-  long getThrownAway();
-  void incrementThrownAway();
-
-  Map<String, Object> getTotals();
-
-  Map<String, Object> getMovingAverages();
+  @Override
+  public RowIngestionMeters createRowIngestionMeters()
+  {
+    return new DropwizardRowIngestionMeters();
+  }
 }

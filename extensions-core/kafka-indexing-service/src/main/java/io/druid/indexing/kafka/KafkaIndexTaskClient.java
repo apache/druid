@@ -214,8 +214,10 @@ public class KafkaIndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
-      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-      throw new RuntimeException(e);
+      throw new RuntimeException(
+          StringUtils.format("Exception [%s] while pausing Task [%s]", e.getMessage(), id),
+          e
+      );
     }
   }
 
@@ -663,6 +665,7 @@ public class KafkaIndexTaskClient
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e2);
           }
         }

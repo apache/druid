@@ -52,6 +52,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -146,6 +147,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private RowIngestionMeters rowIngestionMeters;
 
   @JsonIgnore
+  private RowIngestionMetersFactory rowIngestionMetersFactory;
+
+  @JsonIgnore
   private volatile boolean gracefullyStopped = false;
 
   @JsonIgnore
@@ -176,7 +180,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @JsonProperty("spec") RealtimeAppenderatorIngestionSpec spec,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(
@@ -196,6 +201,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     }
 
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
   }
 
   @Override
@@ -300,7 +306,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         }
       }
 
-      rowIngestionMeters = new RowIngestionMeters();
+      rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
       ingestionState = IngestionState.BUILD_SEGMENTS;
 
       // Time to read data!
@@ -310,7 +316,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
           if (inputRow == null) {
             log.debug("Discarded null row, considering thrownAway.");
-            rowIngestionMeters.getThrownAway().mark();
+            rowIngestionMeters.incrementThrownAway();
           } else {
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
@@ -331,7 +337,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             if (addResult.getParseException() != null) {
               handleParseException(addResult.getParseException());
             } else {
-              rowIngestionMeters.getProcessed().mark();
+              rowIngestionMeters.incrementProcessed();
             }
           }
         }
@@ -559,9 +565,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private void handleParseException(ParseException pe)
   {
     if (pe.isFromPartiallyValidRow()) {
-      rowIngestionMeters.getProcessedWithError().mark();
+      rowIngestionMeters.incrementProcessedWithError();
     } else {
-      rowIngestionMeters.getUnparseable().mark();
+      rowIngestionMeters.incrementUnparseable();
     }
 
     if (spec.getTuningConfig().isLogParseExceptions()) {
@@ -572,7 +578,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       savedParseExceptions.add(pe);
     }
 
-    if (rowIngestionMeters.getUnparseable().getCount() + rowIngestionMeters.getProcessedWithError().getCount()
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > spec.getTuningConfig().getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...");

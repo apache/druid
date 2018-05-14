@@ -39,6 +39,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.overlord.ForkingTaskRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.worker.Worker;
@@ -92,6 +93,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+            binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.<RowIngestionMetersFactory>of(null));
 
             binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
             binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);

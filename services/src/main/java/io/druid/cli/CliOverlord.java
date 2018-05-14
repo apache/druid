@@ -54,6 +54,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -183,6 +184,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+            binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.<RowIngestionMetersFactory>of(null));
 
             configureTaskStorage(binder);
             configureAutoscale(binder);

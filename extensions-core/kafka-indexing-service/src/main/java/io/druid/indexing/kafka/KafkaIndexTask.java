@@ -63,6 +63,7 @@ import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
@@ -252,6 +253,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
   private String errorMsg;
 
+  private RowIngestionMetersFactory rowIngestionMetersFactory;
   private RowIngestionMeters rowIngestionMeters;
 
   @JsonCreator
@@ -263,7 +265,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("ioConfig") KafkaIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(
@@ -284,6 +287,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.topic = ioConfig.getStartPartitions().getTopic();
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
 
     if (context != null && context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
@@ -617,7 +621,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
       Set<Integer> assignment = assignPartitionsAndSeekToNext(consumer, topic);
 
-      rowIngestionMeters = new RowIngestionMeters();
+      rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
       ingestionState = IngestionState.BUILD_SEGMENTS;
 
       // Main loop.
@@ -758,10 +762,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                     if (addResult.getParseException() != null) {
                       handleParseException(addResult.getParseException(), record);
                     } else {
-                      rowIngestionMeters.getProcessed().mark();
+                      rowIngestionMeters.incrementProcessed();
                     }
                   } else {
-                    rowIngestionMeters.getThrownAway().mark();
+                    rowIngestionMeters.incrementThrownAway();
                   }
                 }
                 if (isPersistRequired) {
@@ -964,7 +968,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         )
     );
 
-    rowIngestionMeters = new RowIngestionMeters();
+    rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
     ingestionState = IngestionState.BUILD_SEGMENTS;
 
     try (
@@ -1148,10 +1152,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                     if (addResult.getParseException() != null) {
                       handleParseException(addResult.getParseException(), record);
                     } else {
-                      rowIngestionMeters.getProcessed().mark();
+                      rowIngestionMeters.incrementProcessed();
                     }
                   } else {
-                    rowIngestionMeters.getThrownAway().mark();
+                    rowIngestionMeters.incrementThrownAway();
                   }
                 }
 
@@ -1296,9 +1300,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private void handleParseException(ParseException pe, ConsumerRecord<byte[], byte[]> record)
   {
     if (pe.isFromPartiallyValidRow()) {
-      rowIngestionMeters.getProcessedWithError().mark();
+      rowIngestionMeters.incrementProcessedWithError();
     } else {
-      rowIngestionMeters.getUnparseable().mark();
+      rowIngestionMeters.incrementUnparseable();
     }
 
     if (tuningConfig.isLogParseExceptions()) {
@@ -1314,7 +1318,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       savedParseExceptions.add(pe);
     }
 
-    if (rowIngestionMeters.getUnparseable().getCount() + rowIngestionMeters.getProcessedWithError().getCount()
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > tuningConfig.getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
