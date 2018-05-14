@@ -64,6 +64,7 @@ import io.druid.server.DruidNode;
 import io.druid.server.metrics.MonitorsConfig;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
+import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -291,6 +292,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               } else {
                                 taskClasspath = config.getClasspath();
                               }
+
                               command.add(config.getJavaCommand());
                               command.add("-cp");
                               command.add(taskClasspath);
@@ -355,8 +357,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   }
                                 }
                               }
-                              command.add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8100");
-                              // Add dataSource and taskId for metrics or logging
+                              
+                              // Add dataSource, taskId and taskType for metrics or logging
                               command.add(
                                   StringUtils.format(
                                       "-D%s%s=%s",
@@ -519,8 +521,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                             try {
                               if (!stopping && taskDir.exists()) {
-                                log.info("REMOVING task directory: %s", taskDir);
-                                //FileUtils.deleteDirectory(taskDir);
+                                log.info("Removing task directory: %s", taskDir);
+                                FileUtils.deleteDirectory(taskDir);
                               }
                             }
                             catch (Exception e) {
