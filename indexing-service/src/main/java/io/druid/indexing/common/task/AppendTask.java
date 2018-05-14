@@ -76,13 +76,7 @@ public class AppendTask extends MergeTaskBase
   public File merge(final TaskToolbox toolbox, final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
-    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
-        Comparators.naturalNullsFirst()
-    );
-
-    for (DataSegment segment : segments.keySet()) {
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-    }
+    VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments.keySet());
 
     final Iterable<SegmentToMergeHolder> segmentsToMerge = Iterables.concat(
         Iterables.transform(
