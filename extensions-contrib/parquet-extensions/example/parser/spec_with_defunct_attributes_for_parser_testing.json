@@ -1,0 +1,153 @@
+{
+  "type": "index_hadoop",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "test_datasource",
+      "parser": {
+        "type": "parquet",
+        "binaryAsString": true,
+        "parquetParser": {
+          "fields": [
+            {
+              "key": "eventId",
+              "fieldType": "STRING"
+            },
+            {
+              "rootFieldName": "attributes",
+              "fieldType": "MAP"
+            },
+            {
+              "rootFieldName": "headers",
+              "key": "ts_message_create",
+              "fieldType": "UNION",
+              "field": {
+                "key": "member1",
+                "rootFieldName": "member1",
+                "fieldType": "MAP"
+              },
+              "dimensionName": "event_time"
+            },
+            {
+              "rootFieldName": "attributes",
+              "key": "e",
+              "fieldType": "MAP"
+            },
+            {
+              "rootFieldName": "cldAttributes",
+              "key": "city",
+              "fieldType": "MAP"
+            },
+            {
+              "rootFieldName": "cldAttributes",
+              "key": "customer_id",
+              "fieldType": "MAP"
+            },
+            {
+              "rootFieldName": "cometAttributes",
+              "key": "is_raw_prospect",
+              "fieldType": "MAP"
+            }
+          ]
+        },
+        "parseSpec": {
+          "format": "timeAndDims",
+          "timestampSpec": {
+            "column": "eventTimestamp",
+            "format": "millis"
+          },
+          "dimensionsSpec": {
+            "dimensions": [
+              "experiencedExperiments",
+              "eventTimestamp",
+              "fpti",
+              "isElmo",
+              "eventId",
+              "e",
+              "customer_id",
+              "is_raw_prospect"
+            ],
+            "dimensionExclusions": [
+            ],
+            "spatialDimensions": [
+            ]
+          }
+        }
+      },
+      "metricsSpec": [
+        {
+          "type": "count",
+          "name": "count"
+        }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "DAY",
+        "rollup": true,
+        "intervals": [
+          "2017-07-26T00:00:00.000Z/2017-07-27T00:59:59.000Z"
+        ]
+      }
+    },
+    "ioConfig": {
+      "type": "hadoop",
+      "inputSpec": {
+        "type": "static",
+        "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+        "paths": "example/events/part-1.snappy.parquet"
+      },
+      "segmentOutputPath": "/tmp/segments"
+    },
+    "tuningConfig": {
+      "type": "hadoop",
+      "workingPath": "tmp/working_path",
+      "version": "2017-02-09T07:36:09.249Z",
+      "partitionsSpec": {
+        "type": "hashed",
+        "targetPartitionSize": 750000,
+        "maxPartitionSize": 750000,
+        "assumeGrouped": false,
+        "numShards": -1,
+        "partitionDimensions": [
+        ]
+      },
+      "shardSpecs": {
+      },
+      "indexSpec": {
+        "bitmap": {
+          "type": "concise"
+        },
+        "dimensionCompression": "lz4",
+        "metricCompression": "lz4",
+        "longEncoding": "longs"
+      },
+      "maxRowsInMemory": 75000,
+      "leaveIntermediate": true,
+      "cleanupOnFailure": true,
+      "overwriteFiles": false,
+      "ignoreInvalidRows": false,
+      "jobProperties": {
+        "hdp.version": "2.5.3.58-3",
+        "mapreduce.job.user.classpath.first": "true",
+        "mapreduce.task.timeout": "1800000",
+        "mapreduce.map.memory.mb": "2048",
+        "mapreduce.map.java.opts": "-server -Xmx3072m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+        "mapreduce.reduce.memory.mb": "2048",
+        "mapreduce.reduce.java.opts": "-server -Xmx8192m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+        "mapreduce.job.queuename": "experimentation",
+        "mapred.child.ulimit": "16777216",
+        "mapreduce.map.output.compress": "true",
+        "mapred.map.output.compress.codec": "org.apache.hadoop.io.compress.GzipCodec"
+      },
+      "combineText": false,
+      "useCombiner": false,
+      "buildV9Directly": false,
+      "numBackgroundPersistThreads": 0,
+      "forceExtendableShardSpecs": false
+    },
+    "uniqueId": "715f31321096480b869aca2cc9c5d252"
+  },
+  "hadoopDependencyCoordinates": [
+    "org.apache.hadoop:hadoop-client:2.6.0"
+  ]
+}

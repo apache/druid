@@ -22,12 +22,17 @@ package org.apache.parquet.avro;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.parquet.ParquetHadoopInputRowParser;
+import io.druid.data.input.parquet.model.ParquetParser;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.transform.TransformingInputRowParser;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.parquet.Preconditions;
 import org.apache.parquet.hadoop.api.InitContext;
 import org.apache.parquet.io.api.RecordMaterializer;
 import org.apache.parquet.schema.MessageType;
@@ -54,9 +59,11 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
     String name = fullSchema.getName();
 
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
-    String tsField = config.getParser().getParseSpec().getTimestampSpec().getTimestampColumn();
+    final InputRowParser parser = config.getParser();
+    Preconditions.checkNotNull(parser, "parser");
+    final String tsField = parser.getParseSpec().getTimestampSpec().getTimestampColumn();
 
-    List<DimensionSchema> dimensionSchema = config.getParser().getParseSpec().getDimensionsSpec().getDimensions();
+    List<DimensionSchema> dimensionSchema = parser.getParseSpec().getDimensionsSpec().getDimensions();
     Set<String> dimensions = Sets.newHashSet();
     for (DimensionSchema dim : dimensionSchema) {
       dimensions.add(dim.getName());
@@ -68,13 +75,26 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
     }
 
     List<Type> partialFields = Lists.newArrayList();
-
     for (Type type : fullSchema.getFields()) {
       if (tsField.equals(type.getName())
           || metricsFields.contains(type.getName())
           || dimensions.size() > 0 && dimensions.contains(type.getName())
           || dimensions.size() == 0) {
         partialFields.add(type);
+      }
+    }
+
+    //Adding parquet parsers root fields ((ParquetHadoopInputRowParser)((TransformingInputRowParser) parser).getParser()).getParquetParser()
+    final ParquetParser parquetParser = parser instanceof TransformingInputRowParser
+                                        && ((TransformingInputRowParser) parser).getParser() instanceof ParquetHadoopInputRowParser
+                                        ? ((ParquetHadoopInputRowParser) ((TransformingInputRowParser) parser).getParser())
+                                            .getParquetParser()
+                                        : null;
+    if (parquetParser != null) {
+      for (Type type : fullSchema.getFields()) {
+        if (!partialFields.contains(type) && parquetParser.containsType(type.getName())) {
+          partialFields.add(type);
+        }
       }
     }
 

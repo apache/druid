@@ -1,0 +1,73 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package io.druid.data.input.parquet.model;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Maps;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+public class ParquetParser
+{
+
+  private final transient Map<Class<?>, FieldType> typeMap;
+  private final List<Field> fields;
+
+  @JsonCreator
+  public ParquetParser(@JsonProperty("fields") List<Field> fields)
+  {
+    this.fields = fields;
+    //Loads all the mapping between Class reference and FieldType
+    final Map<Class<?>, FieldType> tempMap = Maps.newHashMap();
+    for (FieldType fieldType : FieldType.values()) {
+      tempMap.put(fieldType.getClassz(), fieldType);
+    }
+    typeMap = Collections.unmodifiableMap(tempMap);
+  }
+
+  /**
+   * @param classz
+   *
+   * @return
+   */
+  public FieldType getFieldType(Class<?> classz)
+  {
+    return typeMap.get(classz);
+  }
+
+  public List<Field> getFields()
+  {
+    return fields;
+  }
+
+  public boolean containsType(String typeName)
+  {
+    for (Field field : this.getFields()) {
+      if (field.getKey().toString().equals(typeName) || (field.getRootFieldName() != null &&
+                                                         field.getRootFieldName().equals(typeName))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+}

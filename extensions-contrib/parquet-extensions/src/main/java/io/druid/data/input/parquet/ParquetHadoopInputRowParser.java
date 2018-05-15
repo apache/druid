@@ -28,6 +28,7 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.data.input.parquet.model.ParquetParser;
 import io.druid.java.util.common.DateTimes;
 import org.apache.avro.LogicalType;
 import org.apache.avro.LogicalTypes;
@@ -45,16 +46,19 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   private final boolean binaryAsString;
   private final List<String> dimensions;
   private final TimestampSpec timestampSpec;
+  private final ParquetParser parquetParser;
 
   @JsonCreator
   public ParquetHadoopInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("binaryAsString") Boolean binaryAsString
+      @JsonProperty("binaryAsString") Boolean binaryAsString,
+      @JsonProperty("parquetParser") ParquetParser parquetParser
   )
   {
     this.parseSpec = parseSpec;
     this.timestampSpec = parseSpec.getTimestampSpec();
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.parquetParser = parquetParser;
 
     List<DimensionSchema> dimensionSchema = parseSpec.getDimensionsSpec().getDimensions();
     this.dimensions = Lists.newArrayList();
@@ -81,7 +85,11 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   public List<InputRow> parseBatch(GenericRecord record)
   {
     // Map the record to a map
-    GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(record, binaryAsString);
+    final GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(
+        record,
+        binaryAsString,
+        parquetParser
+    );
 
     // Determine logical type of the timestamp column
     LogicalType logicalType = determineTimestampSpecLogicalType(record.getSchema(), timestampSpec.getTimestampColumn());
@@ -111,6 +119,11 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new ParquetHadoopInputRowParser(parseSpec, binaryAsString);
+    return new ParquetHadoopInputRowParser(parseSpec, binaryAsString, parquetParser);
+  }
+
+  public ParquetParser getParquetParser()
+  {
+    return parquetParser;
   }
 }
