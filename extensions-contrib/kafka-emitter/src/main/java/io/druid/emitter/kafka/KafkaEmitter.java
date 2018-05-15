@@ -21,6 +21,7 @@ package io.druid.emitter.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.collect.ImmutableMap;
 import io.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import io.druid.java.util.common.StringUtils;
@@ -31,6 +32,7 @@ import io.druid.java.util.emitter.core.Emitter;
 import io.druid.java.util.emitter.core.Event;
 import io.druid.java.util.emitter.service.AlertEvent;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.server.log.EmittingRequestLogger;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -38,7 +40,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,6 +53,7 @@ public class KafkaEmitter implements Emitter
   private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
+  private final AtomicLong requestLost;
   private final AtomicLong invalidLost;
 
   private final KafkaEmitterConfig config;
@@ -60,12 +62,16 @@ public class KafkaEmitter implements Emitter
   private final ObjectMapper jsonMapper;
   private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
   private final ScheduledExecutorService scheduler;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
   {
     this.config = config;
+
     this.jsonMapper = jsonMapper;
+    this.jsonMapper.addMixIn(EmittingRequestLogger.RequestLogEvent.class, ClusterNameMixin.class);
+
     this.producer = setKafkaProducer();
     this.producerCallback = setProducerCallback();
     // same with kafka producer's buffer.memory
@@ -73,9 +79,11 @@ public class KafkaEmitter implements Emitter
                                                       .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432"));
     this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.scheduler = Executors.newScheduledThreadPool(3);
+    this.requestQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
+    this.scheduler = Executors.newScheduledThreadPool(4);
     this.metricLost = new AtomicLong(0L);
     this.alertLost = new AtomicLong(0L);
+    this.requestLost = new AtomicLong(0L);
     this.invalidLost = new AtomicLong(0L);
   }
 
@@ -88,6 +96,8 @@ public class KafkaEmitter implements Emitter
           metricLost.incrementAndGet();
         } else if (recordMetadata.topic().equals(config.getAlertTopic())) {
           alertLost.incrementAndGet();
+        } else if (recordMetadata.topic().equals(config.getRequestTopic())) {
+          requestLost.incrementAndGet();
         } else {
           invalidLost.incrementAndGet();
         }
@@ -121,9 +131,10 @@ public class KafkaEmitter implements Emitter
   {
     scheduler.scheduleWithFixedDelay(this::sendMetricToKafka, 10, 10, TimeUnit.SECONDS);
     scheduler.scheduleWithFixedDelay(this::sendAlertToKafka, 10, 10, TimeUnit.SECONDS);
+    scheduler.scheduleWithFixedDelay(this::sendRequestToKafka, 10, 10, TimeUnit.SECONDS);
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], invalidLost=[%d]",
-               metricLost.get(), alertLost.get(), invalidLost.get());
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
+               metricLost.get(), alertLost.get(), requestLost.get(), invalidLost.get());
     }, 5, 5, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
@@ -136,6 +147,11 @@ public class KafkaEmitter implements Emitter
   private void sendAlertToKafka()
   {
     sendToKafka(config.getAlertTopic(), alertQueue);
+  }
+
+  private void sendRequestToKafka()
+  {
+    sendToKafka(config.getRequestTopic(), requestQueue);
   }
 
   private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue)
@@ -156,18 +172,33 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
-      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder().putAll(event.toMap());
-      if (config.getClusterName() != null) {
-        resultBuilder.put("clusterName", config.getClusterName());
-      }
-      Map<String, Object> result = resultBuilder.build();
-
       try {
-        String resultJson = jsonMapper.writeValueAsString(result);
+        String resultJson;
+
+        if (event instanceof EmittingRequestLogger.RequestLogEvent) {
+          ObjectWriter objectWriter = jsonMapper.writerFor(EmittingRequestLogger.RequestLogEvent.class);
+
+          if (config.getClusterName() != null) {
+            objectWriter.withAttribute("clusterName", config.getClusterName());
+          }
+
+          resultJson = objectWriter.writeValueAsString(event);
+        } else {
+          ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.builder();
+          resultBuilder.putAll(event.toMap());
+
+          if (config.getClusterName() != null) {
+            resultBuilder.put("clusterName", config.getClusterName());
+          }
+
+          resultJson = jsonMapper.writeValueAsString(resultBuilder.build());
+        }
+
         ObjectContainer<String> objectContainer = new ObjectContainer<>(
             resultJson,
             StringUtils.toUtf8(resultJson).length
         );
+
         if (event instanceof ServiceMetricEvent) {
           if (!metricQueue.offer(objectContainer)) {
             metricLost.incrementAndGet();
@@ -175,6 +206,10 @@ public class KafkaEmitter implements Emitter
         } else if (event instanceof AlertEvent) {
           if (!alertQueue.offer(objectContainer)) {
             alertLost.incrementAndGet();
+          }
+        } else if (event instanceof EmittingRequestLogger.RequestLogEvent) {
+          if (!requestQueue.offer(objectContainer)) {
+            requestLost.incrementAndGet();
           }
         } else {
           invalidLost.incrementAndGet();

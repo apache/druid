@@ -22,6 +22,7 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 |`druid.emitter.kafka.bootstrap.servers`|Comma-separated Kafka broker. (`[hostname:port],[hostname:port]...`)|yes|none|
 |`druid.emitter.kafka.metric.topic`|Kafka topic name for emitter's target to emit service metric.|yes|none|
 |`druid.emitter.kafka.alert.topic`|Kafka topic name for emitter's target to emit alert.|yes|none|
+|`druid.emitter.kafka.request.topic`|Kafka topic name for emitter's target to emit request logs.|yes|none|
 |`druid.emitter.kafka.producer.config`|JSON formatted configuration which user want to set additional properties to Kafka producer.|no|none|
 |`druid.emitter.kafka.clusterName`|Optional value to specify name of your druid cluster. It can help make groups in your monitoring environment. |no|none|
 
@@ -31,5 +32,6 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 druid.emitter.kafka.bootstrap.servers=hostname1:9092,hostname2:9092
 druid.emitter.kafka.metric.topic=druid-metric
 druid.emitter.kafka.alert.topic=druid-alert
+druid.emitter.kafka.request.topic=druid-request
 druid.emitter.kafka.producer.config={"max.block.ms":10000}
 ```
