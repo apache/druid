@@ -134,9 +134,9 @@ public class CompactionTaskTest
   private static Map<String, DimensionSchema> DIMENSIONS;
   private static Map<String, AggregatorFactory> AGGREGATORS;
   private static List<DataSegment> SEGMENTS;
+  private static RowIngestionMetersFactory rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
   private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static Map<DataSegment, File> segmentMap;
-  private static RowIngestionMetersFactory rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
 
   private TaskToolbox toolbox;
 
@@ -217,6 +217,7 @@ public class CompactionTaskTest
                   {
                     binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                     binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+                    binder.bind(RowIngestionMetersFactory.class).toInstance(rowIngestionMetersFactory);
                   }
                 }
             )

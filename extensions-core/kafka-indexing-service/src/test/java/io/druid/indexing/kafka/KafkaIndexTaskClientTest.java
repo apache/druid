@@ -32,7 +32,6 @@ import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
@@ -181,7 +180,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = IAE.class)
+  @Test(expected = RuntimeException.class)
   public void testBadRequest()
   {
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).times(2);
