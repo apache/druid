@@ -29,13 +29,16 @@ import java.util.Map;
 public class ParquetParser
 {
 
+  public static final int DEFAULT_MAX_DEPTH = 3;
   private final transient Map<Class<?>, FieldType> typeMap;
   private final List<Field> fields;
+  private final Integer maxDepth;
 
   @JsonCreator
-  public ParquetParser(@JsonProperty("fields") List<Field> fields)
+  public ParquetParser(@JsonProperty("fields") List<Field> fields, @JsonProperty("depth") int maxDepth)
   {
     this.fields = fields;
+    this.maxDepth = Math.max(maxDepth, DEFAULT_MAX_DEPTH);
     //Loads all the mapping between Class reference and FieldType
     final Map<Class<?>, FieldType> tempMap = Maps.newHashMap();
     for (FieldType fieldType : FieldType.values()) {
@@ -70,4 +73,8 @@ public class ParquetParser
     return false;
   }
 
+  public Integer getMaxDepth()
+  {
+    return maxDepth;
+  }
 }

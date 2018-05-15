@@ -63,6 +63,32 @@ public class DruidParquetParserTest extends DruidParquetInputTest
   }
 
   @Test
+  public void testCircularSpec() throws IOException, InterruptedException
+  {
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
+        "example/parser/circular_dependency_spec.json"));
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+    GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+  }
+
+  @Test
+  public void testSpecHavingToTraversalOverMaxDepth() throws IOException, InterruptedException
+  {
+
+  }
+
+  @Test
+  public void testWithNonAvailableFields()
+  {
+
+  }
+
+  @Test
   public void structHavingMapWithDoubleKey() throws IOException, InterruptedException
   {
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
