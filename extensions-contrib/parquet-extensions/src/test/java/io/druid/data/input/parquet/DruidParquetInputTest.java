@@ -92,19 +92,6 @@ public class DruidParquetInputTest
     }
   }
 
-  @Test
-  public void testMapAndUnionDataTypeParser() throws IOException, InterruptedException
-  {
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
-        "example/parser/events_with_map_list_and_union_datatype.json"));
-    Job job = Job.getInstance(new Configuration());
-    config.intoConfiguration(job);
-    GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
-
-    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
-    System.out.println(row);
-  }
-
   GenericRecord getFirstRecord(Job job, String parquetPath) throws IOException, InterruptedException
   {
     File testFile = new File(parquetPath);
