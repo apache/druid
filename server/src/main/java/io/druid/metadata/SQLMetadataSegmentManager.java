@@ -27,8 +27,8 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -179,55 +179,30 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     try {
       final IDBI dbi = connector.getDBI();
       VersionedIntervalTimeline<String, DataSegment> segmentTimeline = connector.inReadOnlyTransaction(
-          new TransactionCallback<VersionedIntervalTimeline<String, DataSegment>>()
-          {
-            @Override
-            public VersionedIntervalTimeline<String, DataSegment> inTransaction(
-                Handle handle, TransactionStatus status
-            )
-            {
-              return handle
-                  .createQuery(StringUtils.format(
-                      "SELECT payload FROM %s WHERE dataSource = :dataSource",
-                      getSegmentsTable()
-                  ))
-                  .setFetchSize(connector.getStreamingFetchSize())
-                  .bind("dataSource", ds)
-                  .map(ByteArrayMapper.FIRST)
-                  .fold(
-                      new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural()),
-                      new Folder3<VersionedIntervalTimeline<String, DataSegment>, byte[]>()
-                      {
-                        @Override
-                        public VersionedIntervalTimeline<String, DataSegment> fold(
-                            VersionedIntervalTimeline<String, DataSegment> timeline,
-                            byte[] payload,
-                            FoldController foldController,
-                            StatementContext statementContext
-                        ) throws SQLException
-                        {
-                          try {
-                            final DataSegment segment = DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(
-                                payload,
-                                DataSegment.class
-                            ));
+          (handle, status) -> VersionedIntervalTimeline.forSegments(
+              Iterators.transform(
+                  handle
+                      .createQuery(
+                          StringUtils.format(
+                              "SELECT payload FROM %s WHERE dataSource = :dataSource",
+                              getSegmentsTable()
+                          )
+                      )
+                      .setFetchSize(connector.getStreamingFetchSize())
+                      .bind("dataSource", ds)
+                      .map(ByteArrayMapper.FIRST)
+                      .iterator(),
+                  payload -> {
+                    try {
+                      return DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(payload, DataSegment.class));
+                    }
+                    catch (IOException e) {
+                      throw new RuntimeException(e);
+                    }
+                  }
+              )
 
-                            timeline.add(
-                                segment.getInterval(),
-                                segment.getVersion(),
-                                segment.getShardSpec().createChunk(segment)
-                            );
-
-                            return timeline;
-                          }
-                          catch (Exception e) {
-                            throw new SQLException(e.toString());
-                          }
-                        }
-                      }
-                  );
-            }
-          }
+          )
       );
 
       final List<DataSegment> segments = Lists.newArrayList();
@@ -537,7 +512,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 .createQuery(
                     StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false ORDER BY start, %2$send%2$s",
-                        getSegmentsTable(), connector.getQuoteString()
+                        getSegmentsTable(),
+                        connector.getQuoteString()
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())

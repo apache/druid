@@ -20,7 +20,9 @@
 package io.druid.timeline;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -35,6 +37,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -85,11 +88,26 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
   public static VersionedIntervalTimeline<String, DataSegment> forSegments(Iterable<DataSegment> segments)
   {
-    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-    for (final DataSegment segment : segments) {
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-    }
+    return forSegments(segments.iterator());
+  }
+
+  public static VersionedIntervalTimeline<String, DataSegment> forSegments(Iterator<DataSegment> segments)
+  {
+    final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+    addSegments(timeline, segments);
     return timeline;
+  }
+
+  public static void addSegments(
+      VersionedIntervalTimeline<String, DataSegment> timeline,
+      Iterator<DataSegment> segments
+  )
+  {
+    timeline.addAll(
+        Iterators.transform(segments, segment -> segment.getShardSpec().createChunk(segment)),
+        DataSegment::getInterval,
+        DataSegment::getVersion
+    );
   }
 
   @VisibleForTesting
@@ -100,34 +118,57 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
   {
+    addAll(Iterators.singletonIterator(object), o -> interval, o -> version);
+  }
+
+  private void addAll(
+      final Iterator<PartitionChunk<ObjectType>> objects,
+      final Function<ObjectType, Interval> intervalFunction,
+      final Function<ObjectType, VersionType> versionFunction
+  )
+  {
+    lock.writeLock().lock();
+
     try {
-      lock.writeLock().lock();
+      final IdentityHashMap<TimelineEntry, Interval> allEntries = new IdentityHashMap<>();
 
-      Map<VersionType, TimelineEntry> exists = allTimelineEntries.get(interval);
-      TimelineEntry entry = null;
+      while (objects.hasNext()) {
+        PartitionChunk<ObjectType> object = objects.next();
+        Interval interval = intervalFunction.apply(object.getObject());
+        VersionType version = versionFunction.apply(object.getObject());
+        Map<VersionType, TimelineEntry> exists = allTimelineEntries.get(interval);
+        TimelineEntry entry;
 
-      if (exists == null) {
-        entry = new TimelineEntry(interval, version, new PartitionHolder<ObjectType>(object));
-        TreeMap<VersionType, TimelineEntry> versionEntry = new TreeMap<VersionType, TimelineEntry>(versionComparator);
-        versionEntry.put(version, entry);
-        allTimelineEntries.put(interval, versionEntry);
-      } else {
-        entry = exists.get(version);
-
-        if (entry == null) {
-          entry = new TimelineEntry(interval, version, new PartitionHolder<ObjectType>(object));
-          exists.put(version, entry);
+        if (exists == null) {
+          entry = new TimelineEntry(interval, version, new PartitionHolder<>(object));
+          TreeMap<VersionType, TimelineEntry> versionEntry = new TreeMap<>(versionComparator);
+          versionEntry.put(version, entry);
+          allTimelineEntries.put(interval, versionEntry);
         } else {
-          PartitionHolder<ObjectType> partitionHolder = entry.getPartitionHolder();
-          partitionHolder.add(object);
+          entry = exists.get(version);
+
+          if (entry == null) {
+            entry = new TimelineEntry(interval, version, new PartitionHolder<>(object));
+            exists.put(version, entry);
+          } else {
+            PartitionHolder<ObjectType> partitionHolder = entry.getPartitionHolder();
+            partitionHolder.add(object);
+          }
         }
+
+        allEntries.put(entry, interval);
       }
 
-      if (entry.getPartitionHolder().isComplete()) {
-        add(completePartitionsTimeline, interval, entry);
-      }
+      // "isComplete" is O(objects in holder) so defer it to the end of addAll.
+      for (Map.Entry<TimelineEntry, Interval> entry : allEntries.entrySet()) {
+        Interval interval = entry.getValue();
 
-      add(incompletePartitionsTimeline, interval, entry);
+        if (entry.getKey().getPartitionHolder().isComplete()) {
+          add(completePartitionsTimeline, interval, entry.getKey());
+        }
+
+        add(incompletePartitionsTimeline, interval, entry.getKey());
+      }
     }
     finally {
       lock.writeLock().unlock();
