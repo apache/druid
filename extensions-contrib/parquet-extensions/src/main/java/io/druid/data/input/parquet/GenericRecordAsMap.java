@@ -83,108 +83,117 @@ public class GenericRecordAsMap implements Map<String, Object>
     if (depth++ > maxDepthOfFieldTraversal) {
       return null;
     }
-    switch (fieldType) {
-      case MAP: {
-        if (field == null) {
+    final GenericRecord referencingObject = (GenericRecord) getReferencingObject(obj, depth);
+    if (referencingObject != null) {
+      switch (fieldType) {
+        case MAP: {
+          if (field == null) {
+            return null;
+          }
+          return parseMap(field, referencingObject, depth);
+        }
+        case ARRAY: {
+          if (field == null) {
+            return null;
+          }
+          // Ignoring record list check as not matching the parser spec should result in runtime exception
+          final List<Object> list = (List<Object>) referencingObject.get(field.getKey().toString());
+          if (list != null && field.getIndex() >= 0 && field.getIndex() < list.size()) {
+            if (field.getField() != null) {
+              //Extracting element per field definition
+              Object currObj = list.get(field.getIndex());
+              //Having this check for retrieval from an array
+              if (currObj != null && FieldType.GENERIC_DATA_RECORD.equals(getFieldType(currObj.getClass()))) {
+                return parseObject(((GenericRecord) currObj).get(0), field.getField(), depth);
+              } else {
+                return parseObject(currObj, field.getField(), depth);
+              }
+            } else {
+              return parseObject(list.get(field.getIndex()), depth);
+            }
+          }
           return null;
         }
-
-        final GenericRecord referencingRecord = (GenericRecord) getReferencingObject(obj);
-        return parseMap(field, referencingRecord, depth);
-      }
-      case ARRAY: {
-        if (field == null) {
-          return null;
-        }
-        // Ignoring record list check as not matching the parser spec should result in runtime exception
-        final List<Object> list = (List<Object>) ((GenericRecord) getReferencingObject(obj))
-            .get(field.getKey().toString());
-        if (list != null && field.getIndex() >= 0 && field.getIndex() < list.size()) {
-          if (field.getField() != null) {
-            //Extracting element per field definition
-            return parseObject(list.get(field.getIndex()), field.getField(), depth);
+        case GENERIC_DATA_RECORD: {
+          if (field != null) {
+            return referencingObject.get(field.getKey().toString());
           } else {
-            return parseObject(list.get(field.getIndex()), depth);
+            return referencingObject.get(0);
           }
         }
-        return null;
-      }
-      case GENERIC_DATA_RECORD: {
-        if (obj == null) {
-          return null;
-        }
-        return ((GenericRecord) getReferencingObject(obj)).get(0);
-      }
-      case STRUCT: {
-        if (field == null || obj == null) {
-          return null;
-        }
-        //TODO have to extract from object
-        return ((GenericData.Record) ((GenericRecord) getReferencingObject(obj)).get(field.getIndex())).get(field.getIndex());
-      }
-      case STRUCT_LIST: {
-        if (field == null) {
-          return null;
-        }
-        final List objectList = (List) ((GenericRecord) getReferencingObject(obj)).get(field.getKey().toString());
-        if (objectList != null && !objectList.isEmpty()) {
-          List parsedList = Lists.newArrayList();
-          for (Object object : objectList) {
-            //TODO Check field -> field to be available
-            parsedList.add(parseObject(object, field.getField(), depth));
+        case STRUCT: {
+          if (field == null) {
+            return null;
           }
-          return parsedList;
+          //Extracting from object
+          if (field.getField() != null) {
+            return parseObject(
+                referencingObject.get(field.getKey().toString()),
+                field.getField(),
+                depth
+            );
+          } else {
+            return referencingObject.get(field.getKey().toString());
+          }
         }
-        return null;
-      }
-      case STRUCT_MAP: {
-        if (field == null || obj == null) {
+        case STRUCT_LIST: {
+          if (field == null) {
+            return null;
+          }
+          final List<GenericRecord> objectList = (List<GenericRecord>) referencingObject.get(field.getKey().toString());
+          if (objectList != null && !objectList.isEmpty()) {
+            List parsedList = Lists.newArrayList();
+            for (GenericRecord object : objectList) {
+              //TODO Check field -> field to be available
+              parsedList.add(parseObject(object.get(0), field.getField(), depth));
+            }
+            return parsedList;
+          }
           return null;
         }
-        final GenericData.Record referenceObj = (GenericData.Record) ((GenericRecord) getReferencingObject(obj)).get(0);
-        return parseMap(field, referenceObj, depth);
-      }
-      case UTF8: {
-        return obj != null ? obj.toString() : null;
-      }
-      case LIST: {
-        // For de duping PARQUET arrays like [{"element": 10}]
-        final Object extractedObject = ((GenericRecord) getReferencingObject(obj)).get(field.getKey().toString());
-        if (extractedObject instanceof List) {
-          return parseList((List) extractedObject, depth);
-        } else if (extractedObject instanceof GenericData.Record) {
-          return parseList((GenericData.Record) extractedObject, depth);
+        case UTF8: {
+          return referencingObject.toString();
         }
-        return null;
-      }
-      case GENERIC_RECORD: {
-        return parseGenericRecord((GenericRecord) obj);
-      }
-      case UNION: {
-        // Support for HIVE union types, as this support is not continued
-        // https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types#LanguageManualTypes-UnionTypesunionUnionTypes
-        // having it for one of our use case, this will be deprecated and replaced with struct and field usage
-        if (field == null) {
+        case LIST: {
+          // For de duping PARQUET arrays like [{"element": 10}]
+          final Object extractedObject = referencingObject.get(field.getKey().toString());
+          if (extractedObject instanceof List) {
+            return parseList((List) extractedObject, depth);
+          } else if (extractedObject instanceof GenericData.Record) {
+            return parseList((GenericData.Record) extractedObject, depth);
+          }
           return null;
         }
-        // Field will be a struct having the index for GenericRecord, and then it will contain a map within it
-        return parseObject(
-            ((GenericRecord) getReferencingObject(obj)).get(field.getKey().toString()),
-            field.getField(),
-            depth
-        );
-      }
-      case BYTE_BUFFER: {
-        return getBufferString((ByteBuffer) obj);
-      }
-      default: {
-        Preconditions.checkNotNull(
-            field.getKey(),
-            "Expecting key in field to be available for parsing from default MAP record!"
-        );
-        return record.get(field.getKey().toString());
+        case GENERIC_RECORD: {
+          return parseGenericRecord((GenericRecord) referencingObject);
+        }
+        case UNION: {
+          // Support for HIVE union types, as this support is not continued
+          // https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types#LanguageManualTypes-UnionTypesunionUnionTypes
+          // having it for one of our use case, this will be deprecated and replaced with struct and field usage
+          if (field == null) {
+            return null;
+          }
+          // Field will be a struct having the index for GenericRecord, and then it will contain a map within it
+          return parseObject(
+              referencingObject.get(field.getKey().toString()),
+              field.getField(),
+              depth
+          );
+        }
+        case BYTE_BUFFER: {
+          return getBufferString((ByteBuffer) obj);
+        }
+        default: {
+          Preconditions.checkNotNull(
+              field.getKey(),
+              "Expecting key in field to be available for parsing from default MAP record!"
+          );
+          return referencingObject.get(field.getKey().toString());
+        }
       }
     }
+    return null;
   }
 
   @Nullable
@@ -212,9 +221,9 @@ public class GenericRecordAsMap implements Map<String, Object>
     return null;
   }
 
-  private Object getReferencingObject(Object obj)
+  private Object getReferencingObject(Object obj, int depth)
   {
-    return obj == null ? record : obj;
+    return obj == null && depth == 1 ? record : obj;
   }
 
   @Nullable

@@ -81,7 +81,7 @@
               "fieldType": "STRUCT_LIST",
               "field": {
                 "key": "CostA",
-                "fieldType": "STRUCT_MAP",
+                "fieldType": "MAP",
                 "rootFieldName": "tagCostAttributes"
               },
               "dimensionName": "cost_a"
@@ -92,7 +92,7 @@
               "index": 0,
               "field": {
                 "key": "CostB",
-                "fieldType": "STRUCT_MAP",
+                "fieldType": "MAP",
                 "rootFieldName": "tagCostAttributes"
               },
               "dimensionName": "cost_b_1st_tag"
@@ -103,7 +103,7 @@
               "index": 1,
               "field": {
                 "key": "CostB",
-                "fieldType": "STRUCT_MAP",
+                "fieldType": "MAP",
                 "rootFieldName": "tagCostAttributes"
               },
               "dimensionName": "cost_b_2nd_tag"

@@ -9,104 +9,62 @@
         "parquetParser": {
           "fields": [
             {
-              "key": "eventId",
-              "fieldType": "STRING"
+              "key": "e2",
+              "fieldType": "STRUCT",
+              "field": {
+                "key": "e3",
+                "fieldType": "STRUCT",
+                "field": {
+                  "key": "id",
+                  "fieldType": "STRUCT"
+                }
+              },
+              "dimensionName": "e3_id"
+            },
+            {
+              "key": "e2",
+              "fieldType": "STRUCT",
+              "field": {
+                "key": "e3",
+                "fieldType": "STRUCT",
+                "field": {
+                  "key": "costFactor",
+                  "fieldType": "STRUCT"
+                }
+              },
+              "dimensionName": "cost_factor"
+            },
+            {
+              "key": "e2",
+              "fieldType": "STRUCT",
+              "field": {
+                "key": "e3",
+                "fieldType": "STRUCT",
+                "index": 1,
+                "field": {
+                  "key": "e4",
+                  "fieldType": "STRUCT",
+                  "field": {
+                    "key": "e4",
+                    "fieldType": "STRUCT",
+                    "field": {
+                      "key": "id",
+                      "fieldType": "STRUCT"
+                    }
+                  }
+                }
+              },
+              "dimensionName": "e5_id"
+            },
+            {
+              "key": "id",
+              "fieldType": "STRUCT",
+              "index": 0,
+              "dimensionName": "e1_id"
             },
             {
               "key": "eventTimestamp",
               "fieldType": "LONG"
-            },
-            {
-              "rootFieldName": "attributes",
-              "key": "geo",
-              "fieldType": "MAP",
-              "dimensionName": "valid_map_access"
-            },
-            {
-              "rootFieldName": "attributes",
-              "key": "non_existing_key",
-              "fieldType": "MAP",
-              "dimensionName": "max_access_with_non_existing_key"
-            },
-            {
-              "rootFieldName": "un_available_map",
-              "key": "attrA",
-              "fieldType": "MAP",
-              "dimensionName": "max_access_with_un_available_map"
-            },
-            {
-              "key": "referenceIds",
-              "fieldType": "ARRAY",
-              "index": 1,
-              "dimensionName": "array_access_with_index"
-            },
-            {
-              "key": "referenceIds",
-              "fieldType": "ARRAY",
-              "dimensionName": "array_access_with_default_index"
-            },
-            {
-              "key": "referenceIds",
-              "fieldType": "ARRAY",
-              "index": 3,
-              "dimensionName": "array_access_with_overbound_index"
-            },
-            {
-              "key": "referenceIds",
-              "fieldType": "LIST",
-              "dimensionName": "reference_ids"
-            },
-            {
-              "key": "headers_tmp",
-              "fieldType": "UNION",
-              "field": {
-                "key": "member1",
-                "rootFieldName": "member1",
-                "fieldType": "STRUCT",
-                "index": 1
-              },
-              "dimensionName": "union_attribute"
-            },
-            {
-              "key": "tags",
-              "fieldType": "STRUCT_LIST",
-              "field": {
-                "key": "tagId",
-                "fieldType": "STRUCT"
-              },
-              "dimensionName": "tag_ids"
-            },
-            {
-              "key": "tags",
-              "fieldType": "STRUCT_LIST",
-              "field": {
-                "key": "CostA",
-                "fieldType": "STRUCT_MAP",
-                "rootFieldName": "tagCostAttributes"
-              },
-              "dimensionName": "cost_a"
-            },
-            {
-              "key": "tags",
-              "fieldType": "ARRAY",
-              "index": 0,
-              "field": {
-                "key": "CostB",
-                "fieldType": "STRUCT_MAP",
-                "rootFieldName": "tagCostAttributes"
-              },
-              "dimensionName": "cost_b_1st_tag"
-            },
-            {
-              "key": "tags",
-              "fieldType": "ARRAY",
-              "index": 1,
-              "field": {
-                "key": "CostB",
-                "fieldType": "STRUCT_MAP",
-                "rootFieldName": "tagCostAttributes"
-              },
-              "dimensionName": "cost_b_2nd_tag"
             }
           ]
         },
@@ -118,18 +76,10 @@
           },
           "dimensionsSpec": {
             "dimensions": [
-              "eventId",
-              "valid_map_access",
-              "max_access_with_non_existing_key",
-              "max_access_with_un_available_map",
-              "array_access_with_index",
-              "array_access_with_default_index",
-              "array_access_with_overbound_index",
-              "union_attribute",
-              "tag_ids",
-              "reference_ids",
-              "cost_a",
-              "cost_b_1st_tag"
+              "e1_id",
+              "e3_id",
+              "cost_factor",
+              "e5_id"
             ],
             "dimensionExclusions": [
             ],
@@ -142,11 +92,6 @@
         {
           "type": "count",
           "name": "count"
-        },
-        {
-          "type": "doubleSum",
-          "name": "cost_b_2nd_tag_sum",
-          "fieldName": "cost_b_2nd_tag"
         }
       ],
       "granularitySpec": {
@@ -164,7 +109,7 @@
       "inputSpec": {
         "type": "static",
         "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
-        "paths": "example/events/events_with_all_datatypes.parquet"
+        "paths": "example/events/events_with_n_depth.parquet"
       },
       "segmentOutputPath": "/tmp/segments"
     },

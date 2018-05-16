@@ -24,14 +24,13 @@ import org.apache.avro.util.Utf8;
 
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public enum FieldType
 {
   STRING(String.class), MAP(Map.class), ARRAY(Array.class), INT(Integer.class), LONG(Long.class), UNION(Object.class),
-  STRUCT_LIST(List.class), /*Reference*/STRUCT_MAP(HashMap.class), STRUCT(Object.class), UTF8(Utf8.class),
+  STRUCT_LIST(List.class), STRUCT(Object.class), UTF8(Utf8.class),
   LIST(List.class), GENERIC_RECORD(GenericRecord.class), BYTE_BUFFER(ByteBuffer.class),
   GENERIC_DATA_RECORD(GenericData.Record.class);
 

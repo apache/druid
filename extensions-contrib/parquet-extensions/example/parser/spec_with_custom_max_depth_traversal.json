@@ -7,62 +7,61 @@
         "type": "parquet",
         "binaryAsString": true,
         "parquetParser": {
+          "depth": 5,
           "fields": [
             {
-              "key": "eventId",
-              "fieldType": "STRING"
+              "key": "e2",
+              "fieldType": "STRUCT",
+              "field": {
+                "key": "e3",
+                "fieldType": "STRUCT",
+                "index": 1,
+                "field": {
+                  "key": "e4",
+                  "fieldType": "STRUCT",
+                  "field": {
+                    "key": "e5",
+                    "fieldType": "STRUCT",
+                    "field": {
+                      "key": "id",
+                      "fieldType": "STRUCT"
+                    }
+                  }
+                }
+              },
+              "dimensionName": "e5_id"
+            },
+            {
+              "key": "e2",
+              "fieldType": "STRUCT",
+              "field": {
+                "key": "e3",
+                "fieldType": "STRUCT",
+                "index": 1,
+                "field": {
+                  "key": "e4",
+                  "fieldType": "STRUCT",
+                  "field": {
+                    "key": "e4",
+                    "fieldType": "STRUCT",
+                    "field": {
+                      "key": "id",
+                      "fieldType": "STRUCT"
+                    }
+                  }
+                }
+              },
+              "dimensionName": "empty_val_as_wrong_ref"
+            },
+            {
+              "key": "id",
+              "fieldType": "STRUCT",
+              "index": 0,
+              "dimensionName": "e1_id"
             },
             {
               "key": "eventTimestamp",
               "fieldType": "LONG"
-            },
-            {
-              "key": "tags",
-              "fieldType": "STRUCT_LIST",
-              "field": {
-                "key": "CostA",
-                "fieldType": "STRUCT_MAP",
-                "rootFieldName": "tagCostAttributes"
-              },
-              "dimensionName": "cost_a"
-            },
-            {
-              "key": "tags",
-              "fieldType": "ARRAY",
-              "index": 0,
-              "field": {
-                "key": "CostB",
-                "fieldType": "STRUCT_MAP",
-                "rootFieldName": "tagCostAttributes"
-              },
-              "dimensionName": "cost_b_1st_tag"
-            },
-            {
-              "key": "tags",
-              "fieldType": "ARRAY",
-              "index": 1,
-              "field": {
-                "key": "CostB",
-                "fieldType": "STRUCT_MAP",
-                "rootFieldName": "tagCostAttributes"
-              },
-              "dimensionName": "cost_b_2nd_tag"
-            },
-            {
-              "key": "tags",
-              "fieldType": "ARRAY",
-              "index": 0,
-              "field": {
-                "key": "tags",
-                "fieldType": "ARRAY",
-                "index": 1,
-                "field": {
-                  "key": "CostB",
-                  "fieldType": "STRUCT_MAP",
-                  "rootFieldName": "tagCostAttributes"
-                }
-              },
-              "dimensionName": "circlular_dimension"
             }
           ]
         },
@@ -74,10 +73,9 @@
           },
           "dimensionsSpec": {
             "dimensions": [
-              "eventId",
-              "cost_a",
-              "cost_b_1st_tag",
-              "circlular_dimension"
+              "e1_id",
+              "e5_id",
+              "empty_val_as_wrong_ref"
             ],
             "dimensionExclusions": [
             ],
@@ -90,11 +88,6 @@
         {
           "type": "count",
           "name": "count"
-        },
-        {
-          "type": "doubleSum",
-          "name": "cost_b_2nd_tag_sum",
-          "fieldName": "cost_b_2nd_tag"
         }
       ],
       "granularitySpec": {
@@ -112,7 +105,7 @@
       "inputSpec": {
         "type": "static",
         "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
-        "paths": "example/events/events_with_all_datatypes.parquet"
+        "paths": "example/events/events_with_n_depth.parquet"
       },
       "segmentOutputPath": "/tmp/segments"
     },

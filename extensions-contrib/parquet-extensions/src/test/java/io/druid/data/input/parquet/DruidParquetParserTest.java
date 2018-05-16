@@ -63,10 +63,10 @@ public class DruidParquetParserTest extends DruidParquetInputTest
   }
 
   @Test
-  public void testCircularSpec() throws IOException, InterruptedException
+  public void testSpecHavingToTraversalOverMaxDepth() throws IOException, InterruptedException
   {
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
-        "example/parser/circular_dependency_spec.json"));
+        "example/parser/spec_having_traversal_greater_than_max_depth.json"));
     Job job = Job.getInstance(new Configuration());
     config.intoConfiguration(job);
     GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
@@ -74,12 +74,27 @@ public class DruidParquetParserTest extends DruidParquetInputTest
     for (String dimension : row.getDimensions()) {
       System.out.println(dimension + " -> " + row.getDimension(dimension));
     }
+    assertTrue(row.getDimension("e1_id").equals(Collections.singletonList("ELEMENT1")));
+    assertTrue(row.getDimension("e3_id").equals(Collections.singletonList("ELEMENT3")));
+    assertTrue(row.getDimension("cost_factor").equals(Collections.singletonList("23.5")));
+    //This attribute crossed the default max depth level of 3, hence receiving empty set
+    assertTrue(row.getDimension("e5_id").isEmpty());
   }
 
   @Test
-  public void testSpecHavingToTraversalOverMaxDepth() throws IOException, InterruptedException
+  public void testCustomMaxDepthTraversal() throws IOException, InterruptedException
   {
-
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
+        "example/parser/spec_with_custom_max_depth_traversal.json"));
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+    GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+    assertTrue(row.getDimension("e5_id").equals(Collections.singletonList("ELEM5")));
+    assertTrue(row.getDimension("empty_val_as_wrong_ref").isEmpty());
   }
 
   @Test
