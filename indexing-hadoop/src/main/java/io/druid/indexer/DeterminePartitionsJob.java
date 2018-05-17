@@ -192,14 +192,13 @@ public class DeterminePartitionsJob implements Jobby
         config.addInputPaths(dimSelectionJob);
       }
 
-      SortableBytes.useSortableBytesAsMapOutputKey(dimSelectionJob);
+      SortableBytes.useSortableBytesAsMapOutputKey(dimSelectionJob, DeterminePartitionsDimSelectionPartitioner.class);
       dimSelectionJob.setMapOutputValueClass(Text.class);
       dimSelectionJob.setCombinerClass(DeterminePartitionsDimSelectionCombiner.class);
       dimSelectionJob.setReducerClass(DeterminePartitionsDimSelectionReducer.class);
       dimSelectionJob.setOutputKeyClass(BytesWritable.class);
       dimSelectionJob.setOutputValueClass(Text.class);
       dimSelectionJob.setOutputFormatClass(DeterminePartitionsDimSelectionOutputFormat.class);
-      dimSelectionJob.setPartitionerClass(DeterminePartitionsDimSelectionPartitioner.class);
       dimSelectionJob.setNumReduceTasks(config.getGranularitySpec().bucketIntervals().get().size());
       JobHelper.setupClasspath(
           JobHelper.distributedClassPath(config.getWorkingPath()),

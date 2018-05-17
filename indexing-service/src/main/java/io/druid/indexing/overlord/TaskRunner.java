@@ -45,6 +45,11 @@ public interface TaskRunner
   List<Pair<Task, ListenableFuture<TaskStatus>>> restore();
 
   /**
+   * Start the state of the runner.
+   */
+  void start();
+
+  /**
    * Register a listener with this task runner. On registration, the listener will get events corresponding to the
    * current state of known tasks.
    *
@@ -95,12 +100,4 @@ public interface TaskRunner
    * @return ScalingStats if the runner has an underlying resource which can scale, Optional.absent() otherwise
    */
   Optional<ScalingStats> getScalingStats();
-
-  /**
-   * Start the state of the runner.
-   *
-   * This method is unused, but TaskRunner is {@link PublicApi}, so we cannot remove it.
-   */
-  @SuppressWarnings("unused")
-  void start();
 }

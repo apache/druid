@@ -73,7 +73,7 @@ import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
-import io.druid.indexing.overlord.ThreadPoolTaskRunner;
+import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -218,9 +218,9 @@ public class CliPeon extends GuiceRunnable
                 )
             );
 
-            binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
+            binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
             binder.install(new CacheModule());
