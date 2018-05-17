@@ -1054,7 +1054,7 @@ public class KafkaIndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 4,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
@@ -1065,7 +1065,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> unparseableEvents = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [Unable to parse value[notanumber] for field[met1],]",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2049-01-01T00:00:00.000Z, event={timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=notanumber, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}], exceptions: [could not convert value [notanumber] to float,]",
@@ -1129,7 +1129,7 @@ public class KafkaIndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 3,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
@@ -1140,7 +1140,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> unparseableEvents = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unable to parse row [unparseable2]",
             "Unable to parse row [unparseable]"

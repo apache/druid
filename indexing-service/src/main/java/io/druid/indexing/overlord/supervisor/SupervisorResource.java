@@ -205,7 +205,12 @@ public class SupervisorResource
             Optional<Map<String, Object>> stats = manager.getSupervisorStats(id);
             if (!stats.isPresent()) {
               return Response.status(Response.Status.NOT_FOUND)
-                             .entity(ImmutableMap.of("error", StringUtils.format("[%s] does not exist", id)))
+                             .entity(
+                                 ImmutableMap.of(
+                                     "error",
+                                     StringUtils.format("[%s] does not exist", id)
+                                 )
+                             )
                              .build();
             }
 

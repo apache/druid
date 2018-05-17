@@ -23,6 +23,9 @@ import java.util.Map;
 
 public interface RowIngestionMeters
 {
+  String BUILD_SEGMENTS = "buildSegments";
+  String DETERMINE_PARTITIONS = "determinePartitions";
+
   String PROCESSED = "processed";
   String PROCESSED_WITH_ERROR = "processedWithError";
   String UNPARSEABLE = "unparseable";

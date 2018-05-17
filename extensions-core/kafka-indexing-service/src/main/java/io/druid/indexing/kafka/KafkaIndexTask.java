@@ -244,6 +244,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final CountDownLatch waitForPublishes = new CountDownLatch(1);
   private final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<>();
   private final String topic;
+  private final RowIngestionMeters rowIngestionMeters;
 
   private volatile CopyOnWriteArrayList<SequenceMetadata> sequences;
   private ListeningExecutorService publishExecService;
@@ -252,9 +253,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private IngestionState ingestionState;
 
   private String errorMsg;
-
-  private RowIngestionMetersFactory rowIngestionMetersFactory;
-  private RowIngestionMeters rowIngestionMeters;
 
   @JsonCreator
   public KafkaIndexTask(
@@ -287,7 +285,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.topic = ioConfig.getStartPartitions().getTopic();
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
     if (context != null && context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
@@ -621,7 +619,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
       Set<Integer> assignment = assignPartitionsAndSeekToNext(consumer, topic);
 
-      rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
       ingestionState = IngestionState.BUILD_SEGMENTS;
 
       // Main loop.
@@ -968,7 +965,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         )
     );
 
-    rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
     ingestionState = IngestionState.BUILD_SEGMENTS;
 
     try (
@@ -1345,7 +1341,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
     if (buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
     return unparseableEventsMap;
   }
@@ -1353,12 +1349,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (rowIngestionMeters != null) {
-      metrics.put(
-          "buildSegments",
-          rowIngestionMeters.getTotals()
-      );
-    }
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
     return metrics;
   }
 
@@ -1580,18 +1574,16 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     Map<String, Object> totalsMap = Maps.newHashMap();
     Map<String, Object> averagesMap = Maps.newHashMap();
 
-    if (rowIngestionMeters != null) {
-      totalsMap.put(
-          "buildSegments",
-          rowIngestionMeters.getTotals()
-      );
-      averagesMap.put(
-          "buildSegments",
-          rowIngestionMeters.getMovingAverages()
-      );
-    }
+    totalsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    averagesMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getMovingAverages()
+    );
 
-    returnMap.put("averages", averagesMap);
+    returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     return Response.ok(returnMap).build();
   }

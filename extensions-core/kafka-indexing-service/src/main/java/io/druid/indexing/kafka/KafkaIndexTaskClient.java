@@ -38,6 +38,7 @@ import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.Request;
@@ -269,9 +270,7 @@ public class KafkaIndexTaskClient
       );
       return response.getContent() == null || response.getContent().isEmpty()
              ? ImmutableMap.of()
-             : jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, Object>>()
-             {
-             });
+             : jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -593,13 +592,17 @@ public class KafkaIndexTaskClient
 
           log.debug("HTTP %s: %s", method.getName(), serviceUri.toString());
           response = httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
+
+        }
+        catch (IOException | ChannelException ioce) {
+          throw ioce;
+        }
+        catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(ie);
         }
         catch (Exception e) {
-          if (e.getCause() instanceof IOException || e.getCause() instanceof ChannelException) {
-            throw e;
-          } else {
-            throw new RuntimeException(e);
-          }
+          throw new RuntimeException(e);
         }
 
         int responseCode = response.getStatus().getCode();
@@ -666,7 +669,8 @@ public class KafkaIndexTaskClient
           }
           catch (InterruptedException e2) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e2);
+            e.addSuppressed(e2);
+            throw new RuntimeException(e);
           }
         }
       }
@@ -677,7 +681,7 @@ public class KafkaIndexTaskClient
       }
       catch (Exception e) {
         log.warn(e, "Exception while sending request");
-        throw new RuntimeException(e);
+        throw e;
       }
     }
   }

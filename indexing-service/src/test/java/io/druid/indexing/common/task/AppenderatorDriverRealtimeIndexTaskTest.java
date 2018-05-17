@@ -625,7 +625,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:50:00.000Z, event={t=3000000, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]"
         )
@@ -704,7 +704,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     handOffCallbacks.clear();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 2,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 1,
@@ -796,7 +796,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     handOffCallbacks.clear();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 2,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
@@ -813,7 +813,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
@@ -873,7 +873,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED, 1,
             RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
@@ -883,7 +883,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
@@ -1125,8 +1125,18 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       // Wait for the task to finish.
       TaskStatus status = statusFuture.get();
 
+      Map<String, Object> expectedMetrics = ImmutableMap.of(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          ImmutableMap.of(
+              RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+              RowIngestionMeters.PROCESSED, 0,
+              RowIngestionMeters.UNPARSEABLE, 0,
+              RowIngestionMeters.THROWN_AWAY, 0
+          )
+      );
+
       IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
-      Assert.assertEquals(ImmutableMap.of(), reportData.getRowStats());
+      Assert.assertEquals(expectedMetrics, reportData.getRowStats());
       Assert.assertTrue(status.getErrorMsg().contains("java.lang.IllegalArgumentException\n\tat java.nio.Buffer.position"));
     }
   }

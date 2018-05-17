@@ -144,10 +144,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private volatile FireDepartmentMetrics metrics = null;
 
   @JsonIgnore
-  private RowIngestionMeters rowIngestionMeters;
-
-  @JsonIgnore
-  private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final RowIngestionMeters rowIngestionMeters;
 
   @JsonIgnore
   private volatile boolean gracefullyStopped = false;
@@ -201,7 +198,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     }
 
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
   }
 
   @Override
@@ -306,7 +303,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         }
       }
 
-      rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
       ingestionState = IngestionState.BUILD_SEGMENTS;
 
       // Time to read data!
@@ -480,18 +476,16 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     Map<String, Object> totalsMap = Maps.newHashMap();
     Map<String, Object> averagesMap = Maps.newHashMap();
 
-    if (rowIngestionMeters != null) {
-      totalsMap.put(
-          "buildSegments",
-          rowIngestionMeters.getTotals()
-      );
-      averagesMap.put(
-          "buildSegments",
-          rowIngestionMeters.getMovingAverages()
-      );
-    }
+    totalsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    averagesMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getMovingAverages()
+    );
 
-    returnMap.put("averages", averagesMap);
+    returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     return Response.ok(returnMap).build();
   }
@@ -545,7 +539,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
     if (buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
     return unparseableEventsMap;
   }
@@ -553,12 +547,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metricsMap = Maps.newHashMap();
-    if (rowIngestionMeters != null) {
-      metricsMap.put(
-          "buildSegments",
-          rowIngestionMeters.getTotals()
-      );
-    }
+    metricsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
     return metricsMap;
   }
 

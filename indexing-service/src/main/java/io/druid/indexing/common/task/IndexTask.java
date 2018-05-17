@@ -174,13 +174,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private String errorMsg;
 
   @JsonIgnore
-  private RowIngestionMeters determinePartitionsMeters;
+  private final RowIngestionMeters determinePartitionsMeters;
 
   @JsonIgnore
-  private RowIngestionMeters buildSegmentsMeters;
-
-  @JsonIgnore
-  private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private final RowIngestionMeters buildSegmentsMeters;
 
   @JsonCreator
   public IndexTask(
@@ -238,7 +235,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
     }
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
+    this.determinePartitionsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.buildSegmentsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
   }
 
   @Override
@@ -314,14 +312,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     if (needsDeterminePartitions) {
       events.put(
-          "determinePartitions",
+          RowIngestionMeters.DETERMINE_PARTITIONS,
           IndexTaskUtils.getMessagesFromSavedParseExceptions(determinePartitionsSavedParseExceptions)
       );
     }
 
     if (needsBuildSegments) {
       events.put(
-          "buildSegments",
+          RowIngestionMeters.BUILD_SEGMENTS,
           IndexTaskUtils.getMessagesFromSavedParseExceptions(buildSegmentsSavedParseExceptions)
       );
     }
@@ -363,33 +361,29 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     if (needsDeterminePartitions) {
-      if (determinePartitionsMeters != null) {
-        totalsMap.put(
-            "determinePartitions",
-            determinePartitionsMeters.getTotals()
-        );
-        averagesMap.put(
-            "determinePartitions",
-            determinePartitionsMeters.getMovingAverages()
-        );
-      }
+      totalsMap.put(
+          RowIngestionMeters.DETERMINE_PARTITIONS,
+          determinePartitionsMeters.getTotals()
+      );
+      averagesMap.put(
+          RowIngestionMeters.DETERMINE_PARTITIONS,
+          determinePartitionsMeters.getMovingAverages()
+      );
     }
 
     if (needsBuildSegments) {
-      if (buildSegmentsMeters != null) {
-        totalsMap.put(
-            "buildSegments",
-            buildSegmentsMeters.getTotals()
-        );
-        averagesMap.put(
-            "buildSegments",
-            buildSegmentsMeters.getMovingAverages()
-        );
-      }
+      totalsMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          buildSegmentsMeters.getTotals()
+      );
+      averagesMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          buildSegmentsMeters.getMovingAverages()
+      );
     }
 
     returnMap.put("totals", totalsMap);
-    returnMap.put("averages", averagesMap);
+    returnMap.put("movingAverages", averagesMap);
     return Response.ok(returnMap).build();
   }
 
@@ -500,8 +494,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
         buildSegmentsSavedParseExceptions);
 
     if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("determinePartitions", determinePartitionsParseExceptionMessages);
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
 
     return unparseableEventsMap;
@@ -510,18 +504,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (determinePartitionsMeters != null) {
-      metrics.put(
-          "determinePartitions",
-          determinePartitionsMeters.getTotals()
-      );
-    }
-    if (buildSegmentsMeters != null) {
-      metrics.put(
-          "buildSegments",
-          buildSegmentsMeters.getTotals()
-      );
-    }
+    metrics.put(
+        RowIngestionMeters.DETERMINE_PARTITIONS,
+        determinePartitionsMeters.getTotals()
+    );
+
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        buildSegmentsMeters.getTotals()
+    );
+
     return metrics;
   }
 
@@ -723,7 +715,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     try (
         final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser(), firehoseTempDir)
     ) {
-      determinePartitionsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
       while (firehose.hasMore()) {
         try {
@@ -927,8 +918,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
         final Firehose firehose = firehoseFactory.connect(dataSchema.getParser(), firehoseTempDir)
     ) {
       driver.startJob();
-
-      buildSegmentsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
       while (firehose.hasMore()) {
         try {

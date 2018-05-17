@@ -27,6 +27,10 @@ import java.util.Map;
 
 public class DropwizardRowIngestionMeters implements RowIngestionMeters
 {
+  public static final String ONE_MINUTE_NAME = "1m";
+  public static final String FIVE_MINUTE_NAME = "5m";
+  public static final String FIFTEEN_MINUTE_NAME = "15m";
+
   private final MetricRegistry metricRegistry;
   private final Meter processed;
   private final Meter processedWithError;
@@ -124,9 +128,9 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     fifteenMinute.put(UNPARSEABLE, unparseable.getFifteenMinuteRate());
     fifteenMinute.put(THROWN_AWAY, thrownAway.getFifteenMinuteRate());
 
-    movingAverages.put("1m", oneMinute);
-    movingAverages.put("5m", fiveMinute);
-    movingAverages.put("15m", fifteenMinute);
+    movingAverages.put(ONE_MINUTE_NAME, oneMinute);
+    movingAverages.put(FIVE_MINUTE_NAME, fiveMinute);
+    movingAverages.put(FIFTEEN_MINUTE_NAME, fifteenMinute);
 
     return movingAverages;
   }

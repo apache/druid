@@ -494,8 +494,13 @@ public class KafkaSupervisor implements Supervisor
     try {
       return getCurrentTotalStats();
     }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      log.error("getStats() interrupted.");
+      throw new RuntimeException(ie);
+    }
+    catch (ExecutionException | TimeoutException eete) {
+      throw new RuntimeException(eete);
     }
   }
 
@@ -2215,27 +2220,32 @@ public class KafkaSupervisor implements Supervisor
     };
   }
 
+  /**
+   * Collect row ingestion stats from all tasks managed by this supervisor.
+   *
+   * @return A map of groupId->taskId->task row stats
+   *
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
   private Map<String, Object> getCurrentTotalStats() throws InterruptedException, ExecutionException, TimeoutException
   {
     Map<String, Object> allStats = Maps.newHashMap();
-    final List<ListenableFuture<Void>> futures = new ArrayList<>();
+    final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
 
     for (int groupId : taskGroups.keySet()) {
-      Map<String, Object> groupStats = (Map<String, Object>) allStats.get(String.valueOf(groupId));
-      if (groupStats == null) {
-        groupStats = Maps.newHashMap();
-        allStats.put(String.valueOf(groupId), groupStats);
-      }
-
-      final Map<String, Object> eGroupStats = groupStats;
       TaskGroup group = taskGroups.get(groupId);
       for (String taskId : group.taskIds()) {
         futures.add(
             Futures.transform(
                 taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, Void>) (currentStats) -> {
-                  eGroupStats.put(taskId, currentStats);
-                  return null;
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
                 }
             )
         );
@@ -2243,28 +2253,66 @@ public class KafkaSupervisor implements Supervisor
     }
 
     for (int groupId : pendingCompletionTaskGroups.keySet()) {
-      Map<String, Object> groupStats = (Map<String, Object>) allStats.get(String.valueOf(groupId));
-      if (groupStats == null) {
-        groupStats = Maps.newHashMap();
-        allStats.put(String.valueOf(groupId), groupStats);
-      }
-
-      final Map<String, Object> eGroupStats = groupStats;
       TaskGroup group = taskGroups.get(groupId);
       for (String taskId : group.taskIds()) {
         futures.add(
             Futures.transform(
                 taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, Void>) (currentStats) -> {
-                  eGroupStats.put(taskId, currentStats);
-                  return null;
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
                 }
             )
         );
       }
     }
 
-    Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    List<StatsFromTaskResult> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (StatsFromTaskResult result : results) {
+      Map<String, Object> groupMap = (Map<String, Object>) allStats.putIfAbsent(result.getGroupId(), Maps.newHashMap());
+      if (groupMap == null) {
+        groupMap = (Map<String, Object>) allStats.get(result.getGroupId());
+      }
+      groupMap.put(result.getTaskId(), result.getStats());
+    }
+
     return allStats;
   }
+
+  private static class StatsFromTaskResult
+  {
+    private final String groupId;
+    private final String taskId;
+    private final Map<String, Object> stats;
+
+    public StatsFromTaskResult(
+        int groupId,
+        String taskId,
+        Map<String, Object> stats
+    )
+    {
+      this.groupId = String.valueOf(groupId);
+      this.taskId = taskId;
+      this.stats = stats;
+    }
+
+    public String getGroupId()
+    {
+      return groupId;
+    }
+
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    public Map<String, Object> getStats()
+    {
+      return stats;
+    }
+  }
+
 }

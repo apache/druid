@@ -878,9 +878,9 @@ public class IndexTaskTest
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
     );
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
@@ -969,14 +969,14 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 4,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1
         ),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
 
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
@@ -988,14 +988,14 @@ public class IndexTaskTest
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
             "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
@@ -1092,7 +1092,14 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
+        ImmutableMap.of(
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.UNPARSEABLE, 0,
+            RowIngestionMeters.THROWN_AWAY, 0
+        ),
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
@@ -1104,9 +1111,9 @@ public class IndexTaskTest
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
@@ -1199,25 +1206,32 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 2
+        ),
+        RowIngestionMeters.BUILD_SEGMENTS,
+        ImmutableMap.of(
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.UNPARSEABLE, 0,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
             "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         new ArrayList<>()
     );
 
@@ -1362,9 +1376,9 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList("Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
