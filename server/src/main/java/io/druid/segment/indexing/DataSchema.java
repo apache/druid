@@ -68,9 +68,11 @@ public class DataSchema
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMapper.");
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
     this.parser = parser;
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
+
+    Preconditions.checkArgument(dataSource != null && !dataSource.isEmpty(), "dataSource cannot be null or empty. Please provide a dataSource.");
+    this.dataSource = dataSource;
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
