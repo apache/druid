@@ -88,7 +88,12 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        final DateTime dateTime = new DateTime(arg.eval(bindings).asLong(), chronology);
+        Object val = arg.eval(bindings).value();
+        if (val == null) {
+          // Return null if the argument if null.
+          return ExprEval.of(null);
+        }
+        final DateTime dateTime = new DateTime(val, chronology);
         switch (unit) {
           case EPOCH:
             return ExprEval.of(dateTime.getMillis() / 1000);

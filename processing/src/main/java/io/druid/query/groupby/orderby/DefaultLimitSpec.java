@@ -269,7 +269,7 @@ public class DefaultLimitSpec implements LimitSpec
 
   private Ordering<Row> metricOrdering(final String column, final Comparator comparator)
   {
-    return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsLast(comparator)));
+    return Ordering.from(Comparator.comparing((Row row) -> row.getRaw(column), Comparator.nullsFirst(comparator)));
   }
 
   private Ordering<Row> dimensionOrdering(final String dimension, final StringComparator comparator)

@@ -796,6 +796,9 @@ interface Function
     @Override
     protected ExprEval eval(ExprEval x, ExprEval y)
     {
+      if (NullHandling.sqlCompatible() && x.value() == null) {
+        return ExprEval.of(null);
+      }
       ExprType castTo;
       try {
         castTo = ExprType.valueOf(StringUtils.toUpperCase(y.asString()));
@@ -937,7 +940,7 @@ interface Function
       }
 
       final String arg = args.get(0).eval(bindings).asString();
-      return arg == null ? ExprEval.of(0) : ExprEval.of(arg.length());
+      return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
     }
   }
 

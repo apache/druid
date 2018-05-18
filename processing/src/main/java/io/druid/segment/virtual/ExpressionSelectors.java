@@ -248,23 +248,32 @@ public class ExpressionSelectors
   {
     final Map<String, Supplier<Object>> suppliers = Maps.newHashMap();
     for (String columnName : Parser.findRequiredBindings(expression)) {
-      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+      final ColumnCapabilities columnCapabilities = columnSelectorFactory
+              .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getFloat;
+        ColumnValueSelector selector = columnSelectorFactory
+                .makeColumnValueSelector(columnName);
+        supplier = makeNullableSupplier(selector, selector::getFloat);
       } else if (nativeType == ValueType.LONG) {
-        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getLong;
+        ColumnValueSelector selector = columnSelectorFactory
+                .makeColumnValueSelector(columnName);
+        supplier = makeNullableSupplier(selector, selector::getLong);
       } else if (nativeType == ValueType.DOUBLE) {
-        supplier = columnSelectorFactory.makeColumnValueSelector(columnName)::getDouble;
+        ColumnValueSelector selector = columnSelectorFactory
+                .makeColumnValueSelector(columnName);
+        supplier = makeNullableSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
+                columnSelectorFactory
+                        .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName))
         );
       } else if (nativeType == null) {
         // Unknown ValueType. Try making an Object selector and see if that gives us anything useful.
-        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
+        supplier = supplierFromObjectSelector(columnSelectorFactory
+                .makeColumnValueSelector(columnName));
       } else {
         // Unhandleable ValueType (COMPLEX).
         supplier = null;
@@ -289,6 +298,23 @@ public class ExpressionSelectors
       };
     } else {
       return Parser.withSuppliers(suppliers);
+    }
+  }
+
+  private static <T> Supplier<T> makeNullableSupplier(
+      ColumnValueSelector selector,
+      Supplier<T> supplier
+  )
+  {
+    if (NullHandling.replaceWithDefault()) {
+      return supplier;
+    } else {
+      return () -> {
+        if (selector.isNull()) {
+          return null;
+        }
+        return supplier.get();
+      };
     }
   }
 

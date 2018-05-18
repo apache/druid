@@ -272,6 +272,9 @@ class UnaryMinusExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
+    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+      return ExprEval.of(null);
+    }
     if (ret.type() == ExprType.LONG) {
       return ExprEval.of(-ret.asLong());
     }
@@ -307,6 +310,9 @@ class UnaryNotExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
+    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+      return ExprEval.of(null);
+    }
     // conforming to other boolean-returning binary operators
     ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
     return ExprEval.of(!ret.asBoolean(), retType);
