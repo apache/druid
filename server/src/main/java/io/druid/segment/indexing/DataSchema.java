@@ -72,7 +72,7 @@ public class DataSchema
     this.parser = parser;
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
 
-    Preconditions.checkArgument(Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
     this.dataSource = dataSource;
 
     if (granularitySpec == null) {
