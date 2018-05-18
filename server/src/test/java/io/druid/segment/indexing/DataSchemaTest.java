@@ -305,6 +305,11 @@ public class DataSchemaTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
+    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectMessage(
+        "dataSource cannot be null or empty. Please provide a dataSource."
+    );
+
     DataSchema schema = new DataSchema(
         "",
         parser,
@@ -315,11 +320,6 @@ public class DataSchemaTest
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
         null,
         jsonMapper
-    );
-
-    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectMessage(
-        "dataSource cannot be null or empty. Please provide a dataSource."
     );
   }
 
