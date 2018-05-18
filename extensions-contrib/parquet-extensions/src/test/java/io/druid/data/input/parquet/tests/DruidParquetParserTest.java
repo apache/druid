@@ -1,4 +1,22 @@
-package io.druid.data.input.parquet;
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package io.druid.data.input.parquet.tests;
 
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -53,7 +71,34 @@ public class DruidParquetParserTest extends DruidParquetInputTest
     assertTrue(row.getDimension("max_access_with_non_existing_key").isEmpty());
     assertTrue(row.getDimension("max_access_with_un_available_map").isEmpty());
     assertTrue(row.getDimension("array_access_with_index").equals(Collections.singletonList("20")));
-    assertTrue(row.getDimension("array_access_with_default_index").equals(Collections.singletonList("10")));
+    assertTrue(row.getDimension("array_access_with_default_index").equals(Arrays.asList("10", "20")));
+    assertTrue(row.getDimension("array_access_with_overbound_index").isEmpty());
+    assertTrue(row.getDimension("union_attribute").isEmpty());
+    assertTrue(row.getDimension("tag_ids").equals(Arrays.asList("100", "101")));
+    assertTrue(row.getDimension("reference_ids").equals(Arrays.asList("10", "20")));
+    assertTrue(row.getDimension("cost_a").equals(Arrays.asList("10.35", "9.4")));
+    assertTrue(row.getDimension("cost_b_1st_tag").equals(Collections.singletonList("2.7")));
+  }
+
+  @Test
+  public void testAllDatatypeCombinationsParserNew() throws IOException, InterruptedException
+  {
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
+            "example/parser/events_with_all_datatype_test_combinations_new.json"));
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+    GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+    System.out.println("cost_b_2nd_tag_sum -> " + row.getMetric("cost_b_2nd_tag_sum"));
+    assertTrue(row.getDimension("eventId").equals(Collections.singletonList("1")));
+    assertTrue(row.getDimension("valid_map_access").equals(Collections.singletonList("US")));
+    assertTrue(row.getDimension("max_access_with_non_existing_key").isEmpty());
+    assertTrue(row.getDimension("max_access_with_un_available_map").isEmpty());
+    assertTrue(row.getDimension("array_access_with_index").equals(Collections.singletonList("20")));
+    assertTrue(row.getDimension("array_access_with_default_index").equals(Arrays.asList("10", "20")));
     assertTrue(row.getDimension("array_access_with_overbound_index").isEmpty());
     assertTrue(row.getDimension("union_attribute").isEmpty());
     assertTrue(row.getDimension("tag_ids").equals(Arrays.asList("100", "101")));

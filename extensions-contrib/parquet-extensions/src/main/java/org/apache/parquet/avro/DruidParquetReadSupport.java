@@ -46,7 +46,7 @@ public class DruidParquetReadSupport extends AvroReadSupport<GenericRecord>
 {
 
   /**
-   * Select the columns from the parquet schema that are used in the schema of the ingestion job
+   * Select the columns from the parquet schema that are used in the schema of the ingestion job.
    *
    * @param context The context of the file to be read
    *
