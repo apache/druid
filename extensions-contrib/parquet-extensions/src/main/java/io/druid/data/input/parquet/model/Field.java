@@ -26,9 +26,10 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 public final class Field
 {
+  private static final int DEFAULT_INDEX = -1;
 
   private final String rootFieldName;
-  private final int index;
+  private final Integer index;
   private final Utf8 key;
   private final FieldType fieldType;
   private final Field field;
@@ -37,7 +38,7 @@ public final class Field
   @JsonCreator
   Field(
       @JsonProperty("rootFieldName") String rootFieldName,
-      @JsonProperty("index") int index,
+      @JsonProperty("index") Integer index,
       @JsonProperty(value = "key") Utf8 key,
       @JsonProperty(value = "fieldType") FieldType fieldType,
       @JsonProperty("field") Field field,
@@ -45,7 +46,7 @@ public final class Field
   )
   {
     this.rootFieldName = rootFieldName;
-    this.index = index;
+    this.index = index == null ? DEFAULT_INDEX : index;
     this.key = key;
     this.fieldType = fieldType;
     this.field = field;
@@ -100,7 +101,7 @@ public final class Field
 
     Field field = (Field) o;
 
-    if (index != field.index) {
+    if (!index.equals(field.index)) {
       return false;
     }
     if (rootFieldName != null ? !rootFieldName.equals(field.rootFieldName) : field.rootFieldName != null) {

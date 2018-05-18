@@ -1,0 +1,500 @@
+[
+  {
+    "suite_name": "test_generic_record_builder",
+    "description": "Test Generic Record Builder.",
+    "druid_spec": {
+      "type": "index_hadoop",
+      "spec": {
+        "dataSchema": {
+          "dataSource": "test_datasource",
+          "parser": {
+            "type": "parquet",
+            "binaryAsString": true,
+            "parquetParser": {
+              "fields": [
+                {
+                  "key": "field1",
+                  "fieldType": "GENERIC_RECORD",
+                  "dimensionName": "gr_field1_dim"
+                }
+              ]
+            },
+            "parseSpec": {
+              "format": "timeAndDims",
+              "timestampSpec": {
+                "column": "eventTimestamp",
+                "format": "millis"
+              },
+              "dimensionsSpec": {
+                "dimensions": [
+                  "gr_field1_dim"
+                ],
+                "dimensionExclusions": [
+                ],
+                "spatialDimensions": [
+                ]
+              }
+            }
+          },
+          "metricsSpec": [
+            {
+              "type": "count",
+              "name": "count"
+            },
+            {
+              "type": "doubleSum",
+              "name": "cost_b_2nd_tag_sum",
+              "fieldName": "cost_b_2nd_tag"
+            }
+          ],
+          "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "DAY",
+            "queryGranularity": "DAY",
+            "rollup": true,
+            "intervals": [
+              "2017-07-26T00:00:00.000Z/2017-07-27T00:59:59.000Z"
+            ]
+          }
+        },
+        "ioConfig": {
+          "type": "hadoop",
+          "inputSpec": {
+            "type": "static",
+            "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+            "paths": "example/events/events_with_all_datatypes.parquet"
+          },
+          "segmentOutputPath": "/tmp/segments"
+        },
+        "tuningConfig": {
+          "type": "hadoop",
+          "workingPath": "tmp/working_path",
+          "version": "2017-02-09T07:36:09.249Z",
+          "partitionsSpec": {
+            "type": "hashed",
+            "targetPartitionSize": 750000,
+            "maxPartitionSize": 750000,
+            "assumeGrouped": false,
+            "numShards": -1,
+            "partitionDimensions": [
+            ]
+          },
+          "shardSpecs": {
+          },
+          "indexSpec": {
+            "bitmap": {
+              "type": "concise"
+            },
+            "dimensionCompression": "lz4",
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+          },
+          "maxRowsInMemory": 75000,
+          "leaveIntermediate": true,
+          "cleanupOnFailure": true,
+          "overwriteFiles": false,
+          "ignoreInvalidRows": false,
+          "jobProperties": {
+            "hdp.version": "2.5.3.58-3",
+            "mapreduce.job.user.classpath.first": "true",
+            "mapreduce.task.timeout": "1800000",
+            "mapreduce.map.memory.mb": "2048",
+            "mapreduce.map.java.opts": "-server -Xmx3072m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.reduce.memory.mb": "2048",
+            "mapreduce.reduce.java.opts": "-server -Xmx8192m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.job.queuename": "experimentation",
+            "mapred.child.ulimit": "16777216",
+            "mapreduce.map.output.compress": "true",
+            "mapred.map.output.compress.codec": "org.apache.hadoop.io.compress.GzipCodec"
+          },
+          "combineText": false,
+          "useCombiner": false,
+          "buildV9Directly": false,
+          "numBackgroundPersistThreads": 0,
+          "forceExtendableShardSpecs": false
+        },
+        "uniqueId": "715f31321096480b869aca2cc9c5d252"
+      },
+      "hadoopDependencyCoordinates": [
+        "org.apache.hadoop:hadoop-client:2.6.0"
+      ]
+    }
+  },
+  {
+    "suite_name": "test_generic_record_builder_nested",
+    "description": "Test Generic Record with Nested values.",
+    "druid_spec": {
+      "type": "index_hadoop",
+      "spec": {
+        "dataSchema": {
+          "dataSource": "test_datasource",
+          "parser": {
+            "type": "parquet",
+            "binaryAsString": true,
+            "parquetParser": {
+              "fields": [
+                {
+                  "key": "field1",
+                  "fieldType": "GENERIC_RECORD",
+                  "dimensionName": "field1"
+                },
+                {
+                  "key": "field1",
+                  "fieldType": "GENERIC_RECORD",
+                  "field": {
+                    "key": "field2",
+                    "fieldType": "GENERIC_RECORD"
+                  },
+                  "dimensionName": "field2"
+                }
+              ]
+            },
+            "parseSpec": {
+              "format": "timeAndDims",
+              "timestampSpec": {
+                "column": "eventTimestamp",
+                "format": "millis"
+              },
+              "dimensionsSpec": {
+                "dimensions": [
+                  "field1",
+                  "field2"
+                ],
+                "dimensionExclusions": [
+                ],
+                "spatialDimensions": [
+                ]
+              }
+            }
+          },
+          "metricsSpec": [
+            {
+              "type": "count",
+              "name": "count"
+            },
+            {
+              "type": "doubleSum",
+              "name": "cost_b_2nd_tag_sum",
+              "fieldName": "cost_b_2nd_tag"
+            }
+          ],
+          "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "DAY",
+            "queryGranularity": "DAY",
+            "rollup": true,
+            "intervals": [
+              "2017-07-26T00:00:00.000Z/2017-07-27T00:59:59.000Z"
+            ]
+          }
+        },
+        "ioConfig": {
+          "type": "hadoop",
+          "inputSpec": {
+            "type": "static",
+            "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+            "paths": "example/events/events_with_all_datatypes.parquet"
+          },
+          "segmentOutputPath": "/tmp/segments"
+        },
+        "tuningConfig": {
+          "type": "hadoop",
+          "workingPath": "tmp/working_path",
+          "version": "2017-02-09T07:36:09.249Z",
+          "partitionsSpec": {
+            "type": "hashed",
+            "targetPartitionSize": 750000,
+            "maxPartitionSize": 750000,
+            "assumeGrouped": false,
+            "numShards": -1,
+            "partitionDimensions": [
+            ]
+          },
+          "shardSpecs": {
+          },
+          "indexSpec": {
+            "bitmap": {
+              "type": "concise"
+            },
+            "dimensionCompression": "lz4",
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+          },
+          "maxRowsInMemory": 75000,
+          "leaveIntermediate": true,
+          "cleanupOnFailure": true,
+          "overwriteFiles": false,
+          "ignoreInvalidRows": false,
+          "jobProperties": {
+            "hdp.version": "2.5.3.58-3",
+            "mapreduce.job.user.classpath.first": "true",
+            "mapreduce.task.timeout": "1800000",
+            "mapreduce.map.memory.mb": "2048",
+            "mapreduce.map.java.opts": "-server -Xmx3072m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.reduce.memory.mb": "2048",
+            "mapreduce.reduce.java.opts": "-server -Xmx8192m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.job.queuename": "experimentation",
+            "mapred.child.ulimit": "16777216",
+            "mapreduce.map.output.compress": "true",
+            "mapred.map.output.compress.codec": "org.apache.hadoop.io.compress.GzipCodec"
+          },
+          "combineText": false,
+          "useCombiner": false,
+          "buildV9Directly": false,
+          "numBackgroundPersistThreads": 0,
+          "forceExtendableShardSpecs": false
+        },
+        "uniqueId": "715f31321096480b869aca2cc9c5d252"
+      },
+      "hadoopDependencyCoordinates": [
+        "org.apache.hadoop:hadoop-client:2.6.0"
+      ]
+    }
+  },
+  {
+    "suite_name": "test_union_type",
+    "description": "Test union Type Field.",
+    "druid_spec": {
+      "type": "index_hadoop",
+      "spec": {
+        "dataSchema": {
+          "dataSource": "test_datasource",
+          "parser": {
+            "type": "parquet",
+            "binaryAsString": true,
+            "parquetParser": {
+              "fields": [
+                {
+                  "key": "field1",
+                  "fieldType": "UNION"
+                }
+              ]
+            },
+            "parseSpec": {
+              "format": "timeAndDims",
+              "timestampSpec": {
+                "column": "eventTimestamp",
+                "format": "millis"
+              },
+              "dimensionsSpec": {
+                "dimensions": [
+                  "field1"
+                ],
+                "dimensionExclusions": [
+                ],
+                "spatialDimensions": [
+                ]
+              }
+            }
+          },
+          "metricsSpec": [
+            {
+              "type": "count",
+              "name": "count"
+            },
+            {
+              "type": "doubleSum",
+              "name": "cost_b_2nd_tag_sum",
+              "fieldName": "cost_b_2nd_tag"
+            }
+          ],
+          "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "DAY",
+            "queryGranularity": "DAY",
+            "rollup": true,
+            "intervals": [
+              "2017-07-26T00:00:00.000Z/2017-07-27T00:59:59.000Z"
+            ]
+          }
+        },
+        "ioConfig": {
+          "type": "hadoop",
+          "inputSpec": {
+            "type": "static",
+            "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+            "paths": "example/events/events_with_all_datatypes.parquet"
+          },
+          "segmentOutputPath": "/tmp/segments"
+        },
+        "tuningConfig": {
+          "type": "hadoop",
+          "workingPath": "tmp/working_path",
+          "version": "2017-02-09T07:36:09.249Z",
+          "partitionsSpec": {
+            "type": "hashed",
+            "targetPartitionSize": 750000,
+            "maxPartitionSize": 750000,
+            "assumeGrouped": false,
+            "numShards": -1,
+            "partitionDimensions": [
+            ]
+          },
+          "shardSpecs": {
+          },
+          "indexSpec": {
+            "bitmap": {
+              "type": "concise"
+            },
+            "dimensionCompression": "lz4",
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+          },
+          "maxRowsInMemory": 75000,
+          "leaveIntermediate": true,
+          "cleanupOnFailure": true,
+          "overwriteFiles": false,
+          "ignoreInvalidRows": false,
+          "jobProperties": {
+            "hdp.version": "2.5.3.58-3",
+            "mapreduce.job.user.classpath.first": "true",
+            "mapreduce.task.timeout": "1800000",
+            "mapreduce.map.memory.mb": "2048",
+            "mapreduce.map.java.opts": "-server -Xmx3072m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.reduce.memory.mb": "2048",
+            "mapreduce.reduce.java.opts": "-server -Xmx8192m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.job.queuename": "experimentation",
+            "mapred.child.ulimit": "16777216",
+            "mapreduce.map.output.compress": "true",
+            "mapred.map.output.compress.codec": "org.apache.hadoop.io.compress.GzipCodec"
+          },
+          "combineText": false,
+          "useCombiner": false,
+          "buildV9Directly": false,
+          "numBackgroundPersistThreads": 0,
+          "forceExtendableShardSpecs": false
+        },
+        "uniqueId": "715f31321096480b869aca2cc9c5d252"
+      },
+      "hadoopDependencyCoordinates": [
+        "org.apache.hadoop:hadoop-client:2.6.0"
+      ]
+    }
+  },
+  {
+    "suite_name": "test_union_type_with_map",
+    "description": "Test union Type Field.",
+    "druid_spec": {
+      "type": "index_hadoop",
+      "spec": {
+        "dataSchema": {
+          "dataSource": "test_datasource",
+          "parser": {
+            "type": "parquet",
+            "binaryAsString": true,
+            "parquetParser": {
+              "fields": [
+                {
+                  "key": "field1",
+                  "fieldType": "UNION",
+                  "field": {
+                    "key": "map_key",
+                    "rootFieldName": "map_key",
+                    "fieldType": "MAP"
+                  },
+                  "dimensionName": "field1"
+                }
+              ]
+            },
+            "parseSpec": {
+              "format": "timeAndDims",
+              "timestampSpec": {
+                "column": "eventTimestamp",
+                "format": "millis"
+              },
+              "dimensionsSpec": {
+                "dimensions": [
+                  "field1"
+                ],
+                "dimensionExclusions": [
+                ],
+                "spatialDimensions": [
+                ]
+              }
+            }
+          },
+          "metricsSpec": [
+            {
+              "type": "count",
+              "name": "count"
+            },
+            {
+              "type": "doubleSum",
+              "name": "cost_b_2nd_tag_sum",
+              "fieldName": "cost_b_2nd_tag"
+            }
+          ],
+          "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "DAY",
+            "queryGranularity": "DAY",
+            "rollup": true,
+            "intervals": [
+              "2017-07-26T00:00:00.000Z/2017-07-27T00:59:59.000Z"
+            ]
+          }
+        },
+        "ioConfig": {
+          "type": "hadoop",
+          "inputSpec": {
+            "type": "static",
+            "inputFormat": "io.druid.data.input.parquet.DruidParquetInputFormat",
+            "paths": "example/events/events_with_all_datatypes.parquet"
+          },
+          "segmentOutputPath": "/tmp/segments"
+        },
+        "tuningConfig": {
+          "type": "hadoop",
+          "workingPath": "tmp/working_path",
+          "version": "2017-02-09T07:36:09.249Z",
+          "partitionsSpec": {
+            "type": "hashed",
+            "targetPartitionSize": 750000,
+            "maxPartitionSize": 750000,
+            "assumeGrouped": false,
+            "numShards": -1,
+            "partitionDimensions": [
+            ]
+          },
+          "shardSpecs": {
+          },
+          "indexSpec": {
+            "bitmap": {
+              "type": "concise"
+            },
+            "dimensionCompression": "lz4",
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+          },
+          "maxRowsInMemory": 75000,
+          "leaveIntermediate": true,
+          "cleanupOnFailure": true,
+          "overwriteFiles": false,
+          "ignoreInvalidRows": false,
+          "jobProperties": {
+            "hdp.version": "2.5.3.58-3",
+            "mapreduce.job.user.classpath.first": "true",
+            "mapreduce.task.timeout": "1800000",
+            "mapreduce.map.memory.mb": "2048",
+            "mapreduce.map.java.opts": "-server -Xmx3072m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.reduce.memory.mb": "2048",
+            "mapreduce.reduce.java.opts": "-server -Xmx8192m -Duser.timezone=UTC -Dfile.encoding=UTF-8",
+            "mapreduce.job.queuename": "experimentation",
+            "mapred.child.ulimit": "16777216",
+            "mapreduce.map.output.compress": "true",
+            "mapred.map.output.compress.codec": "org.apache.hadoop.io.compress.GzipCodec"
+          },
+          "combineText": false,
+          "useCombiner": false,
+          "buildV9Directly": false,
+          "numBackgroundPersistThreads": 0,
+          "forceExtendableShardSpecs": false
+        },
+        "uniqueId": "715f31321096480b869aca2cc9c5d252"
+      },
+      "hadoopDependencyCoordinates": [
+        "org.apache.hadoop:hadoop-client:2.6.0"
+      ]
+    }
+  }
+]

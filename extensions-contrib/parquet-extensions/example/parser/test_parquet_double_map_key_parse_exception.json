@@ -36,18 +36,18 @@
             },
             {
               "key": "referenceIds",
-              "fieldType": "ARRAY",
+              "fieldType": "LIST",
               "index": 1,
               "dimensionName": "array_access_with_index"
             },
             {
               "key": "referenceIds",
-              "fieldType": "ARRAY",
+              "fieldType": "LIST",
               "dimensionName": "array_access_with_default_index"
             },
             {
               "key": "referenceIds",
-              "fieldType": "ARRAY",
+              "fieldType": "LIST",
               "index": 3,
               "dimensionName": "array_access_with_overbound_index"
             },
