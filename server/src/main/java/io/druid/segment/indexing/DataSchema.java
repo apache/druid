@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -71,7 +72,7 @@ public class DataSchema
     this.parser = parser;
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
 
-    Preconditions.checkArgument(dataSource != null && !dataSource.isEmpty(), "dataSource cannot be null or empty. Please provide a dataSource.");
+    Preconditions.checkArgument(Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
     this.dataSource = dataSource;
 
     if (granularitySpec == null) {
