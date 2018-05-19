@@ -21,13 +21,14 @@ package io.druid.segment.realtime.plumber;
 
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 public class ServerTimeRejectionPolicyFactory implements RejectionPolicyFactory
 {
   @Override
-  public RejectionPolicy create(final Period windowPeriod)
+  public RejectionPolicy create(final Period windowPeriod, final Granularity segmentGranularity)
   {
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
 

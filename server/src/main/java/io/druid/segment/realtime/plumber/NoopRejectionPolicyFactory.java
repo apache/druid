@@ -20,13 +20,14 @@
 package io.druid.segment.realtime.plumber;
 
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 public class NoopRejectionPolicyFactory implements RejectionPolicyFactory
 {
   @Override
-  public RejectionPolicy create(Period windowPeriod)
+  public RejectionPolicy create(Period windowPeriod, Granularity segmentGranularity)
   {
     return new RejectionPolicy()
     {

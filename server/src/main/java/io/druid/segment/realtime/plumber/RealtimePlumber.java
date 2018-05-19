@@ -153,7 +153,8 @@ public class RealtimePlumber implements Plumber
   {
     this.schema = schema;
     this.config = config;
-    this.rejectionPolicy = config.getRejectionPolicyFactory().create(config.getWindowPeriod());
+    this.rejectionPolicy = config.getRejectionPolicyFactory().create(
+        config.getWindowPeriod(), schema.getGranularitySpec().getSegmentGranularity());
     this.metrics = metrics;
     this.segmentAnnouncer = segmentAnnouncer;
     this.dataSegmentPusher = dataSegmentPusher;

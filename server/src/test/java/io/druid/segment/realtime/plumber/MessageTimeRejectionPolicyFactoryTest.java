@@ -33,7 +33,7 @@ public class MessageTimeRejectionPolicyFactoryTest
   public void testAccept()
   {
     Period period = new Period("PT10M");
-    RejectionPolicy rejectionPolicy = new MessageTimeRejectionPolicyFactory().create(period);
+    RejectionPolicy rejectionPolicy = new MessageTimeRejectionPolicyFactory().create(period, null);
 
     DateTime now = DateTimes.nowUtc();
     DateTime past = now.minus(period).minus(1);

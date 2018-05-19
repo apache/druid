@@ -34,7 +34,7 @@ public class ServerTimeRejectionPolicyFactoryTest
   {
     Period period = new Period("PT10M");
 
-    RejectionPolicy rejectionPolicy = new ServerTimeRejectionPolicyFactory().create(period);
+    RejectionPolicy rejectionPolicy = new ServerTimeRejectionPolicyFactory().create(period, null);
 
     DateTime now = DateTimes.nowUtc();
     DateTime past = now.minus(period).minus(100);

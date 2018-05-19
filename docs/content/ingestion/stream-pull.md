@@ -167,6 +167,7 @@ The following policies are available:
 
 * `serverTime` &ndash; The recommended policy for "current time" data, it is optimal for current data that is generated and ingested in real time. Uses `windowPeriod` to accept only those events that are inside the window looking forward and back.
 * `messageTime` &ndash; Can be used for non-"current time" as long as that data is relatively in sequence. Events are rejected if they are less than `windowPeriod` from the event with the latest timestamp. Hand off only occurs if an event is seen after the segmentGranularity and `windowPeriod` (hand off will not periodically occur unless you have a constant stream of data).
+* `segmentGranularity` &ndash; Can be used for non-"current time" as long as that data is relatively in sequence. Events are accepted if they are within [this `segmentGranularity` start, "latest timestamp"] or [last `segmentGranularity` start, "latest timestamp"] if in window. Events are rejected if they are greater than "current time". Hand off only occurs if an event is seen after the segmentGranularity and `windowPeriod` (hand off will not periodically occur unless you have a constant stream of data).
 * `none` &ndash; All events are accepted. Never hands off data unless shutdown() is called on the configured firehose.
 
 #### IndexSpec
