@@ -24,31 +24,29 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
 import java.util.Set;
 
 /**
- */
+*/
 class StorageLocation
 {
   private static final Logger log = new Logger(StorageLocation.class);
 
-  private final Path path;
+  private final File path;
   private final long maxSize;
   private final long freeSpaceToKeep;
   private final Set<DataSegment> segments;
 
   private volatile long currSize = 0;
 
-  StorageLocation(Path path, long maxSize, @Nullable Double freeSpacePercent)
+  StorageLocation(File path, long maxSize, @Nullable Double freeSpacePercent)
   {
     this.path = path;
     this.maxSize = maxSize;
 
     if (freeSpacePercent != null) {
-      long totalSpaceInPartition = getTotalSpaceInPartition();
+      long totalSpaceInPartition = path.getTotalSpace();
       this.freeSpaceToKeep = (long) ((freeSpacePercent * totalSpaceInPartition) / 100);
       log.info(
           "SegmentLocation[%s] will try and maintain [%d:%d] free space while loading segments.",
@@ -63,7 +61,7 @@ class StorageLocation
     this.segments = Sets.newHashSet();
   }
 
-  Path getPath()
+  File getPath()
   {
     return path;
   }
@@ -92,19 +90,19 @@ class StorageLocation
     if (available() < segment.getSize()) {
       log.warn(
           "Segment[%s:%,d] too lage for storage[%s:%,d].",
-          segment.getIdentifier(), segment.getSize(), path, available()
+          segment.getIdentifier(), segment.getSize(), getPath(), available()
       );
       return false;
     }
 
     if (freeSpaceToKeep > 0) {
-      long currFreeSpace = getCurrFreeSpace();
+      long currFreeSpace = path.getFreeSpace();
       if ((freeSpaceToKeep + segment.getSize()) > currFreeSpace) {
         log.warn(
             "Segment[%s:%,d] too large for storage[%s:%,d] to maintain suggested freeSpace[%d], current freeSpace is [%d].",
             segment.getIdentifier(),
             segment.getSize(),
-            path,
+            getPath(),
             available(),
             freeSpaceToKeep,
             currFreeSpace
@@ -119,29 +117,5 @@ class StorageLocation
   synchronized long available()
   {
     return maxSize - currSize;
-  }
-
-  private long getCurrFreeSpace()
-  {
-    long currFreeSpace = 0;
-    try {
-      currFreeSpace = Files.getFileStore(path).getUsableSpace();
-    }
-    catch (IOException e) {
-      log.warn(e, "Unable to get free space of SegmentLocation[%s].", path);
-    }
-    return currFreeSpace;
-  }
-
-  private long getTotalSpaceInPartition()
-  {
-    long totalSpaceInPartition = 0;
-    try {
-      totalSpaceInPartition = Files.getFileStore(path).getTotalSpace();
-    }
-    catch (IOException e) {
-      log.warn(e, "Unable to get total size of SegmentLocation[%s].", path);
-    }
-    return totalSpaceInPartition;
   }
 }
