@@ -52,11 +52,9 @@ public final class Field
     this.field = field;
     this.dimensionName = dimensionName;
     //Having the null check at last to give more clarity on what field the error was!
-    Preconditions.checkNotNull(this.key, String.format("ParquetParser field [%s] cannot have null field key ", this));
+    Preconditions.checkNotNull(this.key, "ParquetParser field " + this + " cannot have null field key ");
     Preconditions.checkNotNull(
-        this.fieldType,
-        String.format("ParquetParser field [%s] cannot have null FieldType ", this)
-    );
+        this.fieldType, "ParquetParser field " + this + " cannot have null FieldType ");
   }
 
   public String getRootFieldName()
