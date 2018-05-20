@@ -20,7 +20,6 @@
 package io.druid.server.coordinator;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -30,8 +29,6 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -56,6 +53,8 @@ import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;
@@ -98,14 +97,8 @@ public class DruidCoordinator
 {
   public static Comparator<DataSegment> SEGMENT_COMPARATOR = Ordering.from(Comparators.intervalsByEndThenStart())
                                                                      .onResultOf(
-                                                                         new Function<DataSegment, Interval>()
-                                                                         {
-                                                                           @Override
-                                                                           public Interval apply(DataSegment segment)
-                                                                           {
-                                                                             return segment.getInterval();
-                                                                           }
-                                                                         })
+                                                                         (Function<DataSegment, Interval>) segment -> segment
+                                                                             .getInterval())
                                                                      .compound(Ordering.<DataSegment>natural())
                                                                      .reverse();
 
@@ -259,6 +252,7 @@ public class DruidCoordinator
                   .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
                   .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
             });
+        break; // only the first matching rule applies
       }
     }
 
@@ -304,7 +298,11 @@ public class DruidCoordinator
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
         if (loadedView != null) {
-          segments.removeAll(loadedView.getSegments());
+          // This does not use segments.removeAll(loadedView.getSegments()) for performance reasons.
+          // Please see https://github.com/druid-io/druid/pull/5632 and LoadStatusBenchmark for more info.
+          for (DataSegment serverSegment : loadedView.getSegments()) {
+            segments.remove(serverSegment);
+          }
         }
       }
       final int unloadedSegmentSize = segments.size();
@@ -572,7 +570,8 @@ public class DruidCoordinator
                 if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()) {
                   theRunnable.run();
                 }
-                if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()) { // (We might no longer be leader)
+                if (coordLeaderSelector.isLeader()
+                    && startingLeaderCounter == coordLeaderSelector.localTerm()) { // (We might no longer be leader)
                   return ScheduledExecutors.Signal.REPEAT;
                 } else {
                   return ScheduledExecutors.Signal.STOP;
@@ -705,27 +704,8 @@ public class DruidCoordinator
                   // Display info about all historical servers
                   Iterable<ImmutableDruidServer> servers = FunctionalIterable
                       .create(serverInventoryView.getInventory())
-                      .filter(
-                          new Predicate<DruidServer>()
-                          {
-                            @Override
-                            public boolean apply(
-                                DruidServer input
-                            )
-                            {
-                              return input.segmentReplicatable();
-                            }
-                          }
-                      ).transform(
-                          new Function<DruidServer, ImmutableDruidServer>()
-                          {
-                            @Override
-                            public ImmutableDruidServer apply(DruidServer input)
-                            {
-                              return input.toImmutableDruidServer();
-                            }
-                          }
-                      );
+                      .filter(DruidServer::segmentReplicatable)
+                      .transform(DruidServer::toImmutableDruidServer);
 
                   if (log.isDebugEnabled()) {
                     log.debug("Servers");

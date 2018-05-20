@@ -26,8 +26,8 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedColumnarDoublesSuppliers;
 import io.druid.segment.data.ColumnarDoubles;
+import io.druid.segment.data.CompressedColumnarDoublesSuppliers;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

@@ -25,11 +25,13 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -39,71 +41,66 @@ public class Metadata
 {
   // container is used for arbitrary key-value pairs in segment metadata e.g.
   // kafka firehose uses it to store commit offset
-  @JsonProperty
   private final Map<String, Object> container;
+  @Nullable
+  private final AggregatorFactory[] aggregators;
+  @Nullable
+  private final TimestampSpec timestampSpec;
+  @Nullable
+  private final Granularity queryGranularity;
+  @Nullable
+  private final Boolean rollup;
 
-  @JsonProperty
-  private AggregatorFactory[] aggregators;
-
-  @JsonProperty
-  private TimestampSpec timestampSpec;
-
-  @JsonProperty
-  private Granularity queryGranularity;
-
-  @JsonProperty
-  private Boolean rollup;
-
-  public Metadata()
+  public Metadata(
+      @JsonProperty("container") @Nullable Map<String, Object> container,
+      @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
+      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec,
+      @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
+      @JsonProperty("rollup") @Nullable Boolean rollup
+  )
   {
-    container = new ConcurrentHashMap<>();
+    this.container = container == null ? new ConcurrentHashMap<>() : container;
+    this.aggregators = aggregators;
+    this.timestampSpec = timestampSpec;
+    this.queryGranularity = queryGranularity;
+    this.rollup = rollup;
   }
 
+  @JsonProperty
+  public Map<String, Object> getContainer()
+  {
+    return container;
+  }
+
+  @JsonProperty
+  @Nullable
   public AggregatorFactory[] getAggregators()
   {
     return aggregators;
   }
 
-  public Metadata setAggregators(AggregatorFactory[] aggregators)
-  {
-    this.aggregators = aggregators;
-    return this;
-  }
-
+  @JsonProperty
+  @Nullable
   public TimestampSpec getTimestampSpec()
   {
     return timestampSpec;
   }
 
-  public Metadata setTimestampSpec(TimestampSpec timestampSpec)
-  {
-    this.timestampSpec = timestampSpec;
-    return this;
-  }
-
+  @JsonProperty
+  @Nullable
   public Granularity getQueryGranularity()
   {
     return queryGranularity;
   }
 
-  public Metadata setQueryGranularity(Granularity queryGranularity)
-  {
-    this.queryGranularity = queryGranularity;
-    return this;
-  }
-
+  @JsonProperty
+  @Nullable
   public Boolean isRollup()
   {
     return rollup;
   }
 
-  public Metadata setRollup(Boolean rollup)
-  {
-    this.rollup = rollup;
-    return this;
-  }
-
-  public Metadata putAll(Map<String, Object> other)
+  public Metadata putAll(@Nullable Map<String, Object> other)
   {
     if (other != null) {
       container.putAll(other);
@@ -116,7 +113,7 @@ public class Metadata
     return container.get(key);
   }
 
-  public Metadata put(String key, Object value)
+  public Metadata put(String key, @Nullable Object value)
   {
     if (value != null) {
       container.put(key, value);
@@ -127,9 +124,10 @@ public class Metadata
   // arbitrary key-value pairs from the metadata just follow the semantics of last one wins if same
   // key exists in multiple input Metadata containers
   // for others e.g. Aggregators, appropriate merging is done
+  @Nullable
   public static Metadata merge(
-      List<Metadata> toBeMerged,
-      AggregatorFactory[] overrideMergedAggregators
+      @Nullable List<Metadata> toBeMerged,
+      @Nullable AggregatorFactory[] overrideMergedAggregators
   )
   {
     if (toBeMerged == null || toBeMerged.size() == 0) {
@@ -139,7 +137,7 @@ public class Metadata
     boolean foundSomeMetadata = false;
     Map<String, Object> mergedContainer = new HashMap<>();
     List<AggregatorFactory[]> aggregatorsToMerge = overrideMergedAggregators == null
-                                                   ? new ArrayList<AggregatorFactory[]>()
+                                                   ? new ArrayList<>()
                                                    : null;
 
     List<TimestampSpec> timestampSpecsToMerge = new ArrayList<>();
@@ -179,20 +177,17 @@ public class Metadata
       return null;
     }
 
-    Metadata result = new Metadata();
-    if (aggregatorsToMerge != null) {
-      result.setAggregators(AggregatorFactory.mergeAggregators(aggregatorsToMerge));
-    } else {
-      result.setAggregators(overrideMergedAggregators);
-    }
+    final AggregatorFactory[] mergedAggregators = aggregatorsToMerge == null ?
+                                                  overrideMergedAggregators :
+                                                  AggregatorFactory.mergeAggregators(aggregatorsToMerge);
 
-    if (timestampSpecsToMerge != null) {
-      result.setTimestampSpec(TimestampSpec.mergeTimestampSpec(timestampSpecsToMerge));
-    }
+    final TimestampSpec mergedTimestampSpec = timestampSpecsToMerge == null ?
+                                              null :
+                                              TimestampSpec.mergeTimestampSpec(timestampSpecsToMerge);
 
-    if (gransToMerge != null) {
-      result.setQueryGranularity(Granularity.mergeGranularities(gransToMerge));
-    }
+    final Granularity mergedGranularity = gransToMerge == null ?
+                                          null :
+                                          Granularity.mergeGranularities(gransToMerge);
 
     Boolean rollup = null;
     if (rollupToMerge != null && !rollupToMerge.isEmpty()) {
@@ -210,10 +205,13 @@ public class Metadata
       }
     }
 
-    result.setRollup(rollup);
-    result.container.putAll(mergedContainer);
-    return result;
-
+    return new Metadata(
+        mergedContainer,
+        mergedAggregators,
+        mergedTimestampSpec,
+        mergedGranularity,
+        rollup
+    );
   }
 
   @Override
@@ -225,37 +223,18 @@ public class Metadata
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    Metadata metadata = (Metadata) o;
-
-    if (!container.equals(metadata.container)) {
-      return false;
-    }
-    // Probably incorrect - comparing Object[] arrays with Arrays.equals
-    if (!Arrays.equals(aggregators, metadata.aggregators)) {
-      return false;
-    }
-    if (timestampSpec != null ? !timestampSpec.equals(metadata.timestampSpec) : metadata.timestampSpec != null) {
-      return false;
-    }
-    if (rollup != null ? !rollup.equals(metadata.rollup) : metadata.rollup != null) {
-      return false;
-    }
-    return queryGranularity != null
-           ? queryGranularity.equals(metadata.queryGranularity)
-           : metadata.queryGranularity == null;
-
+    final Metadata metadata = (Metadata) o;
+    return Objects.equals(container, metadata.container) &&
+           Arrays.equals(aggregators, metadata.aggregators) &&
+           Objects.equals(timestampSpec, metadata.timestampSpec) &&
+           Objects.equals(queryGranularity, metadata.queryGranularity) &&
+           Objects.equals(rollup, metadata.rollup);
   }
 
   @Override
   public int hashCode()
   {
-    int result = container.hashCode();
-    result = 31 * result + Arrays.hashCode(aggregators);
-    result = 31 * result + (timestampSpec != null ? timestampSpec.hashCode() : 0);
-    result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
-    result = 31 * result + (rollup != null ? rollup.hashCode() : 0);
-    return result;
+    return Objects.hash(container, Arrays.hashCode(aggregators), timestampSpec, queryGranularity, rollup);
   }
 
   @Override

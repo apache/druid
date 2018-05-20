@@ -42,8 +42,9 @@ import java.nio.ByteOrder;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-// Run LongCompressionBenchmarkFileGenerator to generate the required files before running this benchmark
-
+/**
+ * Run {@link LongCompressionBenchmarkFileGenerator} to generate the required files before running this benchmark
+ */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)

@@ -45,9 +45,10 @@ class FloatsColumnWithNulls extends FloatsColumn
   }
 
   @Override
-  public boolean isNull(int rowNum)
+  public long getLongSingleValueRow(int rowNum)
   {
-    return nullValueBitmap.get(rowNum);
+    assert !nullValueBitmap.get(rowNum);
+    return super.getLongSingleValueRow(rowNum);
   }
 
   @Override
@@ -55,26 +56,5 @@ class FloatsColumnWithNulls extends FloatsColumn
   {
     super.inspectRuntimeShape(inspector);
     inspector.visit("nullValueBitmap", nullValueBitmap);
-  }
-
-  @Override
-  public float getFloatSingleValueRow(int rowNum)
-  {
-    assert !isNull(rowNum);
-    return super.getFloatSingleValueRow(rowNum);
-  }
-
-  @Override
-  public long getLongSingleValueRow(int rowNum)
-  {
-    assert !isNull(rowNum);
-    return super.getLongSingleValueRow(rowNum);
-  }
-
-  @Override
-  public double getDoubleSingleValueRow(int rowNum)
-  {
-    assert !isNull(rowNum);
-    return super.getLongSingleValueRow(rowNum);
   }
 }

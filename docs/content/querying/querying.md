@@ -98,4 +98,5 @@ Possible codes for the *error* field include:
 |`Query interrupted`|The query was interrupted, possibly due to JVM shutdown.|
 |`Query cancelled`|The query was cancelled through the query cancellation API.|
 |`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
+|`Unauthorized request.`|The query was denied due to security policy. Either the user was not recognized, or the user was recognized but does not have access to the requested resource.|
 |`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|

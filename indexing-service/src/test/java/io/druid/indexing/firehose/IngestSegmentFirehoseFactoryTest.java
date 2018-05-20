@@ -50,6 +50,7 @@ import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -248,7 +249,7 @@ public class IngestSegmentFirehoseFactoryTest
           }
 
           @Override
-          public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
+          public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
           {
             return segment;
           }
@@ -312,7 +313,8 @@ public class IngestSegmentFirehoseFactoryTest
         null,
         null,
         null,
-        null
+        null,
+        new NoopTestTaskFileWriter()
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(

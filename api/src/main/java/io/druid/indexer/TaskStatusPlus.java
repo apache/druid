@@ -38,6 +38,9 @@ public class TaskStatusPlus
   private final TaskLocation location;
   private final String dataSource;
 
+  @Nullable
+  private final String errorMsg;
+
   @JsonCreator
   public TaskStatusPlus(
       @JsonProperty("id") String id,
@@ -47,20 +50,22 @@ public class TaskStatusPlus
       @JsonProperty("statusCode") @Nullable TaskState state,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
-      @JsonProperty("dataSource") String dataSource
+      @JsonProperty("dataSource") @Nullable String dataSource, // nullable for backward compatibility
+      @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
     if (state != null && state.isComplete()) {
       Preconditions.checkNotNull(duration, "duration");
     }
     this.id = Preconditions.checkNotNull(id, "id");
-    this.type = Preconditions.checkNotNull(type, "type");
+    this.type = type;
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
     this.state = state;
     this.duration = duration;
     this.location = Preconditions.checkNotNull(location, "location");
     this.dataSource = dataSource;
+    this.errorMsg = errorMsg;
   }
 
   @JsonProperty
@@ -108,49 +113,53 @@ public class TaskStatusPlus
     return location;
   }
 
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @Nullable
+  @JsonProperty("errorMsg")
+  public String getErrorMsg()
+  {
+    return errorMsg;
+  }
+
   @Override
   public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final TaskStatusPlus that = (TaskStatusPlus) o;
-    if (!id.equals(that.id)) {
-      return false;
-    }
-    if (!type.equals(that.type)) {
-      return false;
-    }
-    if (!createdTime.equals(that.createdTime)) {
-      return false;
-    }
-    if (!queueInsertionTime.equals(that.queueInsertionTime)) {
-      return false;
-    }
-    if (!Objects.equals(state, that.state)) {
-      return false;
-    }
-    if (!Objects.equals(duration, that.duration)) {
-      return false;
-    }
-    return location.equals(that.location);
+    TaskStatusPlus that = (TaskStatusPlus) o;
+    return Objects.equals(getId(), that.getId()) &&
+           Objects.equals(getType(), that.getType()) &&
+           Objects.equals(getCreatedTime(), that.getCreatedTime()) &&
+           Objects.equals(getQueueInsertionTime(), that.getQueueInsertionTime()) &&
+           getState() == that.getState() &&
+           Objects.equals(getDuration(), that.getDuration()) &&
+           Objects.equals(getLocation(), that.getLocation()) &&
+           Objects.equals(getDataSource(), that.getDataSource()) &&
+           Objects.equals(getErrorMsg(), that.getErrorMsg());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, type, createdTime, queueInsertionTime, state, duration, location);
+    return Objects.hash(
+        getId(),
+        getType(),
+        getCreatedTime(),
+        getQueueInsertionTime(),
+        getState(),
+        getDuration(),
+        getLocation(),
+        getDataSource(),
+        getErrorMsg()
+    );
   }
-  
-  @JsonProperty
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-  
 }

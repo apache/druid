@@ -77,7 +77,7 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
     "tuningConfig" : {
       "type" : "index",
       "targetPartitionSize" : 5000000,
-      "maxRowsInMemory" : 75000
+      "maxRowsInMemory" : 1000000
     }
   }
 }
@@ -137,7 +137,8 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|5000000|no|
-|maxRowsInMemory|Used in determining when intermediate persists to disk should occur.|75000|no|
+|maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
+|maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Total number of rows in segments waiting for being published. Used in determining when intermediate publish should occur.|150000|no|
 |numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if targetPartitionSize is set.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|

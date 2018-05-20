@@ -51,7 +51,19 @@ public class GoogleTaskLogs implements TaskLogs
   {
     final String taskKey = getTaskLogKey(taskid);
     LOG.info("Pushing task log %s to: %s", logFile, taskKey);
+    pushTaskFile(taskid, logFile, taskKey);
+  }
 
+  @Override
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    final String taskKey = getTaskReportKey(taskid);
+    LOG.info("Pushing task reports %s to: %s", reportFile, taskKey);
+    pushTaskFile(taskid, reportFile, taskKey);
+  }
+
+  private void pushTaskFile(final String taskid, final File logFile, final String taskKey) throws IOException
+  {
     FileInputStream fileSteam = new FileInputStream(logFile);
 
     InputStreamContent mediaContent = new InputStreamContent("text/plain", fileSteam);
@@ -64,7 +76,18 @@ public class GoogleTaskLogs implements TaskLogs
   public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid);
+    return streamTaskFile(taskid, offset, taskKey);
+  }
 
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  {
+    final String taskKey = getTaskReportKey(taskid);
+    return streamTaskFile(taskid, 0, taskKey);
+  }
+
+  private Optional<ByteSource> streamTaskFile(final String taskid, final long offset, String taskKey) throws IOException
+  {
     try {
       if (!storage.exists(config.getBucket(), taskKey)) {
         return Optional.absent();
@@ -109,6 +132,11 @@ public class GoogleTaskLogs implements TaskLogs
   private String getTaskLogKey(String taskid)
   {
     return config.getPrefix() + "/" + taskid.replaceAll(":", "_");
+  }
+
+  private String getTaskReportKey(String taskid)
+  {
+    return config.getPrefix() + "/" + taskid.replaceAll(":", "_") + ".report.json";
   }
 
   @Override

@@ -59,11 +59,6 @@ public class DimensionExpression
     return expression;
   }
 
-  public ValueType getOutputType()
-  {
-    return outputType;
-  }
-
   public DimensionSpec toDimensionSpec()
   {
     if (expression.isSimpleExtraction()) {

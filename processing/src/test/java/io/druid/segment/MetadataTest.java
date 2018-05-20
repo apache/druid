@@ -31,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,15 +43,17 @@ public class MetadataTest
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
-    Metadata metadata = new Metadata();
-    metadata.put("k", "v");
-
     AggregatorFactory[] aggregators = new AggregatorFactory[] {
         new LongSumAggregatorFactory("out", "in")
     };
-    metadata.setAggregators(aggregators);
-    metadata.setQueryGranularity(Granularities.ALL);
-    metadata.setRollup(Boolean.FALSE);
+
+    Metadata metadata = new Metadata(
+        Collections.singletonMap("k", "v"),
+        aggregators,
+        null,
+        Granularities.ALL,
+        Boolean.FALSE
+    );
 
     Metadata other = jsonMapper.readValue(
         jsonMapper.writeValueAsString(metadata),
@@ -75,30 +78,39 @@ public class MetadataTest
     AggregatorFactory[] aggs = new AggregatorFactory[] {
         new LongMaxAggregatorFactory("n", "f")
     };
-    Metadata m1 = new Metadata();
-    m1.put("k", "v");
-    m1.setAggregators(aggs);
-    m1.setTimestampSpec(new TimestampSpec("ds", "auto", null));
-    m1.setQueryGranularity(Granularities.ALL);
-    m1.setRollup(Boolean.FALSE);
+    final Metadata m1 = new Metadata(
+        Collections.singletonMap("k", "v"),
+        aggs,
+        new TimestampSpec("ds", "auto", null),
+        Granularities.ALL,
+        Boolean.FALSE
+    );
 
-    Metadata m2 = new Metadata();
-    m2.put("k", "v");
-    m2.setAggregators(aggs);
-    m2.setTimestampSpec(new TimestampSpec("ds", "auto", null));
-    m2.setQueryGranularity(Granularities.ALL);
-    m2.setRollup(Boolean.FALSE);
+    final Metadata m2 = new Metadata(
+        Collections.singletonMap("k", "v"),
+        aggs,
+        new TimestampSpec("ds", "auto", null),
+        Granularities.ALL,
+        Boolean.FALSE
+    );
 
-    Metadata merged = new Metadata();
-    merged.put("k", "v");
-    merged.setAggregators(
+    final Metadata m3 = new Metadata(
+        Collections.singletonMap("k", "v"),
+        aggs,
+        new TimestampSpec("ds", "auto", null),
+        Granularities.ALL,
+        Boolean.TRUE
+    );
+
+    final Metadata merged = new Metadata(
+        Collections.singletonMap("k", "v"),
         new AggregatorFactory[]{
             new LongMaxAggregatorFactory("n", "n")
-        }
+        },
+        new TimestampSpec("ds", "auto", null),
+        Granularities.ALL,
+        Boolean.FALSE
     );
-    merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
-    merged.setRollup(Boolean.FALSE);
-    merged.setQueryGranularity(Granularities.ALL);
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
     //merge check with one metadata being null
@@ -107,29 +119,32 @@ public class MetadataTest
     metadataToBeMerged.add(m2);
     metadataToBeMerged.add(null);
 
-    merged.setAggregators(null);
-    merged.setTimestampSpec(null);
-    merged.setQueryGranularity(null);
-    merged.setRollup(null);
-    Assert.assertEquals(merged, Metadata.merge(metadataToBeMerged, null));
+    final Metadata merged2 = new Metadata(Collections.singletonMap("k", "v"), null, null, null, null);
+
+    Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
     //merge check with client explicitly providing merged aggregators
     AggregatorFactory[] explicitAggs = new AggregatorFactory[] {
         new DoubleMaxAggregatorFactory("x", "y")
     };
-    merged.setAggregators(explicitAggs);
+
+    final Metadata merged3 = new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null);
 
     Assert.assertEquals(
-        merged,
+        merged3,
         Metadata.merge(metadataToBeMerged, explicitAggs)
     );
 
-    merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
-    merged.setQueryGranularity(Granularities.ALL);
-    m1.setRollup(Boolean.TRUE);
+    final Metadata merged4 = new Metadata(
+        Collections.singletonMap("k", "v"),
+        explicitAggs,
+        new TimestampSpec("ds", "auto", null),
+        Granularities.ALL,
+        null
+    );
     Assert.assertEquals(
-        merged,
-        Metadata.merge(ImmutableList.of(m1, m2), explicitAggs)
+        merged4,
+        Metadata.merge(ImmutableList.of(m3, m2), explicitAggs)
     );
   }
 }

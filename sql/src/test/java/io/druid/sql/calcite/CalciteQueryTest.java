@@ -276,6 +276,73 @@ public class CalciteQueryTest extends CalciteTestBase
     );
   }
 
+
+  @Test
+  public void testSelectCountStart() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  dim2 = 0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(QSS(Filtration.eternity()))
+                               .filters(SELECTOR("dim2", "0", null))
+                               .granularity(Granularities.ALL)
+                               .aggregators(AGGS(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   EXPRESSION_POST_AGG("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
+        ImmutableList.of(
+            new Object[]{11.0, 0.0}
+        )
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        "SELECT exp(count(*)) + 10, sum(m2)  FROM druid.foo WHERE  __time >= TIMESTAMP '2999-01-01 00:00:00'",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(QSS(Intervals.of("2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                               .granularity(Granularities.ALL)
+                               .aggregators(AGGS(
+                                   new CountAggregatorFactory("a0"),
+                                   new DoubleSumAggregatorFactory("a1", "m2")
+                               ))
+                               .postAggregators(
+                                   EXPRESSION_POST_AGG("p0", "(exp(\"a0\") + 10)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
+        ImmutableList.of(
+            new Object[]{11.0, 0.0}
+        )
+    );
+
+    testQuery(
+        "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent' GROUP BY FLOOR(__time TO DAY)",
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(QSS(Filtration.eternity()))
+                               .filters(SELECTOR("dim1", "nonexistent", null))
+                               .granularity(Granularities.DAY)
+                               .aggregators(AGGS(
+                                   new CountAggregatorFactory("a0")
+                               ))
+                               .context(TIMESERIES_CONTEXT_DEFAULT)
+                               .build()),
+        ImmutableList.of()
+    );
+  }
+
   @Test
   public void testSelectTrimFamily() throws Exception
   {
@@ -2954,6 +3021,34 @@ public class CalciteQueryTest extends CalciteTestBase
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Intervals.of("2000-01-01/2001-01-01")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testRemoveUselessCaseWhen() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo\n"
+        + "WHERE\n"
+        + "  CASE\n"
+        + "    WHEN __time >= TIME_PARSE('2000-01-01 00:00:00', 'yyyy-MM-dd HH:mm:ss') AND __time < TIMESTAMP '2001-01-01 00:00:00'\n"
+        + "    THEN true\n"
+        + "    ELSE false\n"
+        + "  END\n"
+        + "OR\n"
+        + "  __time >= TIMESTAMP '2010-01-01 00:00:00' AND __time < TIMESTAMP '2011-01-01 00:00:00'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Intervals.of("2000/2001"), Intervals.of("2010/2011")))
                   .granularity(Granularities.ALL)
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)

@@ -37,6 +37,15 @@ public class AuthenticationResult
    */
   private final String authorizerName;
 
+
+  /**
+   * Name of authenticator whom created the results
+   *
+   * If you found your self asking why the authenticatedBy field can be null please read this
+   * https://github.com/druid-io/druid/pull/5706#discussion_r185940889
+   */
+  @Nullable
+  private final String authenticatedBy;
   /**
    * parameter containing additional context information from an Authenticator
    */
@@ -46,11 +55,13 @@ public class AuthenticationResult
   public AuthenticationResult(
       final String identity,
       final String authorizerName,
+      final String authenticatedBy,
       final Map<String, Object> context
   )
   {
     this.identity = identity;
     this.authorizerName = authorizerName;
+    this.authenticatedBy = authenticatedBy;
     this.context = context;
   }
 
@@ -67,5 +78,10 @@ public class AuthenticationResult
   public Map<String, Object> getContext()
   {
     return context;
+  }
+
+  public String getAuthenticatedBy()
+  {
+    return authenticatedBy;
   }
 }

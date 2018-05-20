@@ -215,11 +215,10 @@ public class IncrementalIndexTest
   {
     IncrementalIndex<?> index = closer.closeLater(indexCreator.createIndex());
 
-    expectedException.expect(ParseException.class);
-    expectedException.expectMessage("could not convert value [asdj] to long");
-    index.add(
+    IncrementalIndexAddResult result;
+    result = index.add(
         new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
+            0,
             Lists.newArrayList("string", "float", "long", "double"),
             ImmutableMap.<String, Object>of(
                 "string", "A",
@@ -229,12 +228,15 @@ public class IncrementalIndexTest
             )
         )
     );
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=asdj, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [asdj] to long,]",
+        result.getParseException().getMessage()
+    );
 
-    expectedException.expect(ParseException.class);
-    expectedException.expectMessage("could not convert value [aaa] to float");
-    index.add(
+    result = index.add(
         new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
+            0,
             Lists.newArrayList("string", "float", "long", "double"),
             ImmutableMap.<String, Object>of(
                 "string", "A",
@@ -244,12 +246,15 @@ public class IncrementalIndexTest
             )
         )
     );
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=aaa, long=20, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [aaa] to float,]",
+        result.getParseException().getMessage()
+    );
 
-    expectedException.expect(ParseException.class);
-    expectedException.expectMessage("could not convert value [] to double");
-    index.add(
+    result = index.add(
         new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
+            0,
             Lists.newArrayList("string", "float", "long", "double"),
             ImmutableMap.<String, Object>of(
                 "string", "A",
@@ -258,6 +263,11 @@ public class IncrementalIndexTest
                 "double", ""
             )
         )
+    );
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=20, double=}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [] to double,]",
+        result.getParseException().getMessage()
     );
   }
 

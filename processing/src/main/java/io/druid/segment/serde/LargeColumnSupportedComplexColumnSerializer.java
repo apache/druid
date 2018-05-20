@@ -22,10 +22,11 @@ package io.druid.segment.serde;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ObjectStrategy;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
@@ -93,11 +94,10 @@ public class LargeColumnSupportedComplexColumnSerializer implements GenericColum
     writer.open();
   }
 
-  @SuppressWarnings(value = "unchecked")
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(ColumnValueSelector selector) throws IOException
   {
-    writer.write(obj);
+    writer.write(selector.getObject());
   }
 
   @Override

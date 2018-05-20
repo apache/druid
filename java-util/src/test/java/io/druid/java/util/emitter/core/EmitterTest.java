@@ -21,7 +21,6 @@ package io.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
@@ -229,7 +228,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -240,7 +239,7 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }
@@ -271,7 +270,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -282,7 +281,7 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }
@@ -298,7 +297,7 @@ public class EmitterTest
 
     httpClient.setGoHandler(GoHandlers.passingHandler(okResponse()).times(1));
     emitter.emit(new UnitEvent("test", 3));
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
 
     httpClient.setGoHandler(GoHandlers.failingHandler());
     emitter.emit(new UnitEvent("test", 4));
@@ -338,7 +337,7 @@ public class EmitterTest
         timeWaited < timeBetweenEmissions * 2
     );
 
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
 
     final CountDownLatch thisLatch = new CountDownLatch(1);
     httpClient.setGoHandler(
@@ -363,7 +362,7 @@ public class EmitterTest
         timeWaited < timeBetweenEmissions * 2
     );
 
-    waitForEmission(emitter, 1);
+    waitForEmission(emitter, 2);
     closeNoFlush(emitter);
     Assert.assertTrue("httpClient.succeeded()", httpClient.succeeded());
   }
@@ -389,7 +388,7 @@ public class EmitterTest
     );
     emitter.emit(event1);
     emitter.flush();
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     Assert.assertTrue(httpClient.succeeded());
 
     // Failed to emit the first event.
@@ -408,7 +407,7 @@ public class EmitterTest
 
     emitter.emit(event2);
     emitter.flush();
-    waitForEmission(emitter, 1);
+    waitForEmission(emitter, 2);
     closeNoFlush(emitter);
     // Failed event is emitted inside emitter thread, there is no other way to wait for it other than joining the
     // emitterThread
@@ -450,7 +449,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -462,7 +461,7 @@ public class EmitterTest
       emitter.emit(event);
     }
     emitter.flush();
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }
@@ -502,7 +501,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(counter.getAndIncrement())),
                     jsonMapper.writeValueAsString(events.get(counter.getAndIncrement()))
                 ),
-                Charsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -513,11 +512,11 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     Assert.assertEquals(2, emitter.getTotalEmittedEvents());
 
     emitter.flush();
-    waitForEmission(emitter, 1);
+    waitForEmission(emitter, 2);
     Assert.assertEquals(4, emitter.getTotalEmittedEvents());
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
@@ -561,7 +560,7 @@ public class EmitterTest
                     jsonMapper.writeValueAsString(events.get(0)),
                     jsonMapper.writeValueAsString(events.get(1))
                 ),
-                baos.toString(Charsets.UTF_8.name())
+                baos.toString(StandardCharsets.UTF_8.name())
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -572,7 +571,7 @@ public class EmitterTest
     for (UnitEvent event : events) {
       emitter.emit(event);
     }
-    waitForEmission(emitter, 0);
+    waitForEmission(emitter, 1);
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }

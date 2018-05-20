@@ -279,7 +279,7 @@ public class ConcatSequenceTest
   }
 
   @SuppressWarnings("unchecked")
-  public void testAll(Iterable <List<Integer>> vals) throws IOException
+  public void testAll(Iterable<List<Integer>> vals) throws IOException
   {
     final Iterable<TestSequence<Integer>> theSequences = Iterables.transform(
         vals,

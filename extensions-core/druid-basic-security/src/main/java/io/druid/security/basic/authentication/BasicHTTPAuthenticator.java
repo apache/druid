@@ -105,7 +105,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     }
 
     if (checkCredentials(user, password.toCharArray())) {
-      return new AuthenticationResult(user, name, null);
+      return new AuthenticationResult(user, authorizerName, name, null);
     } else {
       return null;
     }
@@ -173,7 +173,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       char[] password = splits[1].toCharArray();
 
       if (checkCredentials(user, password)) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, null);
+        AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
       }
 

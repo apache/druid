@@ -19,7 +19,6 @@
 
 package io.druid.java.util.http.client;
 
-import com.google.common.base.Charsets;
 import io.druid.java.util.common.StringUtils;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.junit.Assert;
@@ -64,7 +63,7 @@ public class AsyncHttpClientTest
                   // skip lines
                 }
                 Thread.sleep(5000); // times out
-                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(Charsets.UTF_8));
+                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
               }
               catch (Exception e) {
                 // Suppress

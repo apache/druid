@@ -332,7 +332,7 @@ The return value will be the json representation of the factory.
 ```
 
 # Configuration
-See the [coordinator configuration guilde](../configuration/coordinator.html) for coordinator configuration
+See the [coordinator configuration guide](../configuration/coordinator.html) for coordinator configuration.
 
 To configure a Broker / Router / Historical / Peon to announce itself as part of a lookup tier, use the `druid.zk.paths.lookupTier` property.
 
@@ -364,9 +364,53 @@ It is possible to save the configuration across restarts such that a node will n
 
 ## Introspect a Lookup
 
-Lookup implementations can provide some introspection capabilities by implementing `LookupIntrospectHandler`. User will send request to `/druid/lookups/v1/introspect/{lookupId}` to enable introspection on a given lookup.
+The broker provides an API for lookup introspection if the lookup type implements a `LookupIntrospectHandler`. 
 
-For instance you can list all the keys/values of a map based lookup by issuing a `GET` request to `/druid/lookups/v1/introspect/{lookupId}/keys"` or `/druid/lookups/v1/introspect/{lookupId}/values"`
+A `GET` request to `/druid/v1/lookups/introspect/{lookupId}` will return the map of complete values. 
+
+ex: `GET /druid/v1/lookups/introspect/nato-phonetic`
+```
+{
+    "A": "Alfa",
+    "B": "Bravo",
+    "C": "Charlie",
+    ...
+    "Y": "Yankee",
+    "Z": "Zulu",
+    "-": "Dash"
+}
+
+```
+
+The list of keys can be retrieved via `GET` to `/druid/v1/lookups/introspect/{lookupId}/keys"`
+
+ex: `GET /druid/v1/lookups/introspect/nato-phonetic/keys`
+```
+[
+    "A",
+    "B",
+    "C",
+    ...
+    "Y",
+    "Z",
+    "-"
+]
+```
+
+A `GET` request to `/druid/v1/lookups/introspect/{lookupId}/values"` will return the list of values.
+
+ex: `GET /druid/v1/lookups/introspect/nato-phonetic/values`
+```
+[
+    "Alfa",
+    "Bravo",
+    "Charlie",
+    ...
+    "Yankee",
+    "Zulu",
+    "Dash"
+]
+```
  
 ## Druid version 0.10.0 to 0.10.1 upgrade/downgrade
 Overall druid cluster lookups configuration is persisted in metadata store and also individual lookup nodes optionally persist a snapshot of loaded lookups on disk.

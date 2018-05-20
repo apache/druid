@@ -21,7 +21,6 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
@@ -34,9 +33,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -45,8 +41,11 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.segment.IndexIO;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -54,6 +53,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -186,10 +186,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 
       // Upload file
 
-      // The merge task does not support replicas where different tasks could generate segments with the
-      // same identifier but potentially different contents. In case of conflict, favor the most recently pushed
-      // segment (replaceExisting == true).
-      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment, true);
+      final DataSegment uploadedSegment = toolbox.getSegmentPusher().push(fileToUpload, mergedSegment, false);
 
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
@@ -307,7 +304,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     return StringUtils.format(
         "%s_%s",
         dataSource,
-        Hashing.sha1().hashString(segmentIDs, Charsets.UTF_8).toString()
+        Hashing.sha1().hashString(segmentIDs, StandardCharsets.UTF_8).toString()
     );
   }
 

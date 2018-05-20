@@ -26,6 +26,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 
@@ -66,9 +67,9 @@ public class Plumbers
       return;
     }
 
-    final int numRows;
+    final IncrementalIndexAddResult addResult;
     try {
-      numRows = plumber.add(inputRow, committerSupplier);
+      addResult = plumber.add(inputRow, committerSupplier);
     }
     catch (IndexSizeExceededException e) {
       // Shouldn't happen if this is only being called by a single thread.
@@ -76,9 +77,15 @@ public class Plumbers
       throw new ISE(e, "WTF?! Index size exceeded, this shouldn't happen. Bad Plumber!");
     }
 
-    if (numRows == -1) {
+    if (addResult.getRowCount() == -1) {
       metrics.incrementThrownAway();
-      log.debug("Discarded row[%s], considering thrownAway.", inputRow);
+      log.debug("Discarded row[%s], considering thrownAway due to %s.", inputRow, addResult.getReasonOfNotAdded());
+      return;
+    }
+
+    if (addResult.getRowCount() == -2) {
+      metrics.incrementDedup();
+      log.debug("Discarded row[%s], considering duplication.", inputRow);
       return;
     }
 

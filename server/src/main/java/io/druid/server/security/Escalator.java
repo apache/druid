@@ -50,4 +50,5 @@ public interface Escalator
    * @return an AuthenticationResult representing the identity of the internal system user.
    */
   AuthenticationResult createEscalatedAuthenticationResult();
+
 }

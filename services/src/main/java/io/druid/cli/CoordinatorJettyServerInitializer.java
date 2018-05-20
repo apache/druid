@@ -71,12 +71,14 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
   private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
+  private final AuthConfig authConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties)
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, AuthConfig authConfig)
   {
     this.config = config;
     this.beOverlord = CliCoordinator.isOverlord(properties);
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -117,12 +119,18 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
+
+    if (beOverlord) {
+      AuthenticationUtils.addNoopAuthorizationFilters(root, CliOverlord.UNSECURED_PATHS);
+    }
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
-    JettyServerInitUtils.addExtensionFilters(root, injector);
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
+    JettyServerInitUtils.addExtensionFilters(root, injector);
 
     // Check that requests were authorized before sending responses
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(

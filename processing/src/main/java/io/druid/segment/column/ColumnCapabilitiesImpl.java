@@ -105,10 +105,10 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return this;
   }
 
-  public ColumnCapabilitiesImpl merge(ColumnCapabilities other)
+  public void merge(ColumnCapabilities other)
   {
     if (other == null) {
-      return this;
+      return;
     }
 
     if (type == null) {
@@ -124,7 +124,5 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.hasInvertedIndexes |= other.hasBitmapIndexes();
     this.hasSpatialIndexes |= other.hasSpatialIndexes();
     this.hasMultipleValues |= other.hasMultipleValues();
-
-    return this;
   }
 }

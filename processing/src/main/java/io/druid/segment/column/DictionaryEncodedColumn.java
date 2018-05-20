@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
  */
 public interface DictionaryEncodedColumn<ActualType extends Comparable> extends BaseColumn
 {
+  Class<ActualType> getClazz();
   int length();
   boolean hasMultipleValues();
   int getSingleValueRow(int rowNum);

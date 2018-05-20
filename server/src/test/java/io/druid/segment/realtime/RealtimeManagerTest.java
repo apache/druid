@@ -65,10 +65,12 @@ import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
@@ -199,6 +201,7 @@ public class RealtimeManagerTest
     );
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -213,6 +216,7 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
         null
     );
     plumber = new TestPlumber(new Sink(
@@ -221,7 +225,9 @@ public class RealtimeManagerTest
         tuningConfig.getShardSpec(),
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     ));
 
     realtimeManager = new RealtimeManager(
@@ -241,7 +247,9 @@ public class RealtimeManagerTest
         tuningConfig.getShardSpec(),
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     ));
 
     realtimeManager2 = new RealtimeManager(
@@ -258,6 +266,7 @@ public class RealtimeManagerTest
 
     tuningConfig_0 = new RealtimeTuningConfig(
         1,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -272,11 +281,13 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
         null
     );
 
     tuningConfig_1 = new RealtimeTuningConfig(
         1,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -288,6 +299,7 @@ public class RealtimeManagerTest
         null,
         0,
         0,
+        null,
         null,
         null,
         null,
@@ -469,20 +481,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -515,6 +514,24 @@ public class RealtimeManagerTest
 
   }
 
+  private void awaitStarted() throws InterruptedException
+  {
+    while (true) {
+      boolean notAllStarted = realtimeManager3
+          .getFireChiefs("testing").values().stream()
+          .anyMatch(
+              fireChief -> {
+                final Plumber plumber = fireChief.getPlumber();
+                return plumber == null || !((TestPlumber) plumber).isStartedJob();
+              }
+          );
+      if (!notAllStarted) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+  }
+
   @Test(timeout = 10_000L)
   public void testQueryWithSegmentSpec() throws InterruptedException
   {
@@ -542,20 +559,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -654,20 +658,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     final Interval interval_26_28 = Intervals.of("2011-03-26T00:00:00.000Z/2011-03-28T00:00:00.000Z");
     final Interval interval_28_29 = Intervals.of("2011-03-28T00:00:00.000Z/2011-03-29T00:00:00.000Z");
@@ -1049,16 +1040,16 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+    public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
     {
       if (row == null) {
-        return -1;
+        return Plumber.THROWAWAY;
       }
 
       Sink sink = getSink(row.getTimestampFromEpoch());
 
       if (sink == null) {
-        return -1;
+        return Plumber.THROWAWAY;
       }
 
       return sink.add(row, false);

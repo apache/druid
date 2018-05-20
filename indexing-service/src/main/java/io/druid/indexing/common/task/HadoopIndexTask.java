@@ -23,20 +23,27 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSpec;
-import io.druid.indexer.Jobby;
+import io.druid.indexer.IngestionState;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
+import io.druid.indexer.TaskMetricsGetter;
+import io.druid.indexer.TaskMetricsUtils;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
+import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -47,14 +54,29 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.segment.realtime.firehose.ChatHandler;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.server.security.Action;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 
-public class HadoopIndexTask extends HadoopTask
+public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
 
@@ -71,6 +93,30 @@ public class HadoopIndexTask extends HadoopTask
 
   @JsonIgnore
   private final ObjectMapper jsonMapper;
+
+  @JsonIgnore
+  private final AuthorizerMapper authorizerMapper;
+
+  @JsonIgnore
+  private final Optional<ChatHandlerProvider> chatHandlerProvider;
+
+  @JsonIgnore
+  private InnerProcessingStatsGetter determinePartitionsStatsGetter;
+
+  @JsonIgnore
+  private InnerProcessingStatsGetter buildSegmentsStatsGetter;
+
+  @JsonIgnore
+  private IngestionState ingestionState;
+
+  @JsonIgnore
+  private HadoopDetermineConfigInnerProcessingStatus determineConfigStatus = null;
+
+  @JsonIgnore
+  private HadoopIndexGeneratorInnerProcessingStatus buildSegmentsStatus = null;
+
+  @JsonIgnore
+  private String errorMsg;
 
   /**
    * @param spec is used by the HadoopDruidIndexerJob to set up the appropriate parameters
@@ -90,7 +136,9 @@ public class HadoopIndexTask extends HadoopTask
       @JsonProperty("hadoopDependencyCoordinates") List<String> hadoopDependencyCoordinates,
       @JsonProperty("classpathPrefix") String classpathPrefix,
       @JacksonInject ObjectMapper jsonMapper,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
     super(
@@ -101,8 +149,8 @@ public class HadoopIndexTask extends HadoopTask
         : hadoopDependencyCoordinates,
         context
     );
-
-
+    this.authorizerMapper = authorizerMapper;
+    this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     this.spec = spec;
 
     // Some HadoopIngestionSpec stuff doesn't make sense in the context of the indexing service
@@ -118,6 +166,7 @@ public class HadoopIndexTask extends HadoopTask
 
     this.classpathPrefix = classpathPrefix;
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMappper");
+    this.ingestionState = IngestionState.NOT_STARTED;
   }
 
   @Override
@@ -168,9 +217,46 @@ public class HadoopIndexTask extends HadoopTask
     return classpathPrefix;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
+  {
+    try {
+      if (chatHandlerProvider.isPresent()) {
+        log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
+        chatHandlerProvider.get().register(getId(), this, false);
+      } else {
+        log.warn("No chat handler detected");
+      }
+
+      return runInternal(toolbox);
+    }
+    catch (Exception e) {
+      Throwable effectiveException;
+      if (e instanceof RuntimeException && e.getCause() instanceof InvocationTargetException) {
+        InvocationTargetException ite = (InvocationTargetException) e.getCause();
+        effectiveException = ite.getCause();
+        log.error(effectiveException, "Got invocation target exception in run(), cause: ");
+      } else {
+        effectiveException = e;
+        log.error(e, "Encountered exception in run():");
+      }
+
+      errorMsg = Throwables.getStackTraceAsString(effectiveException);
+      toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+      return TaskStatus.failure(
+          getId(),
+          errorMsg
+      );
+    }
+    finally {
+      if (chatHandlerProvider.isPresent()) {
+        chatHandlerProvider.get().unregister(getId());
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
@@ -181,20 +267,56 @@ public class HadoopIndexTask extends HadoopTask
         new OverlordActionBasedUsedSegmentLister(toolbox)
     );
 
-    final String config = invokeForeignLoader(
-        "io.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessing",
-        new String[]{
-            toolbox.getObjectMapper().writeValueAsString(spec),
-            toolbox.getConfig().getHadoopWorkingPath(),
-            toolbox.getSegmentPusher().getPathForHadoop()
-        },
+    Object determinePartitionsInnerProcessingRunner = getForeignClassloaderObject(
+        "io.druid.indexing.common.task.HadoopIndexTask$HadoopDetermineConfigInnerProcessingRunner",
         loader
     );
+    determinePartitionsStatsGetter = new InnerProcessingStatsGetter(determinePartitionsInnerProcessingRunner);
 
-    final HadoopIngestionSpec indexerSchema = toolbox
-        .getObjectMapper()
-        .readValue(config, HadoopIngestionSpec.class);
+    String[] determinePartitionsInput = new String[]{
+        toolbox.getObjectMapper().writeValueAsString(spec),
+        toolbox.getConfig().getHadoopWorkingPath(),
+        toolbox.getSegmentPusher().getPathForHadoop()
+    };
 
+    HadoopIngestionSpec indexerSchema = null;
+    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    Class<?> determinePartitionsRunnerClass = determinePartitionsInnerProcessingRunner.getClass();
+    Method determinePartitionsInnerProcessingRunTask = determinePartitionsRunnerClass.getMethod(
+        "runTask",
+        determinePartitionsInput.getClass()
+    );
+    try {
+      Thread.currentThread().setContextClassLoader(loader);
+
+      ingestionState = IngestionState.DETERMINE_PARTITIONS;
+
+      final String determineConfigStatusString = (String) determinePartitionsInnerProcessingRunTask.invoke(
+          determinePartitionsInnerProcessingRunner,
+          new Object[]{determinePartitionsInput}
+      );
+
+
+      determineConfigStatus = toolbox
+          .getObjectMapper()
+          .readValue(determineConfigStatusString, HadoopDetermineConfigInnerProcessingStatus.class);
+
+      indexerSchema = determineConfigStatus.getSchema();
+      if (indexerSchema == null) {
+        errorMsg = determineConfigStatus.getErrorMsg();
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        return TaskStatus.failure(
+            getId(),
+            errorMsg
+        );
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
+    }
 
     // We should have a lock from before we started running only if interval was specified
     String version;
@@ -229,41 +351,236 @@ public class HadoopIndexTask extends HadoopTask
             specVersion,
             version
         );
+        toolbox.getTaskReportFileWriter().write(null);
         return TaskStatus.failure(getId());
       }
     }
 
     log.info("Setting version to: %s", version);
 
-    final String segments = invokeForeignLoader(
-        "io.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessing",
-        new String[]{
-            toolbox.getObjectMapper().writeValueAsString(indexerSchema),
-            version
-        },
+    Object innerProcessingRunner = getForeignClassloaderObject(
+        "io.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessingRunner",
         loader
     );
+    buildSegmentsStatsGetter = new InnerProcessingStatsGetter(innerProcessingRunner);
 
-    if (segments != null) {
-      List<DataSegment> publishedSegments = toolbox.getObjectMapper().readValue(
-          segments,
-          new TypeReference<List<DataSegment>>()
-          {
-          }
+    String[] buildSegmentsInput = new String[]{
+        toolbox.getObjectMapper().writeValueAsString(indexerSchema),
+        version
+    };
+
+    Class<?> buildSegmentsRunnerClass = innerProcessingRunner.getClass();
+    Method innerProcessingRunTask = buildSegmentsRunnerClass.getMethod("runTask", buildSegmentsInput.getClass());
+
+    try {
+      Thread.currentThread().setContextClassLoader(loader);
+
+      ingestionState = IngestionState.BUILD_SEGMENTS;
+      final String jobStatusString = (String) innerProcessingRunTask.invoke(
+          innerProcessingRunner,
+          new Object[]{buildSegmentsInput}
       );
 
-      toolbox.publishSegments(publishedSegments);
-      return TaskStatus.success(getId());
-    } else {
-      return TaskStatus.failure(getId());
+      buildSegmentsStatus = toolbox.getObjectMapper().readValue(
+          jobStatusString,
+          HadoopIndexGeneratorInnerProcessingStatus.class
+      );
+
+      if (buildSegmentsStatus.getDataSegments() != null) {
+        ingestionState = IngestionState.COMPLETED;
+        toolbox.publishSegments(buildSegmentsStatus.getDataSegments());
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        return TaskStatus.success(
+            getId(),
+            null
+        );
+      } else {
+        errorMsg = buildSegmentsStatus.getErrorMsg();
+        toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
+        return TaskStatus.failure(
+            getId(),
+            errorMsg
+        );
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
     }
   }
 
+  @GET
+  @Path("/rowStats")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getRowStats(
+      @Context final HttpServletRequest req,
+      @QueryParam("windows") List<Integer> windows
+  )
+  {
+    IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
+    Map<String, Object> returnMap = Maps.newHashMap();
+    Map<String, Object> totalsMap = Maps.newHashMap();
+
+    if (determinePartitionsStatsGetter != null) {
+      totalsMap.put("determinePartitions", determinePartitionsStatsGetter.getTotalMetrics());
+    }
+
+    if (buildSegmentsStatsGetter != null) {
+      totalsMap.put("buildSegments", buildSegmentsStatsGetter.getTotalMetrics());
+    }
+
+    returnMap.put("totals", totalsMap);
+    return Response.ok(returnMap).build();
+  }
+
+  private Map<String, TaskReport> getTaskCompletionReports()
+  {
+    return TaskReport.buildTaskReports(
+        new IngestionStatsAndErrorsTaskReport(
+            getId(),
+            new IngestionStatsAndErrorsTaskReportData(
+                ingestionState,
+                null,
+                getTaskCompletionRowStats(),
+                errorMsg
+            )
+        )
+    );
+  }
+
+  private Map<String, Object> getTaskCompletionRowStats()
+  {
+    Map<String, Object> metrics = Maps.newHashMap();
+    if (determineConfigStatus != null) {
+      metrics.put(
+          "determinePartitions",
+          determineConfigStatus.getMetrics()
+      );
+    }
+    if (buildSegmentsStatus != null) {
+      metrics.put(
+          "buildSegments",
+          buildSegmentsStatus.getMetrics()
+      );
+    }
+    return metrics;
+  }
+
+  public static class InnerProcessingStatsGetter implements TaskMetricsGetter
+  {
+    public static final List<String> KEYS = Arrays.asList(
+        TaskMetricsUtils.ROWS_PROCESSED,
+        TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS,
+        TaskMetricsUtils.ROWS_THROWN_AWAY,
+        TaskMetricsUtils.ROWS_UNPARSEABLE
+    );
+
+    private final Method getStatsMethod;
+    private final Object innerProcessingRunner;
+
+    public InnerProcessingStatsGetter(
+        Object innerProcessingRunner
+    )
+    {
+      try {
+        Class<?> aClazz = innerProcessingRunner.getClass();
+        this.getStatsMethod = aClazz.getMethod("getStats");
+        this.innerProcessingRunner = innerProcessingRunner;
+      }
+      catch (NoSuchMethodException nsme) {
+        throw new RuntimeException(nsme);
+      }
+    }
+
+    @Override
+    public List<String> getKeys()
+    {
+      return KEYS;
+    }
+
+    @Override
+    public Map<String, Number> getTotalMetrics()
+    {
+      try {
+        Map<String, Object> statsMap = (Map<String, Object>) getStatsMethod.invoke(innerProcessingRunner);
+        if (statsMap == null) {
+          return null;
+        }
+        long curProcessed = (Long) statsMap.get(TaskMetricsUtils.ROWS_PROCESSED);
+        long curProcessedWithErrors = (Long) statsMap.get(TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS);
+        long curThrownAway = (Long) statsMap.get(TaskMetricsUtils.ROWS_THROWN_AWAY);
+        long curUnparseable = (Long) statsMap.get(TaskMetricsUtils.ROWS_UNPARSEABLE);
+
+        return ImmutableMap.of(
+            TaskMetricsUtils.ROWS_PROCESSED, curProcessed,
+            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, curProcessedWithErrors,
+            TaskMetricsUtils.ROWS_THROWN_AWAY, curThrownAway,
+            TaskMetricsUtils.ROWS_UNPARSEABLE, curUnparseable
+        );
+      }
+      catch (Exception e) {
+        log.error(e, "Got exception from getTotalMetrics(): ");
+        return null;
+      }
+    }
+  }
+
+
   /** Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}. */
   @SuppressWarnings("unused")
-  public static class HadoopIndexGeneratorInnerProcessing
+  public static class HadoopDetermineConfigInnerProcessingRunner
   {
-    public static String runTask(String[] args) throws Exception
+    private HadoopDruidDetermineConfigurationJob job;
+
+    public String runTask(String[] args) throws Exception
+    {
+      final String schema = args[0];
+      final String workingPath = args[1];
+      final String segmentOutputPath = args[2];
+
+      final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
+          .readValue(
+              schema,
+              HadoopIngestionSpec.class
+          );
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
+          theSchema
+              .withIOConfig(theSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
+              .withTuningConfig(theSchema.getTuningConfig().withWorkingPath(workingPath))
+      );
+
+      job = new HadoopDruidDetermineConfigurationJob(config);
+
+      log.info("Starting a hadoop determine configuration job...");
+      if (job.run()) {
+        return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
+            new HadoopDetermineConfigInnerProcessingStatus(config.getSchema(), job.getStats(), null)
+        );
+      } else {
+        return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
+            new HadoopDetermineConfigInnerProcessingStatus(null, job.getStats(), job.getErrorMessage())
+        );
+      }
+    }
+
+    public Map<String, Object> getStats()
+    {
+      if (job == null) {
+        return null;
+      }
+
+      return job.getStats();
+    }
+  }
+
+  @SuppressWarnings("unused")
+  public static class HadoopIndexGeneratorInnerProcessingRunner
+  {
+    private HadoopDruidIndexerJob job;
+
+    public String runTask(String[] args) throws Exception
     {
       final String schema = args[0];
       String version = args[1];
@@ -287,46 +604,121 @@ public class HadoopIndexTask extends HadoopTask
       } else {
         maybeHandler = null;
       }
-      HadoopDruidIndexerJob job = new HadoopDruidIndexerJob(config, maybeHandler);
+      job = new HadoopDruidIndexerJob(config, maybeHandler);
 
       log.info("Starting a hadoop index generator job...");
-      if (job.run()) {
-        return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(job.getPublishedSegments());
+      try {
+        if (job.run()) {
+          return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
+              new HadoopIndexGeneratorInnerProcessingStatus(
+                  job.getPublishedSegments(),
+                  job.getStats(),
+                  null
+              )
+          );
+        } else {
+          return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
+              new HadoopIndexGeneratorInnerProcessingStatus(
+                  null,
+                  job.getStats(),
+                  job.getErrorMessage()
+              )
+          );
+        }
+      }
+      catch (Exception e) {
+        log.error(e, "Encountered exception in HadoopIndexGeneratorInnerProcessing.");
+        return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
+            new HadoopIndexGeneratorInnerProcessingStatus(
+                null,
+                job.getStats(),
+                e.getMessage()
+            )
+        );
+      }
+    }
+
+    public Map<String, Object> getStats()
+    {
+      if (job == null) {
+        return null;
       }
 
-      return null;
+      return job.getStats();
     }
   }
 
-  /** Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}. */
-  @SuppressWarnings("unused")
-  public static class HadoopDetermineConfigInnerProcessing
+  public static class HadoopIndexGeneratorInnerProcessingStatus
   {
-    public static String runTask(String[] args) throws Exception
+    private final List<DataSegment> dataSegments;
+    private final Map<String, Object> metrics;
+    private final String errorMsg;
+
+    @JsonCreator
+    public HadoopIndexGeneratorInnerProcessingStatus(
+        @JsonProperty("dataSegments") List<DataSegment> dataSegments,
+        @JsonProperty("metrics") Map<String, Object> metrics,
+        @JsonProperty("errorMsg") String errorMsg
+    )
     {
-      final String schema = args[0];
-      final String workingPath = args[1];
-      final String segmentOutputPath = args[2];
+      this.dataSegments = dataSegments;
+      this.metrics = metrics;
+      this.errorMsg = errorMsg;
+    }
 
-      final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
-          .readValue(
-              schema,
-              HadoopIngestionSpec.class
-          );
-      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
-          theSchema
-              .withIOConfig(theSchema.getIOConfig().withSegmentOutputPath(segmentOutputPath))
-              .withTuningConfig(theSchema.getTuningConfig().withWorkingPath(workingPath))
-      );
+    @JsonProperty
+    public List<DataSegment> getDataSegments()
+    {
+      return dataSegments;
+    }
 
-      Jobby job = new HadoopDruidDetermineConfigurationJob(config);
+    @JsonProperty
+    public Map<String, Object> getMetrics()
+    {
+      return metrics;
+    }
 
-      log.info("Starting a hadoop determine configuration job...");
-      if (job.run()) {
-        return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(config.getSchema());
-      }
+    @JsonProperty
+    public String getErrorMsg()
+    {
+      return errorMsg;
+    }
+  }
 
-      return null;
+  public static class HadoopDetermineConfigInnerProcessingStatus
+  {
+    private final HadoopIngestionSpec schema;
+    private final Map<String, Object> metrics;
+    private final String errorMsg;
+
+    @JsonCreator
+    public HadoopDetermineConfigInnerProcessingStatus(
+        @JsonProperty("schema") HadoopIngestionSpec schema,
+        @JsonProperty("metrics") Map<String, Object> metrics,
+        @JsonProperty("errorMsg") String errorMsg
+    )
+    {
+      this.schema = schema;
+      this.metrics = metrics;
+      this.errorMsg = errorMsg;
+    }
+
+    @JsonProperty
+    public HadoopIngestionSpec getSchema()
+    {
+      return schema;
+    }
+
+    @JsonProperty
+    public Map<String, Object> getMetrics()
+    {
+      return metrics;
+    }
+
+    @JsonProperty
+    public String getErrorMsg()
+    {
+      return errorMsg;
     }
   }
 }

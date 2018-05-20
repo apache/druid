@@ -76,6 +76,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Extending AbstractBenchmark means only runs if explicitly called
@@ -118,7 +119,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean reportParseExceptions,
         boolean concurrentEventAdd,
         boolean sortFacts,
-        int maxRowCount
+        int maxRowCount,
+        long maxBytesInMemory
     )
     {
       super(
@@ -127,7 +129,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
-          maxRowCount
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -135,20 +138,22 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         long minTimestamp,
         Granularity gran,
         AggregatorFactory[] metrics,
-        int maxRowCount
+        int maxRowCount,
+        long maxBytesInMemory
     )
     {
       super(
           new IncrementalIndexSchema.Builder()
-            .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(gran)
-            .withMetrics(metrics)
-            .build(),
-        true,
-        true,
-        false,
-        true,
-        maxRowCount
+              .withMinTimestamp(minTimestamp)
+              .withQueryGranularity(gran)
+              .withMetrics(metrics)
+              .build(),
+          true,
+          true,
+          false,
+          true,
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -166,13 +171,14 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected Integer addToFacts(
+    protected AddToFactsResult addToFacts(
         AggregatorFactory[] metrics,
         boolean deserializeComplexMetrics,
         boolean reportParseExceptions,
         InputRow row,
         AtomicInteger numEntries,
-        TimeAndDims key,
+        AtomicLong sizeInBytes,
+        IncrementalIndexRow key,
         ThreadLocal<InputRow> rowContainer,
         Supplier<InputRow> rowSupplier,
         boolean skipMaxRowsInMemoryCheck // ignore for benchmark
@@ -202,12 +208,14 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
-          throw new IndexSizeExceededException("Maximum number of rows reached");
+        if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
+            && getFacts().getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
+          throw new IndexSizeExceededException("Maximum number of rows or max bytes reached");
         }
         final int prev = getFacts().putIfAbsent(key, rowIndex);
-        if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
+        if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
+          sizeInBytes.incrementAndGet();
         } else {
           // We lost a race
           aggs = indexedMap.get(prev);
@@ -235,8 +243,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       rowContainer.set(null);
 
-
-      return numEntries.get();
+      return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
     }
 
     @Override

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.CriticalAction;
 import io.druid.indexing.overlord.DataSourceMetadata;
@@ -124,22 +125,20 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       throw new RuntimeException(e);
     }
 
+    // Emit metrics
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+
     if (retVal.isSuccess()) {
-      // Emit metrics
-      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-          .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-          .setDimension(DruidMetrics.TASK_TYPE, task.getType());
+      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
+    } else {
+      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
+    }
 
-      if (retVal.isSuccess()) {
-        toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
-      } else {
-        toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
-      }
-
-      for (DataSegment segment : retVal.getSegments()) {
-        metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-        toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
-      }
+    // getSegments() should return an empty set if announceHistoricalSegments() failed
+    for (DataSegment segment : retVal.getSegments()) {
+      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
     }
 
     return retVal;

@@ -59,6 +59,8 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientUsername, authorizerName, null);
+    // if you found your self asking why the authenticatedBy field is set to null please read this:
+    // https://github.com/druid-io/druid/pull/5706#discussion_r185940889
+    return new AuthenticationResult(internalClientUsername, authorizerName, null, null);
   }
 }

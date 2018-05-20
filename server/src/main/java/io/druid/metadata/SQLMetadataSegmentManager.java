@@ -27,15 +27,14 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
 import io.druid.client.ImmutableDruidDataSource;
-import io.druid.concurrent.LifecycleLock;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
@@ -86,7 +85,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
 
-  private final LifecycleLock lifecycleLock = new LifecycleLock();
+  // Use to synchronize start() and stop(). These methods should be synchronized to prevent from being called at the
+  // same time if two different threads are calling them. This might be possible if a druid coordinator gets and drops
+  // leadership repeatedly in quick succession.
+  private final Object lock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
@@ -96,6 +98,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
   private volatile ListeningScheduledExecutorService exec = null;
   private volatile ListenableFuture<?> future = null;
+  private volatile boolean started;
 
   @Inject
   public SQLMetadataSegmentManager(
@@ -116,11 +119,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStart
   public void start()
   {
-    if (!lifecycleLock.canStart()) {
-      return;
-    }
+    synchronized (lock) {
+      if (started) {
+        return;
+      }
 
-    try {
       exec = MoreExecutors.listeningDecorator(Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d"));
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
@@ -143,10 +146,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
-      lifecycleLock.started();
-    }
-    finally {
-      lifecycleLock.exitStart();
+      started = true;
     }
   }
 
@@ -154,10 +154,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStop
   public void stop()
   {
-    if (!lifecycleLock.canStop()) {
-      return;
-    }
-    try {
+    synchronized (lock) {
+      if (!started) {
+        return;
+      }
+
       final ConcurrentHashMap<String, DruidDataSource> emptyMap = new ConcurrentHashMap<>();
       ConcurrentHashMap<String, DruidDataSource> current;
       do {
@@ -168,9 +169,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       future = null;
       exec.shutdownNow();
       exec = null;
-    }
-    finally {
-      lifecycleLock.exitStop();
+      started = false;
     }
   }
 
@@ -180,55 +179,30 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     try {
       final IDBI dbi = connector.getDBI();
       VersionedIntervalTimeline<String, DataSegment> segmentTimeline = connector.inReadOnlyTransaction(
-          new TransactionCallback<VersionedIntervalTimeline<String, DataSegment>>()
-          {
-            @Override
-            public VersionedIntervalTimeline<String, DataSegment> inTransaction(
-                Handle handle, TransactionStatus status
-            )
-            {
-              return handle
-                  .createQuery(StringUtils.format(
-                      "SELECT payload FROM %s WHERE dataSource = :dataSource",
-                      getSegmentsTable()
-                  ))
-                  .setFetchSize(connector.getStreamingFetchSize())
-                  .bind("dataSource", ds)
-                  .map(ByteArrayMapper.FIRST)
-                  .fold(
-                      new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural()),
-                      new Folder3<VersionedIntervalTimeline<String, DataSegment>, byte[]>()
-                      {
-                        @Override
-                        public VersionedIntervalTimeline<String, DataSegment> fold(
-                            VersionedIntervalTimeline<String, DataSegment> timeline,
-                            byte[] payload,
-                            FoldController foldController,
-                            StatementContext statementContext
-                        ) throws SQLException
-                        {
-                          try {
-                            final DataSegment segment = DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(
-                                payload,
-                                DataSegment.class
-                            ));
+          (handle, status) -> VersionedIntervalTimeline.forSegments(
+              Iterators.transform(
+                  handle
+                      .createQuery(
+                          StringUtils.format(
+                              "SELECT payload FROM %s WHERE dataSource = :dataSource",
+                              getSegmentsTable()
+                          )
+                      )
+                      .setFetchSize(connector.getStreamingFetchSize())
+                      .bind("dataSource", ds)
+                      .map(ByteArrayMapper.FIRST)
+                      .iterator(),
+                  payload -> {
+                    try {
+                      return DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(payload, DataSegment.class));
+                    }
+                    catch (IOException e) {
+                      throw new RuntimeException(e);
+                    }
+                  }
+              )
 
-                            timeline.add(
-                                segment.getInterval(),
-                                segment.getVersion(),
-                                segment.getShardSpec().createChunk(segment)
-                            );
-
-                            return timeline;
-                          }
-                          catch (Exception e) {
-                            throw new SQLException(e.toString());
-                          }
-                        }
-                      }
-                  );
-            }
-          }
+          )
       );
 
       final List<DataSegment> segments = Lists.newArrayList();
@@ -366,7 +340,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public boolean isStarted()
   {
-    return lifecycleLock.isStarted();
+    return started;
   }
 
   @Override
@@ -420,7 +394,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public void poll()
   {
     try {
-      if (!lifecycleLock.isStarted()) {
+      if (!started) {
         return;
       }
 
@@ -538,7 +512,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 .createQuery(
                     StringUtils.format(
                         "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false ORDER BY start, %2$send%2$s",
-                        getSegmentsTable(), connector.getQuoteString()
+                        getSegmentsTable(),
+                        connector.getQuoteString()
                     )
                 )
                 .setFetchSize(connector.getStreamingFetchSize())

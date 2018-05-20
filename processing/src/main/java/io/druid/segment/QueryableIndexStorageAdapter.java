@@ -53,6 +53,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +90,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public Iterable<String> getAvailableMetrics()
   {
-    return Sets.difference(Sets.newHashSet(index.getColumnNames()), Sets.newHashSet(index.getAvailableDimensions()));
+    HashSet<String> columnNames = Sets.newHashSet(index.getColumnNames());
+    return Sets.difference(columnNames, Sets.newHashSet(index.getAvailableDimensions()));
   }
 
   @Override
@@ -235,7 +237,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     int preFilteredRows = totalRows;
     if (filter == null) {
       preFilters = Collections.emptyList();
-      offset = new NoFilterOffset(0, totalRows, descending);
+      offset = descending ? new SimpleDescendingOffset(totalRows) : new SimpleAscendingOffset(totalRows);
     } else {
       preFilters = new ArrayList<>();
 
@@ -258,7 +260,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       }
 
       if (preFilters.size() == 0) {
-        offset = new NoFilterOffset(0, index.getNumRows(), descending);
+        offset = descending ? new SimpleDescendingOffset(totalRows) : new SimpleAscendingOffset(totalRows);
       } else {
         if (queryMetrics != null) {
           BitmapResultFactory<?> bitmapResultFactory =
@@ -333,6 +335,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final long minDataTimestamp;
     private final long maxDataTimestamp;
     private final boolean descending;
+    @Nullable
     private final Filter postFilter;
     private final ColumnSelectorBitmapIndexSelector bitmapIndexSelector;
 
@@ -345,7 +348,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         long minDataTimestamp,
         long maxDataTimestamp,
         boolean descending,
-        Filter postFilter,
+        @Nullable Filter postFilter,
         ColumnSelectorBitmapIndexSelector bitmapIndexSelector
     )
     {
@@ -548,7 +551,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       this.baseOffset = baseOffset;
       this.timestamps = timestamps;
       this.timeLimit = timeLimit;
-      // checks if all the values are within the Threshold specified, skips timestamp lookups and checks if all values are within threshold.
+      // checks if all the values are within the Threshold specified, skips timestamp lookups and checks if all values
+      // are within threshold.
       this.allWithinThreshold = allWithinThreshold;
     }
 

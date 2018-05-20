@@ -108,6 +108,7 @@ public class JobHelperTest
                 null,
                 null,
                 null,
+                null,
                 false,
                 false,
                 false,
@@ -126,6 +127,8 @@ public class JobHelperTest
                 null,
                 false,
                 false,
+                null,
+                null,
                 null
             )
         )

@@ -105,7 +105,19 @@ public class DruidCoordinatorSegmentCompactorTest
     @Override
     public List<TaskStatusPlus> getRunningTasks()
     {
-      return ImmutableList.of();
+      return Collections.emptyList();
+    }
+
+    @Override
+    public List<TaskStatusPlus> getPendingTasks()
+    {
+      return Collections.emptyList();
+    }
+
+    @Override
+    public List<TaskStatusPlus> getWaitingTasks()
+    {
+      return Collections.emptyList();
     }
 
     @Override

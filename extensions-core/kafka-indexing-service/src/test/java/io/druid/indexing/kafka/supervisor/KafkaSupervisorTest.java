@@ -20,7 +20,6 @@
 package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -91,6 +90,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -185,6 +185,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     tuningConfig = new KafkaSupervisorTuningConfig(
         1000,
+        null,
         50000,
         new Period("P1Y"),
         new File("/test"),
@@ -200,6 +201,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
+        null,
+        null,
+        null,
         null,
         null
     );
@@ -2003,7 +2007,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                     new JSONPathSpec(true, ImmutableList.<JSONPathFieldSpec>of()),
                     ImmutableMap.<String, Boolean>of()
                 ),
-                Charsets.UTF_8.name()
+                StandardCharsets.UTF_8.name()
             ),
             Map.class
         ),

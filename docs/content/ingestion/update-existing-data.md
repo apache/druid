@@ -76,7 +76,7 @@ For example
 
 #### `multi`
 
-This is a composing inputSpec to combine other inputSpecs. This inputSpec is used for delta ingestion. Please note that you can have only one `dataSource` as child of `multi` inputSpec.
+This is a composing inputSpec to combine other inputSpecs. This inputSpec is used for delta ingestion. You can also use a `multi` inputSpec to combine data from multiple dataSources. However, each particular dataSource can only be specified one time.
 Note that, "useNewAggs" must be set to default value false to support delta-ingestion.
 
 |Field|Type|Description|Required|

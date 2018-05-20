@@ -54,11 +54,23 @@ public class AzureTaskLogs implements TaskLogs
   {
     final String taskKey = getTaskLogKey(taskid);
     log.info("Pushing task log %s to: %s", logFile, taskKey);
+    pushTaskFile(taskid, logFile, taskKey);
+  }
 
+  @Override
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    final String taskKey = getTaskReportsKey(taskid);
+    log.info("Pushing task reports %s to: %s", reportFile, taskKey);
+    pushTaskFile(taskid, reportFile, taskKey);
+  }
+
+  private void pushTaskFile(final String taskId, final File logFile, String taskKey)
+  {
     try {
       AzureUtils.retryAzureOperation(
           () -> {
-            azureStorage.uploadBlob(logFile, config.getContainer(), taskKey, true);
+            azureStorage.uploadBlob(logFile, config.getContainer(), taskKey);
             return null;
           },
           config.getMaxTries()
@@ -72,8 +84,18 @@ public class AzureTaskLogs implements TaskLogs
   @Override
   public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
   {
+    return streamTaskFile(taskid, offset, getTaskLogKey(taskid));
+  }
+
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  {
+    return streamTaskFile(taskid, 0, getTaskReportsKey(taskid));
+  }
+
+  private Optional<ByteSource> streamTaskFile(final String taskid, final long offset, String taskKey) throws IOException
+  {
     final String container = config.getContainer();
-    final String taskKey = getTaskLogKey(taskid);
 
     try {
       if (!azureStorage.getBlobExists(container, taskKey)) {
@@ -116,10 +138,14 @@ public class AzureTaskLogs implements TaskLogs
     }
   }
 
-
   private String getTaskLogKey(String taskid)
   {
     return StringUtils.format("%s/%s/log", config.getPrefix(), taskid);
+  }
+
+  private String getTaskReportsKey(String taskid)
+  {
+    return StringUtils.format("%s/%s/report.json", config.getPrefix(), taskid);
   }
 
   @Override

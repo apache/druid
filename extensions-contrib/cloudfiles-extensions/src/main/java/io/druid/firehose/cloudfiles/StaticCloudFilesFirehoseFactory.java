@@ -101,7 +101,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
   @Override
   protected InputStream wrapObjectStream(CloudFilesBlob object, InputStream stream) throws IOException
   {
-    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return CompressionUtils.decompress(stream, object.getPath());
   }
 
   @Override

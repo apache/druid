@@ -19,9 +19,7 @@
 
 package io.druid.query.lookup.namespace;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -39,6 +37,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +67,7 @@ public class JSONFlatDataParserTest
   public void setUp() throws Exception
   {
     tmpFile = temporaryFolder.newFile("lookup.json");
-    final CharSink sink = Files.asByteSink(tmpFile).asCharSink(Charsets.UTF_8);
+    final CharSink sink = Files.asByteSink(tmpFile).asCharSink(StandardCharsets.UTF_8);
     sink.writeLines(
         Iterables.transform(
             MAPPINGS,

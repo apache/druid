@@ -45,6 +45,9 @@ import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationResult;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
@@ -58,6 +61,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -112,6 +116,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final AuthenticatorMapper authenticatorMapper;
 
   private HttpClient broadcastClient;
 
@@ -125,7 +130,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       @Router DruidHttpClientConfig httpClientConfig,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
-      GenericQueryMetricsFactory queryMetricsFactory
+      GenericQueryMetricsFactory queryMetricsFactory,
+      AuthenticatorMapper authenticatorMapper
   )
   {
     this.warehouse = warehouse;
@@ -137,6 +143,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryMetricsFactory = queryMetricsFactory;
+    this.authenticatorMapper = authenticatorMapper;
   }
 
   @Override
@@ -312,6 +319,22 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // will log that on the remote node.
     clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
 
+    // Check if there is an authentication result and use it to decorate the proxy request if needed.
+    AuthenticationResult authenticationResult = (AuthenticationResult) clientRequest.getAttribute(
+        AuthConfig.DRUID_AUTHENTICATION_RESULT);
+    if (authenticationResult != null && authenticationResult.getAuthenticatedBy() != null) {
+      Authenticator authenticator = authenticatorMapper.getAuthenticatorMap()
+                                                       .get(authenticationResult.getAuthenticatedBy());
+      if (authenticator != null) {
+        authenticator.decorateProxyRequest(
+            clientRequest,
+            proxyResponse,
+            proxyRequest
+        );
+      } else {
+        log.error("Can not find Authenticator with Name [%s]", authenticationResult.getAuthenticatedBy());
+      }
+    }
     super.sendProxyRequest(
         clientRequest,
         proxyResponse,
@@ -465,13 +488,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
                         success
-                        && result.getResponse().getStatus() == javax.ws.rs.core.Response.Status.OK.getStatusCode()
+                        && result.getResponse().getStatus() == Status.OK.getStatusCode()
                     )
                 )
             )
         );
-
-
       }
       catch (Exception e) {
         log.error(e, "Unable to log query [%s]!", query);
