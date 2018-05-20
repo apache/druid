@@ -22,9 +22,6 @@ import java.util.Map;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Created by vrparikh on 5/17/18.
- */
 public class GenericRecordAsMapTest {
 
   @Test
@@ -39,7 +36,7 @@ public class GenericRecordAsMapTest {
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suit_for_different_events.json"));
+            "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_generic_record_builder");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
@@ -75,7 +72,7 @@ public class GenericRecordAsMapTest {
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suit_for_different_events.json"));
+            "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_generic_record_builder_nested");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
@@ -105,7 +102,7 @@ public class GenericRecordAsMapTest {
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suit_for_different_events.json"));
+            "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_union_type");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
@@ -136,7 +133,7 @@ public class GenericRecordAsMapTest {
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suit_for_different_events.json"));
+            "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_union_type_with_map");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();

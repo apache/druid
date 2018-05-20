@@ -84,7 +84,7 @@ public class ParquetHadoopInputRowParser implements InputRowParser<GenericRecord
   @Override
   public List<InputRow> parseBatch(GenericRecord record)
   {
-    // Map the record to a map
+    // Mapping the incoming record to a queryable map, holding dimensions and metrics per parser definition
     final GenericRecordAsMap genericRecordAsMap = new GenericRecordAsMap(
         record,
         binaryAsString,

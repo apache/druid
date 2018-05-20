@@ -48,9 +48,11 @@ public class ParquetParser
   }
 
   /**
-   * @param classz
+   * For given class returns the appropriate available field type
    *
-   * @return
+   * @param classz - class type of incoming object reference
+   *
+   * @return FieldType enum
    */
   public FieldType getFieldType(Class<?> classz)
   {

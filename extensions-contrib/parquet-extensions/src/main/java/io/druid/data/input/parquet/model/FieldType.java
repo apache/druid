@@ -22,16 +22,14 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
 public enum FieldType
 {
-  STRING(String.class), MAP(Map.class), INT(Integer.class), LONG(Long.class), UNION(Object.class),
-  STRUCT_LIST(List.class), STRUCT(Object.class), UTF8(Utf8.class),
-  LIST(List.class), GENERIC_RECORD(GenericRecord.class), BYTE_BUFFER(ByteBuffer.class),
+  STRING(String.class), MAP(Map.class), INT(Integer.class), LONG(Long.class), UNION(Object.class), STRUCT(Object.class),
+  UTF8(Utf8.class), LIST(List.class), GENERIC_RECORD(GenericRecord.class), BYTE_BUFFER(ByteBuffer.class),
   GENERIC_DATA_RECORD(GenericData.Record.class);
 
   private final Class<?> classz;

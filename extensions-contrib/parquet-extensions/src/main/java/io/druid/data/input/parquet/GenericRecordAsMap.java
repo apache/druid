@@ -31,10 +31,15 @@ import org.apache.commons.lang.builder.ToStringBuilder;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
-public class GenericRecordAsMap implements Map<String, Object> {
+class GenericRecordAsMap implements Map<String, Object>
+{
   private final GenericRecord record;
   private final boolean binaryAsString;
   private final Map<String, Object> attributes;
@@ -42,40 +47,44 @@ public class GenericRecordAsMap implements Map<String, Object> {
   private final int maxDepthOfFieldTraversal;
 
   /**
-   * Constructor to invoke GenericRecordAsMap, which is resonsible to parse the schema and .
+   * Global constructor within this package, stores dataset required for retrieval of dimension and metrics at runtime
    *
-   * @param record
-   * @param binaryAsString
-   * @param parquetParser
+   * @param record         incoming generic record
+   * @param binaryAsString parsed from parserSpec
+   * @param parquetParser  incoming parquet parser spec definition object if defined, else it is null
    */
   GenericRecordAsMap(
-          GenericRecord record,
-          boolean binaryAsString,
-          ParquetParser parquetParser
-  ) {
+      GenericRecord record,
+      boolean binaryAsString,
+      ParquetParser parquetParser
+  )
+  {
     this.record = Preconditions.checkNotNull(record, "record");
     this.binaryAsString = binaryAsString;
-
-    //As record is already connected to a schema, using a seperate attributes map
-    //As attibutes is referred only within this object not making it a immutable collection
-    this.attributes = Maps.newHashMap();
     this.parquetParser = parquetParser;
-    this.maxDepthOfFieldTraversal = parquetParser != null ?
-            parquetParser.getMaxDepth() : ParquetParser.DEFAULT_MAX_DEPTH;
+    //As record is already connected to a schema, using a seperate attributes map
+    this.attributes = Maps.newHashMap();
 
     // Update key & value from parquet parser.
     // Takes the key as dimensionName. If null then takes `key` from the parser config as key.
     // Updates the attributes Map based on the parser config
     if (this.parquetParser != null && this.parquetParser.getFields() != null) {
+      // Maximum depth till which the nested fields will be traversed, default depth is 3
+      this.maxDepthOfFieldTraversal = parquetParser.getMaxDepth();
       for (Field field : this.parquetParser.getFields()) {
+        // Looking up for dimension_name specified in field, to override the default field name
+        // Even basic datatypes can use this option to override the dimension name without changing parquet columnname
         String key = field.getDimensionName();
-
         if (key == null) {
+          // Else use the key as the dimension_name
           key = field.getKey().toString();
-
         }
+        // Single entry point for attributes updation,
+        // as attributes is within the scope of this object not converting it as an unmodifiable MAP
         this.attributes.put(key, fetchFieldValue(field.getFieldType(), field, null, 0));
       }
+    } else {
+      this.maxDepthOfFieldTraversal = ParquetParser.DEFAULT_MAX_DEPTH;
     }
   }
 
@@ -84,16 +93,18 @@ public class GenericRecordAsMap implements Map<String, Object> {
    * It parses the records as specified in the parser config and produces a flattened data.
    *
    * @param fieldType Type of the field to be parsed
-   * @param field Field config as mentioned in the parser spec
-   * @param object Object to parsed
-   * @param depth Depth of the parser fields
+   * @param field     Field config as mentioned in the parser spec
+   * @param object    Object to parsed
+   * @param depth     Depth of the parser fields
    *
    * @return Parsed object
    */
   @Nullable
   @SuppressWarnings("unchecked")
-  private Object fetchFieldValue(FieldType fieldType, Field field, Object object, int depth) {
+  private Object fetchFieldValue(FieldType fieldType, Field field, Object object, int depth)
+  {
     if (depth++ > maxDepthOfFieldTraversal) {
+      // If the spec definition's max_depth limit is crossed breaking the parser process for the given field
       return null;
     }
 
@@ -118,10 +129,10 @@ public class GenericRecordAsMap implements Map<String, Object> {
 
           // If object is of type GenericRecord, then extract Map based on the rootFieldName
           // And then assign it to referenceMap
-          if (referenceObject instanceof GenericRecord){
+          if (referenceObject instanceof GenericRecord) {
             Preconditions.checkNotNull(
-                    field.getRootFieldName(),
-                    "Expecting field name in field to be available for parsing a MAP!"
+                field.getRootFieldName(),
+                "Expecting field name in field to be available for parsing a MAP!"
             );
 
             GenericRecord genericRecord = (GenericRecord) referenceObject;
@@ -152,11 +163,11 @@ public class GenericRecordAsMap implements Map<String, Object> {
         // Section of code to parse a Union Type and extract values as mentioned in the spec
         case UNION: {
           if (field == null) {
+            // Having this check to ensure on nested fields, no empty field is passed
             return null;
           }
 
           GenericRecord genericRecord = (GenericRecord) getReferencingObject(object, depth);
-//          GenericRecord unionObject = (GenericRecord) genericRecord.get(field.getRootFieldName());
 
           Object extractedObject = genericRecord.get(field.getKey().toString());
           Field nextField = field.getField();
@@ -166,9 +177,6 @@ public class GenericRecordAsMap implements Map<String, Object> {
           }
           return extractedObject;
 
-
-
-          // Field will be a struct having the index for GenericRecord, and then it will contain a map within it
         }
 
         // Section of code to parse a Struct and extract values as mentioned in the spec
@@ -180,7 +188,12 @@ public class GenericRecordAsMap implements Map<String, Object> {
           //Extracting from object
           if (field.getField() != null) {
             Field nextField = field.getField();
-            return fetchFieldValue(nextField.getFieldType(), nextField, genericRecord.get(field.getKey().toString()), depth);
+            return fetchFieldValue(
+                nextField.getFieldType(),
+                nextField,
+                genericRecord.get(field.getKey().toString()),
+                depth
+            );
           }
 
           return genericRecord.get(field.getKey().toString());
@@ -199,29 +212,20 @@ public class GenericRecordAsMap implements Map<String, Object> {
           final Object extractedObject = genericRecord.get(field.getKey().toString());
 
           // Evaluate parseListrecord method, that checks for index and returns value based on that.
-          if (extractedObject instanceof List) {
+          if (extractedObject != null && extractedObject instanceof List) {
             return parseListRecord((List<GenericRecord>) extractedObject, field, depth);
           }
 
-          // TODO @Sathish: This section of code is not required and not used.
-          // Evaluate GenericRecord if it is an instance of GenericData.Record
-//          if (extractedObject instanceof GenericData.Record) {
-//            for (int i = 0; i < record.getSchema().getFields().size(); i++) {
-//              Object currentRecord = record.get(i);
-//
-//              Object extractedValue = fetchFieldValue(getFieldType(currentRecord.getClass()), null, currentRecord, depth);
-//              if (extractedValue != null) {
-//                parsedObjectList.add(extractedValue);
-//              }
-//            }
-//          }
           return null;
         }
 
         // Section of code to parse a Utf8 and extract values as mentioned in the spec
         case UTF8: {
+          if (field == null) {
+            return null;
+          }
           GenericRecord genericRecord = (GenericRecord) getReferencingObject(object, depth);
-          return genericRecord.toString();
+          return genericRecord.get(field.getKey().toString());
         }
 
         // Section of code to parse a GenericDataRecord and extract values as mentioned in the spec
@@ -243,11 +247,11 @@ public class GenericRecordAsMap implements Map<String, Object> {
 
         // Section of code to parse a default value and extract values as mentioned in the spec
         default: {
+          if (field == null) {
+            return null;
+          }
           GenericRecord genericRecord = (GenericRecord) getReferencingObject(object, depth);
-          Preconditions.checkNotNull(
-                  field.getKey(),
-                  "Expecting key in field to be available for parsing from default record!"
-          );
+          //Null check for key is performed at field creation, as its a required parameter
           return genericRecord.get(field.getKey().toString());
         }
       }
@@ -256,7 +260,16 @@ public class GenericRecordAsMap implements Map<String, Object> {
     return null;
   }
 
-  private Object getReferencingObject(Object obj, int depth) {
+  /**
+   * Helper method for determining extraction object to be either the passed object or the base generic record
+   *
+   * @param obj   object in scope
+   * @param depth current depth of fields traversed
+   *
+   * @return the object to be used for value extraction
+   */
+  private Object getReferencingObject(Object obj, int depth)
+  {
     return obj == null && depth == 1 ? record : obj;
   }
 
@@ -265,13 +278,14 @@ public class GenericRecordAsMap implements Map<String, Object> {
    * If its non-primitive type, then extract values from it as per the spec
    *
    * @param genericRecord of type GenericRecord
-   * @param  field of type Field
-   * @param depth of type int
+   * @param field         of type Field
+   * @param depth         of type int
    *
    * @return fetched object from GenericRecord. As of now its always first object.
    */
   @Nullable
-  private Object parseGenericRecord(GenericRecord genericRecord, Field field, int depth) {
+  private Object parseGenericRecord(GenericRecord genericRecord, Field field, int depth)
+  {
     if (field != null && field.getKey() != null) {
       Object recordValue = genericRecord.get(field.getKey().toString());
       Field nextField = field.getField();
@@ -292,12 +306,14 @@ public class GenericRecordAsMap implements Map<String, Object> {
    * Else return a list of extracted values based on the parse spec.
    *
    * @param objectList List of object
-   * @param field Field parse spec
-   * @param depth depth for parsing
+   * @param field      Field parse spec
+   * @param depth      depth for parsing
+   *
    * @return Object/List<Object> based on the index value
    */
   @Nullable
-  private Object parseListRecord(List<GenericRecord> objectList, Field field, int depth) {
+  private Object parseListRecord(List<GenericRecord> objectList, Field field, int depth)
+  {
     if (field == null) {
       return null;
     }
@@ -314,11 +330,13 @@ public class GenericRecordAsMap implements Map<String, Object> {
    * Returns a list of extracted values based on the parse spec.
    *
    * @param objectList List of object
-   * @param field Field parse spec
-   * @param depth depth for parsing
+   * @param field      Field parse spec
+   * @param depth      depth for parsing
+   *
    * @return List<Object>
    */
-  private List<Object> parseListRecordToList(List<GenericRecord> objectList, Field field, int depth) {
+  private List<Object> parseListRecordToList(List<GenericRecord> objectList, Field field, int depth)
+  {
     List<Object> parsedObjectList = Lists.newArrayList();
 
     for (GenericRecord currentObject : objectList) {
@@ -345,12 +363,14 @@ public class GenericRecordAsMap implements Map<String, Object> {
    * Returns an extracted value based on the parse spec.
    *
    * @param objectList List of object
-   * @param field Field parse spec
-   * @param depth depth for parsing
+   * @param field      Field parse spec
+   * @param depth      depth for parsing
+   *
    * @return Object
    */
   @Nullable
-  private Object parseListRecordToObject(List<GenericRecord> objectList, Field field, int depth) {
+  private Object parseListRecordToObject(List<GenericRecord> objectList, Field field, int depth)
+  {
     if (objectList != null && (field.getIndex() >= 0 && field.getIndex() < objectList.size())) {
       //Extracting element per field definition
       Object currentObject = objectList.get(field.getIndex());
@@ -364,10 +384,7 @@ public class GenericRecordAsMap implements Map<String, Object> {
 
       if (nextField != null) {
         nextFieldType = nextField.getFieldType();
-        //Having this check for retrieval from an array
-//              if (FieldType.GENERIC_DATA_RECORD.equals(getFieldType(currentObject.getClass()))) {
         currentObject = ((GenericRecord) currentObject).get(0);
-//              }
       }
 
       return fetchFieldValue(nextFieldType, field.getField(), currentObject, depth);
@@ -376,22 +393,26 @@ public class GenericRecordAsMap implements Map<String, Object> {
   }
 
   @Override
-  public int size() {
+  public int size()
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean isEmpty() {
+  public boolean isEmpty()
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean containsKey(Object key) {
+  public boolean containsKey(Object key)
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean containsValue(Object value) {
+  public boolean containsValue(Object value)
+  {
     throw new UnsupportedOperationException();
   }
 
@@ -414,9 +435,10 @@ public class GenericRecordAsMap implements Map<String, Object> {
    * </ul>
    */
   @Override
-  public Object get(Object key) {
+  public Object get(Object key)
+  {
     if (attributes.containsKey(key.toString())) {
-      // TODO send it as a string, check while construction whether the value is saved as string
+      // If the attributes map built during parquet parser definition unpacking contains the key, returning its value
       return attributes.get(key);
     } else {
       Object field = record.get(key.toString());
@@ -430,7 +452,8 @@ public class GenericRecordAsMap implements Map<String, Object> {
     }
   }
 
-  private Object getBufferString(ByteBuffer field) {
+  private Object getBufferString(ByteBuffer field)
+  {
     if (binaryAsString) {
       return StringUtils.fromUtf8(((ByteBuffer) field).array());
     } else {
@@ -438,56 +461,66 @@ public class GenericRecordAsMap implements Map<String, Object> {
     }
   }
 
-  private FieldType getFieldType(Class<?> classz) {
+  private FieldType getFieldType(Class<?> classz)
+  {
     return parquetParser != null ? parquetParser.getFieldType(classz) : null;
   }
 
   @Override
-  public Object put(String key, Object value) {
+  public Object put(String key, Object value)
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Object remove(Object key) {
+  public Object remove(Object key)
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void putAll(Map<? extends String, ?> m) {
+  public void putAll(Map<? extends String, ?> m)
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void clear() {
+  public void clear()
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Set<String> keySet() {
+  public Set<String> keySet()
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Collection<Object> values() {
+  public Collection<Object> values()
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Set<Entry<String, Object>> entrySet() {
+  public Set<Entry<String, Object>> entrySet()
+  {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return new ToStringBuilder(this)
-            .append("record", record)
-            .append("binaryAsString", binaryAsString)
-            .append("attributes", attributes)
-            .toString();
+        .append("record", record)
+        .append("binaryAsString", binaryAsString)
+        .append("attributes", attributes)
+        .toString();
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(Object o)
+  {
     if (this == o) {
       return true;
     }
@@ -507,7 +540,8 @@ public class GenericRecordAsMap implements Map<String, Object> {
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     int result = record != null ? record.hashCode() : 0;
     result = 31 * result + (binaryAsString ? 1 : 0);
     result = 31 * result + (attributes != null ? attributes.hashCode() : 0);

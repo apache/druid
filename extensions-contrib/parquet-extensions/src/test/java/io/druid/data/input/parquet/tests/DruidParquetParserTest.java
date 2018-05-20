@@ -19,9 +19,15 @@
 package io.druid.data.input.parquet.tests;
 
 import io.druid.data.input.InputRow;
+import io.druid.data.input.parquet.models.TestSuiteEntity;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.path.StaticPathSpec;
+import org.apache.avro.Schema;
+import org.apache.avro.SchemaBuilder;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericRecordBuilder;
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Rule;
@@ -32,7 +38,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertTrue;
 
@@ -78,33 +86,8 @@ public class DruidParquetParserTest extends DruidParquetInputTest
     assertTrue(row.getDimension("reference_ids").equals(Arrays.asList("10", "20")));
     assertTrue(row.getDimension("cost_a").equals(Arrays.asList("10.35", "9.4")));
     assertTrue(row.getDimension("cost_b_1st_tag").equals(Collections.singletonList("2.7")));
-  }
-
-  @Test
-  public void testAllDatatypeCombinationsParserNew() throws IOException, InterruptedException
-  {
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
-            "example/parser/events_with_all_datatype_test_combinations_new.json"));
-    Job job = Job.getInstance(new Configuration());
-    config.intoConfiguration(job);
-    GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
-    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
-    for (String dimension : row.getDimensions()) {
-      System.out.println(dimension + " -> " + row.getDimension(dimension));
-    }
-    System.out.println("cost_b_2nd_tag_sum -> " + row.getMetric("cost_b_2nd_tag_sum"));
-    assertTrue(row.getDimension("eventId").equals(Collections.singletonList("1")));
-    assertTrue(row.getDimension("valid_map_access").equals(Collections.singletonList("US")));
-    assertTrue(row.getDimension("max_access_with_non_existing_key").isEmpty());
-    assertTrue(row.getDimension("max_access_with_un_available_map").isEmpty());
-    assertTrue(row.getDimension("array_access_with_index").equals(Collections.singletonList("20")));
-    assertTrue(row.getDimension("array_access_with_default_index").equals(Arrays.asList("10", "20")));
-    assertTrue(row.getDimension("array_access_with_overbound_index").isEmpty());
-    assertTrue(row.getDimension("union_attribute").isEmpty());
-    assertTrue(row.getDimension("tag_ids").equals(Arrays.asList("100", "101")));
-    assertTrue(row.getDimension("reference_ids").equals(Arrays.asList("10", "20")));
-    assertTrue(row.getDimension("cost_a").equals(Arrays.asList("10.35", "9.4")));
-    assertTrue(row.getDimension("cost_b_1st_tag").equals(Collections.singletonList("2.7")));
+    assertTrue(row.getDimension("non_available_list").isEmpty());
+    assertTrue(row.getDimension("list_with_non_available_index").isEmpty());
   }
 
   @Test
@@ -143,9 +126,157 @@ public class DruidParquetParserTest extends DruidParquetInputTest
   }
 
   @Test
-  public void testWithNonAvailableFields()
+  public void testAllDatatypeCombinationsParserNew() throws IOException, InterruptedException
   {
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
+        "example/parser/events_with_all_datatype_test_combinations_new.json"));
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+    GenericRecord data = getFirstRecord(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+    System.out.println("cost_b_2nd_tag_sum -> " + row.getMetric("cost_b_2nd_tag_sum"));
+    assertTrue(row.getDimension("eventId").equals(Collections.singletonList("1")));
+    assertTrue(row.getDimension("valid_map_access").equals(Collections.singletonList("US")));
+    assertTrue(row.getDimension("max_access_with_non_existing_key").isEmpty());
+    assertTrue(row.getDimension("max_access_with_un_available_map").isEmpty());
+    assertTrue(row.getDimension("array_access_with_index").equals(Collections.singletonList("20")));
+    assertTrue(row.getDimension("array_access_with_default_index").equals(Arrays.asList("10", "20")));
+    assertTrue(row.getDimension("array_access_with_overbound_index").isEmpty());
+    assertTrue(row.getDimension("union_attribute").isEmpty());
+    assertTrue(row.getDimension("tag_ids").equals(Arrays.asList("100", "101")));
+    assertTrue(row.getDimension("reference_ids").equals(Arrays.asList("10", "20")));
+    assertTrue(row.getDimension("cost_a").equals(Arrays.asList("10.35", "9.4")));
+    assertTrue(row.getDimension("cost_b_1st_tag").equals(Collections.singletonList("2.7")));
+  }
 
+  @Test
+  public void testSuiteCoveringValidations() throws IOException
+  {
+    testMapValidations();
+    testNestedMapValidations();
+  }
+
+  private void testMapValidations() throws IOException
+  {
+    Schema schema = SchemaBuilder.record("test_record")
+                                 .fields()
+                                 .name("root_map_key").type().map().values().intType().noDefault()
+                                 .name("utf8type_string").type().stringType().noDefault()
+                                 .endRecord();
+
+    GenericRecordBuilder genericRecordBuilder = new GenericRecordBuilder(schema);
+    Map<Utf8, Integer> map = new HashMap<>();
+    map.put(new Utf8("map_key"), 2);
+    genericRecordBuilder.set("root_map_key", map);
+    genericRecordBuilder.set("utf8type_string", new Utf8("utf8_dimension"));
+    GenericData.Record record = genericRecordBuilder.build();
+
+    Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
+        "example/parser/test_suite_for_map_validations.json"));
+
+    TestSuiteEntity testSuiteEntity = testSuites.get("test_map_validations");
+    HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
+
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(record)).get(0);
+
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+    assertTrue(row.getDimension("dimension_1").equals(Collections.singletonList("2")));
+
+    testSuiteEntity = testSuites.get("test_map_with_empty_field");
+    config = testSuiteEntity.getDruidSpec();
+
+    job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+
+    row = ((List<InputRow>) config.getParser().parseBatch(record)).get(0);
+
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+    assertTrue(row.getDimension("dimension_1").isEmpty());
+  }
+
+
+  private void testNestedMapValidations() throws IOException
+  {
+    Schema schema = SchemaBuilder.record("test_record")
+                                 .fields()
+                                 .name("root_map_key").type().map().values().intType().noDefault()
+                                 .endRecord();
+    GenericRecordBuilder genericRecordBuilder = new GenericRecordBuilder(schema);
+    Map<Utf8, Integer> child2 = new HashMap<>();
+    child2.put(new Utf8("child2_key"), 2);
+    Map<Utf8, Map> child1 = new HashMap<>();
+    child1.put(new Utf8("child1_key"), child2);
+
+    Map<Utf8, Map> map = new HashMap<>();
+    map.put(new Utf8("map_key"), child1);
+    genericRecordBuilder.set("root_map_key", map);
+    GenericData.Record record = genericRecordBuilder.build();
+
+    Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
+        "example/parser/test_suite_for_map_validations.json"));
+
+    TestSuiteEntity testSuiteEntity = testSuites.get("test_nested_map");
+    HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
+
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(record)).get(0);
+
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+    assertTrue(row.getDimension("dimension_1").equals(Collections.singletonList("2")));
+  }
+
+  @Test
+  public void testDimensionsBothWithinParserSpecAndDirectColumn() throws IOException
+  {
+    Schema schema = SchemaBuilder.record("test_record")
+                                 .fields()
+                                 .name("root_map_key").type().map().values().intType().noDefault()
+                                 .name("utf8type_string").type().stringType().noDefault()
+                                 .name("long_column").type().longType().longDefault(30)
+                                 .name("double_column").type().doubleType().doubleDefault(89.35)
+                                 .name("string_column").type().stringType().stringDefault("default_string")
+                                 .endRecord();
+
+    GenericRecordBuilder genericRecordBuilder = new GenericRecordBuilder(schema);
+    Map<Utf8, Integer> map = new HashMap<>();
+    map.put(new Utf8("map_key"), 2);
+    genericRecordBuilder.set("root_map_key", map);
+    genericRecordBuilder.set("utf8type_string", new Utf8("utf8_dimension"));
+    GenericData.Record record = genericRecordBuilder.build();
+
+    Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
+        "example/parser/test_suite_for_map_validations.json"));
+
+    TestSuiteEntity testSuiteEntity = testSuites.get("test_dimensions_in_both_parser_spec_and_as_parquet_column");
+    HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
+
+    Job job = Job.getInstance(new Configuration());
+    config.intoConfiguration(job);
+
+    InputRow row = ((List<InputRow>) config.getParser().parseBatch(record)).get(0);
+
+    for (String dimension : row.getDimensions()) {
+      System.out.println(dimension + " -> " + row.getDimension(dimension));
+    }
+    assertTrue(row.getDimension("dimension_1").equals(Collections.singletonList("2")));
+    assertTrue(row.getDimension("utf8type_string").equals(Collections.singletonList("utf8_dimension")));
+    assertTrue(row.getDimension("long_column").equals(Collections.singletonList("30")));
+    assertTrue(row.getDimension("double_column").equals(Collections.singletonList("89.35")));
+    assertTrue(row.getDimension("string_column").equals(Collections.singletonList("default_string")));
   }
 
   @Test

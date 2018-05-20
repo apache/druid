@@ -7,6 +7,7 @@
         "type": "parquet",
         "binaryAsString": true,
         "parquetParser": {
+          "depth": 5,
           "fields": [
             {
               "key": "eventId",
@@ -23,60 +24,60 @@
               "dimensionName": "valid_map_access"
             },
             {
-              "rootFieldName": "attributes",
-              "key": "non_existing_key",
-              "fieldType": "MAP",
-              "dimensionName": "max_access_with_non_existing_key"
-            },
-            {
-              "rootFieldName": "un_available_map",
-              "key": "attrA",
-              "fieldType": "MAP",
-              "dimensionName": "max_access_with_un_available_map"
-            },
-            {
               "key": "referenceIds",
               "fieldType": "LIST",
               "index": 1,
-              "dimensionName": "array_access_with_index"
+              "dimensionName": "list_access_with_index"
             },
             {
               "key": "referenceIds",
               "fieldType": "LIST",
-              "dimensionName": "array_access_with_default_index"
+              "dimensionName": "multi_value_dimension"
             },
             {
-              "key": "referenceIds",
-              "fieldType": "LIST",
-              "index": 3,
-              "dimensionName": "array_access_with_overbound_index"
+              "key": "field1",
+              "fieldType": "GENERIC_RECORD",
+              "field": {
+                "key": "field2",
+                "fieldType": "GENERIC_RECORD"
+              },
+              "dimensionName": "generic_record_nested"
             },
             {
-              "key": "referenceIds_1",
-              "fieldType": "LIST",
-              "dimensionName": "non_available_list"
-            },
-            {
-              "key": "referenceIds",
-              "fieldType": "LIST",
-              "index": 5,
-              "dimensionName": "list_with_non_available_index"
-            },
-            {
-              "key": "referenceIds",
-              "fieldType": "LIST",
-              "dimensionName": "reference_ids"
-            },
-            {
-              "key": "headers_tmp",
+              "key": "union_with_map",
               "fieldType": "UNION",
               "field": {
-                "key": "member1",
-                "rootFieldName": "member1",
-                "fieldType": "STRUCT",
-                "index": 1
+                "key": "map_key",
+                "rootFieldName": "root_map_key",
+                "fieldType": "MAP"
               },
-              "dimensionName": "union_attribute"
+              "dimensionName": "union_with_map_dimension"
+            },
+            {
+              "key": "e2",
+              "fieldType": "STRUCT",
+              "field": {
+                "key": "e3",
+                "fieldType": "STRUCT",
+                "index": 1,
+                "field": {
+                  "key": "e4",
+                  "fieldType": "STRUCT",
+                  "field": {
+                    "key": "e5",
+                    "fieldType": "STRUCT",
+                    "field": {
+                      "key": "id",
+                      "fieldType": "STRUCT"
+                    }
+                  }
+                }
+              },
+              "dimensionName": "nested_struct"
+            },
+            {
+              "key": "union_field",
+              "fieldType": "UNION"
             },
             {
               "key": "tags",
@@ -135,16 +136,13 @@
             "dimensions": [
               "eventId",
               "valid_map_access",
-              "max_access_with_non_existing_key",
-              "max_access_with_un_available_map",
-              "array_access_with_index",
-              "array_access_with_default_index",
-              "array_access_with_overbound_index",
-              "union_attribute",
+              "list_access_with_index",
+              "multi_value_dimension",
+              "generic_record_nested",
+              "union_with_map_dimension",
+              "nested_struct",
+              "union_field",
               "tag_ids",
-              "reference_ids",
-              "non_available_list",
-              "list_with_non_available_index",
               "cost_a",
               "cost_b_1st_tag"
             ],
