@@ -24,7 +24,6 @@ import io.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.conf.Configuration;
@@ -40,21 +39,23 @@ import java.util.Map;
 
 import static org.junit.Assert.assertTrue;
 
-public class GenericRecordAsMapTest {
+public class GenericRecordAsMapTest
+{
 
   @Test
-  public void testGenericRecordWithOneField() throws IOException {
+  public void testGenericRecordWithOneField() throws IOException
+  {
     Schema schema = SchemaBuilder.record("test_record")
-            .fields()
-            .name("field1").type().doubleType().noDefault()
-            .endRecord();
+                                 .fields()
+                                 .name("field1").type().doubleType().noDefault()
+                                 .endRecord();
 
     GenericRecordBuilder genericRecordBuilder = new GenericRecordBuilder(schema);
     genericRecordBuilder.set("field1", 1D);
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suite_for_different_events.json"));
+        "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_generic_record_builder");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
@@ -70,15 +71,16 @@ public class GenericRecordAsMapTest {
   }
 
   @Test
-  public void testGenericRecordWithNesedField() throws IOException {
+  public void testGenericRecordWithNesedField() throws IOException
+  {
     Schema schema = SchemaBuilder.record("test_record")
-            .fields()
-            .name("field1").type()
-            .record("field1_record")
-            .fields()
-            .name("field2").type().doubleType().noDefault()
-            .endRecord().noDefault()
-            .endRecord();
+                                 .fields()
+                                 .name("field1").type()
+                                 .record("field1_record")
+                                 .fields()
+                                 .name("field2").type().doubleType().noDefault()
+                                 .endRecord().noDefault()
+                                 .endRecord();
 
     GenericRecordBuilder genericRecordBuilder = new GenericRecordBuilder(schema);
 
@@ -90,7 +92,7 @@ public class GenericRecordAsMapTest {
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suite_for_different_events.json"));
+        "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_generic_record_builder_nested");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
@@ -109,18 +111,19 @@ public class GenericRecordAsMapTest {
   }
 
   @Test
-  public void testUnionType() throws IOException {
+  public void testUnionType() throws IOException
+  {
     Schema schema = SchemaBuilder.record("test_record")
-            .fields()
-            .name("field1").type().unionOf().stringType().and().intType().endUnion().noDefault()
-            .endRecord();
+                                 .fields()
+                                 .name("field1").type().unionOf().stringType().and().intType().endUnion().noDefault()
+                                 .endRecord();
 
     GenericRecordBuilder genericRecordBuilder = new GenericRecordBuilder(schema);
     genericRecordBuilder.set("field1", "1");
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suite_for_different_events.json"));
+        "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_union_type");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();
@@ -138,11 +141,21 @@ public class GenericRecordAsMapTest {
   }
 
   @Test
-  public void testUnionTypeWithMap() throws IOException {
+  public void testUnionTypeWithMap() throws IOException
+  {
     Schema schema = SchemaBuilder.record("test_record")
-            .fields()
-            .name("field1").type().unionOf().stringType().and().map().values().intType().endUnion().noDefault()
-            .endRecord();
+                                 .fields()
+                                 .name("field1")
+                                 .type()
+                                 .unionOf()
+                                 .stringType()
+                                 .and()
+                                 .map()
+                                 .values()
+                                 .intType()
+                                 .endUnion()
+                                 .noDefault()
+                                 .endRecord();
 
     GenericRecordBuilder genericRecordBuilder = new GenericRecordBuilder(schema);
     Map<Utf8, Integer> map = new HashMap<>();
@@ -151,7 +164,7 @@ public class GenericRecordAsMapTest {
     GenericData.Record record = genericRecordBuilder.build();
 
     Map<String, TestSuiteEntity> testSuites = TestSuiteEntity.fromFile(new File(
-            "example/parser/test_suite_for_different_events.json"));
+        "example/parser/test_suite_for_different_events.json"));
 
     TestSuiteEntity testSuiteEntity = testSuites.get("test_union_type_with_map");
     HadoopDruidIndexerConfig config = testSuiteEntity.getDruidSpec();

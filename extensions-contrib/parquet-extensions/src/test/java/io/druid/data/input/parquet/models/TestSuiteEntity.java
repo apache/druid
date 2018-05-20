@@ -28,9 +28,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TestSuiteEntity {
+public class TestSuiteEntity
+{
   static final TypeReference<List<TestSuiteEntity>> TYPE_REFERENCE_TEST_SUITE =
-          new TypeReference<List<TestSuiteEntity>>() {};
+      new TypeReference<List<TestSuiteEntity>>()
+      {
+      };
 
   @JsonProperty("suite_name")
   private String name;
@@ -41,39 +44,46 @@ public class TestSuiteEntity {
   @JsonProperty("druid_spec")
   private HadoopDruidIndexerConfig druidSpec;
 
-  public String getName() {
+  public static Map<String, TestSuiteEntity> fromFile(File file) throws IOException
+  {
+    List<TestSuiteEntity> testSuiteEntities =
+        HadoopDruidIndexerConfig.JSON_MAPPER.readValue(file, TYPE_REFERENCE_TEST_SUITE);
+
+    Map<String, TestSuiteEntity> testSuiteEntityMap = new HashMap<>();
+    for (TestSuiteEntity testSuiteEntity : testSuiteEntities) {
+      testSuiteEntityMap.put(testSuiteEntity.name, testSuiteEntity);
+    }
+
+    return testSuiteEntityMap;
+  }
+
+  public String getName()
+  {
     return name;
   }
 
-  public void setName(String name) {
+  public void setName(String name)
+  {
     this.name = name;
   }
 
-  public String getDescription() {
+  public String getDescription()
+  {
     return description;
   }
 
-  public void setDescription(String description) {
+  public void setDescription(String description)
+  {
     this.description = description;
   }
 
-  public HadoopDruidIndexerConfig getDruidSpec() {
+  public HadoopDruidIndexerConfig getDruidSpec()
+  {
     return druidSpec;
   }
 
-  public void setDruidSpec(HadoopDruidIndexerConfig druidSpec) {
+  public void setDruidSpec(HadoopDruidIndexerConfig druidSpec)
+  {
     this.druidSpec = druidSpec;
-  }
-
-  public static Map<String, TestSuiteEntity> fromFile(File file) throws IOException {
-    List<TestSuiteEntity> testSuiteEntities =
-            HadoopDruidIndexerConfig.JSON_MAPPER.readValue(file, TYPE_REFERENCE_TEST_SUITE);
-
-     Map<String, TestSuiteEntity> testSuiteEntityMap = new HashMap<>();
-     for (TestSuiteEntity testSuiteEntity : testSuiteEntities) {
-       testSuiteEntityMap.put(testSuiteEntity.name, testSuiteEntity);
-     }
-
-     return testSuiteEntityMap;
   }
 }
