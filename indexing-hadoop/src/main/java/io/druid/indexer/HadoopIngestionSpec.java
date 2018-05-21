@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import io.druid.common.utils.UUIDUtils;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.WindowedDataSegment;
@@ -196,11 +195,7 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
         }
       }
 
-      VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-      for (DataSegment segment : segmentsList) {
-        timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-      }
-
+      final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segmentsList);
       final List<WindowedDataSegment> windowedSegments = Lists.newArrayList();
       for (Interval interval : ingestionSpecObj.getIntervals()) {
         final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(interval);

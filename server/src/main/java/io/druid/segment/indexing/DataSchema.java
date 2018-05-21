@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -68,9 +69,11 @@ public class DataSchema
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMapper.");
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
     this.parser = parser;
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
+
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
+    this.dataSource = dataSource;
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");

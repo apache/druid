@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -37,15 +36,14 @@ import io.druid.guice.RealtimeModule;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupModule;
 import io.druid.segment.loading.DataSegmentPusher;
+import io.druid.segment.loading.NoopDataSegmentPusher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.coordination.NoopDataSegmentAnnouncer;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.timeline.DataSegment;
 
-import java.io.File;
-import java.net.URI;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
@@ -134,62 +132,6 @@ public class CliRealtimeExample extends ServerRunnable
     public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
     {
       return false;
-    }
-  }
-
-  private static class NoopDataSegmentPusher implements DataSegmentPusher
-  {
-
-    @Override
-    public String getPathForHadoop()
-    {
-      return "noop";
-    }
-
-    @Deprecated
-    @Override
-    public String getPathForHadoop(String dataSource)
-    {
-      return getPathForHadoop();
-    }
-
-    @Override
-    public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
-    {
-      return segment;
-    }
-
-    @Override
-    public Map<String, Object> makeLoadSpec(URI uri)
-    {
-      return ImmutableMap.of();
-    }
-  }
-
-  private static class NoopDataSegmentAnnouncer implements DataSegmentAnnouncer
-  {
-    @Override
-    public void announceSegment(DataSegment segment)
-    {
-      // do nothing
-    }
-
-    @Override
-    public void unannounceSegment(DataSegment segment)
-    {
-      // do nothing
-    }
-
-    @Override
-    public void announceSegments(Iterable<DataSegment> segments)
-    {
-      // do nothing
-    }
-
-    @Override
-    public void unannounceSegments(Iterable<DataSegment> segments)
-    {
-      // do nothing
     }
   }
 }
