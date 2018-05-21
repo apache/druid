@@ -28,15 +28,15 @@ import io.druid.java.util.common.ISE;
 /**
  * Perform the given action using {@link #surrogateId} on behalf of the caller task.
  */
-public class SurrogateAction<R, T extends TaskAction<R>> implements TaskAction<R>
+public class SurrogateAction<ReturyType, ActionType extends TaskAction<ReturyType>> implements TaskAction<ReturyType>
 {
   private final String surrogateId;
-  private final T taskAction;
+  private final ActionType taskAction;
 
   @JsonCreator
   public SurrogateAction(
       @JsonProperty("surrogateId") String surrogateId,
-      @JsonProperty("taskAction") T taskAction
+      @JsonProperty("taskAction") ActionType taskAction
   )
   {
     this.surrogateId = surrogateId;
@@ -50,19 +50,19 @@ public class SurrogateAction<R, T extends TaskAction<R>> implements TaskAction<R
   }
 
   @JsonProperty
-  public T getTaskAction()
+  public ActionType getTaskAction()
   {
     return taskAction;
   }
 
   @Override
-  public TypeReference<R> getReturnTypeReference()
+  public TypeReference<ReturyType> getReturnTypeReference()
   {
     return taskAction.getReturnTypeReference();
   }
 
   @Override
-  public R perform(Task task, TaskActionToolbox toolbox)
+  public ReturyType perform(Task task, TaskActionToolbox toolbox)
   {
     final Optional<Task> maybeSurrogateTask = toolbox.getTaskStorage().getTask(surrogateId);
     if (maybeSurrogateTask.isPresent()) {
