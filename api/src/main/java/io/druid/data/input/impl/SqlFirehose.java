@@ -67,7 +67,7 @@ public class SqlFirehose implements Firehose
     return (InputRow) Iterators.getOnlyElement(parser.parseBatch(mapToParse).iterator());
   }
 
-  JsonIterator getNextLineIterator()
+  private JsonIterator getNextLineIterator()
   {
     if (lineIterator != null) {
       lineIterator = null;
