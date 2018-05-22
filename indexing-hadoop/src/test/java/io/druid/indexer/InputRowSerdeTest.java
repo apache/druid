@@ -153,7 +153,7 @@ public class InputRowSerdeTest
     Assert.assertEquals(300.1f, out.getRaw("d4"));
     Assert.assertEquals(400.5d, out.getRaw("d5"));
 
-    Assert.assertEquals(NullHandling.defaultFloatValue(), out.getMetric("agg_non_existing"));
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), out.getMetric("agg_non_existing"));
     Assert.assertEquals(5.0f, out.getMetric("m1out").floatValue(), 0.00001);
     Assert.assertEquals(100L, out.getMetric("m2out"));
     Assert.assertEquals(1, ((HyperLogLogCollector) out.getRaw("m3out")).estimateCardinality(), 0.001);

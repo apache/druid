@@ -1198,7 +1198,7 @@ public class RowBasedGrouperHelper
               throw new IAE("Cannot order by a non-numeric aggregator[%s]", orderSpec);
             }
 
-            serdeHelper = makeNumericSerdeHelper(valueType, aggOffset, true, stringComparator);
+            serdeHelper = makeNullHandlingNumericserdeHelper(valueType, aggOffset, true, stringComparator);
 
             orderByHelpers.add(serdeHelper);
             needsReverses.add(needsReverse);
@@ -1383,9 +1383,28 @@ public class RowBasedGrouperHelper
         case LONG:
         case FLOAT:
         case DOUBLE:
-          return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
+          return makeNullHandlingNumericserdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
         default:
           throw new IAE("invalid type: %s", valueType);
+      }
+    }
+
+    private RowBasedKeySerdeHelper makeNullHandlingNumericserdeHelper(
+        ValueType valueType,
+        int keyBufferPosition,
+        boolean pushLimitDown,
+        @Nullable StringComparator stringComparator
+    )
+    {
+      if (NullHandling.sqlCompatible()) {
+        return new NullableRowBasedKeySerdeHelper(makeNumericSerdeHelper(
+            valueType,
+            keyBufferPosition + Byte.BYTES,
+            pushLimitDown,
+            stringComparator
+        ), keyBufferPosition);
+      } else {
+        return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
       }
     }
 
@@ -1549,13 +1568,13 @@ public class RowBasedGrouperHelper
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Longs.compare(
-              lhsBuffer.getLong(lhsPosition + keyBufferPosition + Byte.BYTES),
-              rhsBuffer.getLong(rhsPosition + keyBufferPosition + Byte.BYTES)
+              lhsBuffer.getLong(lhsPosition + keyBufferPosition),
+              rhsBuffer.getLong(rhsPosition + keyBufferPosition)
           );
         } else {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            long lhs = lhsBuffer.getLong(lhsPosition + keyBufferPosition + Byte.BYTES);
-            long rhs = rhsBuffer.getLong(rhsPosition + keyBufferPosition + Byte.BYTES);
+            long lhs = lhsBuffer.getLong(lhsPosition + keyBufferPosition);
+            long rhs = rhsBuffer.getLong(rhsPosition + keyBufferPosition);
 
             return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
           };
@@ -1565,36 +1584,20 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Long.BYTES + Byte.BYTES;
+        return Long.BYTES;
       }
 
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        Long aLong = (Long) key.getKey()[idx];
-        if (aLong == null) {
-          keyBuffer.put((byte) 1);
-          keyBuffer.putLong(0L);
-        } else {
-          keyBuffer.put((byte) 0);
-          keyBuffer.putLong(aLong);
-        }
+        keyBuffer.putLong(DimensionHandlerUtils.nullToZero((Long) key.getKey()[idx]));
         return true;
-      }
-
-      protected Long readFromBuffer(ByteBuffer buffer, int initialOffset)
-      {
-        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandling.defaultLongValue();
-        } else {
-          return buffer.getLong(initialOffset + keyBufferPosition + Byte.BYTES);
-        }
       }
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
       {
-        dimValues[dimValIdx] = readFromBuffer(buffer, initialOffset);
+        dimValues[dimValIdx] = buffer.getLong(initialOffset + keyBufferPosition);
       }
 
       @Override
@@ -1612,19 +1615,18 @@ public class RowBasedGrouperHelper
       FloatRowBasedKeySerdeHelper(
           int keyBufferPosition,
           boolean pushLimitDown,
-          @Nullable StringComparator stringComparator
-      )
+          @Nullable StringComparator stringComparator)
       {
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Float.compare(
-              lhsBuffer.getFloat(lhsPosition + keyBufferPosition + Byte.BYTES),
-              rhsBuffer.getFloat(rhsPosition + keyBufferPosition + Byte.BYTES)
+              lhsBuffer.getFloat(lhsPosition + keyBufferPosition),
+              rhsBuffer.getFloat(rhsPosition + keyBufferPosition)
           );
         } else {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            float lhs = lhsBuffer.getFloat(lhsPosition + keyBufferPosition + Byte.BYTES);
-            float rhs = rhsBuffer.getFloat(rhsPosition + keyBufferPosition + Byte.BYTES);
+            float lhs = lhsBuffer.getFloat(lhsPosition + keyBufferPosition);
+            float rhs = rhsBuffer.getFloat(rhsPosition + keyBufferPosition);
             return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
           };
         }
@@ -1633,36 +1635,20 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Float.BYTES + Byte.BYTES;
+        return Float.BYTES;
       }
 
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        Float aFloat = (Float) key.getKey()[idx];
-        if (aFloat == null) {
-          keyBuffer.put((byte) 1);
-          keyBuffer.putFloat(0F);
-        } else {
-          keyBuffer.put((byte) 0);
-          keyBuffer.putFloat(aFloat);
-        }
+        keyBuffer.putFloat(DimensionHandlerUtils.nullToZero((Float) key.getKey()[idx]));
         return true;
-      }
-
-      protected Float readFromBuffer(ByteBuffer buffer, int initialOffset)
-      {
-        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandling.defaultFloatValue();
-        } else {
-          return buffer.getFloat(initialOffset + keyBufferPosition + Byte.BYTES);
-        }
       }
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
       {
-        dimValues[dimValIdx] = readFromBuffer(buffer, initialOffset);
+        dimValues[dimValIdx] = buffer.getFloat(initialOffset + keyBufferPosition);
       }
 
       @Override
@@ -1686,13 +1672,13 @@ public class RowBasedGrouperHelper
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Double.compare(
-              lhsBuffer.getDouble(lhsPosition + keyBufferPosition + Byte.BYTES),
-              rhsBuffer.getDouble(rhsPosition + keyBufferPosition + Byte.BYTES)
+              lhsBuffer.getDouble(lhsPosition + keyBufferPosition),
+              rhsBuffer.getDouble(rhsPosition + keyBufferPosition)
           );
         } else {
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-            double lhs = lhsBuffer.getDouble(lhsPosition + keyBufferPosition + Byte.BYTES);
-            double rhs = rhsBuffer.getDouble(rhsPosition + keyBufferPosition + Byte.BYTES);
+            double lhs = lhsBuffer.getDouble(lhsPosition + keyBufferPosition);
+            double rhs = rhsBuffer.getDouble(rhsPosition + keyBufferPosition);
             return stringComparator.compare(String.valueOf(lhs), String.valueOf(rhs));
           };
         }
@@ -1701,42 +1687,92 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Double.BYTES + Byte.BYTES;
+        return Double.BYTES;
       }
 
       @Override
       public boolean putToKeyBuffer(RowBasedKey key, int idx)
       {
-        Double aDouble = (Double) key.getKey()[idx];
-        if (aDouble == null) {
-          keyBuffer.put((byte) 1);
-          keyBuffer.putDouble(0.0D);
-        } else {
-          keyBuffer.put((byte) 0);
-          keyBuffer.putDouble(aDouble);
-        }
+        keyBuffer.putDouble(DimensionHandlerUtils.nullToZero((Double) key.getKey()[idx]));
         return true;
-      }
-
-      protected Double readFromBuffer(ByteBuffer buffer, int initialOffset)
-      {
-        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
-          return NullHandling.defaultDoubleValue();
-        } else {
-          return buffer.getDouble(initialOffset + keyBufferPosition + Byte.BYTES);
-        }
       }
 
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
       {
-        dimValues[dimValIdx] = readFromBuffer(buffer, initialOffset);
+        dimValues[dimValIdx] = buffer.getDouble(initialOffset + keyBufferPosition);
       }
 
       @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
+      }
+    }
+
+    private class NullableRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
+    {
+      public static final byte IS_NULL_BYTE = (byte) 1;
+      public static final byte IS_NOT_NULL_BYTE = (byte) 1;
+      private final RowBasedKeySerdeHelper delegate;
+      private final int keyBufferPosition;
+      private final BufferComparator comparator;
+
+      NullableRowBasedKeySerdeHelper(RowBasedKeySerdeHelper delegate, int keyBufferPosition)
+      {
+        this.delegate = delegate;
+        this.keyBufferPosition = keyBufferPosition;
+        BufferComparator delegateBufferComparator = this.delegate.getBufferComparator();
+        this.comparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+          boolean isLhsNull = lhsBuffer.get(lhsPosition + keyBufferPosition) == IS_NULL_BYTE;
+          boolean isrhsNull = rhsBuffer.get(rhsPosition + keyBufferPosition) == IS_NULL_BYTE;
+          if (isLhsNull && isrhsNull) {
+            // Both are null
+            return 0;
+          }
+          if (isLhsNull) {
+            return -1;
+          }
+          if (isrhsNull) {
+            return 1;
+          }
+          return delegateBufferComparator.compare(lhsBuffer, rhsBuffer, lhsPosition, rhsPosition);
+        };
+      }
+
+      @Override
+      public int getKeyBufferValueSize()
+      {
+        return delegate.getKeyBufferValueSize() + Byte.BYTES;
+      }
+
+      @Override
+      public boolean putToKeyBuffer(RowBasedKey key, int idx)
+      {
+        Object val = key.getKey()[idx];
+        if (val == null) {
+          keyBuffer.put(IS_NULL_BYTE);
+        } else {
+          keyBuffer.put((byte) 0);
+        }
+        delegate.putToKeyBuffer(key, idx);
+        return true;
+      }
+
+      @Override
+      public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
+      {
+        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
+          dimValues[dimValIdx] = null;
+        } else {
+          delegate.getFromByteBuffer(buffer, initialOffset, dimValIdx, dimValues);
+        }
+      }
+
+      @Override
+      public BufferComparator getBufferComparator()
+      {
+        return comparator;
       }
     }
   }

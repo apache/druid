@@ -20,7 +20,8 @@
 package io.druid.query.filter;
 
 /**
- * LongPredicate is only supported in Java 8+, so use this to avoid boxing when a long predicate is needed.
+ * Note: this is not a {@link io.druid.guice.annotations.PublicApi} or an
+ * {@link io.druid.guice.annotations.ExtensionPoint} of Druid.
  */
 public interface DruidLongPredicate
 {

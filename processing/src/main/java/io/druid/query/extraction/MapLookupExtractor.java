@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -85,14 +84,7 @@ public class MapLookupExtractor extends LookupExtractor
       return Collections.EMPTY_LIST;
     }
 
-    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
-    {
-      @Override
-      public boolean apply(@Nullable String key)
-      {
-        return map.get(key).equals(value);
-      }
-    }).keySet());
+    return Lists.newArrayList(Maps.filterKeys(map, key -> map.get(key).equals(valueToLookup)).keySet());
 
   }
 
