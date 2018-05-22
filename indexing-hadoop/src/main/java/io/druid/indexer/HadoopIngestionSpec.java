@@ -37,6 +37,7 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -151,20 +152,19 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     String ingestionSpec = "ingestionSpec";
 
     Map<String, Object> pathSpec = spec.getIOConfig().getPathSpec();
-    Map<String, Object> datasourcePathSpec = null;
+    List<Map<String, Object>> datasourcePathSpecs = new ArrayList<>();
     if (pathSpec.get(type).equals(dataSource)) {
-      datasourcePathSpec = pathSpec;
+      datasourcePathSpecs.add(pathSpec);
     } else if (pathSpec.get(type).equals(multi)) {
       List<Map<String, Object>> childPathSpecs = (List<Map<String, Object>>) pathSpec.get(children);
       for (Map<String, Object> childPathSpec : childPathSpecs) {
         if (childPathSpec.get(type).equals(dataSource)) {
-          datasourcePathSpec = childPathSpec;
-          break;
+          datasourcePathSpecs.add(childPathSpec);
         }
       }
     }
 
-    if (datasourcePathSpec != null) {
+    for (Map<String, Object> datasourcePathSpec : datasourcePathSpecs) {
       Map<String, Object> ingestionSpecMap = (Map<String, Object>) datasourcePathSpec.get(ingestionSpec);
       DatasourceIngestionSpec ingestionSpecObj = jsonMapper.convertValue(
           ingestionSpecMap,
