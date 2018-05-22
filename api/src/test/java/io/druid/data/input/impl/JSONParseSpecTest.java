@@ -80,6 +80,31 @@ public class JSONParseSpecTest
   }
 
   @Test
+  public void testParseRowWithConditional()
+  {
+    final JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")), null, null),
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.maybe_object.foo")
+            )
+        ),
+        null
+    );
+
+    final Map<String, Object> expected = new HashMap<>();
+    expected.put("foo", null);
+
+    final Parser<String, Object> parser = parseSpec.makeParser();
+    final Map<String, Object> parsedRow = parser.parseToMap("{\"something_else\": {\"foo\": \"test\"}}");
+
+    Assert.assertNotNull(parsedRow);
+    Assert.assertEquals(expected, parsedRow);
+  }
+
+  @Test
   public void testSerde() throws IOException
   {
     HashMap<String, Boolean> feature = new HashMap<String, Boolean>();
