@@ -26,8 +26,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -208,7 +208,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
-  ) throws IOException
+  )
   {
     if (intervals == null || intervals.isEmpty()) {
       throw new IAE("null/empty intervals");
@@ -241,29 +241,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .bind(2 * i + 2, interval.getStart().toString());
     }
 
-    final ResultIterator<byte[]> dbSegments = sql
-        .map(ByteArrayMapper.FIRST)
-        .iterator();
-
-    final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-        Ordering.natural()
-    );
-
-    while (dbSegments.hasNext()) {
-      final byte[] payload = dbSegments.next();
-
-      DataSegment segment = jsonMapper.readValue(
-          payload,
-          DataSegment.class
+    try (final ResultIterator<byte[]> dbSegments = sql.map(ByteArrayMapper.FIRST).iterator()) {
+      return VersionedIntervalTimeline.forSegments(
+          Iterators.transform(
+              dbSegments,
+              payload -> {
+                try {
+                  return jsonMapper.readValue(payload, DataSegment.class);
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+          )
       );
-
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-
     }
-
-    dbSegments.close();
-
-    return timeline;
   }
 
   /**
@@ -584,7 +576,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 StringUtils.format(
                     "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
-                    dbTables.getPendingSegmentsTable(), connector.getQuoteString()
+                    dbTables.getPendingSegmentsTable(),
+                    connector.getQuoteString()
                 )
             )
                   .bind("id", newIdentifier.getIdentifierAsString())
@@ -656,7 +649,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           StringUtils.format(
               "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
               + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(), connector.getQuoteString()
+              dbTables.getSegmentsTable(),
+              connector.getQuoteString()
           )
       )
             .bind("id", segment.getIdentifier())

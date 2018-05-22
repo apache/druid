@@ -65,11 +65,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
               timelines.put(dataSource.getName(), timeline);
             }
 
-            for (DataSegment segment : dataSource.getSegments()) {
-              timeline.add(
-                  segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)
-              );
-            }
+            VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
           }
         }
       }

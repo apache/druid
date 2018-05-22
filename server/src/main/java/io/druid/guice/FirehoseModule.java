@@ -31,6 +31,7 @@ import io.druid.segment.realtime.firehose.FixedCountFirehoseFactory;
 import io.druid.segment.realtime.firehose.HttpFirehoseFactory;
 import io.druid.segment.realtime.firehose.IrcFirehoseFactory;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.firehose.SqlFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
 import java.util.Arrays;
@@ -58,7 +59,8 @@ public class FirehoseModule implements DruidModule
                 new NamedType(HttpFirehoseFactory.class, "http"),
                 new NamedType(EventReceiverFirehoseFactory.class, "receiver"),
                 new NamedType(CombiningFirehoseFactory.class, "combining"),
-                new NamedType(FixedCountFirehoseFactory.class, "fixedCount")
+                new NamedType(FixedCountFirehoseFactory.class, "fixedCount"),
+                new NamedType(SqlFirehoseFactory.class, "sql")
             )
     );
   }

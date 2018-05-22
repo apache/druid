@@ -617,7 +617,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskConfig);
     Preconditions.checkNotNull(emitter);
 
-    return new ThreadPoolTaskRunner(
+    return new SingleTaskBackgroundRunner(
         tb,
         taskConfig,
         emitter,
