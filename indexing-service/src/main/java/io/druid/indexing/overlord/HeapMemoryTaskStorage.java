@@ -38,6 +38,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -168,7 +169,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration)
   {
     giant.lock();
 
@@ -184,7 +185,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
       return maxTaskStatuses == null ?
              getRecentlyFinishedTaskStatusesSince(
-                 System.currentTimeMillis() - config.getRecentlyFinishedThreshold().getMillis(),
+                 System.currentTimeMillis() - (duration == null
+                                               ? config.getRecentlyFinishedThreshold().getMillis()
+                                               : duration.getMillis()),
                  createdDateDesc
              ) :
              getNRecentlyFinishedTaskStatuses(maxTaskStatuses, createdDateDesc);

@@ -30,6 +30,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Pair;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -53,9 +54,12 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTasks();
   }
 
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
+  public List<TaskStatus> getRecentlyFinishedTaskStatuses(
+      @Nullable Integer maxTaskStatuses, @Nullable
+      Duration duration
+  )
   {
-    return storage.getRecentlyFinishedTaskStatuses(maxTaskStatuses);
+    return storage.getRecentlyFinishedTaskStatuses(maxTaskStatuses, duration);
   }
 
   @Nullable

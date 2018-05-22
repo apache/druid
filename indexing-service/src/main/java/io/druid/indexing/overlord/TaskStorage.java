@@ -27,6 +27,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Pair;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -128,7 +129,7 @@ public interface TaskStorage
    *
    * @return list of recently finished tasks
    */
-  List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses);
+  List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
 
   @Nullable
   Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);
