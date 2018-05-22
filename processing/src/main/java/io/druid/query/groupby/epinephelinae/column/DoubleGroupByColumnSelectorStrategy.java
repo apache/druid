@@ -20,8 +20,8 @@
 package io.druid.query.groupby.epinephelinae.column;
 
 
-import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -32,52 +32,34 @@ public class DoubleGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public int getGroupingKeySize()
   {
-    return Double.BYTES + Byte.BYTES;
+    return Double.BYTES;
   }
 
   @Override
   public void processValueFromGroupingKey(
-      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap
+      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap, int keyBufferPosition
   )
   {
-    if (key.get(selectorPlus.getKeyBufferPosition()) == (byte) 1) {
-      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultDoubleValue());
-    } else {
-      final double val = key.getDouble(selectorPlus.getKeyBufferPosition() + Byte.BYTES);
-      resultMap.put(selectorPlus.getOutputName(), val);
-    }
+    final double val = key.getDouble(keyBufferPosition);
+    resultMap.put(selectorPlus.getOutputName(), val);
   }
 
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
-    if (NullHandling.sqlCompatible() && selector.isNull()) {
-      values[columnIndex] = null;
-    } else {
-      values[columnIndex] = selector.getDouble();
-    }
+    values[columnIndex] = selector.getDouble();
   }
 
   @Override
-  @Nullable
   public Object getOnlyValue(ColumnValueSelector selector)
   {
-    if (NullHandling.sqlCompatible() && selector.isNull()) {
-      return null;
-    }
     return selector.getDouble();
   }
 
   @Override
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
-    if (obj == null) {
-      keyBuffer.put(keyBufferPosition, (byte) 1);
-      keyBuffer.putDouble(keyBufferPosition + Byte.BYTES, 0.0d);
-    } else {
-      keyBuffer.put(keyBufferPosition, (byte) 0);
-      keyBuffer.putDouble(keyBufferPosition + Byte.BYTES, (Double) obj);
-    }
+    keyBuffer.putDouble(keyBufferPosition, DimensionHandlerUtils.nullToZero((Double) obj));
   }
 
   @Override

@@ -48,9 +48,14 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   }
 
   @Override
-  public void processValueFromGroupingKey(GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap)
+  public void processValueFromGroupingKey(
+      GroupByColumnSelectorPlus selectorPlus,
+      ByteBuffer key,
+      Map<String, Object> resultMap,
+      int keyBufferPosition
+  )
   {
-    final int id = key.getInt(selectorPlus.getKeyBufferPosition());
+    final int id = key.getInt(keyBufferPosition);
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {

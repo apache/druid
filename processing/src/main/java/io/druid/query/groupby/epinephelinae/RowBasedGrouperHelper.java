@@ -29,8 +29,8 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.common.config.NullHandling;
 import io.druid.collections.ReferenceCountingResourceHolder;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -1712,8 +1712,6 @@ public class RowBasedGrouperHelper
 
     private class NullableRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
-      public static final byte IS_NULL_BYTE = (byte) 1;
-      public static final byte IS_NOT_NULL_BYTE = (byte) 1;
       private final RowBasedKeySerdeHelper delegate;
       private final int keyBufferPosition;
       private final BufferComparator comparator;
@@ -1724,19 +1722,26 @@ public class RowBasedGrouperHelper
         this.keyBufferPosition = keyBufferPosition;
         BufferComparator delegateBufferComparator = this.delegate.getBufferComparator();
         this.comparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
-          boolean isLhsNull = lhsBuffer.get(lhsPosition + keyBufferPosition) == IS_NULL_BYTE;
-          boolean isrhsNull = rhsBuffer.get(rhsPosition + keyBufferPosition) == IS_NULL_BYTE;
+          boolean isLhsNull = (lhsBuffer.get(lhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
+          boolean isrhsNull = (rhsBuffer.get(rhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
           if (isLhsNull && isrhsNull) {
             // Both are null
             return 0;
           }
+          // only lhs is null
           if (isLhsNull) {
             return -1;
           }
+          // only rhs is null
           if (isrhsNull) {
             return 1;
           }
-          return delegateBufferComparator.compare(lhsBuffer, rhsBuffer, lhsPosition, rhsPosition);
+          return delegateBufferComparator.compare(
+              lhsBuffer,
+              rhsBuffer,
+              lhsPosition,
+              rhsPosition
+          );
         };
       }
 
@@ -1751,9 +1756,9 @@ public class RowBasedGrouperHelper
       {
         Object val = key.getKey()[idx];
         if (val == null) {
-          keyBuffer.put(IS_NULL_BYTE);
+          keyBuffer.put(NullHandling.IS_NULL_BYTE);
         } else {
-          keyBuffer.put((byte) 0);
+          keyBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
         }
         delegate.putToKeyBuffer(key, idx);
         return true;
@@ -1762,7 +1767,7 @@ public class RowBasedGrouperHelper
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues)
       {
-        if (buffer.get(initialOffset + keyBufferPosition) == (byte) 1) {
+        if (buffer.get(initialOffset + keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
           dimValues[dimValIdx] = null;
         } else {
           delegate.getFromByteBuffer(buffer, initialOffset, dimValIdx, dimValues);

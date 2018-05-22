@@ -45,6 +45,7 @@ import io.druid.query.groupby.epinephelinae.column.FloatGroupByColumnSelectorStr
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 import io.druid.query.groupby.epinephelinae.column.LongGroupByColumnSelectorStrategy;
+import io.druid.query.groupby.epinephelinae.column.NullableValueGroupByColumnSelectorStrategy;
 import io.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnValueSelector;
@@ -250,13 +251,22 @@ public class GroupByQueryEngineV2
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
         case LONG:
-          return new LongGroupByColumnSelectorStrategy();
+          return makeNullableStrategy(new LongGroupByColumnSelectorStrategy());
         case FLOAT:
-          return new FloatGroupByColumnSelectorStrategy();
+          return makeNullableStrategy(new FloatGroupByColumnSelectorStrategy());
         case DOUBLE:
-          return new DoubleGroupByColumnSelectorStrategy();
+          return makeNullableStrategy(new DoubleGroupByColumnSelectorStrategy());
         default:
           throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+      }
+    }
+
+    private GroupByColumnSelectorStrategy makeNullableStrategy(GroupByColumnSelectorStrategy delegate)
+    {
+      if (NullHandling.sqlCompatible()) {
+        return new NullableValueGroupByColumnSelectorStrategy(delegate);
+      } else {
+        return delegate;
       }
     }
   }
@@ -546,7 +556,8 @@ public class GroupByQueryEngineV2
         selectorPlus.getColumnSelectorStrategy().processValueFromGroupingKey(
             selectorPlus,
             key,
-            map
+            map,
+            selectorPlus.getKeyBufferPosition()
         );
       }
     }

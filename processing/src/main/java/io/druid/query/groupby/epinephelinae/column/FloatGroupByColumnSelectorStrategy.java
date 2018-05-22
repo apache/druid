@@ -19,8 +19,8 @@
 
 package io.druid.query.groupby.epinephelinae.column;
 
-import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -32,52 +32,34 @@ public class FloatGroupByColumnSelectorStrategy implements GroupByColumnSelector
   @Override
   public int getGroupingKeySize()
   {
-    return Float.BYTES + Byte.BYTES;
+    return Float.BYTES;
   }
 
   @Override
   public void processValueFromGroupingKey(
-      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap
+      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap, int keyBufferPosition
   )
   {
-    if (key.get(selectorPlus.getKeyBufferPosition()) == (byte) 1) {
-      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultFloatValue());
-    } else {
-      final float val = key.getFloat(selectorPlus.getKeyBufferPosition() + Byte.BYTES);
-      resultMap.put(selectorPlus.getOutputName(), val);
-    }
+    final float val = key.getFloat(keyBufferPosition);
+    resultMap.put(selectorPlus.getOutputName(), val);
   }
 
   @Override
   public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
   {
-    if (NullHandling.sqlCompatible() && selector.isNull()) {
-      valuess[columnIndex] = null;
-    } else {
-      valuess[columnIndex] = selector.getFloat();
-    }
+    valuess[columnIndex] = selector.getFloat();
   }
 
   @Override
-  @Nullable
   public Object getOnlyValue(ColumnValueSelector selector)
   {
-    if (NullHandling.sqlCompatible() && selector.isNull()) {
-      return null;
-    }
     return selector.getFloat();
   }
 
   @Override
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
-    if (obj == null) {
-      keyBuffer.put(keyBufferPosition, (byte) 1);
-      keyBuffer.putFloat(keyBufferPosition + Byte.BYTES, 0f);
-    } else {
-      keyBuffer.put(keyBufferPosition, (byte) 0);
-      keyBuffer.putFloat(keyBufferPosition + Byte.BYTES, (Float) obj);
-    }
+    keyBuffer.putFloat(keyBufferPosition, DimensionHandlerUtils.nullToZero((Float) obj));
   }
 
   @Override

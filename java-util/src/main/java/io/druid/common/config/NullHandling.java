@@ -41,6 +41,8 @@ public class NullHandling
   public static final Double ZERO_DOUBLE = 0.0d;
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
+  public static final byte IS_NULL_BYTE = (byte) 1;
+  public static final byte IS_NOT_NULL_BYTE = (byte) 0;
 
   /**
    * INSTANCE is injected using static injection to avoid adding JacksonInject annotations all over the code.

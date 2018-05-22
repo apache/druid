@@ -26,6 +26,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Rows;
@@ -57,8 +58,6 @@ import java.util.Map;
 public class InputRowSerde
 {
   private static final Logger log = new Logger(InputRowSerde.class);
-  private static final byte NULL_BYTE = (byte) 1;
-  private static final byte NON_NULL_BYTE = (byte) 0;
 
   private static final IndexSerdeTypeHelper STRING_HELPER = new StringIndexSerdeTypeHelper();
   private static final IndexSerdeTypeHelper LONG_HELPER = new LongIndexSerdeTypeHelper();
@@ -334,9 +333,9 @@ public class InputRowSerde
 
           String t = aggFactory.getTypeName();
           if (agg.isNull()) {
-            out.writeByte(NULL_BYTE);
+            out.writeByte(NullHandling.IS_NULL_BYTE);
           } else {
-            out.writeByte(NON_NULL_BYTE);
+            out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
             if (t.equals("float")) {
               out.writeFloat(agg.getFloat());
             } else if (t.equals("long")) {
@@ -461,7 +460,7 @@ public class InputRowSerde
         String metric = readString(in);
         String type = getType(metric, aggs, i);
         byte metricNullability = in.readByte();
-        if (metricNullability == NULL_BYTE) {
+        if (metricNullability == NullHandling.IS_NULL_BYTE) {
           // metric value is null.
           continue;
         }

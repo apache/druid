@@ -137,7 +137,7 @@ public class InDimFilter implements DimFilter
                                           .put(DimFilterUtils.STRING_SEPARATOR)
                                           .put(extractionFnBytes)
                                           .put(DimFilterUtils.STRING_SEPARATOR)
-                                          .put(hasNull ? (byte) 1 : (byte) 0)
+                                          .put(hasNull ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
                                           .put(DimFilterUtils.STRING_SEPARATOR);
     for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)

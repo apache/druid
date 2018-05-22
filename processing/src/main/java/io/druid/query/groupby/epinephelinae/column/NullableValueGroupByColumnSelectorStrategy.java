@@ -19,20 +19,27 @@
 
 package io.druid.query.groupby.epinephelinae.column;
 
+
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
+public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
+  private final GroupByColumnSelectorStrategy delegate;
+
+  public NullableValueGroupByColumnSelectorStrategy(GroupByColumnSelectorStrategy delegate)
+  {
+    this.delegate = delegate;
+  }
 
   @Override
   public int getGroupingKeySize()
   {
-    return Long.BYTES;
+    return delegate.getGroupingKeySize() + Byte.BYTES;
   }
 
   @Override
@@ -40,26 +47,42 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
       GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap, int keyBufferPosition
   )
   {
-    final long val = key.getLong(keyBufferPosition);
-    resultMap.put(selectorPlus.getOutputName(), val);
+    if (key.get(keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
+      resultMap.put(selectorPlus.getOutputName(), null);
+    } else {
+      delegate.processValueFromGroupingKey(selectorPlus, key, resultMap, keyBufferPosition + Byte.BYTES);
+    }
   }
 
   @Override
-  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess)
+  public void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] values)
   {
-    valuess[columnIndex] = selector.getLong();
+    if (selector.isNull()) {
+      values[columnIndex] = null;
+    } else {
+      delegate.initColumnValues(selector, columnIndex, values);
+    }
   }
 
   @Override
+  @Nullable
   public Object getOnlyValue(ColumnValueSelector selector)
   {
-    return selector.getLong();
+    if (selector.isNull()) {
+      return null;
+    }
+    return delegate.getOnlyValue(selector);
   }
 
   @Override
   public void writeToKeyBuffer(int keyBufferPosition, @Nullable Object obj, ByteBuffer keyBuffer)
   {
-    keyBuffer.putLong(keyBufferPosition, DimensionHandlerUtils.nullToZero((Long) obj));
+    if (obj == null) {
+      keyBuffer.put(keyBufferPosition, NullHandling.IS_NULL_BYTE);
+    } else {
+      keyBuffer.put(keyBufferPosition, NullHandling.IS_NOT_NULL_BYTE);
+    }
+    delegate.writeToKeyBuffer(keyBufferPosition + Byte.BYTES, obj, keyBuffer);
   }
 
   @Override
@@ -76,7 +99,7 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
       int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
   )
   {
-    // rows from a long column always have a single value, multi-value is not currently supported
+    // rows from a nullable column always have a single value, multi-value is not currently supported
     // this method handles row values after the first in a multivalued row, so just return false
     return false;
   }

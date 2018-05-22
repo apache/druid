@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.common.config.NullHandling;
 import io.druid.segment.BaseNullableColumnValueSelector;
 
 import javax.annotation.Nullable;
@@ -32,8 +33,6 @@ import java.nio.ByteBuffer;
  */
 public class NullableBufferAggregator implements BufferAggregator
 {
-  private static final byte IS_NULL_BYTE = (byte) 0;
-  private static final byte IS_NOT_NULL_BYTE = (byte) 1;
 
   private final BufferAggregator delegate;
   private final BaseNullableColumnValueSelector selector;
@@ -47,7 +46,7 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, IS_NULL_BYTE);
+    buf.put(position, NullHandling.IS_NULL_BYTE);
     delegate.init(buf, position + Byte.BYTES);
   }
 
@@ -56,8 +55,8 @@ public class NullableBufferAggregator implements BufferAggregator
   {
     boolean isNotNull = !selector.isNull();
     if (isNotNull) {
-      if (buf.get(position) == IS_NULL_BYTE) {
-        buf.put(position, IS_NOT_NULL_BYTE);
+      if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+        buf.put(position, NullHandling.IS_NOT_NULL_BYTE);
       }
       delegate.aggregate(buf, position + Byte.BYTES);
     }
@@ -67,7 +66,7 @@ public class NullableBufferAggregator implements BufferAggregator
   @Nullable
   public Object get(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == IS_NULL_BYTE) {
+    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
       return null;
     }
     return delegate.get(buf, position + Byte.BYTES);
@@ -103,7 +102,7 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public boolean isNull(ByteBuffer buf, int position)
   {
-    return buf.get(position) == IS_NULL_BYTE || delegate.isNull(buf, position + Byte.BYTES);
+    return buf.get(position) == NullHandling.IS_NULL_BYTE || delegate.isNull(buf, position + Byte.BYTES);
   }
 
   @Override

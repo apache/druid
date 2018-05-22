@@ -83,7 +83,7 @@ public class SelectorDimFilter implements DimFilter
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(dimensionBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(value == null ? (byte) 1 : (byte) 0)
+                     .put(value == null ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
                      .put(valueBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)

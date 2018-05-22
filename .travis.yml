@@ -60,7 +60,7 @@ matrix:
       before_script:
         - unset _JAVA_OPTIONS
       # Server module test is run without the parallel-test option because it's memory sensitive and often fails with that option.
-      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -pl server
+      script: echo "MAVEN_OPTS='-Xmx512m'" > ~/.mavenrc && mvn test -B -pl server -Ddruid.generic.useDefaultValueForNull=false
 
 
       # other modules test
@@ -77,6 +77,7 @@ matrix:
     - sudo: false
       env:
         - NAME="other modules test with SQL Compatibility"
+        - AWS_REGION=us-east-1 # set a aws region for unit tests
       install: echo "MAVEN_OPTS='-Xmx3000m'" > ~/.mavenrc && mvn install -q -ff -DskipTests -B
       before_script:
         - unset _JAVA_OPTIONS
