@@ -91,6 +91,8 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
 {
   private static final Logger LOG = new Logger(PrefetchableTextFilesFirehoseFactory.class);
 
+  public static final int DEFAULT_MAX_FETCH_RETRY = 3;
+
   private final CacheManager<T> cacheManager;
   private final PrefetchConfig prefetchConfig;
 
@@ -114,7 +116,7 @@ public abstract class PrefetchableTextFilesFirehoseFactory<T>
     this.cacheManager = new CacheManager<>(
         prefetchConfig.getMaxCacheCapacityBytes()
     );
-    this.maxFetchRetry = maxFetchRetry;
+    this.maxFetchRetry = maxFetchRetry == null ? DEFAULT_MAX_FETCH_RETRY : maxFetchRetry;
   }
 
   @JsonProperty
