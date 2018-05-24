@@ -795,7 +795,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     @Override
     public TaskState getTaskState()
     {
-      return null;
+      return TaskState.UNKNOWN;
     }
 
   }

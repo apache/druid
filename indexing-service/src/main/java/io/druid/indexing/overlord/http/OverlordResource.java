@@ -720,25 +720,18 @@ public class OverlordResource
         req
     );
     List authorizedList = new ArrayList(securedTaskRunnerWorkItems);
-    Function<TaskRunnerWorkItem, TaskStatusPlus> fn = new Function<TaskRunnerWorkItem, TaskStatusPlus>()
-    {
-      @Override
-      public TaskStatusPlus apply(TaskRunnerWorkItem workItem)
-      {
-        return new TaskStatusPlus(
-            workItem.getTaskId(),
-            workItem.getTaskType(),
-            workItem.getCreatedTime(),
-            workItem.getQueueInsertionTime(),
-            workItem.getTaskState(),
-            null,
-            workItem.getLocation(),
-            workItem.getDataSource(),
-            null
-        );
-      }
-    };
-    List<TaskStatusPlus> transformedActiveList = Lists.transform(authorizedList, fn);
+    Function<TaskRunnerWorkItem, TaskStatusPlus> transformFunc = workItem -> new TaskStatusPlus(
+        workItem.getTaskId(),
+        workItem.getTaskType(),
+        workItem.getCreatedTime(),
+        workItem.getQueueInsertionTime(),
+        workItem.getTaskState(),
+        null,
+        workItem.getLocation(),
+        workItem.getDataSource(),
+        null
+    );
+    List<TaskStatusPlus> transformedActiveList = Lists.transform(authorizedList, transformFunc);
     final List<TaskStatusPlus> allTasks = Lists.newArrayList();
     allTasks.addAll(transformedActiveList);
     allTasks.addAll(completedTasks);

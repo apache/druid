@@ -25,7 +25,8 @@ public enum TaskState
   WAITING,
   PENDING,
   SUCCESS,
-  FAILED;
+  FAILED,
+  UNKNOWN;
 
   public boolean isRunnable()
   {

@@ -114,7 +114,7 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   @Override
   public TaskState getTaskState()
   {
-    return null;
+    return TaskState.UNKNOWN;
   }
 
   public void setWorker(Worker worker)

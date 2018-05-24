@@ -392,7 +392,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     @Override
     public TaskState getTaskState()
     {
-      return null;
+      return TaskState.UNKNOWN;
     }
   }
 

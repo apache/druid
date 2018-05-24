@@ -844,7 +844,7 @@ public class OverlordResourceTest
     @Override
     public TaskState getTaskState()
     {
-      return null;
+      return TaskState.UNKNOWN;
     }
   }
 

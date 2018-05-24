@@ -2090,7 +2090,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     @Override
     public TaskState getTaskState()
     {
-      return null;
+      return TaskState.UNKNOWN;
     }
 
   }

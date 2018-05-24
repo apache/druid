@@ -325,7 +325,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
     @Override
     public TaskState getTaskState()
     {
-      return null;
+      return TaskState.UNKNOWN;
     }
 
     @Override
