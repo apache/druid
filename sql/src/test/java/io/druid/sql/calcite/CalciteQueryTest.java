@@ -6570,6 +6570,48 @@ public class CalciteQueryTest extends CalciteTestBase
     );
   }
 
+  @Test
+  public void testProjectAfterSort2() throws Exception
+  {
+    testQuery(
+        "select s / cnt, dim1, dim2, s from (select dim1, dim2, count(*) cnt, sum(m2) s from druid.foo group by dim1, dim2 order by cnt)",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            DIMS(
+                                new DefaultDimensionSpec("dim1", "d0"),
+                                new DefaultDimensionSpec("dim2", "d1")
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            AGGS(new CountAggregatorFactory("a0"), new DoubleSumAggregatorFactory("a1", "m2"))
+                        )
+                        .setPostAggregatorSpecs(Collections.singletonList(EXPRESSION_POST_AGG("p0", "(\"a1\" / \"a0\")")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                Collections.singletonList(
+                                    new OrderByColumnSpec("a0", Direction.ASCENDING, StringComparators.NUMERIC)
+                                ),
+                                Integer.MAX_VALUE
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, "a", "1", 1.0},
+            new Object[]{1.0, "a", "1", 4.0},
+            new Object[]{10.1, "", "1", 2.0},
+            new Object[]{2.0, "", "1", 3.0},
+            new Object[]{null, "", "1", 6.0},
+            new Object[]{null, "abc", "1", 5.0}
+        )
+    );
+  }
+
   private void testQuery(
       final String sql,
       final List<Query> expectedQueries,
