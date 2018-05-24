@@ -185,17 +185,17 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       Thread.sleep(100);
     }
 
+    // Wait for new tasks to be started
+    while (runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
+      Thread.sleep(100);
+    }
+
     checkState(
         task,
         succeededTasks,
         failedTasks,
         buildStateMap()
     );
-
-    // Wait for new tasks to be started
-    while (runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
-      Thread.sleep(100);
-    }
 
     // Make sure only one subTask is running
     succeededTasks += 7;
