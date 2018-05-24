@@ -705,7 +705,13 @@ public class OverlordResource
               taskRunner -> securedTaskRunnerWorkItem(taskRunner.getRunningTasks(), dataSource, req)
           );
         case "COMPLETE":
-          return Response.ok(getCompletedTasks(interval, maxCompletedTasks, dataSource, req)).build();
+          final List<TaskStatusPlus> completedTasks = getCompletedTasks(interval, maxCompletedTasks, dataSource, req);
+          final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
+              completedTasks,
+              dataSource,
+              req
+          );
+          return Response.ok(authorizedList).build();
         default:
           return Response.status(Status.BAD_REQUEST)
                          .entity("Bad state query param passed : " + state).entity(ImmutableList.of()).build();
@@ -714,12 +720,7 @@ public class OverlordResource
     // if no state passed, get all tasks
     final List<TaskRunnerWorkItem> allActiveTasks = getAllActiveTasks(req);
     final List<TaskStatusPlus> completedTasks = getCompletedTasks(interval, maxCompletedTasks, dataSource, req);
-    Collection<? extends TaskRunnerWorkItem> securedTaskRunnerWorkItems = securedTaskRunnerWorkItem(
-        allActiveTasks,
-        dataSource,
-        req
-    );
-    List authorizedList = new ArrayList(securedTaskRunnerWorkItems);
+    List activeTasks = new ArrayList(allActiveTasks);
     Function<TaskRunnerWorkItem, TaskStatusPlus> transformFunc = workItem -> new TaskStatusPlus(
         workItem.getTaskId(),
         workItem.getTaskType(),
@@ -731,11 +732,17 @@ public class OverlordResource
         workItem.getDataSource(),
         null
     );
-    List<TaskStatusPlus> transformedActiveList = Lists.transform(authorizedList, transformFunc);
+    List<TaskStatusPlus> transformedActiveList = Lists.transform(activeTasks, transformFunc);
     final List<TaskStatusPlus> allTasks = Lists.newArrayList();
     allTasks.addAll(transformedActiveList);
     allTasks.addAll(completedTasks);
-    return Response.ok(allTasks).build();
+
+    Collection<? extends TaskStatusPlus> authorizedList = securedTaskStatusPlus(
+        allTasks,
+        dataSource,
+        req
+    );
+    return Response.ok(authorizedList).build();
   }
 
   private List<TaskStatusPlus> getCompletedTasks(
@@ -763,25 +770,8 @@ public class OverlordResource
       return optionalTask.get();
     };
 
-    Function<TaskStatus, Iterable<ResourceAction>> raGenerator = taskStatus -> {
-      final Task task = taskFunction.apply(taskStatus.getId());
-
-      return Lists.newArrayList(
-          new ResourceAction(
-              new Resource(task.getDataSource(), ResourceType.DATASOURCE),
-              Action.READ
-          )
-      );
-    };
-
-    final List<TaskStatus> recentlyFinishedTasks = Lists.newArrayList(
-        AuthorizationUtils.filterAuthorizedResources(
-            req,
-            taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(maxCompletedTasks, duration),
-            raGenerator,
-            authorizerMapper
-        )
-    );
+    final List<TaskStatus> recentlyFinishedTasks = taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(
+            maxCompletedTasks, duration);
 
     final List<TaskStatusPlus> completeTasks = Lists.newArrayList(Iterables.transform(
         recentlyFinishedTasks,
@@ -803,15 +793,7 @@ public class OverlordResource
         }
     ));
 
-    List<TaskStatusPlus> dataSourceFilter = completeTasks;
-    if (dataSource != null) {
-      dataSourceFilter = completeTasks
-          .stream()
-          .filter(task -> task.getDataSource().equals(dataSource))
-          .collect(Collectors.toList());
-    }
-
-    return dataSourceFilter;
+    return completeTasks;
   }
 
   private List<TaskRunnerWorkItem> getAllActiveTasks(HttpServletRequest req)
@@ -1090,6 +1072,46 @@ public class OverlordResource
       );
     };
     Collection<? extends TaskRunnerWorkItem> dataSourceFilter = collectionToFilter;
+    if (dataSource != null) {
+      dataSourceFilter = collectionToFilter
+          .stream()
+          .filter(task -> task.getDataSource().equals(dataSource))
+          .collect(Collectors.toList());
+    }
+    return Lists.newArrayList(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            dataSourceFilter,
+            raGenerator,
+            authorizerMapper
+        )
+    );
+  }
+
+  private List<TaskStatusPlus> securedTaskStatusPlus(
+      List<TaskStatusPlus> collectionToFilter, String dataSource,
+      HttpServletRequest req
+  )
+  {
+    Function<TaskStatusPlus, Iterable<ResourceAction>> raGenerator = taskStatusPlus -> {
+      final String taskId = taskStatusPlus.getId();
+      final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
+      if (!optionalTask.isPresent()) {
+        throw new WebApplicationException(
+            Response.serverError().entity(
+                StringUtils.format("No task information found for task with id: [%s]", taskId)
+            ).build()
+        );
+      }
+
+      return Lists.newArrayList(
+          new ResourceAction(
+              new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
+              Action.READ
+          )
+      );
+    };
+    List<TaskStatusPlus> dataSourceFilter = collectionToFilter;
     if (dataSource != null) {
       dataSourceFilter = collectionToFilter
           .stream()

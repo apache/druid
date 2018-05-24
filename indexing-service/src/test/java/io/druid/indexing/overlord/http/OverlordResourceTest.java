@@ -350,14 +350,11 @@ public class OverlordResourceTest
               }
             }
         ));
-    expectAuthorizationTokenCheck();
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks(null, null, null, null, req)
         .getEntity();
     Assert.assertEquals(4, responseObjects.size());
-    Assert.assertEquals("id_6", responseObjects.get(0).getId());
-    Assert.assertTrue("DataSource Check", "ds_test".equals(responseObjects.get(0).getDataSource()));
   }
 
   @Test
@@ -426,7 +423,6 @@ public class OverlordResourceTest
               }
             }
         ));
-    expectAuthorizationTokenCheck();
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
