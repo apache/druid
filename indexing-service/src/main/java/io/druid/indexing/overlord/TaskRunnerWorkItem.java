@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
@@ -94,6 +95,7 @@ public abstract class TaskRunnerWorkItem
   @Nullable
   public abstract String getTaskType();
   public abstract String getDataSource();
+  public abstract TaskState getTaskState();
 
   @Override
   public String toString()

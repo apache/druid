@@ -22,6 +22,8 @@ package io.druid.indexer;
 public enum TaskState
 {
   RUNNING,
+  WAITING,
+  PENDING,
   SUCCESS,
   FAILED;
 
@@ -32,7 +34,7 @@ public enum TaskState
 
   public boolean isComplete()
   {
-    return this != RUNNING;
+    return this != RUNNING && this != WAITING && this != PENDING;
   }
 
   public boolean isSuccess()

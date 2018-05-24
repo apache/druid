@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -319,6 +320,12 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
     public String getDataSource()
     {
       return task.getDataSource();
+    }
+
+    @Override
+    public TaskState getTaskState()
+    {
+      return null;
     }
 
     @Override
