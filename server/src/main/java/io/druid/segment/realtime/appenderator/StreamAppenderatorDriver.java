@@ -44,7 +44,6 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -194,18 +193,13 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       for (final SegmentIdentifier identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
         final long key = identifier.getInterval().getStartMillis();
-        if (activeSegmentsForSequence.get(key) == null || activeSegmentsForSequence.get(key).stream().noneMatch(
-            segmentWithState -> {
-              if (segmentWithState.getSegmentIdentifier().equals(identifier)) {
-                segmentWithState.finishAppending();
-                return true;
-              } else {
-                return false;
-              }
-            }
-        )) {
+        final SegmentsOfInterval segmentsOfInterval = activeSegmentsForSequence.get(key);
+        if (segmentsOfInterval == null ||
+            segmentsOfInterval.getAppendingSegment() == null ||
+            !segmentsOfInterval.getAppendingSegment().getSegmentIdentifier().equals(identifier)) {
           throw new ISE("WTF?! Asked to remove segment[%s] that didn't exist...", identifier);
         }
+        segmentsOfInterval.finishAppendingToCurrentActiveSegment(SegmentWithState::finishAppending);
       }
     }
   }
@@ -396,7 +390,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   private static class SegmentsForSequenceBuilder
   {
-    private final NavigableMap<Long, LinkedList<SegmentWithState>> intervalToSegmentStates;
+    private final NavigableMap<Long, SegmentsOfInterval> intervalToSegmentStates;
     private final String lastSegmentId;
 
     SegmentsForSequenceBuilder(String lastSegmentId)
@@ -408,15 +402,15 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
     void add(SegmentWithState segmentWithState)
     {
       final SegmentIdentifier identifier = segmentWithState.getSegmentIdentifier();
-      final LinkedList<SegmentWithState> segmentsInInterval = intervalToSegmentStates.computeIfAbsent(
+      final SegmentsOfInterval segmentsInInterval = intervalToSegmentStates.computeIfAbsent(
           identifier.getInterval().getStartMillis(),
-          k -> new LinkedList<>()
+          k -> new SegmentsOfInterval(identifier.getInterval())
       );
       // always keep APPENDING segments for an interval start millis in the front
       if (segmentWithState.getState() == SegmentState.APPENDING) {
-        segmentsInInterval.addFirst(segmentWithState);
+        segmentsInInterval.setAppendingSegment(segmentWithState);
       } else {
-        segmentsInInterval.addLast(segmentWithState);
+        segmentsInInterval.addAppendFinishedSegment(segmentWithState);
       }
     }
 
