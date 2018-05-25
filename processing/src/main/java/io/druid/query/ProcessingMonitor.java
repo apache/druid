@@ -27,14 +27,14 @@ import io.druid.java.util.metrics.AbstractMonitor;
 
 import java.util.List;
 
-public class ExecutorServiceMonitor extends AbstractMonitor
+public class ProcessingMonitor extends AbstractMonitor
 {
 
   private final List<MetricEmitter> metricEmitters;
   private final ServiceMetricEvent.Builder metricBuilder;
 
   @Inject
-  public ExecutorServiceMonitor()
+  public ProcessingMonitor()
   {
     this.metricEmitters = Lists.newArrayList();
     this.metricBuilder = new ServiceMetricEvent.Builder();

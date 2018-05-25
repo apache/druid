@@ -40,7 +40,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.ExecutorServiceMonitor;
+import io.druid.query.ProcessingMonitor;
 
 import java.util.List;
 import java.util.Set;
@@ -69,7 +69,7 @@ public class MetricsModule implements Module
     binder.bind(DataSourceTaskIdHolder.class).in(LazySingleton.class);
 
     binder.bind(EventReceiverFirehoseRegister.class).in(LazySingleton.class);
-    binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
+    binder.bind(ProcessingMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
     binder.bind(Key.get(MonitorScheduler.class, Names.named("ForTheEagerness")))

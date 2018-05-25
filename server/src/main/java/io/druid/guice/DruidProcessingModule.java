@@ -27,7 +27,6 @@ import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import io.druid.client.cache.CacheConfig;
 import io.druid.collections.BlockingPool;
-import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
@@ -41,9 +40,10 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.DruidProcessingConfig;
-import io.druid.query.ExecutorServiceMonitor;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
+import io.druid.query.ProcessingMonitor;
+import io.druid.query.MetricsEmittingMergingBlockingPool;
 import io.druid.server.metrics.MetricsModule;
 
 import java.nio.ByteBuffer;
@@ -60,7 +60,7 @@ public class DruidProcessingModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
-    MetricsModule.register(binder, ExecutorServiceMonitor.class);
+    MetricsModule.register(binder, ProcessingMonitor.class);
   }
 
   @Provides
@@ -89,7 +89,7 @@ public class DruidProcessingModule implements Module
   @ManageLifecycle
   public ExecutorService getProcessingExecutorService(
       DruidProcessingConfig config,
-      ExecutorServiceMonitor executorServiceMonitor,
+      ProcessingMonitor processingMonitor,
       Lifecycle lifecycle
   )
   {
@@ -98,8 +98,7 @@ public class DruidProcessingModule implements Module
             lifecycle,
             config
         ),
-        getMergeBufferPool(config),
-        executorServiceMonitor
+        processingMonitor
     );
   }
 
@@ -120,12 +119,16 @@ public class DruidProcessingModule implements Module
   @Provides
   @LazySingleton
   @Merging
-  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
+  public BlockingPool<ByteBuffer> getMergeBufferPool(
+          DruidProcessingConfig config,
+          ProcessingMonitor processingMonitor
+  )
   {
     verifyDirectMemory(config);
-    return new DefaultBlockingPool<>(
+    return new MetricsEmittingMergingBlockingPool(
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
-        config.getNumMergeBuffers()
+        config.getNumMergeBuffers(),
+        processingMonitor
     );
   }
 

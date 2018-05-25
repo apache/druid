@@ -35,7 +35,7 @@ import io.druid.guice.annotations.Processing;
 import io.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DruidProcessingConfig;
-import io.druid.query.ExecutorServiceMonitor;
+import io.druid.query.ProcessingMonitor;
 import io.druid.server.metrics.MetricsModule;
 
 import java.nio.ByteBuffer;
@@ -55,7 +55,7 @@ public class RouterProcessingModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
-    MetricsModule.register(binder, ExecutorServiceMonitor.class);
+    MetricsModule.register(binder, ProcessingMonitor.class);
   }
 
   @Provides
