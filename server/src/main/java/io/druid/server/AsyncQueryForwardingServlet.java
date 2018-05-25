@@ -51,6 +51,7 @@ import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.client.api.Result;
 import org.eclipse.jetty.client.util.BytesContentProvider;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 
@@ -300,7 +301,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     if (query != null) {
       final ObjectMapper objectMapper = (ObjectMapper) clientRequest.getAttribute(OBJECTMAPPER_ATTRIBUTE);
       try {
-        proxyRequest.content(new BytesContentProvider(objectMapper.writeValueAsBytes(query)));
+        byte[] bytes = objectMapper.writeValueAsBytes(query);
+        proxyRequest.content(new BytesContentProvider(bytes));
+        proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
       }
       catch (JsonProcessingException e) {
         Throwables.propagate(e);
