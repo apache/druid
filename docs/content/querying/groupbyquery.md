@@ -212,6 +212,8 @@ However, you might care about the performance of some really heavy groupBy queri
 
 Once parallel combine is enabled, the groupBy v2 engine can create a combining tree for merging sorted aggregates. Each intermediate node of the tree is a thread merging aggregates from the child nodes. The leaf node threads read and merge aggregates from hash tables including spilled ones. Usually, leaf nodes are slower than intermediate nodes because they need to read data from disk. As a result, less threads are used for intermediate nodes by default. You can change the degree of intermediate nodes. See `intermediateCombineDegree` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
 
+Please note that each historical needs two merge buffers to process a groupBy v2 query with parallel combine: one for computing intermediate aggregates from each segment and another for combining intermediate aggregates in parallel.
+
 
 #### Alternatives
 
