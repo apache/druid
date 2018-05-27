@@ -23,20 +23,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.java.util.common.Intervals;
-import io.druid.java.util.common.guava.Comparators;
-import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
-import io.druid.segment.Rowboat;
-import io.druid.segment.RowboatFilteringIndexAdapter;
+import io.druid.segment.RowFilteringIndexAdapter;
+import io.druid.segment.RowPointer;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -77,13 +75,7 @@ public class AppendTask extends MergeTaskBase
   public File merge(final TaskToolbox toolbox, final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
-    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
-        Comparators.naturalNullsFirst()
-    );
-
-    for (DataSegment segment : segments.keySet()) {
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-    }
+    VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments.keySet());
 
     final Iterable<SegmentToMergeHolder> segmentsToMerge = Iterables.concat(
         Iterables.transform(
@@ -120,18 +112,9 @@ public class AppendTask extends MergeTaskBase
     List<IndexableAdapter> adapters = Lists.newArrayList();
     for (final SegmentToMergeHolder holder : segmentsToMerge) {
       adapters.add(
-          new RowboatFilteringIndexAdapter(
-              new QueryableIndexIndexableAdapter(
-                  toolbox.getIndexIO().loadIndex(holder.getFile())
-              ),
-              new Predicate<Rowboat>()
-              {
-                @Override
-                public boolean apply(Rowboat input)
-                {
-                  return holder.getInterval().contains(input.getTimestamp());
-                }
-              }
+          new RowFilteringIndexAdapter(
+              new QueryableIndexIndexableAdapter(toolbox.getIndexIO().loadIndex(holder.getFile())),
+              (RowPointer rowPointer) -> holder.getInterval().contains(rowPointer.getTimestamp())
           )
       );
     }

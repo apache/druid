@@ -93,7 +93,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     return descriptorFile;
   }
 
-  public void insert(final File file, final String contentType, final String path, final boolean replaceExisting)
+  public void insert(final File file, final String contentType, final String path)
       throws IOException
   {
     LOG.info("Inserting [%s] to [%s]", file, path);
@@ -103,15 +103,11 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     InputStreamContent mediaContent = new InputStreamContent(contentType, fileSteam);
     mediaContent.setLength(file.length());
 
-    if (!replaceExisting && storage.exists(config.getBucket(), path)) {
-      LOG.info("Skipping push because path [%s] exists && replaceExisting == false", path);
-    } else {
-      storage.insert(config.getBucket(), path, mediaContent);
-    }
+    storage.insert(config.getBucket(), path, mediaContent);
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean replaceExisting)
+  public DataSegment push(final File indexFilesDir, final DataSegment segment, final boolean useUniquePath)
       throws IOException
   {
     LOG.info("Uploading [%s] to Google.", indexFilesDir);
@@ -123,7 +119,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     try {
       indexFile = File.createTempFile("index", ".zip");
       final long indexSize = CompressionUtils.zip(indexFilesDir, indexFile);
-      final String storageDir = this.getStorageDir(segment);
+      final String storageDir = this.getStorageDir(segment, useUniquePath);
       final String indexPath = buildPath(storageDir + "/" + "index.zip");
       final String descriptorPath = buildPath(storageDir + "/" + "descriptor.json");
 
@@ -134,8 +130,8 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
 
       descriptorFile = createDescriptorFile(jsonMapper, outSegment);
 
-      insert(indexFile, "application/zip", indexPath, replaceExisting);
-      insert(descriptorFile, "application/json", descriptorPath, replaceExisting);
+      insert(indexFile, "application/zip", indexPath);
+      insert(descriptorFile, "application/json", descriptorPath);
 
       return outSegment;
     }

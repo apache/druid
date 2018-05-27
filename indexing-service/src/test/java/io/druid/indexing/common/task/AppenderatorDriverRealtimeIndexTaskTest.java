@@ -711,6 +711,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         )
     );
 
+
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
@@ -1240,6 +1241,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
         1000,
         1000,
+        null,
         null,
         null,
         null,

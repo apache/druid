@@ -46,7 +46,7 @@ public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVS
         new int[]{11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
     );
     closer = Closer.create();
-    indexedSupplier = V3CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
+    columnarMultiIntsSupplier = V3CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
         Iterables.transform(vals, (Function<int[], ColumnarInts>) input -> VSizeColumnarInts.fromArray(input, 20)),
         2,
         20,
@@ -60,7 +60,7 @@ public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVS
   @After
   public void teardown() throws IOException
   {
-    indexedSupplier = null;
+    columnarMultiIntsSupplier = null;
     closer.close();
     vals = null;
   }

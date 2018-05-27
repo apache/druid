@@ -43,7 +43,7 @@ public class HadoopTuningConfig implements TuningConfig
   private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
-  private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 75000;
+  private static final int DEFAULT_ROW_FLUSH_BOUNDARY = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final boolean DEFAULT_USE_COMBINER = false;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
@@ -56,6 +56,7 @@ public class HadoopTuningConfig implements TuningConfig
         DEFAULT_SHARD_SPECS,
         DEFAULT_INDEX_SPEC,
         DEFAULT_ROW_FLUSH_BOUNDARY,
+        0L,
         false,
         true,
         false,
@@ -80,6 +81,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<Long, List<HadoopyShardSpec>> shardSpecs;
   private final IndexSpec indexSpec;
   private final int rowFlushBoundary;
+  private final long maxBytesInMemory;
   private final boolean leaveIntermediate;
   private final Boolean cleanupOnFailure;
   private final boolean overwriteFiles;
@@ -102,6 +104,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("shardSpecs") Map<Long, List<HadoopyShardSpec>> shardSpecs,
       final @JsonProperty("indexSpec") IndexSpec indexSpec,
       final @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
+      final @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       final @JsonProperty("leaveIntermediate") boolean leaveIntermediate,
       final @JsonProperty("cleanupOnFailure") Boolean cleanupOnFailure,
       final @JsonProperty("overwriteFiles") boolean overwriteFiles,
@@ -129,6 +132,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
                                                       ? DEFAULT_ROW_FLUSH_BOUNDARY
                                                       : maxRowsInMemoryCOMPAT : maxRowsInMemory;
+    // initializing this to 0, it will be lazily initialized to a value
+    // @see server.src.main.java.io.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
@@ -188,6 +194,12 @@ public class HadoopTuningConfig implements TuningConfig
   public int getRowFlushBoundary()
   {
     return rowFlushBoundary;
+  }
+
+  @JsonProperty
+  public long getMaxBytesInMemory()
+  {
+    return maxBytesInMemory;
   }
 
   @JsonProperty
@@ -288,6 +300,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         rowFlushBoundary,
+        maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -315,6 +328,7 @@ public class HadoopTuningConfig implements TuningConfig
         shardSpecs,
         indexSpec,
         rowFlushBoundary,
+        maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,
@@ -342,6 +356,7 @@ public class HadoopTuningConfig implements TuningConfig
         specs,
         indexSpec,
         rowFlushBoundary,
+        maxBytesInMemory,
         leaveIntermediate,
         cleanupOnFailure,
         overwriteFiles,

@@ -17,32 +17,27 @@
  * under the License.
  */
 
-package io.druid.segment.incremental;
+package io.druid.indexing.common;
 
-/**
- * This interface is the core "pointer" interface that is used to create {@link io.druid.segment.ColumnValueSelector}s
- * over incremental index. It's counterpart for historical segments is {@link io.druid.segment.data.Offset}.
- */
-public class TimeAndDimsHolder
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import io.druid.indexing.common.task.Task;
+import io.druid.query.DruidMetrics;
+import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.RealtimeMetricsMonitor;
+
+public class TaskRealtimeMetricsMonitorBuilder
 {
-  IncrementalIndex.TimeAndDims currEntry = null;
+  private TaskRealtimeMetricsMonitorBuilder() {}
 
-  public IncrementalIndex.TimeAndDims get()
+  public static RealtimeMetricsMonitor build(Task task, FireDepartment fireDepartment)
   {
-    return currEntry;
-  }
-
-  public void set(IncrementalIndex.TimeAndDims currEntry)
-  {
-    this.currEntry = currEntry;
-  }
-
-  /**
-   * This method doesn't have well-defined semantics ("value" of what?), should be removed in favor of chaining
-   * get().getRowIndex().
-   */
-  public int getValue()
-  {
-    return currEntry.getRowIndex();
+    return new RealtimeMetricsMonitor(
+        ImmutableList.of(fireDepartment),
+        ImmutableMap.of(
+            DruidMetrics.TASK_ID, new String[]{task.getId()},
+            DruidMetrics.TASK_TYPE, new String[]{task.getType()}
+        )
+    );
   }
 }

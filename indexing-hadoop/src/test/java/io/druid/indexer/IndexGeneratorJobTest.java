@@ -91,7 +91,7 @@ public class IndexGeneratorJobTest
 
   @Parameterized.Parameters(name = "useCombiner={0}, partitionType={1}, interval={2}, shardInfoForEachSegment={3}, " +
                                    "data={4}, inputFormatName={5}, inputRowParser={6}, maxRowsInMemory={7}, " +
-                                   "aggs={8}, datasourceName={9}, forceExtendableShardSpecs={10}")
+                                   "maxBytesInMemory={8}, aggs={9}, datasourceName={10}, forceExtendableShardSpecs={11}")
   public static Collection<Object[]> constructFeed()
   {
     final List<Object[]> baseConstructors = Arrays.asList(
@@ -151,6 +151,7 @@ public class IndexGeneratorJobTest
                     null
                 ),
                 null,
+                null,
                 aggs1,
                 "website"
             },
@@ -197,6 +198,7 @@ public class IndexGeneratorJobTest
                         0
                     )
                 ),
+                null,
                 null,
                 aggs1,
                 "website"
@@ -245,6 +247,7 @@ public class IndexGeneratorJobTest
                     ),
                     null
                 ),
+                null,
                 null,
                 aggs1,
                 "website"
@@ -303,6 +306,7 @@ public class IndexGeneratorJobTest
                     )
                 ),
                 null,
+                null,
                 aggs1,
                 "website"
             },
@@ -335,6 +339,7 @@ public class IndexGeneratorJobTest
                     null
                 ),
                 1, // force 1 row max per index for easier testing
+                null,
                 aggs2,
                 "inherit_dims"
             },
@@ -367,6 +372,7 @@ public class IndexGeneratorJobTest
                     null
                 ),
                 1, // force 1 row max per index for easier testing
+                null,
                 aggs2,
                 "inherit_dims2"
             }
@@ -398,6 +404,7 @@ public class IndexGeneratorJobTest
   private final String inputFormatName;
   private final InputRowParser inputRowParser;
   private final Integer maxRowsInMemory;
+  private final Long maxBytesInMemory;
   private final AggregatorFactory[] aggs;
   private final String datasourceName;
   private final boolean forceExtendableShardSpecs;
@@ -416,6 +423,7 @@ public class IndexGeneratorJobTest
       String inputFormatName,
       InputRowParser inputRowParser,
       Integer maxRowsInMemory,
+      Long maxBytesInMemory,
       AggregatorFactory[] aggs,
       String datasourceName,
       boolean forceExtendableShardSpecs
@@ -429,6 +437,7 @@ public class IndexGeneratorJobTest
     this.inputFormatName = inputFormatName;
     this.inputRowParser = inputRowParser;
     this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.aggs = aggs;
     this.datasourceName = datasourceName;
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
@@ -511,6 +520,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 maxRowsInMemory,
+                maxBytesInMemory,
                 false,
                 false,
                 false,

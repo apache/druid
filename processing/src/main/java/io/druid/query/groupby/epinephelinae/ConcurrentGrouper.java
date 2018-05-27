@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.parsers.CloseableIterator;
@@ -96,7 +96,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   public ConcurrentGrouper(
       final GroupByQueryConfig groupByQueryConfig,
       final Supplier<ByteBuffer> bufferSupplier,
-      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
+      @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final KeySerdeFactory<KeyType> combineKeySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
@@ -114,7 +114,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     this(
         bufferSupplier,
-        combineBufferSupplier,
+        combineBufferHolder,
         keySerdeFactory,
         combineKeySerdeFactory,
         columnSelectorFactory,
@@ -138,7 +138,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
   ConcurrentGrouper(
       final Supplier<ByteBuffer> bufferSupplier,
-      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
+      @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final KeySerdeFactory<KeyType> combineKeySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
@@ -191,7 +191,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
 
     if (numParallelCombineThreads > 1) {
       this.parallelCombiner = new ParallelCombiner<>(
-          combineBufferSupplier,
+          Preconditions.checkNotNull(combineBufferHolder, "combineBufferHolder"),
           getCombiningFactories(aggregatorFactories),
           combineKeySerdeFactory,
           executor,

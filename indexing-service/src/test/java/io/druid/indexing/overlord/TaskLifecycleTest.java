@@ -482,7 +482,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
+      public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
       {
         pushedSegments++;
         return segment;
@@ -617,7 +617,7 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskConfig);
     Preconditions.checkNotNull(emitter);
 
-    return new ThreadPoolTaskRunner(
+    return new SingleTaskBackgroundRunner(
         tb,
         taskConfig,
         emitter,
@@ -671,6 +671,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -749,6 +750,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -1071,7 +1073,7 @@ public class TaskLifecycleTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment dataSegment, boolean replaceExisting)
+      public DataSegment push(File file, DataSegment dataSegment, boolean useUniquePath)
       {
         throw new RuntimeException("FAILURE");
       }
@@ -1134,6 +1136,7 @@ public class TaskLifecycleTest
             new IndexTuningConfig(
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -1260,6 +1263,7 @@ public class TaskLifecycleTest
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         1000,
+        null,
         new Period("P1Y"),
         null, //default window period of 10 minutes
         null, // base persist dir ignored by Realtime Index task
@@ -1271,6 +1275,7 @@ public class TaskLifecycleTest
         null,
         0,
         0,
+        null,
         null,
         null,
         null,

@@ -21,6 +21,7 @@ package io.druid.server.coordinator.helper;
 
 import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.CoordinatorCompactionConfig;
@@ -32,6 +33,8 @@ import io.druid.timeline.VersionedIntervalTimeline;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -73,32 +76,28 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
             .stream()
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-        final int numRunningCompactTasks = indexingServiceClient
-            .getRunningTasks()
-            .stream()
-            .filter(status -> {
-              final String taskType = status.getType();
-              // taskType can be null if middleManagers are running with an older version. Here, we consevatively regard
-              // the tasks of the unknown taskType as the compactionTask. This is because it's important to not run
-              // compactionTasks more than the configured limit at any time which might impact to the ingestion
-              // performance.
-              return taskType == null || taskType.equals(COMPACT_TASK_TYPE);
-            })
-            .collect(Collectors.toList())
-            .size();
+        final int numNonCompleteCompactionTasks = findNumNonCompleteCompactTasks(
+            indexingServiceClient.getRunningTasks(),
+            indexingServiceClient.getPendingTasks(),
+            indexingServiceClient.getWaitingTasks()
+        );
         final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
 
         final int compactionTaskCapacity = (int) Math.min(
             indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
             dynamicConfig.getMaxCompactionTaskSlots()
         );
-        final int numAvailableCompactionTaskSlots = numRunningCompactTasks > 0 ?
-                                                    compactionTaskCapacity - numRunningCompactTasks :
+        final int numAvailableCompactionTaskSlots = numNonCompleteCompactionTasks > 0 ?
+                                                    compactionTaskCapacity - numNonCompleteCompactionTasks :
                                                     // compactionTaskCapacity might be 0 if totalWorkerCapacity is low.
                                                     // This guarantees that at least one slot is available if
                                                     // compaction is enabled and numRunningCompactTasks is 0.
                                                     Math.max(1, compactionTaskCapacity);
-        LOG.info("Running tasks [%d/%d]", numRunningCompactTasks, compactionTaskCapacity);
+        LOG.info(
+            "Found [%d] available task slots for compaction out of [%d] max compaction task capacity",
+            numAvailableCompactionTaskSlots,
+            compactionTaskCapacity
+        );
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
         } else {
@@ -114,6 +113,26 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
     return params.buildFromExisting()
                  .withCoordinatorStats(stats)
                  .build();
+  }
+
+  @SafeVarargs
+  private static int findNumNonCompleteCompactTasks(List<TaskStatusPlus>...taskStatusStreams)
+  {
+    final List<TaskStatusPlus> allTaskStatusPlus = new ArrayList<>();
+    Arrays.stream(taskStatusStreams).forEach(allTaskStatusPlus::addAll);
+
+    return allTaskStatusPlus
+        .stream()
+        .filter(status -> {
+          final String taskType = status.getType();
+          // taskType can be null if middleManagers are running with an older version. Here, we consevatively regard
+          // the tasks of the unknown taskType as the compactionTask. This is because it's important to not run
+          // compactionTasks more than the configured limit at any time which might impact to the ingestion
+          // performance.
+          return taskType == null || taskType.equals(COMPACT_TASK_TYPE);
+        })
+        .collect(Collectors.toList())
+        .size();
   }
 
   private CoordinatorStats doRun(

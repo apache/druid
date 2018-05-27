@@ -16,42 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.common.aws;
 
-package io.druid.sql.calcite.aggregation;
+import com.amazonaws.services.s3.S3ClientOptions;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.druid.query.aggregation.PostAggregator;
-
-/**
- * Can create PostAggregators with specific output names.
- */
-public abstract class PostAggregatorFactory
+public class AWSClientConfig
 {
-  public abstract PostAggregator factorize(String outputName);
+  @JsonProperty
+  private boolean disableChunkedEncoding = S3ClientOptions.DEFAULT_CHUNKED_ENCODING_DISABLED;
 
-  @Override
-  public boolean equals(Object o)
+  @JsonProperty
+  private boolean enablePathStyleAccess = S3ClientOptions.DEFAULT_PATH_STYLE_ACCESS;
+
+  @JsonProperty
+  protected boolean forceGlobalBucketAccessEnabled = S3ClientOptions.DEFAULT_FORCE_GLOBAL_BUCKET_ACCESS_ENABLED;
+
+  public boolean isDisableChunkedEncoding()
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    PostAggregatorFactory that = (PostAggregatorFactory) o;
-
-    return factorize(null).equals(that.factorize(null));
+    return disableChunkedEncoding;
   }
 
-  @Override
-  public int hashCode()
+  public boolean isEnablePathStyleAccess()
   {
-    return factorize(null).hashCode();
+    return enablePathStyleAccess;
   }
 
-  @Override
-  public String toString()
+  public boolean isForceGlobalBucketAccessEnabled()
   {
-    return factorize(null).toString();
+    return forceGlobalBucketAccessEnabled;
   }
 }

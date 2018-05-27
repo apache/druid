@@ -29,6 +29,4 @@ import java.io.IOException;
 public interface ColumnarIntsSerializer extends Serializer
 {
   void open() throws IOException;
-
-  void add(Object obj) throws IOException;
 }

@@ -19,16 +19,25 @@
 
 package io.druid.segment;
 
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.GenericColumn;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
+import io.druid.segment.selector.settable.SettableLongColumnValueSelector;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.Closeable;
+import java.util.Comparator;
 
 public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
 {
+  private static Comparator<ColumnValueSelector> LONG_COLUMN_COMPARATOR = (s1, s2) -> {
+    if (s1.isNull()) {
+      return s2.isNull() ? 0 : -1;
+    } else if (s2.isNull()) {
+      return 1;
+    } else {
+      return Long.compare(s1.getLong(), s2.getLong());
+    }
+  };
+
   private final String dimensionName;
 
   public LongDimensionHandler(String dimensionName)
@@ -49,7 +58,7 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   }
 
   @Override
-  public DimensionMergerV9<Long> makeMerger(
+  public DimensionMergerV9 makeMerger(
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -70,35 +79,14 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   }
 
   @Override
-  public int compareSortedEncodedKeyComponents(Long lhs, Long rhs)
+  public Comparator<ColumnValueSelector> getEncodedValueSelectorComparator()
   {
-    return lhs.compareTo(rhs);
+    return LONG_COLUMN_COMPARATOR;
   }
 
   @Override
-  public void validateSortedEncodedKeyComponents(
-      Long lhs, Long rhs, Indexed<Long> lhsEncodings, Indexed<Long> rhsEncodings
-  ) throws SegmentValidationException
+  public SettableColumnValueSelector makeNewSettableEncodedValueSelector()
   {
-    if (!lhs.equals(rhs)) {
-      throw new SegmentValidationException(
-          "Dim [%s] value not equal. Expected [%s] found [%s]",
-          dimensionName,
-          lhs,
-          rhs
-      );
-    }
-  }
-
-  @Override
-  public Closeable getSubColumn(Column column)
-  {
-    return column.getGenericColumn();
-  }
-
-  @Override
-  public Long getEncodedKeyComponentFromColumn(Closeable column, int currRow)
-  {
-    return ((GenericColumn) column).getLongSingleValueRow(currRow);
+    return new SettableLongColumnValueSelector();
   }
 }

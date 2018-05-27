@@ -62,7 +62,7 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
   }
 
   @Override
-  protected void addValue(int val) throws IOException
+  public void addValue(int val) throws IOException
   {
     if (bufPaddingWritten) {
       throw new IllegalStateException("written out already");

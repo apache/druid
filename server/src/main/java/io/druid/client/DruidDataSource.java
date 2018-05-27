@@ -21,13 +21,12 @@ package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import io.druid.timeline.DataSegment;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  */
@@ -35,7 +34,7 @@ public class DruidDataSource
 {
   private final String name;
   private final Map<String, String> properties;
-  private final ConcurrentHashMap<String, DataSegment> idToSegmentMap;
+  private final ConcurrentSkipListMap<String, DataSegment> idToSegmentMap;
 
   public DruidDataSource(
       String name,
@@ -44,7 +43,7 @@ public class DruidDataSource
   {
     this.name = Preconditions.checkNotNull(name);
     this.properties = properties;
-    this.idToSegmentMap = new ConcurrentHashMap<>();
+    this.idToSegmentMap = new ConcurrentSkipListMap<>();
   }
 
   @JsonProperty
@@ -83,11 +82,7 @@ public class DruidDataSource
 
   public ImmutableDruidDataSource toImmutableDruidDataSource()
   {
-    return new ImmutableDruidDataSource(
-        name,
-        ImmutableMap.copyOf(properties),
-        ImmutableMap.copyOf(idToSegmentMap)
-    );
+    return new ImmutableDruidDataSource(name, properties, idToSegmentMap);
   }
 
   @Override
@@ -102,6 +97,7 @@ public class DruidDataSource
   @Override
   public boolean equals(Object o)
   {
+    //noinspection Contract
     throw new UnsupportedOperationException("Use ImmutableDruidDataSource instead");
   }
 

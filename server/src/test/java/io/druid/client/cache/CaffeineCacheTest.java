@@ -360,19 +360,19 @@ public class CaffeineCacheTest
 
     CacheStats stats = cache.getStats();
     Assert.assertEquals(0L, stats.getNumEntries());
-    Assert.assertEquals(-1L, stats.getSizeInBytes());
+    Assert.assertEquals(0L, stats.getSizeInBytes());
 
     cache.put(key1, val1);
 
     stats = cache.getStats();
     Assert.assertEquals(1L, stats.getNumEntries());
-    Assert.assertEquals(-1L, stats.getSizeInBytes());
+    Assert.assertEquals(34L, stats.getSizeInBytes());
 
     cache.put(key2, val2);
 
     stats = cache.getStats();
     Assert.assertEquals(2L, stats.getNumEntries());
-    Assert.assertEquals(-1L, stats.getSizeInBytes());
+    Assert.assertEquals(68L, stats.getSizeInBytes());
   }
 
   @Test
@@ -461,7 +461,7 @@ public class CaffeineCacheTest
     caffeineCacheConfigJsonConfigProvider.inject(properties, configurator);
     final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get().get();
     Assert.assertEquals(-1, config.getExpireAfter());
-    Assert.assertEquals(-1, config.getSizeInBytes());
+    Assert.assertEquals(-1L, config.getSizeInBytes());
     Assert.assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
   }
 

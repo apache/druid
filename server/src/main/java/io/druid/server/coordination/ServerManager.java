@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.CachingQueryRunner;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
@@ -33,6 +31,8 @@ import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.FunctionalIterable;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.CPUTimeMetricQueryRunner;
 import io.druid.query.DataSource;
@@ -280,26 +280,26 @@ public class ServerManager implements QuerySegmentWalker
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     String segmentId = adapter.getIdentifier();
-    return new SetAndVerifyContextQueryRunner(
+    return new SetAndVerifyContextQueryRunner<>(
         serverConfig,
         CPUTimeMetricQueryRunner.safeBuild(
-            new SpecificSegmentQueryRunner<T>(
-                new MetricsEmittingQueryRunner<T>(
+            new SpecificSegmentQueryRunner<>(
+                new MetricsEmittingQueryRunner<>(
                     emitter,
                     toolChest,
-                    new BySegmentQueryRunner<T>(
+                    new BySegmentQueryRunner<>(
                         segmentId,
                         adapter.getDataInterval().getStart(),
-                        new CachingQueryRunner<T>(
+                        new CachingQueryRunner<>(
                             segmentId,
                             segmentDescriptor,
                             objectMapper,
                             cache,
                             toolChest,
-                            new MetricsEmittingQueryRunner<T>(
+                            new MetricsEmittingQueryRunner<>(
                                 emitter,
                                 toolChest,
-                                new ReferenceCountingSegmentQueryRunner<T>(factory, adapter, segmentDescriptor),
+                                new ReferenceCountingSegmentQueryRunner<>(factory, adapter, segmentDescriptor),
                                 QueryMetrics::reportSegmentTime,
                                 queryMetrics -> queryMetrics.segment(segmentId)
                             ),
