@@ -292,7 +292,7 @@ public class MaterializedViewSupervisor implements Supervisor
   @VisibleForTesting
   Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> checkSegments()
   {
-    // Pair< interval -> version, interval -> list<DataSegment>>
+    // Pair<interval -> version, interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> derivativeSegmentsSnapshot =
         getVersionAndBaseSegments(
             metadataStorageCoordinator.getUsedSegmentsForInterval(
@@ -300,7 +300,7 @@ public class MaterializedViewSupervisor implements Supervisor
                 ALL_INTERVAL
             )
         );
-    // Pair< interval -> max(created_date), interval -> list<DataSegment>>
+    // Pair<interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
         getMaxCreateDateAndBaseSegments(
             metadataStorageCoordinator.getUsedSegmentAndCreatedDateForInterval(
@@ -317,7 +317,7 @@ public class MaterializedViewSupervisor implements Supervisor
     SortedMap<Interval, String> sortedToBuildInterval = Maps.newTreeMap(
         Comparators.inverse(Comparators.intervalsByStartThenEnd())
     );
-    // finde the intervals to drop and to build
+    // find the intervals to drop and to build
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);
     Map<Interval, String> toBuildInterval = Maps.newHashMap(difference.entriesOnlyOnLeft());
     Map<Interval, String> toDropInterval = Maps.newHashMap(difference.entriesOnlyOnRight());
@@ -345,7 +345,7 @@ public class MaterializedViewSupervisor implements Supervisor
         segmentManager.removeSegment(dataSource, segment.getIdentifier());
       }
     }
-    // data in latest interval will be built firstly.
+    // data of the latest interval will be built firstly.
     sortedToBuildInterval.putAll(toBuildInterval);
     return new Pair<>(sortedToBuildInterval, baseSegments);
   }
@@ -432,11 +432,7 @@ public class MaterializedViewSupervisor implements Supervisor
    */
   private boolean hasEnoughLag(Interval target, Interval maxInterval)
   {
-    if ((target.getStartMillis() + minDataLagMs) > maxInterval.getStartMillis()) {
-      return false;
-    } else {
-      return true;
-    }
+    return minDataLagMs <= (maxInterval.getStartMillis() - target.getStartMillis());
   }
   
   private void clearTasks() 
