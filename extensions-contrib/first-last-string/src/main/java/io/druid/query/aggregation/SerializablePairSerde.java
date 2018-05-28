@@ -82,7 +82,21 @@ public class SerializablePairSerde extends ComplexMetricSerde
       @Override
       public int compare(SerializablePair o1, SerializablePair o2)
       {
-        return o1.lhs.equals(o2.lhs) && o1.rhs.equals(o2.rhs) ? 1 : 0;
+        Integer comparation = 0;
+
+        if ((Long) o1.lhs > (Long) o2.lhs) {
+          comparation = 1;
+        } else if ((Long) o1.lhs < (Long) o2.lhs) {
+          comparation = -1;
+        }
+
+        if (comparation == 0 && o1.rhs.equals(o2.rhs)) {
+          comparation = 0;
+        } else if (comparation == 0) {
+          comparation = -1;
+        }
+
+        return comparation;
       }
 
       @Override
