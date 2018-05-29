@@ -67,7 +67,8 @@ public class LoadingLookup extends LookupExtractor
   {
     String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
     if (keyEquivalent == null) {
-      // keyEquivalent is null for SQL Compatible Null Behavior
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       return null;
     }
 
@@ -87,7 +88,8 @@ public class LoadingLookup extends LookupExtractor
   {
     String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
     if (valueEquivalent == null) {
-      // valueEquivalent is null for SQL Compatible Null Behavior
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       // null value maps to empty list when SQL Compatible
       return Collections.EMPTY_LIST;
     }

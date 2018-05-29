@@ -68,7 +68,8 @@ public class MapLookupExtractor extends LookupExtractor
   {
     String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
     if (keyEquivalent == null) {
-      // keyEquivalent is null for SQL Compatible Null Behavior
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       return null;
     }
     return NullHandling.emptyToNullIfNeeded(map.get(keyEquivalent));
@@ -79,7 +80,8 @@ public class MapLookupExtractor extends LookupExtractor
   {
     String valueToLookup = NullHandling.nullToEmptyIfNeeded(value);
     if (valueToLookup == null) {
-      // valueEquivalent is null for SQL Compatible Null Behavior
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       // null value maps to empty list when SQL Compatible
       return Collections.EMPTY_LIST;
     }
