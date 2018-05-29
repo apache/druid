@@ -116,7 +116,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final boolean isSmile;
 
   /**
-   * Removes the magical fields added by {@link #makeResponseContextForQuery(Query, long)}.
+   * Removes the magical fields added.
    */
   public static void removeMagicResponseContextFields(Map<String, Object> responseContext)
   {
