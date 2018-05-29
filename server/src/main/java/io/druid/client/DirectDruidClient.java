@@ -124,20 +124,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
   }
 
-  public static Map<String, Object> makeResponseContextForQuery(Query query, long startTimeMillis)
-  {
-    final Map<String, Object> responseContext = new ConcurrentHashMap<>();
-    responseContext.put(
-        DirectDruidClient.QUERY_FAIL_TIME,
-        startTimeMillis + QueryContexts.getTimeout(query)
-    );
-    responseContext.put(
-        DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED,
-        new AtomicLong()
-    );
-    return responseContext;
-  }
-
   public DirectDruidClient(
       QueryToolChestWarehouse warehouse,
       QueryWatcher queryWatcher,
@@ -199,7 +185,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       final long requestStartTimeNs = System.nanoTime();
 
-      long timeoutAt = ((Long) context.get(QUERY_FAIL_TIME)).longValue();
+      long timeoutAt = query.getContextValue(QUERY_FAIL_TIME);
       long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
       AtomicLong totalBytesGathered = (AtomicLong) context.get(QUERY_TOTAL_BYTES_GATHERED);
 

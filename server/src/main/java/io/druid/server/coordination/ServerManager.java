@@ -316,7 +316,8 @@ public class ServerManager implements QuerySegmentWalker
             emitter,
             cpuTimeAccumulator,
             false
-        )
+        ),
+        System.currentTimeMillis()
     );
   }
 }
