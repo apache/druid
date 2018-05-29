@@ -58,6 +58,7 @@ import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryHelper;
@@ -75,6 +76,7 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -387,7 +389,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
                       queryWithoutSubtotalsSpec.getDimensions(),
                       (dimSpec) -> new DefaultDimensionSpec(
                           dimSpec.getOutputName(),
-                          dimSpec.getOutputName()
+                          dimSpec.getOutputName(),
+                          dimSpec.getOutputType()
                       )
                   )
               ),
@@ -403,9 +406,16 @@ public class GroupByStrategyV2 implements GroupByStrategy
       );
       List<Sequence<Row>> subtotalsResults = new ArrayList<>(subtotals.size());
 
+      Map<String, DimensionSpec> queryDimensionSpecs = new HashMap(queryWithoutSubtotalsSpec.getDimensions().size());
+      for (DimensionSpec dimSpec : queryWithoutSubtotalsSpec.getDimensions()) {
+        queryDimensionSpecs.put(dimSpec.getOutputName(), dimSpec);
+      }
+
       for (List<String> subtotalSpec : subtotals) {
         GroupByQuery subtotalQuery = queryWithoutSubtotalsSpec.withDimensionSpecs(
-            subtotalSpec.stream().map(s -> new DefaultDimensionSpec(s, s)).collect(Collectors.toList())
+            subtotalSpec.stream()
+                        .map(s -> new DefaultDimensionSpec(s, s, queryDimensionSpecs.get(s).getOutputType()))
+                        .collect(Collectors.toList())
         );
 
         subtotalsResults.add(applyPostProcessing(

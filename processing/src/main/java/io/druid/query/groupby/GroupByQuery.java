@@ -234,7 +234,7 @@ public class GroupByQuery extends BaseQuery<Row>
           }
           if (!found) {
             throw new IAE(
-                "Subtotal spec %s is either not a subset or items are in different order than in dimensiosn spec.",
+                "Subtotal spec %s is either not a subset or items are in different order than in dimensions.",
                 subtotalSpec
             );
           }
