@@ -12,11 +12,11 @@ druid.extensions.loadList=["druid-first-last-string"]
 
 ## First String aggregator
 
-`firstString` computes the metric value with the minimum timestamp or `null` if no row exist
+`stringFirst` computes the metric value with the minimum timestamp or `null` if no row exist
 
 ```json
 {
-  "type" : "firstString",
+  "type" : "stringFirst",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "maxStringBytes" : <integer>
@@ -27,14 +27,14 @@ druid.extensions.loadList=["druid-first-last-string"]
 
 ```json
 {
-  "type" : "lastString",
+  "type" : "stringLast",
   "name" : <output_name>,
   "fieldName" : <metric_name>,
   "maxStringBytes" : <integer>
 }
 ```
 
-`lastString` computes the metric value with the maximum timestamp or `null` if no row exist
+`stringLast` computes the metric value with the maximum timestamp or `null` if no row exist
 
 
 
