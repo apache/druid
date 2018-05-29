@@ -19,7 +19,6 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
@@ -48,7 +47,6 @@ import java.util.zip.GZIPOutputStream;
  */
 public class S3DataSegmentPullerTest
 {
-
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -57,7 +55,7 @@ public class S3DataSegmentPullerTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     final S3ObjectSummary objectSummary = new S3ObjectSummary();
     objectSummary.setBucketName(bucket);
@@ -87,7 +85,7 @@ public class S3DataSegmentPullerTest
   {
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
-    final AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
     final byte[] value = bucket.getBytes("utf8");
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
@@ -144,7 +142,7 @@ public class S3DataSegmentPullerTest
   {
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
-    final AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    final ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
     final byte[] value = bucket.getBytes("utf8");
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
