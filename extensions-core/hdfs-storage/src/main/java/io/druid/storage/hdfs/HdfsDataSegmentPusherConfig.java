@@ -28,13 +28,37 @@ public class HdfsDataSegmentPusherConfig
   @JsonProperty
   private String storageDirectory = "";
 
+  @JsonProperty
+  private boolean useS3Backup = false;
+
+  @JsonProperty
+  private String backupS3Bucket = "";
+
+  @JsonProperty
+  private String backupS3BaseKey = "";
+
+  public String getStorageDirectory()
+  {
+    return storageDirectory;
+  }
+
   public void setStorageDirectory(String storageDirectory)
   {
     this.storageDirectory = storageDirectory;
   }
 
-  public String getStorageDirectory()
+  public boolean isUseS3Backup()
   {
-    return storageDirectory;
+    return useS3Backup;
+  }
+
+  public String getBackupS3Bucket()
+  {
+    return backupS3Bucket;
+  }
+
+  public String getBackupS3BaseKey()
+  {
+    return backupS3BaseKey;
   }
 }

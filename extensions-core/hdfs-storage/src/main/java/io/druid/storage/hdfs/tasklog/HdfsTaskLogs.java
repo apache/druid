@@ -18,6 +18,7 @@
  */
 package io.druid.storage.hdfs.tasklog;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
@@ -45,33 +46,56 @@ import java.io.OutputStream;
 public class HdfsTaskLogs implements TaskLogs
 {
   private static final Logger log = new Logger(HdfsTaskLogs.class);
+  private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   private final HdfsTaskLogsConfig config;
   private final Configuration hadoopConfig;
+  private final String s3StorageDirectory;
 
   @Inject
   public HdfsTaskLogs(HdfsTaskLogsConfig config, Configuration hadoopConfig)
   {
     this.config = config;
     this.hadoopConfig = hadoopConfig;
+    this.s3StorageDirectory = JOINER.join(
+        "s3a://" + config.getBackupS3Bucket(),
+        config.getBackupS3BaseKey().isEmpty() ? null : config.getBackupS3BaseKey()
+    );
   }
 
   @Override
   public void pushTaskLog(String taskId, File logFile) throws IOException
   {
-    final Path path = getTaskLogFileFromId(taskId);
+    Path path = getTaskLogFileFromId(taskId);
     log.info("Writing task log to: %s", path);
-    pushTaskFile(path, logFile);
+    path = pushTaskFileWithBackup(path, logFile);
     log.info("Wrote task log to: %s", path);
   }
 
   @Override
   public void pushTaskReports(String taskId, File reportFile) throws IOException
   {
-    final Path path = getTaskReportsFileFromId(taskId);
+    Path path = getTaskReportsFileFromId(taskId);
     log.info("Writing task reports to: %s", path);
-    pushTaskFile(path, reportFile);
+    path = pushTaskFileWithBackup(path, reportFile);
     log.info("Wrote task reports to: %s", path);
+  }
+
+  private Path pushTaskFileWithBackup(Path path, File logFile) throws IOException
+  {
+    try {
+      pushTaskFile(path, logFile);
+      return path;
+    }
+    catch (Exception e) {
+      if (!config.isUseS3Backup()) {
+        throw e;
+      }
+      log.warn(e, "Failed to write %s, fallback to S3", path);
+    }
+    final Path backupPath = new Path(s3StorageDirectory, path.getName());
+    pushTaskFile(backupPath, logFile);
+    return backupPath;
   }
 
   private void pushTaskFile(Path path, File logFile) throws IOException
@@ -89,14 +113,31 @@ public class HdfsTaskLogs implements TaskLogs
   public Optional<ByteSource> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final Path path = getTaskLogFileFromId(taskId);
-    return streamTaskFile(path, offset);
+    return streamTaskFileWithBackup(path, offset);
   }
 
   @Override
   public Optional<ByteSource> streamTaskReports(String taskId) throws IOException
   {
     final Path path = getTaskReportsFileFromId(taskId);
-    return streamTaskFile(path, 0);
+    return streamTaskFileWithBackup(path, 0);
+  }
+
+  private Optional<ByteSource> streamTaskFileWithBackup(final Path path, final long offset) throws IOException
+  {
+    try {
+      Optional<ByteSource> result = streamTaskFile(path, offset);
+      if (result.isPresent() || !config.isUseS3Backup()) {
+        return result;
+      }
+    }
+    catch (Exception e) {
+      if (!config.isUseS3Backup()) {
+        throw e;
+      }
+    }
+    final Path backupPath = new Path(s3StorageDirectory, path.getName());
+    return streamTaskFile(backupPath, offset);
   }
 
   private Optional<ByteSource> streamTaskFile(final Path path, final long offset) throws IOException
@@ -135,7 +176,7 @@ public class HdfsTaskLogs implements TaskLogs
    */
   private Path getTaskLogFileFromId(String taskId)
   {
-    return new Path(mergePaths(config.getDirectory(), taskId.replaceAll(":", "_")));
+    return new Path(config.getDirectory(), taskId.replaceAll(":", "_"));
   }
 
   /**
@@ -144,13 +185,7 @@ public class HdfsTaskLogs implements TaskLogs
    */
   private Path getTaskReportsFileFromId(String taskId)
   {
-    return new Path(mergePaths(config.getDirectory(), taskId.replaceAll(":", "_") + ".reports.json"));
-  }
-
-  // some hadoop version Path.mergePaths does not exist
-  private static String mergePaths(String path1, String path2)
-  {
-    return path1 + (path1.endsWith(Path.SEPARATOR) ? "" : Path.SEPARATOR) + path2;
+    return new Path(config.getDirectory(), taskId.replaceAll(":", "_") + ".reports.json");
   }
 
   @Override

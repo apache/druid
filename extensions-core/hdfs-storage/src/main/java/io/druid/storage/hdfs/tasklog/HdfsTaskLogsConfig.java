@@ -20,6 +20,8 @@ package io.druid.storage.hdfs.tasklog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 
 import javax.validation.constraints.NotNull;
 
@@ -32,15 +34,59 @@ public class HdfsTaskLogsConfig
   @NotNull
   private String directory;
 
+  @JsonProperty
+  private boolean useS3Backup = false;
+
+  @JsonProperty
+  private String backupS3Bucket = "";
+
+  @JsonProperty
+  private String backupS3BaseKey = "";
+
+  public HdfsTaskLogsConfig(String directory)
+  {
+    this(directory, false, "", "");
+  }
+
   @JsonCreator
-  public HdfsTaskLogsConfig(@JsonProperty("directory") String directory)
+  public HdfsTaskLogsConfig(
+      @JsonProperty("directory") String directory,
+      @JsonProperty("useS3Backup") boolean useS3Backup,
+      @JsonProperty("backupS3Bucket") String backupS3Bucket,
+      @JsonProperty("backupS3BaseKey") String backupS3BaseKey
+  )
   {
     this.directory = directory;
+    this.useS3Backup = useS3Backup;
+    this.backupS3Bucket = Objects.firstNonNull(backupS3Bucket, "");
+    this.backupS3BaseKey = Objects.firstNonNull(backupS3BaseKey, "");
+
+    if (useS3Backup) {
+      Preconditions.checkArgument(
+          backupS3Bucket != null && backupS3Bucket.length() > 0,
+          "must specify backupS3Bucket for task logs"
+      );
+    }
   }
 
   public String getDirectory()
   {
     return directory;
+  }
+
+  public boolean isUseS3Backup()
+  {
+    return useS3Backup;
+  }
+
+  public String getBackupS3Bucket()
+  {
+    return backupS3Bucket;
+  }
+
+  public String getBackupS3BaseKey()
+  {
+    return backupS3BaseKey;
   }
 }
 

@@ -122,6 +122,10 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
   private void removeEmptyParentDirectories(final FileSystem fs, final Path segmentPath, final int depth)
   {
+    if ("s3a".equals(segmentPath.toUri().getScheme())) {
+      return; // there is no real directory in s3
+    }
+
     Path path = segmentPath;
     try {
       for (int i = 1; i <= depth; i++) {

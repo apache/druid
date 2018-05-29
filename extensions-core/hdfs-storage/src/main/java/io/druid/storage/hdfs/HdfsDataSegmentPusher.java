@@ -61,10 +61,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   // Please see https://github.com/druid-io/druid/pull/5684
   private final Supplier<String> fullyQualifiedStorageDirectory;
 
+  private final boolean hasBackup;
+  private final String s3StorageDirectory;
+
   @Inject
   public HdfsDataSegmentPusher(HdfsDataSegmentPusherConfig config, Configuration hadoopConfig, ObjectMapper jsonMapper)
   {
     this.hadoopConfig = hadoopConfig;
+
     this.jsonMapper = jsonMapper;
     Path storageDir = new Path(config.getStorageDirectory());
     this.fullyQualifiedStorageDirectory = Suppliers.memoize(
@@ -81,6 +85,11 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         }
     );
 
+    this.hasBackup = config.isUseS3Backup();
+    this.s3StorageDirectory = JOINER.join(
+        "s3a://" + config.getBackupS3Bucket(),
+        config.getBackupS3BaseKey().isEmpty() ? null : config.getBackupS3BaseKey()
+    );
     log.info("Configured HDFS as deep storage");
   }
 
@@ -103,7 +112,23 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     // For HDFS, useUniquePath does not affect the directory tree but instead affects the filename, which is of the form
     // '{partitionNum}_index.zip' without unique paths and '{partitionNum}_{UUID}_index.zip' with unique paths.
     final String storageDir = this.getStorageDir(segment, false);
+    try {
+      return pushToHdfs(inDir, segment, storageDir, useUniquePath);
 
+    }
+    catch (Exception e) {
+      if (!hasBackup) {
+        throw e;
+      }
+      log.warn(e, "Failed to push segment to HDFS, fallback to S3");
+    }
+
+    return pushToS3(inDir, segment, storageDir, useUniquePath);
+  }
+
+  private DataSegment pushToHdfs(File inDir, DataSegment segment, final String storageDir, final boolean useUniquePath)
+      throws IOException
+  {
     log.info(
         "Copying segment[%s] to HDFS at location[%s/%s]",
         segment.getIdentifier(),
@@ -131,20 +156,8 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
       }
 
       final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
-      final Path outIndexFile = new Path(StringUtils.format(
-          "%s/%s/%d_%sindex.zip",
-          fullyQualifiedStorageDirectory.get(),
-          storageDir,
-          segment.getShardSpec().getPartitionNum(),
-          uniquePrefix
-      ));
-      final Path outDescriptorFile = new Path(StringUtils.format(
-          "%s/%s/%d_%sdescriptor.json",
-          fullyQualifiedStorageDirectory.get(),
-          storageDir,
-          segment.getShardSpec().getPartitionNum(),
-          uniquePrefix
-      ));
+      final Path outIndexFile = new Path(getSegmentIndexPath(segment, uniquePrefix, false));
+      final Path outDescriptorFile = new Path(getSegmentDescriptorPath(segment, uniquePrefix, false));
 
       dataSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
                            .withSize(size)
@@ -194,22 +207,35 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     }
   }
 
-  private static class HdfsOutputStreamSupplier extends ByteSink
+  private DataSegment pushToS3(File inDir, DataSegment segment, final String storageDir, final boolean useUniquePath)
+      throws IOException
   {
-    private final FileSystem fs;
-    private final Path descriptorFile;
+    final String uniquePrefix = useUniquePath ? DataSegmentPusher.generateUniquePath() + "_" : "";
+    final Path outIndexFile = new Path(getSegmentIndexPath(segment, uniquePrefix, true));
+    final Path outDescriptorFile = new Path(getSegmentDescriptorPath(segment, uniquePrefix, true));
 
-    public HdfsOutputStreamSupplier(FileSystem fs, Path descriptorFile)
-    {
-      this.fs = fs;
-      this.descriptorFile = descriptorFile;
+    final FileSystem fs = outIndexFile.getFileSystem(hadoopConfig);
+    log.info(
+        "Pushing segment[%s] to Backup S3 at location[%s]",
+        segment.getIdentifier(),
+        outIndexFile
+    );
+
+    final long indexSize;
+    try (FSDataOutputStream out = fs.create(outIndexFile)) {
+      indexSize = CompressionUtils.zip(inDir, out);
     }
 
-    @Override
-    public OutputStream openStream() throws IOException
-    {
-      return fs.create(descriptorFile);
-    }
+    log.info("Pushing descriptor file to Backup S3 at location[%s]", outDescriptorFile);
+
+    final DataSegment finalSegment = segment.withLoadSpec(makeLoadSpec(outIndexFile.toUri()))
+                                            .withSize(indexSize)
+                                            .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir));
+
+    ByteSource.wrap(jsonMapper.writeValueAsBytes(finalSegment))
+              .copyTo(new HdfsOutputStreamSupplier(fs, outDescriptorFile));
+
+    return finalSegment;
   }
 
   @Override
@@ -256,5 +282,45 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         dataSegment.getShardSpec().getPartitionNum(),
         indexName
     );
+  }
+
+  private String getSegmentIndexPath(DataSegment segment, String uniquePrefix, boolean useBackup)
+  {
+    return StringUtils.format(
+        "%s/%s/%d_%sindex.zip",
+        useBackup ? s3StorageDirectory : fullyQualifiedStorageDirectory.get(),
+        getStorageDir(segment, false),
+        segment.getShardSpec().getPartitionNum(),
+        uniquePrefix
+    );
+  }
+
+  private String getSegmentDescriptorPath(DataSegment segment, String uniquePrefix, boolean useBackup)
+  {
+    return StringUtils.format(
+        "%s/%s/%d_%sdescriptor.json",
+        useBackup ? s3StorageDirectory : fullyQualifiedStorageDirectory.get(),
+        getStorageDir(segment, false),
+        segment.getShardSpec().getPartitionNum(),
+        uniquePrefix
+    );
+  }
+
+  private static class HdfsOutputStreamSupplier extends ByteSink
+  {
+    private final FileSystem fs;
+    private final Path descriptorFile;
+
+    public HdfsOutputStreamSupplier(FileSystem fs, Path descriptorFile)
+    {
+      this.fs = fs;
+      this.descriptorFile = descriptorFile;
+    }
+
+    @Override
+    public OutputStream openStream() throws IOException
+    {
+      return fs.create(descriptorFile);
+    }
   }
 }

@@ -333,6 +333,13 @@ This deep storage is used to interface with HDFS.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.storage.storageDirectory`|HDFS directory to use as deep storage.|none|
+|`druid.storage.useS3Backup`|Whether to use S3 as a backup storage when HDFS is not available|false|
+|`druid.storage.backupS3Bucket`|S3 bucket name when using backup S3 storage|none|
+|`druid.storage.backupS3BaseKey`|S3 object key prefix when using backup S3 storage|none|
+
+Note: HDFS Deep Storage uses Hadoop's [S3AFileSystem](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html#S3A) to interacte with S3.
+To use S3 as a backup storage, please configure S3AFileSystem in hadoop's configuration file first.
+
 
 #### Cassandra Deep Storage
 

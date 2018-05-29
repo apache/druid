@@ -89,6 +89,12 @@ Store task logs in HDFS.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.logs.directory`|The directory to store logs.|none|
+|`druid.indexer.logs.useS3Backup`|Whether to use S3 as a backup storage when HDFS is not available|false|
+|`druid.indexer.logs.backupS3Bucket`|S3 bucket name for logs when using backup S3 storage|none|
+|`druid.indexer.logs.backupS3BaseKey`|S3 object key prefix for logs when using backup S3 storage|none|
+
+Note: HDFS Task Logs uses Hadoop's [S3AFileSystem](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html#S3A) to interacte with S3.
+To use S3 as a backup storage, please configure S3AFileSystem in hadoop's configuration file first.
 
 ### Overlord Configs
 
