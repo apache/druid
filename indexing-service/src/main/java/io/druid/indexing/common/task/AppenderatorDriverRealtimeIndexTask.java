@@ -53,6 +53,7 @@ import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -67,7 +68,6 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
@@ -251,7 +251,11 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         dataSchema, new RealtimeIOConfig(null, null, null), null
     );
 
-    final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
+    final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+        this,
+        fireDepartmentForMetrics,
+        rowIngestionMeters
+    );
 
     this.metrics = fireDepartmentForMetrics.getMetrics();
 

@@ -54,6 +54,7 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
@@ -72,7 +73,6 @@ import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -842,7 +842,11 @@ public class IndexTask extends AbstractTask implements ChatHandler
     buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
     if (toolbox.getMonitorScheduler() != null) {
-      final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
+      final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+          this,
+          fireDepartmentForMetrics,
+          buildSegmentsMeters
+      );
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
     }
 

@@ -43,7 +43,7 @@ public interface RowIngestionMeters
   long getThrownAway();
   void incrementThrownAway();
 
-  Map<String, Object> getTotals();
+  RowIngestionMetersTotals getTotals();
 
   Map<String, Object> getMovingAverages();
 }

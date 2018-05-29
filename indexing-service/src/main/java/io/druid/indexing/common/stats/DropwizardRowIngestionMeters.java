@@ -95,14 +95,14 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
-  public Map<String, Object> getTotals()
+  public RowIngestionMetersTotals getTotals()
   {
-    Map<String, Object> totals = Maps.newHashMap();
-    totals.put(PROCESSED, processed.getCount());
-    totals.put(PROCESSED_WITH_ERROR, processedWithError.getCount());
-    totals.put(UNPARSEABLE, unparseable.getCount());
-    totals.put(THROWN_AWAY, thrownAway.getCount());
-    return totals;
+    return new RowIngestionMetersTotals(
+        processed.getCount(),
+        processedWithError.getCount(),
+        thrownAway.getCount(),
+        unparseable.getCount()
+    );
   }
 
   @Override

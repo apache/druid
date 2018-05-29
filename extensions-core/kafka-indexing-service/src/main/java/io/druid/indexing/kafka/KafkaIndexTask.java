@@ -513,7 +513,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics));
+    toolbox.getMonitorScheduler()
+           .addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics, rowIngestionMeters));
 
     LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
@@ -951,7 +952,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics));
+    toolbox.getMonitorScheduler()
+           .addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics, rowIngestionMeters));
 
     LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
