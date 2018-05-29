@@ -193,7 +193,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       @JacksonInject ChatHandlerProvider chatHandlerProvider
   )
   {
-    this(
+     this(
         id,
         makeGroupId(ingestionSchema),
         taskResource,

@@ -41,6 +41,8 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.initialization.DruidModule;
 import io.druid.storage.s3.S3Utils;
 import org.easymock.EasyMock;
+import io.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import io.druid.storage.s3.NoopServerSideEncryption;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,7 +57,10 @@ import java.util.stream.Collectors;
  */
 public class StaticS3FirehoseFactoryTest
 {
-  private static final AmazonS3Client SERVICE = EasyMock.createNiceMock(AmazonS3Client.class);
+  private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
+      EasyMock.createNiceMock(AmazonS3Client.class),
+      new NoopServerSideEncryption()
+  );
 
   @Test
   public void testSerde() throws Exception
@@ -169,7 +174,7 @@ public class StaticS3FirehoseFactoryTest
     }
 
     @Provides
-    public AmazonS3 getAmazonS3Client()
+    public ServerSideEncryptingAmazonS3 getAmazonS3Client()
     {
       return SERVICE;
     }

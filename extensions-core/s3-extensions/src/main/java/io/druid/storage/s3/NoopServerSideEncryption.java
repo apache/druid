@@ -16,25 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.storage.s3;
 
-package io.druid.data.input.impl.prefetch;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-
-interface ObjectOpenFunction<T>
+public class NoopServerSideEncryption implements ServerSideEncryption
 {
-  InputStream open(T object) throws IOException;
-
-  default InputStream open(T object, long start) throws IOException
-  {
-    return open(object);
-  }
-
-  default InputStream open(T object, File outFile) throws IOException
-  {
-    return open(object);
-  }
-
 }

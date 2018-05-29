@@ -16,25 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.storage.s3;
 
-package io.druid.data.input.impl.prefetch;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-
-interface ObjectOpenFunction<T>
+public class S3SSEKmsConfig
 {
-  InputStream open(T object) throws IOException;
+  @JsonProperty
+  private String keyId;
 
-  default InputStream open(T object, long start) throws IOException
+  public String getKeyId()
   {
-    return open(object);
+    return keyId;
   }
-
-  default InputStream open(T object, File outFile) throws IOException
-  {
-    return open(object);
-  }
-
 }

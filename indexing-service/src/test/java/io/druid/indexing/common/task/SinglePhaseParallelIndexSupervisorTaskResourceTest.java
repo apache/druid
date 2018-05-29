@@ -181,12 +181,8 @@ public class SinglePhaseParallelIndexSupervisorTaskResourceTest
       runningTasks.get(0).setState(TaskState.FAILED);
     }
 
-    while (getNumSubTasks(Status::getFailed) < failedTasks) {
-      Thread.sleep(100);
-    }
-
     // Wait for new tasks to be started
-    while (runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
+    while (getNumSubTasks(Status::getFailed) < failedTasks || runningTasks.size() < NUM_SUB_TASKS - succeededTasks) {
       Thread.sleep(100);
     }
 

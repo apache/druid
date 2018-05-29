@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -44,14 +43,14 @@ public class S3TaskLogs implements TaskLogs
 {
   private static final Logger log = new Logger(S3TaskLogs.class);
 
-  private final AmazonS3 service;
+  private final ServerSideEncryptingAmazonS3 service;
   private final S3TaskLogsConfig config;
 
   @Inject
-  public S3TaskLogs(S3TaskLogsConfig config, AmazonS3 service)
+  public S3TaskLogs(ServerSideEncryptingAmazonS3 service, S3TaskLogsConfig config)
   {
-    this.config = config;
     this.service = service;
+    this.config = config;
   }
 
   @Override
