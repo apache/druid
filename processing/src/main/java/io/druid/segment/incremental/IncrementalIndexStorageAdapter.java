@@ -146,7 +146,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Capabilities getCapabilities()
   {
-    return Capabilities.builder().dimensionValuesSorted(true).build();
+    return Capabilities.builder().dimensionValuesSorted(false).build();
   }
 
   @Override

@@ -315,7 +315,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       columnCapabilities.put(dimName, capabilities);
     }
 
-    //__time storageAdapter
+    //__time capabilites
     ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl();
     timeCapabilities.setType(ValueType.LONG);
     columnCapabilities.put(Column.TIME_COLUMN_NAME, timeCapabilities);
@@ -662,7 +662,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           parseExceptionMessages.add(pe.getMessage());
         }
         dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
-        // Set column storageAdapter as data is coming in
+        // Set column capabilites as data is coming in
         if (!capabilities.hasMultipleValues() &&
             dimsKey != null &&
             handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
