@@ -148,9 +148,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   {
     return Capabilities.builder().dimensionValuesSorted(true).build();
   }
-  
+
   @Override
-  public boolean areDimensionValuesSorted()
+  public boolean dimensionValuesSorted()
   {
     return false;
   }

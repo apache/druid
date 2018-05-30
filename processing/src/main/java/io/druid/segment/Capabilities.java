@@ -21,6 +21,7 @@ package io.druid.segment;
 
 /**
  */
+
 public class Capabilities
 {
   private final boolean dimensionValuesSorted;

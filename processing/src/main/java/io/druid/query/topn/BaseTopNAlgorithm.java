@@ -268,7 +268,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     @Override
     public void skipTo(String previousStop)
     {
-      if (storageAdapter.areDimensionValuesSorted()) {
+      if (storageAdapter.dimensionValuesSorted()) {
         this.previousStop = previousStop;
       }
     }

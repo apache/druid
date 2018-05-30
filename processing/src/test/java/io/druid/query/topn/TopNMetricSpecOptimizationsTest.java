@@ -35,6 +35,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
@@ -350,7 +351,13 @@ public class TopNMetricSpecOptimizationsTest
       }
 
       @Override
-      public boolean areDimensionValuesSorted()
+      public Capabilities getCapabilities()
+      {
+        return null;
+      }
+
+      @Override
+      public boolean dimensionValuesSorted()
       {
         return true;
       }

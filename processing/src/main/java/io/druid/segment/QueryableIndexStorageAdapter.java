@@ -164,7 +164,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public boolean areDimensionValuesSorted()
+  public boolean dimensionValuesSorted()
   {
     return true;
   }
