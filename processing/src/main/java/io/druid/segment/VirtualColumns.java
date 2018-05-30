@@ -199,7 +199,7 @@ public class VirtualColumns implements Cacheable
     if (virtualColumn != null) {
       return Preconditions.checkNotNull(
           virtualColumn.capabilities(columnName),
-          "capabilites for column[%s]",
+          "capabilities for column[%s]",
           columnName
       );
     } else {

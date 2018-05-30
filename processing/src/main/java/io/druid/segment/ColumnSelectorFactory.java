@@ -40,13 +40,13 @@ public interface ColumnSelectorFactory
   ColumnValueSelector makeColumnValueSelector(String columnName);
 
   /**
-   * Returns capabilites of a particular column, if known. May be null if the column doesn't exist, or if
-   * the column does exist but the capabilites are unknown. The latter is possible with dynamically discovered
+   * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
+   * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered
    * columns.
    *
    * @param column column name
    *
-   * @return capabilites, or null
+   * @return capabilities, or null
    */
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);

@@ -299,7 +299,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ValueType type = TYPE_MAP.get(dimSchema.getValueType());
       String dimName = dimSchema.getName();
-      ColumnCapabilitiesImpl capabilities = makeCapabilitesFromValueType(type);
+      ColumnCapabilitiesImpl capabilities = makeCapabilitiesFromValueType(type);
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
 
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
@@ -315,7 +315,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       columnCapabilities.put(dimName, capabilities);
     }
 
-    //__time capabilites
+    //__time capabilities
     ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl();
     timeCapabilities.setType(ValueType.LONG);
     columnCapabilities.put(Column.TIME_COLUMN_NAME, timeCapabilities);
@@ -662,7 +662,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           parseExceptionMessages.add(pe.getMessage());
         }
         dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
-        // Set column capabilites as data is coming in
+        // Set column capabilities as data is coming in
         if (!capabilities.hasMultipleValues() &&
             dimsKey != null &&
             handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
@@ -875,7 +875,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  private ColumnCapabilitiesImpl makeCapabilitesFromValueType(ValueType type)
+  private ColumnCapabilitiesImpl makeCapabilitiesFromValueType(ValueType type)
   {
     ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     capabilities.setDictionaryEncoded(type == ValueType.STRING);

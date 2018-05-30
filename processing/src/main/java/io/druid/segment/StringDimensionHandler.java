@@ -164,10 +164,10 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       ProgressIndicator progress
   )
   {
-    // Sanity-check capabilites.
+    // Sanity-check capabilities.
     if (hasBitmapIndexes != capabilities.hasBitmapIndexes()) {
       throw new ISE(
-          "capabilites.hasBitmapIndexes[%s] != this.hasBitmapIndexes[%s]",
+          "capabilities.hasBitmapIndexes[%s] != this.hasBitmapIndexes[%s]",
           capabilities.hasBitmapIndexes(),
           hasBitmapIndexes
       );

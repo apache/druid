@@ -192,8 +192,8 @@ public final class DimensionHandlerUtils
     }
   }
 
-  // When determining the capabilites of a column during query processing, this function
-  // adjusts the capabilites for columns that cannot be handled as-is to manageable defaults
+  // When determining the capabilities of a column during query processing, this function
+  // adjusts the capabilities for columns that cannot be handled as-is to manageable defaults
   // (e.g., treating missing columns as empty String columns)
   private static ColumnCapabilities getEffectiveCapabilities(
       DimensionSpec dimSpec,
