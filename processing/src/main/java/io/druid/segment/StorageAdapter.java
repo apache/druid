@@ -56,12 +56,6 @@ public interface StorageAdapter extends CursorFactory
   Capabilities getCapabilities();
 
   /**
-   * Is dimension value dictionary sorted?
-   * @return
-   */
-  boolean dimensionValuesSorted();
-
-  /**
    * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
    * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered
    * columns.

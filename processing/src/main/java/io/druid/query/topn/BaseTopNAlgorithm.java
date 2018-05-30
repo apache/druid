@@ -26,6 +26,7 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
+import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
@@ -268,7 +269,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     @Override
     public void skipTo(String previousStop)
     {
-      if (storageAdapter.dimensionValuesSorted()) {
+      Capabilities capabilities = storageAdapter.getCapabilities();
+      if (capabilities.dimensionValuesSorted()) {
         this.previousStop = previousStop;
       }
     }

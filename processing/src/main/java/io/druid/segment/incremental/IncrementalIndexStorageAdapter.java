@@ -150,12 +150,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public boolean dimensionValuesSorted()
-  {
-    return false;
-  }
-
-  @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     return index.getCapabilities(column);

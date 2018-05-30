@@ -164,12 +164,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public boolean dimensionValuesSorted()
-  {
-    return true;
-  }
-
-  @Override
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String column)
   {

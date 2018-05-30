@@ -353,13 +353,7 @@ public class TopNMetricSpecOptimizationsTest
       @Override
       public Capabilities getCapabilities()
       {
-        return null;
-      }
-
-      @Override
-      public boolean dimensionValuesSorted()
-      {
-        return true;
+        return Capabilities.builder().dimensionValuesSorted(true).build();
       }
 
       @Nullable

@@ -38,6 +38,10 @@ public class Capabilities
     this.dimensionValuesSorted = dimensionValuesSorted;
   }
 
+  /**
+   * Is dimension value dictionary sorted?
+   * @return
+   */
   public boolean dimensionValuesSorted()
   {
     return dimensionValuesSorted;
