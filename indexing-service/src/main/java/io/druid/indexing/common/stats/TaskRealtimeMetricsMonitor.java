@@ -31,6 +31,12 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 
 import java.util.Map;
 
+/**
+ * Replaces the old RealtimeMetricsMonitor for indexing tasks that use a single FireDepartment, with changes to
+ * read row ingestion stats from RowIngestionMeters (which supports moving averages) instead of FireDepartmentMetrics.
+ * See comment on RowIngestionMeters for more information regarding relationship between RowIngestionMeters and
+ * FireDepartmentMetrics.
+ */
 public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 {
   private static final EmittingLogger log = new EmittingLogger(TaskRealtimeMetricsMonitor.class);

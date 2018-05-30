@@ -21,6 +21,12 @@ package io.druid.indexing.common.stats;
 
 import java.util.Map;
 
+/**
+ * A collection of meters for row ingestion stats, with support for moving average calculations.
+ * This can eventually replace FireDepartmentMetrics, but moving averages for other stats collected by
+ * FireDepartmentMetrics are not currently supported, so we continue to use FireDepartmentMetrics alongside
+ * RowIngestionMeters to avoid unnecessary overhead from maintaining these moving averages.
+ */
 public interface RowIngestionMeters
 {
   String BUILD_SEGMENTS = "buildSegments";
