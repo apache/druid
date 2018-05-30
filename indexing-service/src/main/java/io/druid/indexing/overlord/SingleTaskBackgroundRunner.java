@@ -345,8 +345,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
 
     return new SetAndVerifyContextQueryRunner<>(
         serverConfig,
-        queryRunner == null ? new NoopQueryRunner<>() : queryRunner,
-        System.currentTimeMillis()
+        queryRunner == null ? new NoopQueryRunner<>() : queryRunner
     );
   }
 

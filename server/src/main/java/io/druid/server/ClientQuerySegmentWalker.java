@@ -122,8 +122,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                     baseClientRunner,
                     retryConfig,
                     objectMapper
-                ),
-                System.currentTimeMillis()
+                )
             )
         )
         .applyPreMergeDecoration()
