@@ -520,7 +520,7 @@ public class HadoopConverterJob
         log.warn("Unable to make directory");
       }
 
-      final long inSize = JobHelper.unzipNoGuava(inPath, context.getConfiguration(), inDir, context);
+      final long inSize = JobHelper.unzipNoGuava(inPath, context.getConfiguration(), inDir, context, null);
       log.debug("Loaded %d bytes into [%s] for converting", inSize, inDir.getAbsolutePath());
       context.getCounter(COUNTER_GROUP, COUNTER_LOADED).increment(inSize);
 
