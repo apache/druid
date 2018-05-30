@@ -158,6 +158,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public Capabilities getCapabilities()
+  {
+    return Capabilities.builder().dimensionValuesSorted(true).build();
+  }
+
+  @Override
   public boolean areDimensionValuesSorted()
   {
     return true;

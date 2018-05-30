@@ -29,6 +29,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.QueryMetrics;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.Capabilities;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionIndexer;
@@ -141,6 +142,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     return indexer.getMaxValue();
   }
 
+
+  @Override
+  public Capabilities getCapabilities()
+  {
+    return Capabilities.builder().dimensionValuesSorted(true).build();
+  }
+  
   @Override
   public boolean areDimensionValuesSorted()
   {
