@@ -53,6 +53,7 @@ public interface StorageAdapter extends CursorFactory
   Comparable getMinValue(String column);
   @Nullable
   Comparable getMaxValue(String column);
+  Capabilities getCapabilities();
   boolean areDimensionValuesSorted();
 
   /**
