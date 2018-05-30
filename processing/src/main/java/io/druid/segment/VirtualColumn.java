@@ -74,14 +74,14 @@ public interface VirtualColumn extends Cacheable
 
 
   /**
-   * Returns the capabilities of this virtual column, which includes a type that corresponds to the best
+   * Returns the storageAdapter of this virtual column, which includes a type that corresponds to the best
    * performing base selector supertype (e. g. {@link BaseLongColumnValueSelector}) of the object, returned from
    * {@link #makeColumnValueSelector(String, ColumnSelectorFactory)}. May vary based on columnName if this column uses
    * dot notation.
    *
    * @param columnName the name this virtual column was referenced with
    *
-   * @return capabilities, must not be null
+   * @return storageAdapter, must not be null
    */
   ColumnCapabilities capabilities(String columnName);
 

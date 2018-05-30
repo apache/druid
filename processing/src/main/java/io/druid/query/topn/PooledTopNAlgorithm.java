@@ -33,10 +33,10 @@ import io.druid.query.aggregation.SimpleDoubleBufferAggregator;
 import io.druid.query.monomorphicprocessing.SpecializationService;
 import io.druid.query.monomorphicprocessing.SpecializationState;
 import io.druid.query.monomorphicprocessing.StringRuntimeShape;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FilteredOffset;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
@@ -64,7 +64,9 @@ public class PooledTopNAlgorithm
   private static boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN =
       !Boolean.getBoolean("dontSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN");
 
-  /** See TopNQueryRunnerTest */
+  /**
+   * See TopNQueryRunnerTest
+   */
   @VisibleForTesting
   static void setSpecializeGeneric1AggPooledTopN(boolean value)
   {
@@ -116,6 +118,7 @@ public class PooledTopNAlgorithm
   }
 
   private static final List<ScanAndAggregate> specializedScanAndAggregateImplementations = new ArrayList<>();
+
   static {
     computeSpecializedScanAndAggregateImplementations();
   }
@@ -197,12 +200,12 @@ public class PooledTopNAlgorithm
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
 
   public PooledTopNAlgorithm(
-      Capabilities capabilities,
+      StorageAdapter storageAdapter,
       TopNQuery query,
       NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    super(capabilities);
+    super(storageAdapter);
     this.query = query;
     this.bufferPool = bufferPool;
   }
@@ -226,7 +229,7 @@ public class PooledTopNAlgorithm
     final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(
         dimSelector,
         query,
-        capabilities
+        storageAdapter
     )
     {
       private final int[] positions = new int[cardinality];
