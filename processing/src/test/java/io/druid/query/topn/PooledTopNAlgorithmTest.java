@@ -20,7 +20,7 @@
 package io.druid.query.topn;
 
 import io.druid.collections.ResourceHolder;
-import io.druid.segment.Capabilities;
+import io.druid.segment.StorageAdapter;
 import org.easymock.EasyMock;
 import org.junit.Test;
 
@@ -32,14 +32,14 @@ public class PooledTopNAlgorithmTest
   @Test
   public void testCleanupWithNullParams()
   {
-    PooledTopNAlgorithm pooledTopNAlgorithm = new PooledTopNAlgorithm(Capabilities.builder().build(), null, null);
+    PooledTopNAlgorithm pooledTopNAlgorithm = new PooledTopNAlgorithm(EasyMock.mock(StorageAdapter.class), null, null);
     pooledTopNAlgorithm.cleanup(null);
   }
 
   @Test
   public void cleanup() throws IOException
   {
-    PooledTopNAlgorithm pooledTopNAlgorithm = new PooledTopNAlgorithm(Capabilities.builder().build(), null, null);
+    PooledTopNAlgorithm pooledTopNAlgorithm = new PooledTopNAlgorithm(EasyMock.mock(StorageAdapter.class), null, null);
     PooledTopNAlgorithm.PooledTopNParams params = EasyMock.createMock(PooledTopNAlgorithm.PooledTopNParams.class);
     ResourceHolder<ByteBuffer> resourceHolder = EasyMock.createMock(ResourceHolder.class);
     EasyMock.expect(params.getResultsBufHolder()).andReturn(resourceHolder).times(1);

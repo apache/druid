@@ -26,9 +26,9 @@ import io.druid.query.topn.BaseTopNAlgorithm;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultBuilder;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 
@@ -50,7 +50,7 @@ public class StringTopNColumnSelectorStrategy
   }
 
   @Override
-  public Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, Capabilities capabilities)
+  public Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
   {
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
@@ -64,7 +64,7 @@ public class StringTopNColumnSelectorStrategy
         (DimensionSelector) params.getSelectorPlus().getSelector(),
         query,
         params.getCardinality(),
-        capabilities
+        storageAdapter
     );
 
     return provider.build();

@@ -281,7 +281,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ValueType type = TYPE_MAP.get(dimSchema.getValueType());
       String dimName = dimSchema.getName();
-      ColumnCapabilitiesImpl capabilities = makeCapabilitesFromValueType(type);
+      ColumnCapabilitiesImpl capabilities = makeCapabilitiesFromValueType(type);
+
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {
@@ -720,7 +721,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   }
 
-  private ColumnCapabilitiesImpl makeCapabilitesFromValueType(ValueType type)
+  private ColumnCapabilitiesImpl makeCapabilitiesFromValueType(ValueType type)
   {
     ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     capabilities.setDictionaryEncoded(type == ValueType.STRING);
