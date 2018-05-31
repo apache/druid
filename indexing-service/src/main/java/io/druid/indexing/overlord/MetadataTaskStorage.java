@@ -28,6 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import io.druid.indexer.TaskInfo;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
@@ -36,6 +37,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.Triple;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -214,6 +216,15 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<TaskInfo> getActiveTaskInfo()
+  {
+    return ImmutableList.copyOf(
+        handler
+            .getActiveTaskInfo()
+    );
+  }
+
+  @Override
   public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration)
   {
     return ImmutableList.copyOf(
@@ -228,11 +239,32 @@ public class MetadataTaskStorage implements TaskStorage
     );
   }
 
+  @Override
+  public List<TaskInfo> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration duration
+  )
+  {
+    return ImmutableList.copyOf(
+        handler
+            .getCompletedTaskInfo(
+                DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+                maxTaskStatuses
+            )
+    );
+  }
+
   @Nullable
   @Override
   public Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId)
   {
     return handler.getCreatedDateAndDataSource(taskId);
+  }
+
+  @Override
+  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids)
+  {
+    return handler.getCompleteTasksCreatedDateAndDataSource(ids);
   }
 
   @Override

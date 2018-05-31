@@ -37,6 +37,7 @@ import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.ConfigManager.SetResult;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
@@ -99,6 +100,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -118,6 +120,9 @@ public class OverlordResource
   private final AuthorizerMapper authorizerMapper;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
+  //in memory cache for task info indexed by task id
+  private Map<String, TaskInfo> taskInfoCache = new ConcurrentHashMap<>();
+
 
   @Inject
   public OverlordResource(
@@ -462,7 +467,7 @@ public class OverlordResource
               if (!runnersKnownTasks.contains(task.getId())) {
                 waitingTasks.add(
                     // Would be nice to include the real created date, but the TaskStorage API doesn't yet allow it.
-                    new AnyTaskBuilder(
+                    new AnyTask(
                         task.getId(),
                         task.getType(),
                         SettableFuture.create(),
@@ -485,13 +490,13 @@ public class OverlordResource
     );
   }
 
-  private static class AnyTaskBuilder extends TaskRunnerWorkItem
+  private static class AnyTask extends TaskRunnerWorkItem
   {
     private final String taskType;
     private final String dataSource;
-    private TaskState taskState;
+    private final TaskState taskState;
 
-    AnyTaskBuilder(
+    AnyTask(
         String taskId,
         String taskType,
         ListenableFuture<TaskStatus> result,
@@ -529,10 +534,9 @@ public class OverlordResource
       return taskState;
     }
 
-    public AnyTaskBuilder withTaskState(TaskState taskState)
+    public AnyTask withTaskState(TaskState newTaskState)
     {
-      this.taskState = taskState;
-      return this;
+      return new AnyTask(getTaskId(), getTaskType(), getResult(), getDataSource(), newTaskState);
     }
   }
 
@@ -541,16 +545,7 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getPendingTasks(@Context final HttpServletRequest req)
   {
-    return workItemsResponse(
-        new Function<TaskRunner, Collection<? extends TaskRunnerWorkItem>>()
-        {
-          @Override
-          public Collection<? extends TaskRunnerWorkItem> apply(TaskRunner taskRunner)
-          {
-            return securedTaskRunnerWorkItem(taskRunner.getPendingTasks(), null, req);
-          }
-        }
-    );
+    return getTasks("pending", null, null, null, req);
   }
 
   @GET
@@ -655,72 +650,12 @@ public class OverlordResource
       @QueryParam("state") final String state,
       @QueryParam("datasource") final String dataSource,
       @PathParam("interval") final String interval,
-      @QueryParam("maxCompletedTasks") final Integer maxCompletedTasks,
+      @QueryParam("max") final Integer maxCompletedTasks,
       @Context final HttpServletRequest req
   )
   {
 
-    if (state != null) {
-      switch (StringUtils.toUpperCase(state)) {
-        case "PENDING":
-          return workItemsResponse(
-              taskRunner -> securedTaskRunnerWorkItem(taskRunner.getPendingTasks(), dataSource, req)
-          );
-        case "WAITING":
-          return workItemsResponse(
-              taskRunner -> {
-                final Set<String> runnersKnownTasks = Sets.newHashSet(
-                    Iterables.transform(
-                        taskRunner.getKnownTasks(),
-                        (Function<TaskRunnerWorkItem, String>) workItem -> workItem.getTaskId()
-                    )
-                );
-                List<Task> activeTasks = taskStorageQueryAdapter.getActiveTasks();
-                final List<TaskRunnerWorkItem> waitingTasks = Lists.newArrayList();
-                for (final Task task : activeTasks) {
-                  if (!runnersKnownTasks.contains(task.getId())) {
-                    waitingTasks.add(
-                        new AnyTaskBuilder(
-                            task.getId(),
-                            task.getType(),
-                            SettableFuture.create(),
-                            task.getDataSource(),
-                            TaskState.WAITING
-                        )
-                        {
-                          @Override
-                          public TaskLocation getLocation()
-                          {
-                            return TaskLocation.unknown();
-                          }
-                        }
-                    );
-                  }
-                }
-                return securedTaskRunnerWorkItem(waitingTasks, dataSource, req);
-              }
-          );
-        case "RUNNING":
-          return workItemsResponse(
-              taskRunner -> securedTaskRunnerWorkItem(taskRunner.getRunningTasks(), dataSource, req)
-          );
-        case "COMPLETE":
-          final List<TaskStatusPlus> completedTasks = getCompletedTasks(interval, maxCompletedTasks, dataSource, req);
-          final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
-              completedTasks,
-              dataSource,
-              req
-          );
-          return Response.ok(authorizedList).build();
-        default:
-          return Response.status(Status.BAD_REQUEST)
-                         .entity("Bad state query param passed : " + state).entity(ImmutableList.of()).build();
-      }
-    }
-    // if no state passed, get all tasks
-    final List<TaskRunnerWorkItem> allActiveTasks = getAllActiveTasks(req);
-    final List<TaskStatusPlus> completedTasks = getCompletedTasks(interval, maxCompletedTasks, dataSource, req);
-    List activeTasks = new ArrayList(allActiveTasks);
+    List<TaskStatusPlus> finalTaskList = new ArrayList<>();
     Function<TaskRunnerWorkItem, TaskStatusPlus> transformFunc = workItem -> new TaskStatusPlus(
         workItem.getTaskId(),
         workItem.getTaskType(),
@@ -732,13 +667,33 @@ public class OverlordResource
         workItem.getDataSource(),
         null
     );
-    List<TaskStatusPlus> transformedActiveList = Lists.transform(activeTasks, transformFunc);
-    final List<TaskStatusPlus> allTasks = Lists.newArrayList();
-    allTasks.addAll(transformedActiveList);
-    allTasks.addAll(completedTasks);
-
-    Collection<? extends TaskStatusPlus> authorizedList = securedTaskStatusPlus(
-        allTasks,
+    if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
+      final List<TaskRunnerWorkItem> pendingWorkItems = getAllActiveTasks(req, "pending");
+      List<TaskStatusPlus> transformedPendingList = Lists.transform(pendingWorkItems, transformFunc);
+      final List<TaskStatusPlus> pendingTasks = Lists.newArrayList();
+      pendingTasks.addAll(transformedPendingList);
+      finalTaskList.addAll(pendingTasks);
+    }
+    if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
+      final List<TaskRunnerWorkItem> waitingWorkItems = getAllActiveTasks(req, "waiting");
+      List<TaskStatusPlus> transformedWaitingList = Lists.transform(waitingWorkItems, transformFunc);
+      final List<TaskStatusPlus> waitingTasks = Lists.newArrayList();
+      waitingTasks.addAll(transformedWaitingList);
+      finalTaskList.addAll(waitingTasks);
+    }
+    if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
+      final List<TaskRunnerWorkItem> runningWorkItems = getAllActiveTasks(req, "waiting");
+      List<TaskStatusPlus> transformedRunningList = Lists.transform(runningWorkItems, transformFunc);
+      final List<TaskStatusPlus> runningTasks = Lists.newArrayList();
+      runningTasks.addAll(transformedRunningList);
+      finalTaskList.addAll(runningTasks);
+    }
+    if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
+      final List<TaskStatusPlus> completedTasks = getCompletedTasks(interval, maxCompletedTasks);
+      finalTaskList.addAll(completedTasks);
+    }
+    final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
+        finalTaskList,
         dataSource,
         req
     );
@@ -747,9 +702,7 @@ public class OverlordResource
 
   private List<TaskStatusPlus> getCompletedTasks(
       String interval,
-      Integer maxCompletedTasks,
-      String dataSource,
-      HttpServletRequest req
+      Integer maxCompletedTasks
   )
   {
     Duration duration = null;
@@ -770,45 +723,60 @@ public class OverlordResource
       return optionalTask.get();
     };
 
+
+    final List<TaskInfo> taskInfoList = taskStorageQueryAdapter.recentlyCompletedTaskInfo(
+        maxCompletedTasks, duration);
+    for (TaskInfo taskInfo : taskInfoList) {
+      taskInfoCache.putIfAbsent(taskInfo.getId(), taskInfo);
+    }
+
     final List<TaskStatus> recentlyFinishedTasks = taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(
-            maxCompletedTasks, duration);
+        maxCompletedTasks, duration);
 
     final List<TaskStatusPlus> completeTasks = Lists.newArrayList(Iterables.transform(
         recentlyFinishedTasks,
         status -> {
-          final Pair<DateTime, String> pair = taskStorageQueryAdapter.getCreatedDateAndDataSource(status.getId());
           return new TaskStatusPlus(
               status.getId(),
               taskFunction.apply(status.getId()).getType(),
-              pair.lhs,
+              taskInfoCache.get(status.getId()).getCreatedTime(),
               // Would be nice to include the real queue insertion time, but the
               // TaskStorage API doesn't yet allow it.
               DateTimes.EPOCH,
               status.getStatusCode(),
               status.getDuration(),
               TaskLocation.unknown(),
-              pair.rhs,
+              taskInfoCache.get(status.getId()).getDataSource(),
               status.getErrorMsg()
           );
-        }
-    ));
+        }));
 
     return completeTasks;
   }
 
-  private List<TaskRunnerWorkItem> getAllActiveTasks(HttpServletRequest req)
+  private List<TaskRunnerWorkItem> getAllActiveTasks(HttpServletRequest req, String state)
   {
     final List<Task> allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
+    final List<TaskInfo> allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
+    for (TaskInfo t : allActiveTaskInfo) {
+      taskInfoCache.putIfAbsent(t.getId(), t);
+    }
     final List<TaskRunnerWorkItem> allTasks = Lists.newArrayList();
     for (final Task task : allActiveTasks) {
-      allTasks.add(new AnyTaskBuilder(
-          task.getId(),
-          task.getType(),
-          SettableFuture.create(),
-          task.getDataSource(),
-          TaskState.PENDING
-      ));
+      allTasks.add(
+          new AnyTask(
+              task.getId(),
+              task.getType(),
+              SettableFuture.create(),
+              task.getDataSource(),
+              TaskState.UNKNOWN
+          ));
     }
+
+    if (state == null) {
+      return allTasks;
+    }
+
     //divide active task into 3 lists : running, pending, waiting
     Optional<TaskRunner> taskRunnerOpt = taskMaster.getTaskRunner();
     if (!taskRunnerOpt.isPresent()) {
@@ -821,32 +789,46 @@ public class OverlordResource
     List<String> runnerKnownTaskIds = runnersKnownTasks.stream()
                                                        .map(TaskRunnerWorkItem::getTaskId)
                                                        .collect(Collectors.toList());
-    //set the state of unknown tasks to WAITING
-    final List<TaskRunnerWorkItem> waitingTasks = Lists.newArrayList();
-    for (TaskRunnerWorkItem task : allTasks) {
-      if (!runnerKnownTaskIds.contains(task.getTaskId())) {
-        waitingTasks.add(((AnyTaskBuilder) task).withTaskState(TaskState.WAITING));
+
+    if ("waiting".equals(StringUtils.toLowerCase(state))) {
+      final List<TaskRunnerWorkItem> waitingTasks = Lists.newArrayList();
+      for (TaskRunnerWorkItem task : allTasks) {
+        if (!runnerKnownTaskIds.contains(task.getTaskId())) {
+          waitingTasks.add(((AnyTask) task).withTaskState(TaskState.WAITING));
+        }
       }
+      return waitingTasks;
     }
-    //allTasks - waiting = running + pending
-    allTasks.removeAll(waitingTasks);
-    Collection<? extends TaskRunnerWorkItem> knownRunningTasks = runner.getRunningTasks();
-    List<String> runningTaskIds = knownRunningTasks.stream()
-                                                   .map(TaskRunnerWorkItem::getTaskId)
-                                                   .collect(Collectors.toList());
-    final List<TaskRunnerWorkItem> runningTasks = Lists.newArrayList();
-    for (TaskRunnerWorkItem task : allTasks) {
-      if (runningTaskIds.contains(task.getTaskId())) {
-        runningTasks.add(((AnyTaskBuilder) task).withTaskState(TaskState.RUNNING));
+
+    if ("running".equals(StringUtils.toLowerCase(state))) {
+      Collection<? extends TaskRunnerWorkItem> knownRunningTasks = runner.getRunningTasks();
+      List<String> runningTaskIds = knownRunningTasks.stream()
+                                                     .map(TaskRunnerWorkItem::getTaskId)
+                                                     .collect(Collectors.toList());
+      final List<TaskRunnerWorkItem> runningTasks = Lists.newArrayList();
+      for (TaskRunnerWorkItem task : allTasks) {
+        if (runningTaskIds.contains(task.getTaskId())) {
+          runningTasks.add(((AnyTask) task).withTaskState(TaskState.RUNNING));
+        }
       }
+      return runningTasks;
     }
-    //allTasks - running = pending
-    allTasks.removeAll(runningTasks);
-    final List<TaskRunnerWorkItem> finalList = Lists.newArrayList();
-    finalList.addAll(allTasks);
-    finalList.addAll(waitingTasks);
-    finalList.addAll(runningTasks);
-    return finalList;
+
+    if ("pending".equals(StringUtils.toLowerCase(state))) {
+      Collection<? extends TaskRunnerWorkItem> knownPendingTasks = runner.getPendingTasks();
+      List<String> pendingTaskIds = knownPendingTasks.stream()
+                                                     .map(TaskRunnerWorkItem::getTaskId)
+                                                     .collect(Collectors.toList());
+      final List<TaskRunnerWorkItem> pendingTasks = Lists.newArrayList();
+      for (TaskRunnerWorkItem task : allTasks) {
+        if (pendingTaskIds.contains(task.getTaskId())) {
+          pendingTasks.add(((AnyTask) task).withTaskState(TaskState.PENDING));
+        }
+      }
+      return pendingTasks;
+    }
+
+    return allTasks;
   }
 
   @DELETE
@@ -1095,8 +1077,9 @@ public class OverlordResource
   {
     Function<TaskStatusPlus, Iterable<ResourceAction>> raGenerator = taskStatusPlus -> {
       final String taskId = taskStatusPlus.getId();
-      final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
-      if (!optionalTask.isPresent()) {
+      //final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
+      TaskInfo taskInfo = taskInfoCache.get(taskId);
+      if (taskInfo == null) {
         throw new WebApplicationException(
             Response.serverError().entity(
                 StringUtils.format("No task information found for task with id: [%s]", taskId)
@@ -1106,7 +1089,7 @@ public class OverlordResource
 
       return Lists.newArrayList(
           new ResourceAction(
-              new Resource(optionalTask.get().getDataSource(), ResourceType.DATASOURCE),
+              new Resource(taskInfo.getDataSource(), ResourceType.DATASOURCE),
               Action.READ
           )
       );

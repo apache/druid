@@ -28,6 +28,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
@@ -35,6 +37,7 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.Triple;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
@@ -169,6 +172,31 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
+  public List<TaskInfo> getActiveTaskInfo()
+  {
+    giant.lock();
+
+    try {
+      final ImmutableList.Builder<TaskInfo> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : tasks.values()) {
+        if (taskStuff.getStatus().isRunnable()) {
+          TaskInfo t = new TaskInfo.TaskInfoBuilder().build(
+              taskStuff.getTask().getId(),
+              taskStuff.getCreatedDate(),
+              TaskState.RUNNING,
+              taskStuff.getDataSource()
+          );
+          listBuilder.add(t);
+        }
+      }
+      return listBuilder.build();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
   public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration)
   {
     giant.lock();
@@ -191,6 +219,41 @@ public class HeapMemoryTaskStorage implements TaskStorage
                  createdDateDesc
              ) :
              getNRecentlyFinishedTaskStatuses(maxTaskStatuses, createdDateDesc);
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public List<TaskInfo> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses, @Nullable Duration duration
+  )
+  {
+    giant.lock();
+
+    try {
+      final ImmutableList.Builder<TaskInfo> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : tasks.values()) {
+        String id = taskStuff.getTask().getId();
+        TaskStatus status = taskStuff.getStatus();
+        TaskState state;
+        if (status.isSuccess()) {
+          state = TaskState.SUCCESS;
+        } else if (status.isFailure()) {
+          state = TaskState.FAILED;
+        } else {
+          state = TaskState.UNKNOWN;
+        }
+        TaskInfo t = new TaskInfo.TaskInfoBuilder().build(
+            id,
+            taskStuff.getCreatedDate(),
+            state,
+            taskStuff.getDataSource()
+        );
+        listBuilder.add(t);
+      }
+      return listBuilder.build();
     }
     finally {
       giant.unlock();
@@ -239,6 +302,25 @@ public class HeapMemoryTaskStorage implements TaskStorage
     try {
       final TaskStuff taskStuff = tasks.get(taskId);
       return taskStuff == null ? null : Pair.of(taskStuff.getCreatedDate(), taskStuff.getDataSource());
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids)
+  {
+    giant.lock();
+    try {
+      final ImmutableList.Builder<Triple<String, DateTime, String>> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : tasks.values()) {
+        String id = taskStuff.getTask().getId();
+        Pair pair = Pair.of(taskStuff.getCreatedDate(), taskStuff.getDataSource());
+        Triple t = Triple.of(id, pair.lhs, pair.rhs);
+        listBuilder.add(t);
+      }
+      return listBuilder.build();
     }
     finally {
       giant.unlock();

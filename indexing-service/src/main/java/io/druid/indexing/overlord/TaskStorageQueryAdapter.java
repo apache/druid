@@ -22,12 +22,14 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import io.druid.indexer.TaskInfo;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.Triple;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -54,12 +56,25 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTasks();
   }
 
+  public List<TaskInfo> getActiveTaskInfo()
+  {
+    return storage.getActiveTaskInfo();
+  }
+
   public List<TaskStatus> getRecentlyFinishedTaskStatuses(
       @Nullable Integer maxTaskStatuses, @Nullable
       Duration duration
   )
   {
     return storage.getRecentlyFinishedTaskStatuses(maxTaskStatuses, duration);
+  }
+
+  public List<TaskInfo> recentlyCompletedTaskInfo(
+      @Nullable Integer maxTaskStatuses, @Nullable
+      Duration duration
+  )
+  {
+    return storage.getRecentlyFinishedTaskInfo(maxTaskStatuses, duration);
   }
 
   @Nullable
@@ -105,6 +120,11 @@ public class TaskStorageQueryAdapter
   public Pair<DateTime, String> getCreatedDateAndDataSource(String taskId)
   {
     return storage.getCreatedDateTimeAndDataSource(taskId);
+  }
+
+  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids)
+  {
+    return storage.getCompleteTasksCreatedDateAndDataSource(ids);
   }
   
 }

@@ -26,6 +26,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.Query;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -52,7 +53,9 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     String sql = StringUtils.format(
         "SELECT "
         + "  id, "
-        + "  status_payload "
+        + "  status_payload, "
+        + " created_date, "
+        + " datasource "
         + "FROM "
         + "  %s "
         + "WHERE "
@@ -71,5 +74,35 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
       query = query.bind("n", maxNumStatuses);
     }
     return query;
+  }
+
+  @Override
+  protected Query<Map<String, Object>> createInQuery(Handle handle, List<String> ids)
+  {
+    String sql = StringUtils.format(
+        "SELECT "
+        + "  id, "
+        + " created_date, "
+        + "  datasource "
+        + "FROM "
+        + "  %s "
+        + "WHERE "
+        + " id in %s ",
+        getEntryTable(), getIds(ids)
+    );
+    Query<Map<String, Object>> query = handle.createQuery(sql);
+    return query;
+  }
+
+  private String getIds(List<String> ids)
+  {
+    StringBuilder sb = new StringBuilder();
+    sb.append("(");
+    for (String id : ids) {
+      sb.append("':").append(id).append("',");
+    }
+    sb.deleteCharAt(sb.length() - 1);
+    sb.append(")");
+    return sb.toString();
   }
 }

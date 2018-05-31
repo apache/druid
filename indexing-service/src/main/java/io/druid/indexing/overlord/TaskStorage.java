@@ -20,11 +20,13 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import io.druid.indexer.TaskInfo;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.Triple;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -122,6 +124,8 @@ public interface TaskStorage
    */
   List<Task> getActiveTasks();
 
+  List<TaskInfo> getActiveTaskInfo();
+
   /**
    * Returns up to {@code maxTaskStatuses} statuses of recently finished tasks as stored in the storage facility. No
    * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
@@ -131,8 +135,12 @@ public interface TaskStorage
    */
   List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
 
+  List<TaskInfo> getRecentlyFinishedTaskInfo(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
+
   @Nullable
   Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);
+
+  List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids);
 
   /**
    * Returns a list of locks for a particular task.

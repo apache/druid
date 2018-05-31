@@ -27,9 +27,11 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.indexer.TaskInfo;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.Triple;
 import io.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
@@ -317,6 +319,53 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
+  @Override
+  public List<TaskInfo> getCompletedTaskInfo(DateTime timestamp, @Nullable Integer maxNumStatuses)
+  {
+    return getConnector().retryWithHandle(
+        handle -> {
+          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, maxNumStatuses);
+          return query.map(new TaskMapper()).list();
+        }
+    );
+  }
+
+  @Override
+  public List<TaskInfo> getActiveTaskInfo()
+  {
+    return getConnector().retryWithHandle(
+        handle -> {
+          return handle.createQuery(
+              StringUtils.format(
+                  "SELECT id, status_payload, datasource, created_date FROM %s WHERE active = TRUE ORDER BY created_date",
+                  entryTable
+              )
+          ).map(new TaskMapper()).list();
+        }
+    );
+  }
+
+  class TaskMapper implements ResultSetMapper
+  {
+    @Override
+    public TaskInfo map(int index, ResultSet resultSet, StatementContext context) throws SQLException
+    {
+      TaskInfo taskInfo = null;
+      try {
+        taskInfo = new TaskInfo.TaskInfoBuilder()
+            .withId(resultSet.getString("id"))
+            .withCreatedTime(DateTimes.of(resultSet.getString("created_date")))
+            .withState(getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType()))
+            .withDatasource(resultSet.getString(
+                "datasource")).build();
+      }
+      catch (IOException e) {
+        throw new SQLException(e);
+      }
+      return taskInfo;
+    }
+  }
+
   protected abstract Query<Map<String, Object>> createInactiveStatusesSinceQuery(
       Handle handle,
       DateTime timestamp,
@@ -344,6 +393,30 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         .first()
     );
   }
+
+  @Override
+  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(final List<String> ids)
+  {
+    return connector.retryWithHandle(
+        handle -> {
+          final Query<Map<String, Object>> query = createInQuery(handle, ids);
+          return query
+              .map(
+                  (index, resultSet, ctx) -> Triple.of(
+                      resultSet.getString("id"),
+                      DateTimes.of(resultSet.getString("created_date")),
+                      resultSet.getString("datasource")
+                  )
+              )
+              .list();
+        }
+    );
+  }
+
+  protected abstract Query<Map<String, Object>> createInQuery(
+      Handle handle,
+      List<String> ids
+  );
 
   @Override
   public boolean addLock(final String entryId, final LockType lock)
