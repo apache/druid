@@ -23,24 +23,25 @@ import com.google.common.base.Function;
 import io.druid.query.ColumnSelectorPlus;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.topn.types.TopNColumnSelectorStrategy;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
+import io.druid.segment.StorageAdapter;
 
 import java.util.Map;
 
 /**
  * This has to be its own strategy because the pooled topn algorithm assumes each index is unique, and cannot handle multiple index numerals referencing the same dimension value.
  */
-public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][], Map<Comparable, Aggregator[]>, TopNParams>
+public class DimExtractionTopNAlgorithm
+    extends BaseTopNAlgorithm<Aggregator[][], Map<Comparable, Aggregator[]>, TopNParams>
 {
   private final TopNQuery query;
 
   public DimExtractionTopNAlgorithm(
-      Capabilities capabilities,
+      StorageAdapter storageAdapter,
       TopNQuery query
   )
   {
-    super(capabilities);
+    super(storageAdapter);
 
     this.query = query;
   }
@@ -65,7 +66,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
     }
     ColumnSelectorPlus<TopNColumnSelectorStrategy> selectorPlus = params.getSelectorPlus();
-    return selectorPlus.getColumnSelectorStrategy().getDimExtractionRowSelector(query, params, capabilities);
+    return selectorPlus.getColumnSelectorStrategy().getDimExtractionRowSelector(query, params, storageAdapter);
   }
 
   @Override
