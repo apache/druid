@@ -35,7 +35,7 @@ import io.druid.client.indexing.IndexingService;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;

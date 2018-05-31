@@ -21,6 +21,7 @@ package io.druid.indexing.common;
 
 import com.google.common.base.Optional;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskStatus;
 
 public interface TaskInfoProvider
 {

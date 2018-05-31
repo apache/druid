@@ -44,7 +44,7 @@ import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.tasklogs.LogUtils;

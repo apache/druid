@@ -41,7 +41,7 @@ import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;

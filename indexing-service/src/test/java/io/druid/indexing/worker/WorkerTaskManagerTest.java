@@ -26,7 +26,7 @@ import com.google.common.io.Files;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.SegmentLoaderFactory;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.TestUtils;

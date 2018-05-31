@@ -34,7 +34,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.kafka.KafkaDataSourceMetadata;

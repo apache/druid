@@ -30,7 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
