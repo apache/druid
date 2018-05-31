@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.google.inject.Inject;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -36,12 +35,10 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
 
-  private final AmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
 
   @Inject
-  public S3DataSegmentKiller(
-      AmazonS3 s3Client
-  )
+  public S3DataSegmentKiller(ServerSideEncryptingAmazonS3 s3Client)
   {
     this.s3Client = s3Client;
   }

@@ -23,7 +23,6 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.ClientConfigurationFactory;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.fasterxml.jackson.core.Version;
@@ -103,6 +102,9 @@ public class S3StorageDruidModule implements DruidModule
     Binders.dataSegmentFinderBinder(binder).addBinding("s3").to(S3DataSegmentFinder.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentArchiverConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", S3StorageConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.sse.kms", S3SSEKmsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.sse.custom", S3SSECustomConfig.class);
 
     Binders.taskLogsBinder(binder).addBinding("s3").to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);
@@ -111,11 +113,12 @@ public class S3StorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public AmazonS3 getAmazonS3Client(
+  public ServerSideEncryptingAmazonS3 getAmazonS3Client(
       AWSCredentialsProvider provider,
       AWSProxyConfig proxyConfig,
       AWSEndpointConfig endpointConfig,
-      AWSClientConfig clientConfig
+      AWSClientConfig clientConfig,
+      S3StorageConfig storageConfig
   )
   {
     final ClientConfiguration configuration = new ClientConfigurationFactory().getConfig();
@@ -133,7 +136,10 @@ public class S3StorageDruidModule implements DruidModule
       );
     }
 
-    return builder.build();
+    return new ServerSideEncryptingAmazonS3(
+        builder.build(),
+        storageConfig.getServerSideEncryption()
+    );
   }
 
   private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
