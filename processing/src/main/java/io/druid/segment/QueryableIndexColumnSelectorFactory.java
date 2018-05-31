@@ -146,6 +146,6 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       return virtualColumns.getColumnCapabilities(columnName);
     }
 
-    return QueryableIndexStorageAdapter.getColumnCapabilites(index, columnName);
+    return QueryableIndexStorageAdapter.getColumnCapabilities(index, columnName);
   }
 }

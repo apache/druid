@@ -20,11 +20,11 @@
 package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.ColumnSelectorPlus;
-import io.druid.segment.Capabilities;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.StorageAdapter;
 
 import java.util.Map;
 
@@ -33,9 +33,9 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
   public static final int[] EMPTY_INTS = new int[]{};
   private final TopNQuery query;
 
-  public TimeExtractionTopNAlgorithm(Capabilities capabilities, TopNQuery query)
+  public TimeExtractionTopNAlgorithm(StorageAdapter storageAdapter, TopNQuery query)
   {
-    super(capabilities);
+    super(storageAdapter);
     this.query = query;
   }
 

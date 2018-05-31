@@ -142,6 +142,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     return indexer.getMaxValue();
   }
 
+
   @Override
   public Capabilities getCapabilities()
   {
