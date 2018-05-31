@@ -94,16 +94,46 @@ public abstract class BaseAppenderatorDriver implements Closeable
       this.interval = interval;
     }
 
-    void setAppendingSegment(SegmentWithState appendingSegment)
+    SegmentsOfInterval(
+        Interval interval,
+        @Nullable SegmentWithState appendingSegment,
+        List<SegmentWithState> appendFinishedSegments
+    )
     {
-      // There should be only one appending segment at any time
-      Preconditions.checkState(this.appendingSegment == null);
+      this.interval = interval;
       this.appendingSegment = appendingSegment;
+      this.appendFinishedSegments.addAll(appendFinishedSegments);
+
+      if (appendingSegment != null) {
+        Preconditions.checkArgument(
+            appendingSegment.getState() == SegmentState.APPENDING,
+            "appendingSegment[%s] is not in the APPENDING state",
+            appendingSegment.getSegmentIdentifier()
+        );
+      }
+      if (appendFinishedSegments
+          .stream()
+          .anyMatch(segmentWithState -> segmentWithState.getState() == SegmentState.APPENDING)) {
+        throw new ISE("Some appendFinishedSegments[%s] is in the APPENDING state", appendFinishedSegments);
+      }
     }
 
-    void addAppendFinishedSegment(SegmentWithState appendFinishedSegment)
+    void setAppendingSegment(SegmentWithState appendingSegment)
     {
-      appendFinishedSegments.add(appendFinishedSegment);
+      Preconditions.checkArgument(
+          appendingSegment.getState() == SegmentState.APPENDING,
+          "segment[%s] is not in the APPENDING state",
+          appendingSegment.getSegmentIdentifier()
+      );
+      // There should be only one appending segment at any time
+      Preconditions.checkState(
+          this.appendingSegment == null,
+          "WTF?! Current appendingSegment[%s] is not null. "
+          + "Its state must be changed before setting a new appendingSegment[%s]",
+          this.appendingSegment,
+          appendingSegment
+      );
+      this.appendingSegment = appendingSegment;
     }
 
     void finishAppendingToCurrentActiveSegment(Consumer<SegmentWithState> stateTransitionFn)

@@ -19,6 +19,7 @@
 
 package io.druid.metadata;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -39,6 +40,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
@@ -420,9 +422,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws IOException
   {
     final String previousSegmentIdNotNull = previousSegmentId == null ? "" : previousSegmentId;
-
-    final List<byte[]> existingBytes = handle
-        .createQuery(
+    final CheckExistingSegmentIdResult result = checkAndGetExistingSegmentId(
+        handle.createQuery(
             StringUtils.format(
                 "SELECT payload FROM %s WHERE "
                 + "dataSource = :dataSource AND "
@@ -430,41 +431,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 + "sequence_prev_id = :sequence_prev_id",
                 dbTables.getPendingSegmentsTable()
             )
-        )
-        .bind("dataSource", dataSource)
-        .bind("sequence_name", sequenceName)
-        .bind("sequence_prev_id", previousSegmentIdNotNull)
-        .map(ByteArrayMapper.FIRST)
-        .list();
+        ),
+        interval,
+        sequenceName,
+        previousSegmentIdNotNull,
+        Pair.of("dataSource", dataSource),
+        Pair.of("sequence_name", sequenceName),
+        Pair.of("sequence_prev_id", previousSegmentIdNotNull)
+    );
 
-    if (!existingBytes.isEmpty()) {
-      final SegmentIdentifier existingIdentifier = jsonMapper.readValue(
-          Iterables.getOnlyElement(existingBytes),
-          SegmentIdentifier.class
-      );
-
-      if (existingIdentifier.getInterval().getStartMillis() == interval.getStartMillis()
-          && existingIdentifier.getInterval().getEndMillis() == interval.getEndMillis()) {
-        log.info(
-            "Found existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
-            existingIdentifier.getIdentifierAsString(),
-            sequenceName,
-            previousSegmentIdNotNull
-        );
-
-        return existingIdentifier;
-      } else {
-        log.warn(
-            "Cannot use existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB, "
-            + "does not match requested interval[%s]",
-            existingIdentifier.getIdentifierAsString(),
-            sequenceName,
-            previousSegmentIdNotNull,
-            interval
-        );
-
-        return null;
-      }
+    if (result.found) {
+      // The found existing segment identifier can be null if its interval doesn't match with the given interval
+      return result.segmentIdentifier;
     }
 
     final SegmentIdentifier newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
@@ -489,32 +467,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .asBytes()
     );
 
-    handle.createStatement(
-        StringUtils.format(
-            "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
-            + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
-            dbTables.getPendingSegmentsTable(),
-            connector.getQuoteString()
-        )
-    )
-          .bind("id", newIdentifier.getIdentifierAsString())
-          .bind("dataSource", dataSource)
-          .bind("created_date", DateTimes.nowUtc().toString())
-          .bind("start", interval.getStart().toString())
-          .bind("end", interval.getEnd().toString())
-          .bind("sequence_name", sequenceName)
-          .bind("sequence_prev_id", previousSegmentIdNotNull)
-          .bind("sequence_name_prev_id_sha1", sequenceNamePrevIdSha1)
-          .bind("payload", jsonMapper.writeValueAsBytes(newIdentifier))
-          .execute();
-
-    log.info(
-        "Allocated pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
-        newIdentifier.getIdentifierAsString(),
+    insertToMetastore(
+        handle,
+        newIdentifier,
+        dataSource,
+        interval,
+        previousSegmentIdNotNull,
         sequenceName,
-        previousSegmentIdNotNull
+        sequenceNamePrevIdSha1
     );
-
     return newIdentifier;
   }
 
@@ -527,8 +488,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String maxVersion
   ) throws IOException
   {
-    final List<byte[]> existingBytes = handle
-        .createQuery(
+    final CheckExistingSegmentIdResult result = checkAndGetExistingSegmentId(
+        handle.createQuery(
             StringUtils.format(
                 "SELECT payload FROM %s WHERE "
                 + "dataSource = :dataSource AND "
@@ -538,41 +499,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 dbTables.getPendingSegmentsTable(),
                 connector.getQuoteString()
             )
-        )
-        .bind("dataSource", dataSource)
-        .bind("sequence_name", sequenceName)
-        .bind("start", interval.getStart().toString())
-        .bind("end", interval.getEnd().toString())
-        .map(ByteArrayMapper.FIRST)
-        .list();
+        ),
+        interval,
+        sequenceName,
+        null,
+        Pair.of("dataSource", dataSource),
+        Pair.of("sequence_name", sequenceName),
+        Pair.of("start", interval.getStart().toString()),
+        Pair.of("end", interval.getEnd().toString())
+    );
 
-    if (!existingBytes.isEmpty()) {
-      final SegmentIdentifier existingIdentifier = jsonMapper.readValue(
-          Iterables.getOnlyElement(existingBytes),
-          SegmentIdentifier.class
-      );
-
-      if (existingIdentifier.getInterval().getStartMillis() == interval.getStartMillis()
-          && existingIdentifier.getInterval().getEndMillis() == interval.getEndMillis()) {
-        log.info(
-            "Found existing pending segment [%s] for sequence[%s] and interval[%s] in DB",
-            existingIdentifier.getIdentifierAsString(),
-            sequenceName,
-            interval
-        );
-
-        return existingIdentifier;
-      } else {
-        log.warn(
-            "Cannot use existing pending segment [%s] for sequence[%s] in DB, "
-            + "does not match requested interval[%s]",
-            existingIdentifier.getIdentifierAsString(),
-            sequenceName,
-            interval
-        );
-
-        return null;
-      }
+    if (result.found) {
+      // The found existing segment identifier can be null if its interval doesn't match with the given interval
+      return result.segmentIdentifier;
     }
 
     final SegmentIdentifier newIdentifier = createNewSegment(handle, dataSource, interval, maxVersion);
@@ -584,7 +523,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // Avoiding ON DUPLICATE KEY since it's not portable.
     // Avoiding try/catch since it may cause inadvertent transaction-splitting.
 
-    // UNIQUE key for the row, ensuring sequences do not fork in two directions.
+    // UNIQUE key for the row, ensuring we don't have more than one segment per sequence per interval.
     // Using a single column instead of (sequence_name, sequence_prev_id) as some MySQL storage engines
     // have difficulty with large unique keys (see https://github.com/druid-io/druid/issues/2319)
     final String sequenceNamePrevIdSha1 = BaseEncoding.base16().encode(
@@ -598,6 +537,105 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .asBytes()
     );
 
+    // always insert empty previous sequence id
+    insertToMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
+
+    log.info(
+        "Allocated pending segment [%s] for sequence[%s] in DB",
+        newIdentifier.getIdentifierAsString(),
+        sequenceName
+    );
+
+    return newIdentifier;
+  }
+
+  private CheckExistingSegmentIdResult checkAndGetExistingSegmentId(
+      final Query<Map<String, Object>> query,
+      final Interval interval,
+      final String sequenceName,
+      final @Nullable String previousSegmentId,
+      final Pair<String, String>... queryVars
+  ) throws IOException
+  {
+    Query<Map<String, Object>> boundQuery = query;
+    for (Pair<String, String> var : queryVars) {
+      boundQuery = boundQuery.bind(var.lhs, var.rhs);
+    }
+    final List<byte[]> existingBytes = boundQuery.map(ByteArrayMapper.FIRST).list();
+
+    if (!existingBytes.isEmpty()) {
+      final SegmentIdentifier existingIdentifier = jsonMapper.readValue(
+          Iterables.getOnlyElement(existingBytes),
+          SegmentIdentifier.class
+      );
+
+      if (existingIdentifier.getInterval().getStartMillis() == interval.getStartMillis()
+          && existingIdentifier.getInterval().getEndMillis() == interval.getEndMillis()) {
+        if (previousSegmentId == null) {
+          log.info(
+              "Found existing pending segment [%s] for sequence[%s] in DB",
+              existingIdentifier.getIdentifierAsString(),
+              sequenceName
+          );
+        } else {
+          log.info(
+              "Found existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
+              existingIdentifier.getIdentifierAsString(),
+              sequenceName,
+              previousSegmentId
+          );
+        }
+
+        return new CheckExistingSegmentIdResult(true, existingIdentifier);
+      } else {
+        if (previousSegmentId == null) {
+          log.warn(
+              "Cannot use existing pending segment [%s] for sequence[%s] in DB, "
+              + "does not match requested interval[%s]",
+              existingIdentifier.getIdentifierAsString(),
+              sequenceName,
+              interval
+          );
+        } else {
+          log.warn(
+              "Cannot use existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB, "
+              + "does not match requested interval[%s]",
+              existingIdentifier.getIdentifierAsString(),
+              sequenceName,
+              previousSegmentId,
+              interval
+          );
+        }
+
+        return new CheckExistingSegmentIdResult(true, null);
+      }
+    }
+    return new CheckExistingSegmentIdResult(false, null);
+  }
+
+  private static class CheckExistingSegmentIdResult
+  {
+    private final boolean found;
+    @Nullable
+    private final SegmentIdentifier segmentIdentifier;
+
+    CheckExistingSegmentIdResult(boolean found, @Nullable SegmentIdentifier segmentIdentifier)
+    {
+      this.found = found;
+      this.segmentIdentifier = segmentIdentifier;
+    }
+  }
+
+  private void insertToMetastore(
+      Handle handle,
+      SegmentIdentifier newIdentifier,
+      String dataSource,
+      Interval interval,
+      String previousSegmentId,
+      String sequenceName,
+      String sequenceNamePrevIdSha1
+  ) throws JsonProcessingException
+  {
     handle.createStatement(
         StringUtils.format(
             "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
@@ -612,18 +650,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
           .bind("sequence_name", sequenceName)
-          .bind("sequence_prev_id", "") // always insert empty previous sequence id
+          .bind("sequence_prev_id", previousSegmentId)
           .bind("sequence_name_prev_id_sha1", sequenceNamePrevIdSha1)
           .bind("payload", jsonMapper.writeValueAsBytes(newIdentifier))
           .execute();
-
-    log.info(
-        "Allocated pending segment [%s] for sequence[%s] in DB",
-        newIdentifier.getIdentifierAsString(),
-        sequenceName
-    );
-
-    return newIdentifier;
   }
 
   @Nullable
