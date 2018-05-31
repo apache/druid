@@ -26,7 +26,6 @@ import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.Triple;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -139,8 +138,6 @@ public interface TaskStorage
 
   @Nullable
   Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);
-
-  List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids);
 
   /**
    * Returns a list of locks for a particular task.

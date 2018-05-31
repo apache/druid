@@ -40,8 +40,8 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
@@ -667,22 +667,27 @@ public class OverlordResource
         workItem.getDataSource(),
         null
     );
+    final List<Task> allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
+    final List<TaskInfo> allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
+    for (TaskInfo t : allActiveTaskInfo) {
+      taskInfoCache.putIfAbsent(t.getId(), t);
+    }
     if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
-      final List<TaskRunnerWorkItem> pendingWorkItems = getAllActiveTasks(req, "pending");
+      final List<TaskRunnerWorkItem> pendingWorkItems = filterActiveTasks(req, "pending", allActiveTasks);
       List<TaskStatusPlus> transformedPendingList = Lists.transform(pendingWorkItems, transformFunc);
       final List<TaskStatusPlus> pendingTasks = Lists.newArrayList();
       pendingTasks.addAll(transformedPendingList);
       finalTaskList.addAll(pendingTasks);
     }
     if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
-      final List<TaskRunnerWorkItem> waitingWorkItems = getAllActiveTasks(req, "waiting");
+      final List<TaskRunnerWorkItem> waitingWorkItems = filterActiveTasks(req, "waiting", allActiveTasks);
       List<TaskStatusPlus> transformedWaitingList = Lists.transform(waitingWorkItems, transformFunc);
       final List<TaskStatusPlus> waitingTasks = Lists.newArrayList();
       waitingTasks.addAll(transformedWaitingList);
       finalTaskList.addAll(waitingTasks);
     }
     if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
-      final List<TaskRunnerWorkItem> runningWorkItems = getAllActiveTasks(req, "waiting");
+      final List<TaskRunnerWorkItem> runningWorkItems = filterActiveTasks(req, "running", allActiveTasks);
       List<TaskStatusPlus> transformedRunningList = Lists.transform(runningWorkItems, transformFunc);
       final List<TaskStatusPlus> runningTasks = Lists.newArrayList();
       runningTasks.addAll(transformedRunningList);
@@ -712,6 +717,7 @@ public class OverlordResource
     }
 
     final Function<String, Task> taskFunction = taskId -> {
+      //todo get rid of this call, cache the payload/type
       final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
       if (!optionalTask.isPresent()) {
         throw new WebApplicationException(
@@ -749,18 +755,15 @@ public class OverlordResource
               taskInfoCache.get(status.getId()).getDataSource(),
               status.getErrorMsg()
           );
-        }));
+        }
+    ));
 
     return completeTasks;
   }
 
-  private List<TaskRunnerWorkItem> getAllActiveTasks(HttpServletRequest req, String state)
+  private List<TaskRunnerWorkItem> filterActiveTasks(HttpServletRequest req, String state, List<Task> allActiveTasks)
   {
-    final List<Task> allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
-    final List<TaskInfo> allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
-    for (TaskInfo t : allActiveTaskInfo) {
-      taskInfoCache.putIfAbsent(t.getId(), t);
-    }
+
     final List<TaskRunnerWorkItem> allTasks = Lists.newArrayList();
     for (final Task task : allActiveTasks) {
       allTasks.add(
@@ -771,10 +774,6 @@ public class OverlordResource
               task.getDataSource(),
               TaskState.UNKNOWN
           ));
-    }
-
-    if (state == null) {
-      return allTasks;
     }
 
     //divide active task into 3 lists : running, pending, waiting

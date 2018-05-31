@@ -29,7 +29,6 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.Triple;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -120,11 +119,6 @@ public class TaskStorageQueryAdapter
   public Pair<DateTime, String> getCreatedDateAndDataSource(String taskId)
   {
     return storage.getCreatedDateTimeAndDataSource(taskId);
-  }
-
-  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids)
-  {
-    return storage.getCompleteTasksCreatedDateAndDataSource(ids);
   }
   
 }

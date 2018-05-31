@@ -28,10 +28,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.Triple;
 import io.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
@@ -352,10 +352,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     {
       TaskInfo taskInfo = null;
       try {
+        TaskStatus status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
         taskInfo = new TaskInfo.TaskInfoBuilder()
             .withId(resultSet.getString("id"))
             .withCreatedTime(DateTimes.of(resultSet.getString("created_date")))
-            .withState(getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType()))
+            .withState(status.getStatusCode())
             .withDatasource(resultSet.getString(
                 "datasource")).build();
       }
@@ -393,30 +394,6 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         .first()
     );
   }
-
-  @Override
-  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(final List<String> ids)
-  {
-    return connector.retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createInQuery(handle, ids);
-          return query
-              .map(
-                  (index, resultSet, ctx) -> Triple.of(
-                      resultSet.getString("id"),
-                      DateTimes.of(resultSet.getString("created_date")),
-                      resultSet.getString("datasource")
-                  )
-              )
-              .list();
-        }
-    );
-  }
-
-  protected abstract Query<Map<String, Object>> createInQuery(
-      Handle handle,
-      List<String> ids
-  );
 
   @Override
   public boolean addLock(final String entryId, final LockType lock)

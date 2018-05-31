@@ -22,7 +22,6 @@ package io.druid.metadata;
 import com.google.common.base.Optional;
 import io.druid.indexer.TaskInfo;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.Triple;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -112,8 +111,6 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    */
   @Nullable
   Pair<DateTime, String> getCreatedDateAndDataSource(String entryId);
-
-  List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids);
 
   /**
    * Add a lock to the given entry

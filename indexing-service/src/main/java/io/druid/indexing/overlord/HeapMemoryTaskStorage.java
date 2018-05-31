@@ -37,7 +37,6 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.Triple;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.EntryExistsException;
 import org.joda.time.DateTime;
@@ -302,25 +301,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
     try {
       final TaskStuff taskStuff = tasks.get(taskId);
       return taskStuff == null ? null : Pair.of(taskStuff.getCreatedDate(), taskStuff.getDataSource());
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  @Override
-  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids)
-  {
-    giant.lock();
-    try {
-      final ImmutableList.Builder<Triple<String, DateTime, String>> listBuilder = ImmutableList.builder();
-      for (final TaskStuff taskStuff : tasks.values()) {
-        String id = taskStuff.getTask().getId();
-        Pair pair = Pair.of(taskStuff.getCreatedDate(), taskStuff.getDataSource());
-        Triple t = Triple.of(id, pair.lhs, pair.rhs);
-        listBuilder.add(t);
-      }
-      return listBuilder.build();
     }
     finally {
       giant.unlock();

@@ -106,9 +106,7 @@ public class TaskInfo
     {
       return new TaskInfo(id, createdTime, state, datasource);
     }
-
   }
-
 
 }
 

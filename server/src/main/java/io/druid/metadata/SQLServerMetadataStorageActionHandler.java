@@ -26,8 +26,6 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.Query;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -74,48 +72,4 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
     return query;
   }
 
-
-  @Override
-  protected Query<Map<String, Object>> createInQuery(Handle handle, List<String> ids)
-  {
-    String sql = StringUtils.format(
-        "SELECT "
-        + "  id, "
-        + " created_date, "
-        + "  datasource "
-        + "FROM "
-        + "  %s "
-        + "WHERE "
-        + " id in %s ",
-        getEntryTable(), generateIds(ids.size())
-    );
-    Query<Map<String, Object>> query = handle.createQuery(sql);
-    return query;
-  }
-
-  private List<String> generateDummyList(int size)
-  {
-    StringBuilder sb;
-    int num = size;
-    List<String> dummyList = new ArrayList<>();
-
-    for (int i = 0; i < num; i++) {
-      sb = new StringBuilder();
-      sb.append(":").append("id").append(i);
-      dummyList.add(sb.toString());
-    }
-    return dummyList;
-  }
-
-  private String generateIds(int size)
-  {
-    StringBuilder sb = new StringBuilder();
-    int num = size;
-    for (int i = 0; i < num; i++) {
-      sb.append("':").append("id").append(i).append("',");
-    }
-    sb.deleteCharAt(sb.length() - 1);
-
-    return sb.toString();
-  }
 }

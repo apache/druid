@@ -37,7 +37,6 @@ import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.Triple;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -259,12 +258,6 @@ public class MetadataTaskStorage implements TaskStorage
   public Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId)
   {
     return handler.getCreatedDateAndDataSource(taskId);
-  }
-
-  @Override
-  public List<Triple<String, DateTime, String>> getCompleteTasksCreatedDateAndDataSource(List<String> ids)
-  {
-    return handler.getCompleteTasksCreatedDateAndDataSource(ids);
   }
 
   @Override
