@@ -57,7 +57,7 @@ public class StringLastAggregator implements Aggregator
       Object value = valueSelector.getObject();
 
       if (value instanceof String) {
-        lastValue = (String) valueSelector.getObject();
+        lastValue = (String) value;
 
         if (lastValue.length() > maxStringBytes) {
           lastValue = lastValue.substring(0, maxStringBytes);

@@ -31,8 +31,8 @@ public class StringFirstAggregator implements Aggregator
   private final BaseLongColumnValueSelector timeSelector;
   private final Integer maxStringBytes;
 
-  protected long lastTime;
-  protected String lastValue;
+  protected long firstTime;
+  protected String firstValue;
 
   public StringFirstAggregator(
       BaseLongColumnValueSelector timeSelector,
@@ -44,26 +44,26 @@ public class StringFirstAggregator implements Aggregator
     this.timeSelector = timeSelector;
     this.maxStringBytes = maxStringBytes;
 
-    lastTime = Long.MAX_VALUE;
-    lastValue = null;
+    firstTime = Long.MAX_VALUE;
+    firstValue = null;
   }
 
   @Override
   public void aggregate()
   {
     long time = timeSelector.getLong();
-    if (time < lastTime) {
-      lastTime = time;
+    if (time < firstTime) {
+      firstTime = time;
       Object value = valueSelector.getObject();
 
       if (value instanceof String) {
-        lastValue = (String) valueSelector.getObject();
+        firstValue = (String) value;
 
-        if (lastValue.length() > maxStringBytes) {
-          lastValue = lastValue.substring(0, maxStringBytes);
+        if (firstValue.length() > maxStringBytes) {
+          firstValue = firstValue.substring(0, maxStringBytes);
         }
       } else if (value instanceof SerializablePair) {
-        lastValue = ((SerializablePair<Long, String>) value).rhs;
+        firstValue = ((SerializablePair<Long, String>) value).rhs;
       }
     }
   }
@@ -71,7 +71,7 @@ public class StringFirstAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, lastValue);
+    return new SerializablePair<>(firstTime, firstValue);
   }
 
   @Override

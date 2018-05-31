@@ -21,6 +21,7 @@ package io.druid.query.aggregation.last;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
@@ -31,19 +32,17 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@JsonTypeName("stringLast")
 public class StringLastAggregatorFactory extends AggregatorFactory
 {
   public static final Integer MAX_SIZE_STRING = 1024;
@@ -56,9 +55,9 @@ public class StringLastAggregatorFactory extends AggregatorFactory
       ((SerializablePair<Long, Object>) o2).lhs
   );
 
-  private final String fieldName;
-  private final String name;
-  private final Integer maxStringBytes;
+  public final String fieldName;
+  public final String name;
+  public final Integer maxStringBytes;
 
   @JsonCreator
   public StringLastAggregatorFactory(
@@ -115,58 +114,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringLastAggregatorFactory(name, name, maxStringBytes)
-    {
-      @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
-      {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return new StringLastAggregator(null, null, maxStringBytes)
-        {
-          @Override
-          public void aggregate()
-          {
-            SerializablePair<Long, String> pair = (SerializablePair<Long, String>) selector.getObject();
-            if (pair.lhs >= lastTime) {
-              lastTime = pair.lhs;
-              lastValue = pair.rhs;
-            }
-          }
-        };
-      }
-
-      @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
-      {
-        final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
-        return new StringLastBufferAggregator(null, null, maxStringBytes)
-        {
-          @Override
-          public void aggregate(ByteBuffer buf, int position)
-          {
-            ByteBuffer mutationBuffer = buf.duplicate();
-            mutationBuffer.position(position);
-
-            SerializablePair<Long, String> pair = (SerializablePair<Long, String>) selector.getObject();
-            long lastTime = mutationBuffer.getLong(position);
-            if (pair.lhs >= lastTime) {
-              mutationBuffer.putLong(position, pair.lhs);
-              byte[] valueBytes = pair.rhs.getBytes(StandardCharsets.UTF_8);
-
-              mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
-              mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-              mutationBuffer.put(valueBytes);
-            }
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("selector", selector);
-          }
-        };
-      }
-    };
+    return new StringLastFoldingAggregatorFactory(name, name, maxStringBytes);
   }
 
   @Override

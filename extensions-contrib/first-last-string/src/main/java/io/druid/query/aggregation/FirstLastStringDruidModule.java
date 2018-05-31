@@ -20,13 +20,14 @@
 package io.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 import io.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import io.druid.query.aggregation.first.StringFirstFoldingAggregatorFactory;
 import io.druid.query.aggregation.last.StringLastAggregatorFactory;
+import io.druid.query.aggregation.last.StringLastFoldingAggregatorFactory;
 import io.druid.segment.serde.ComplexMetrics;
 
 import java.util.List;
@@ -35,16 +36,16 @@ import java.util.List;
  */
 public class FirstLastStringDruidModule implements DruidModule
 {
-  public static final String STRING_LAST = "stringLast";
-  public static final String STRING_FIRST = "stringFirst";
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
         new SimpleModule("FirstLastStringModule").registerSubtypes(
-            new NamedType(StringLastAggregatorFactory.class, STRING_LAST),
-            new NamedType(StringFirstAggregatorFactory.class, STRING_FIRST)
+            StringLastAggregatorFactory.class,
+            StringLastFoldingAggregatorFactory.class,
+            StringFirstAggregatorFactory.class,
+            StringFirstFoldingAggregatorFactory.class
         )
     );
   }
