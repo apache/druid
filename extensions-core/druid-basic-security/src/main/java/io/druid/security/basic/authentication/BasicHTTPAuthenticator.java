@@ -56,6 +56,8 @@ public class BasicHTTPAuthenticator implements Authenticator
   private final String name;
   private final String authorizerName;
   private final BasicAuthDBConfig dbConfig;
+  private final String defaultAccessUser;
+  private final String DEFAULT_ACCESS_USER = "defaultUser";
 
   @JsonCreator
   public BasicHTTPAuthenticator(
@@ -66,7 +68,8 @@ public class BasicHTTPAuthenticator implements Authenticator
       @JsonProperty("initialInternalClientPassword") String initialInternalClientPassword,
       @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
       @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout,
-      @JsonProperty("credentialIterations") Integer credentialIterations
+      @JsonProperty("credentialIterations") Integer credentialIterations,
+      @JsonProperty("defaultAccessUser") String defaultAccessUser
   )
   {
     this.name = name;
@@ -79,6 +82,7 @@ public class BasicHTTPAuthenticator implements Authenticator
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations
     );
     this.cacheManager = cacheManager;
+    this.defaultAccessUser = defaultAccessUser == null ? DEFAULT_ACCESS_USER : defaultAccessUser;
   }
 
   @Override
@@ -158,7 +162,9 @@ public class BasicHTTPAuthenticator implements Authenticator
       String userSecret = BasicAuthUtils.getBasicUserSecretFromHttpReq((HttpServletRequest) servletRequest);
 
       if (userSecret == null) {
-        // Request didn't have HTTP Basic auth credentials, move on to the next filter
+        // Request didn't have HTTP Basic auth credentials, give default access
+        AuthenticationResult authenticationResult = new AuthenticationResult(defaultAccessUser, authorizerName, name, null);
+        servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
         return;
       }

@@ -87,6 +87,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 "druid",
                 null,
                 null,
+                null,
                 null
             ),
             AUTHENTICATOR_NAME2,
@@ -96,6 +97,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
                 "test",
                 "druid",
                 "druid",
+                null,
                 null,
                 null,
                 null
