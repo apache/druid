@@ -149,6 +149,12 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     return fieldName;
   }
 
+  @JsonProperty
+  public Integer getMaxStringBytes()
+  {
+    return maxStringBytes;
+  }
+
   @Override
   public List<String> requiredFields()
   {

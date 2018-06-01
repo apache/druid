@@ -47,7 +47,6 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   public static final Comparator VALUE_COMPARATOR = (o1, o2) -> ((SerializablePair<Long, String>) o1).rhs.equals(((SerializablePair<Long, String>) o2).rhs)
                                                                 ? 1
                                                                 : 0;
-
   public final String fieldName;
   public final String name;
   public final Integer maxStringBytes;
@@ -140,6 +139,12 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   public String getFieldName()
   {
     return fieldName;
+  }
+
+  @JsonProperty
+  public Integer getMaxStringBytes()
+  {
+    return maxStringBytes;
   }
 
   @Override
