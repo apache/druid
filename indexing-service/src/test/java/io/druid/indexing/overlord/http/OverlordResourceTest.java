@@ -286,6 +286,7 @@ public class OverlordResourceTest
   }
 
   @Test
+  @Ignore
   public void testGetTasks()
   {
     expectAuthorizationTokenCheck();
