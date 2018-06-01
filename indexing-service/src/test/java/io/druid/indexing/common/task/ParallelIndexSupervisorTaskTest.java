@@ -24,6 +24,8 @@ import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.InputSplit;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.indexer.TaskState;
+import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
@@ -32,13 +34,17 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import io.druid.server.security.AuthorizerMapper;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -49,7 +55,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePhaseParallelIndexSupervisorTaskTest
+public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
   private File inputDir;
 
@@ -87,9 +93,9 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
   @Test
   public void testIsReady() throws Exception
   {
-    final SinglePhaseParallelIndexSupervisorTask task = newTask(
+    final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
-        new SinglePhaseParallelIndexIOConfig(
+        new ParallelIndexIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null),
             false
         )
@@ -100,11 +106,12 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
 
-    final Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator = task.subTaskSpecIterator().iterator();
+    final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.createRunner();
+    final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = runner.subTaskSpecIterator().iterator();
 
     while (subTaskSpecIterator.hasNext()) {
-      final SinglePhaseParallelIndexSubTaskSpec spec = subTaskSpecIterator.next();
-      final SinglePhaseParallelIndexSubTask subTask = new SinglePhaseParallelIndexSubTask(
+      final ParallelIndexSubTaskSpec spec = subTaskSpecIterator.next();
+      final ParallelIndexSubTask subTask = new ParallelIndexSubTask(
           null,
           spec.getGroupId(),
           null,
@@ -124,9 +131,9 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
   @Test
   public void testWithoutInterval() throws Exception
   {
-    final SinglePhaseParallelIndexSupervisorTask task = newTask(
+    final ParallelIndexSupervisorTask task = newTask(
         null,
-        new SinglePhaseParallelIndexIOConfig(
+        new ParallelIndexIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null),
             false
         )
@@ -142,9 +149,9 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
   @Test()
   public void testRunInParallel() throws Exception
   {
-    final SinglePhaseParallelIndexSupervisorTask task = newTask(
+    final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
-        new SinglePhaseParallelIndexIOConfig(
+        new ParallelIndexIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null),
             false
         )
@@ -160,9 +167,9 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
   @Test
   public void testRunInSequential() throws Exception
   {
-    final SinglePhaseParallelIndexSupervisorTask task = newTask(
+    final ParallelIndexSupervisorTask task = newTask(
         Intervals.of("2017/2018"),
-        new SinglePhaseParallelIndexIOConfig(
+        new ParallelIndexIOConfig(
             new LocalFirehoseFactory(inputDir, "test_*", null)
             {
               @Override
@@ -182,13 +189,13 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
   }
 
-  private SinglePhaseParallelIndexSupervisorTask newTask(
+  private ParallelIndexSupervisorTask newTask(
       Interval interval,
-      SinglePhaseParallelIndexIOConfig ioConfig
+      ParallelIndexIOConfig ioConfig
   )
   {
     // set up ingestion spec
-    final SinglePhaseParallelIndexIngestionSpec singlePhaseIngestionSpec = new SinglePhaseParallelIndexIngestionSpec(
+    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
             getObjectMapper().convertValue(
@@ -210,7 +217,8 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
             getObjectMapper()
         ),
         ioConfig,
-        new SinglePhaseParallelIndexTuningConfig(
+        new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
@@ -237,18 +245,20 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
     return new TestSupervisorTask(
         null,
         null,
-        singlePhaseIngestionSpec,
+        ingestionSpec,
         new HashMap<>(),
         indexingServiceClient
     );
   }
 
-  private static class TestSupervisorTask extends TestSinglePhaseParallelIndexSupervisorTask
+  private static class TestSupervisorTask extends TestParallelIndexSupervisorTask
   {
+    private final IndexingServiceClient indexingServiceClient;
+
     TestSupervisorTask(
         String id,
         TaskResource taskResource,
-        SinglePhaseParallelIndexIngestionSpec ingestionSchema,
+        ParallelIndexIngestionSpec ingestionSchema,
         Map<String, Object> context,
         IndexingServiceClient indexingServiceClient
     )
@@ -260,53 +270,94 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
           context,
           indexingServiceClient
       );
+      this.indexingServiceClient = indexingServiceClient;
     }
 
     @Override
-    SinglePhaseParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
+    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    {
+      return TaskStatus.fromCode(
+          getId(),
+          new TestRunner(
+              this,
+              indexingServiceClient,
+              new NoopChatHandlerProvider(),
+              new AuthorizerMapper(Collections.emptyMap())
+          ).run(toolbox)
+      );
+    }
+  }
+
+  private static class TestRunner extends TestParallelIndexTaskRunner
+  {
+    private final ParallelIndexSupervisorTask supervisorTask;
+
+    TestRunner(
+        ParallelIndexSupervisorTask supervisorTask,
+        @Nullable IndexingServiceClient indexingServiceClient,
+        @Nullable ChatHandlerProvider chatHandlerProvider,
+        AuthorizerMapper authorizerMapper
+    )
+    {
+      super(
+          supervisorTask.getId(),
+          supervisorTask.getGroupId(),
+          supervisorTask.getIngestionSchema(),
+          supervisorTask.getContext(),
+          indexingServiceClient,
+          chatHandlerProvider,
+          authorizerMapper
+      );
+      this.supervisorTask = supervisorTask;
+    }
+
+    @Override
+    ParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
     {
       final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
           .getIOConfig()
           .getFirehoseFactory();
-      return new TestSinglePhaseParallelIndexSubTaskSpec(
-          getId() + "_" + getAndIncrementNextSpecId(),
-          getGroupId(),
+      return new TestParallelIndexSubTaskSpec(
+          supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
+          supervisorTask.getGroupId(),
+          supervisorTask,
           this,
-          new SinglePhaseParallelIndexIngestionSpec(
+          new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
-              new SinglePhaseParallelIndexIOConfig(
+              new ParallelIndexIOConfig(
                   baseFirehoseFactory.withSplit(split),
                   getIngestionSchema().getIOConfig().isAppendToExisting()
               ),
               getIngestionSchema().getTuningConfig()
           ),
-          getContext(),
+          supervisorTask.getContext(),
           split
       );
     }
   }
 
-  private static class TestSinglePhaseParallelIndexSubTaskSpec extends SinglePhaseParallelIndexSubTaskSpec
+  private static class TestParallelIndexSubTaskSpec extends ParallelIndexSubTaskSpec
   {
-    private final SinglePhaseParallelIndexSupervisorTask supervisorTask;
+    private final SinglePhaseParallelIndexTaskRunner runner;
 
-    TestSinglePhaseParallelIndexSubTaskSpec(
+    TestParallelIndexSubTaskSpec(
         String id,
         String groupId,
-        SinglePhaseParallelIndexSupervisorTask supervisorTask,
-        SinglePhaseParallelIndexIngestionSpec ingestionSpec,
+        ParallelIndexSupervisorTask supervisorTask,
+        SinglePhaseParallelIndexTaskRunner runner,
+        ParallelIndexIngestionSpec ingestionSpec,
         Map<String, Object> context,
         InputSplit inputSplit
     )
     {
       super(id, groupId, supervisorTask.getId(), ingestionSpec, context, inputSplit);
-      this.supervisorTask = supervisorTask;
+      this.runner = runner;
     }
 
     @Override
-    public SinglePhaseParallelIndexSubTask newSubTask(int numAttempts)
+    public ParallelIndexSubTask newSubTask(int numAttempts)
     {
-      return new SinglePhaseParallelIndexSubTask(
+      return new ParallelIndexSubTask(
           null,
           getGroupId(),
           null,
@@ -315,7 +366,7 @@ public class SinglePhaseParallelIndexSupervisorTaskTest extends AbstractSinglePh
           getIngestionSpec(),
           getContext(),
           null,
-          new LocalSinglePhaseParallelIndexTaskClientFactory(supervisorTask)
+          new LocalParallelIndexTaskClientFactory(runner)
       );
     }
   }

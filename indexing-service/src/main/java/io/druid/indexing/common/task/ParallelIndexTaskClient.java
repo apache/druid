@@ -32,11 +32,11 @@ import org.joda.time.Duration;
 import java.io.IOException;
 import java.util.List;
 
-public class SinglePhaseParallelIndexTaskClient extends IndexTaskClient
+public class ParallelIndexTaskClient extends IndexTaskClient
 {
   private final String subtaskId;
 
-  public SinglePhaseParallelIndexTaskClient(
+  public ParallelIndexTaskClient(
       HttpClient httpClient,
       ObjectMapper objectMapper,
       TaskInfoProvider taskInfoProvider,

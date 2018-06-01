@@ -28,7 +28,7 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.TaskStatusResponse;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
-import io.druid.indexing.common.task.SinglePhaseParallelIndexSupervisorTask.Status;
+import io.druid.indexing.common.task.ParallelIndexSupervisorTask.Status;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;

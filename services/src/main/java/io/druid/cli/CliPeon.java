@@ -66,8 +66,8 @@ import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.IndexTaskClientFactory;
-import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClient;
-import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClientFactory;
+import io.druid.indexing.common.task.ParallelIndexTaskClient;
+import io.druid.indexing.common.task.ParallelIndexTaskClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -190,8 +190,8 @@ public class CliPeon extends GuiceRunnable
             configureTaskActionClient(binder);
             binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
 
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>>(){})
-                  .to(SinglePhaseParallelIndexTaskClientFactory.class)
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
+                  .to(ParallelIndexTaskClientFactory.class)
                   .in(LazySingleton.class);
 
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);

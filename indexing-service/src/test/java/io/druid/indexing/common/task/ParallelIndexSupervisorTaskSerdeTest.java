@@ -52,7 +52,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SinglePhaseParallelIndexSupervisorTaskSerdeTest
+public class ParallelIndexSupervisorTaskSerdeTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -84,7 +84,7 @@ public class SinglePhaseParallelIndexSupervisorTaskSerdeTest
         new NamedType(LocalFirehoseFactory.class, "local")
     );
 
-    final SinglePhaseParallelIndexSupervisorTask task = newTask(
+    final ParallelIndexSupervisorTask task = newTask(
         objectMapper,
         Intervals.of("2018/2019")
     );
@@ -92,13 +92,13 @@ public class SinglePhaseParallelIndexSupervisorTaskSerdeTest
     Assert.assertEquals(task, objectMapper.readValue(json, Task.class));
   }
 
-  private SinglePhaseParallelIndexSupervisorTask newTask(
+  private ParallelIndexSupervisorTask newTask(
       ObjectMapper objectMapper,
       Interval interval
   )
   {
     // set up ingestion spec
-    final SinglePhaseParallelIndexIngestionSpec singlePhaseIngestionSpec = new SinglePhaseParallelIndexIngestionSpec(
+    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
             objectMapper.convertValue(
@@ -119,11 +119,12 @@ public class SinglePhaseParallelIndexSupervisorTaskSerdeTest
             null,
             objectMapper
         ),
-        new SinglePhaseParallelIndexIOConfig(
+        new ParallelIndexIOConfig(
             new LocalFirehoseFactory(new File("tmp"), "test_*", null),
             false
         ),
-        new SinglePhaseParallelIndexTuningConfig(
+        new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
@@ -147,10 +148,10 @@ public class SinglePhaseParallelIndexSupervisorTaskSerdeTest
     );
 
     // set up test tools
-    return new SinglePhaseParallelIndexSupervisorTask(
+    return new ParallelIndexSupervisorTask(
         "taskId",
         new TaskResource("group", 1),
-        singlePhaseIngestionSpec,
+        ingestionSpec,
         new HashMap<>(),
         new NoopIndexingServiceClient(),
         new NoopChatHandlerProvider(),

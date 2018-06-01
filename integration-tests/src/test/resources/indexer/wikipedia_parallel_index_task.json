@@ -1,8 +1,8 @@
 {
-    "type": "index_single_phase_parallel",
+    "type": "index_parallel",
     "spec": {
         "dataSchema": {
-            "dataSource": "wikipedia_parallel_single_phase_index_test",
+            "dataSource": "wikipedia_parallel_index_test",
             "metricsSpec": [
                 {
                     "type": "count",
@@ -55,7 +55,7 @@
             }
         },
         "ioConfig": {
-            "type": "index_single_phase_parallel",
+            "type": "index_parallel",
             "firehose": {
                 "type": "local",
                 "baseDir": "/resources/data/batch_index",

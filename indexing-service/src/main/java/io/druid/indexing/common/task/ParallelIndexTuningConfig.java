@@ -31,8 +31,8 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-@JsonTypeName("index_single_phase_parallel")
-public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
+@JsonTypeName("index_parallel")
+public class ParallelIndexTuningConfig extends IndexTuningConfig
 {
   private static final int DEFAULT_MAX_NUM_BATCH_TASKS = Integer.MAX_VALUE; // unlimited
   private static final int DEFAULT_MAX_RETRY = 3;
@@ -41,16 +41,17 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
   private static final Duration DEFAULT_CHAT_HANDLER_TIMEOUT = new Period("PT10S").toStandardDuration();
   private static final int DEFAULT_CHAT_HANDLER_NUM_RETRIES = 5;
 
-  private final int maxNumBatchTasks;
+  private final int maxNumSubTasks;
   private final int maxRetry;
   private final long taskStatusCheckPeriodMs;
 
   private final Duration chatHandlerTimeout;
   private final int chatHandlerNumRetries;
 
-  public static SinglePhaseParallelIndexTuningConfig defaultConfig()
+  public static ParallelIndexTuningConfig defaultConfig()
   {
-    return new SinglePhaseParallelIndexTuningConfig(
+    return new ParallelIndexTuningConfig(
+        null,
         null,
         null,
         null,
@@ -74,7 +75,7 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
   }
 
   @JsonCreator
-  public SinglePhaseParallelIndexTuningConfig(
+  public ParallelIndexTuningConfig(
       @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
@@ -83,10 +84,11 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
+      @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
-      @JsonProperty("maxNumBatchTasks") @Nullable Integer maxNumBatchTasks,
+      @JsonProperty("maxNumSubTasks") @Nullable Integer maxNumSubTasks,
       @JsonProperty("maxRetry") @Nullable Integer maxRetry,
       @JsonProperty("taskStatusCheckPeriodMs") @Nullable Integer taskStatusCheckPeriodMs,
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
@@ -107,7 +109,7 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
         maxPendingPersists,
         null,
         forceExtendableShardSpecs,
-        false, // SinglePhaseParallelIndexSupervisorTask can't be used for guaranteed rollup
+        forceGuaranteedRollup,
         reportParseExceptions,
         null,
         pushTimeout,
@@ -117,7 +119,7 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
         maxSavedParseExceptions
     );
 
-    this.maxNumBatchTasks = maxNumBatchTasks == null ? DEFAULT_MAX_NUM_BATCH_TASKS : maxNumBatchTasks;
+    this.maxNumSubTasks = maxNumSubTasks == null ? DEFAULT_MAX_NUM_BATCH_TASKS : maxNumSubTasks;
     this.maxRetry = maxRetry == null ? DEFAULT_MAX_RETRY : maxRetry;
     this.taskStatusCheckPeriodMs = taskStatusCheckPeriodMs == null ?
                                    DEFAULT_TASK_STATUS_CHECK_PERIOD_MS :
@@ -128,9 +130,9 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
   }
 
   @JsonProperty
-  public int getMaxNumBatchTasks()
+  public int getMaxNumSubTasks()
   {
-    return maxNumBatchTasks;
+    return maxNumSubTasks;
   }
 
   @JsonProperty
@@ -169,8 +171,8 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
     if (!super.equals(o)) {
       return false;
     }
-    SinglePhaseParallelIndexTuningConfig that = (SinglePhaseParallelIndexTuningConfig) o;
-    return maxNumBatchTasks == that.maxNumBatchTasks &&
+    ParallelIndexTuningConfig that = (ParallelIndexTuningConfig) o;
+    return maxNumSubTasks == that.maxNumSubTasks &&
            maxRetry == that.maxRetry &&
            taskStatusCheckPeriodMs == that.taskStatusCheckPeriodMs &&
            chatHandlerNumRetries == that.chatHandlerNumRetries &&
@@ -183,7 +185,7 @@ public class SinglePhaseParallelIndexTuningConfig extends IndexTuningConfig
 
     return Objects.hash(
         super.hashCode(),
-        maxNumBatchTasks,
+        maxNumSubTasks,
         maxRetry,
         taskStatusCheckPeriodMs,
         chatHandlerTimeout,

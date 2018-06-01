@@ -29,10 +29,10 @@ import javax.annotation.Nullable;
 /**
  * Same with {@link IndexIOConfig} except its JSON type name.
  */
-@JsonTypeName("index_single_phase_parallel")
-public class SinglePhaseParallelIndexIOConfig extends IndexIOConfig
+@JsonTypeName("index_parallel")
+public class ParallelIndexIOConfig extends IndexIOConfig
 {
-  public SinglePhaseParallelIndexIOConfig(
+  public ParallelIndexIOConfig(
       @JsonProperty("firehose") FirehoseFactory firehoseFactory,
       @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
   )

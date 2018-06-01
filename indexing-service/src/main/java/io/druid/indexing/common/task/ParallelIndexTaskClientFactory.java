@@ -28,14 +28,13 @@ import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-public class SinglePhaseParallelIndexTaskClientFactory
-    implements IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>
+public class ParallelIndexTaskClientFactory implements IndexTaskClientFactory<ParallelIndexTaskClient>
 {
   private final HttpClient httpClient;
   private final ObjectMapper mapper;
 
   @Inject
-  public SinglePhaseParallelIndexTaskClientFactory(
+  public ParallelIndexTaskClientFactory(
       @EscalatedGlobal HttpClient httpClient,
       @Smile ObjectMapper mapper
   )
@@ -45,7 +44,7 @@ public class SinglePhaseParallelIndexTaskClientFactory
   }
 
   @Override
-  public SinglePhaseParallelIndexTaskClient build(
+  public ParallelIndexTaskClient build(
       TaskInfoProvider taskInfoProvider,
       String callerId,
       int numThreads,
@@ -54,7 +53,7 @@ public class SinglePhaseParallelIndexTaskClientFactory
   )
   {
     Preconditions.checkState(numThreads == 1, "expect numThreads to be 1");
-    return new SinglePhaseParallelIndexTaskClient(
+    return new ParallelIndexTaskClient(
         httpClient,
         mapper,
         taskInfoProvider,

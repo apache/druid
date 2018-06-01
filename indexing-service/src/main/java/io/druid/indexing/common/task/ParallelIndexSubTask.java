@@ -80,33 +80,34 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
- * A worker task of {@link SinglePhaseParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
- * generates and pushes segments, and reports them to the {@link SinglePhaseParallelIndexSupervisorTask} instead of
+ * A worker task of {@link ParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
+ * generates and pushes segments, and reports them to the {@link ParallelIndexSupervisorTask} instead of
  * publishing on its own.
  */
-public class SinglePhaseParallelIndexSubTask extends AbstractTask
+public class ParallelIndexSubTask extends AbstractTask
 {
-  private static final Logger log = new Logger(SinglePhaseParallelIndexSubTask.class);
-  private static final String TYPE = "index_single_phase_sub";
+  static final String TYPE = "index_sub";
+
+  private static final Logger log = new Logger(ParallelIndexSubTask.class);
 
   private final int numAttempts;
-  private final SinglePhaseParallelIndexIngestionSpec ingestionSchema;
+  private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
   private final IndexingServiceClient indexingServiceClient;
-  private final IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient> taskClientFactory;
+  private final IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory;
 
   @JsonCreator
-  public SinglePhaseParallelIndexSubTask(
-      // id shouldn't be null except when this task is created by SinglePhaseParallelIndexSupervisorTask
+  public ParallelIndexSubTask(
+      // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
       @JsonProperty("id") @Nullable final String id,
       @JsonProperty("groupId") final String groupId,
       @JsonProperty("resource") final TaskResource taskResource,
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
-      @JsonProperty("spec") final SinglePhaseParallelIndexIngestionSpec ingestionSchema,
+      @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient> taskClientFactory
+      @JacksonInject IndexTaskClientFactory<ParallelIndexTaskClient> taskClientFactory
   )
   {
     super(
@@ -169,7 +170,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
   }
 
   @JsonProperty("spec")
-  public SinglePhaseParallelIndexIngestionSpec getIngestionSchema()
+  public ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
   }
@@ -217,7 +218,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
         firehoseFactory,
         firehoseTempDir
     );
-    final SinglePhaseParallelIndexTaskClient taskClient = taskClientFactory.build(
+    final ParallelIndexTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
         getId(),
         1, // always use a single http thread
@@ -255,10 +256,10 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link SinglePhaseParallelIndexTuningConfig#targetPartitionSize}
+   * If the number of rows in a segment exceeds {@link ParallelIndexTuningConfig#targetPartitionSize}
    * </li>
    * <li>
-   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link SinglePhaseParallelIndexTuningConfig#maxTotalRows}
+   * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link ParallelIndexTuningConfig#maxTotalRows}
    * </li>
    * </ul>
    *
@@ -290,7 +291,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
     }
 
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-    final SinglePhaseParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
+    final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
 
@@ -398,7 +399,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
 
   private static boolean exceedMaxRowsInSegment(
       int numRowsInSegment,
-      SinglePhaseParallelIndexTuningConfig indexTuningConfig
+      ParallelIndexTuningConfig indexTuningConfig
   )
   {
     // maxRowsInSegment should be null if numShards is set in indexTuningConfig
@@ -408,7 +409,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
 
   private static boolean exceedMaxRowsInAppenderator(
       long numRowsInAppenderator,
-      SinglePhaseParallelIndexTuningConfig indexTuningConfig
+      ParallelIndexTuningConfig indexTuningConfig
   )
   {
     // maxRowsInAppenderator should be null if numShards is set in indexTuningConfig
@@ -420,7 +421,7 @@ public class SinglePhaseParallelIndexSubTask extends AbstractTask
       FireDepartmentMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
-      SinglePhaseParallelIndexTuningConfig tuningConfig
+      ParallelIndexTuningConfig tuningConfig
   )
   {
     return Appenderators.createOffline(

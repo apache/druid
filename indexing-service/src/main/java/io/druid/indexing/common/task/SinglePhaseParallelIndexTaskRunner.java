@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
@@ -24,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -36,17 +34,12 @@ import io.druid.data.input.InputSplit;
 import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
-import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
-import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import io.druid.indexing.common.task.ParallelIndexSupervisorTask.Status;
 import io.druid.indexing.common.task.TaskMonitor.MonitorEntry;
 import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
 import io.druid.indexing.common.task.TaskMonitor.TaskHistory;
-import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -58,7 +51,6 @@ import io.druid.segment.realtime.firehose.ChatHandlers;
 import io.druid.server.security.Action;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -79,7 +71,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -89,145 +80,68 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * SinglePhaseParallelIndexSupervisorTask is capable of running multiple subTasks for parallel indexing. This is
- * applicable if the input {@link FiniteFirehoseFactory} is splittable. While this task is running, it can submit
- * multiple child tasks to overlords. This task succeeds only when all its child tasks succeed; otherwise it fails.
+ * An implementation of {@link ParallelIndexTaskRunner} to support best-effort roll-up. This runner can submit and
+ * monitor multiple {@link ParallelIndexSubTask}s.
  *
  * As its name indicates, distributed indexing is done in a single phase, i.e., without shuffling intermediate data. As
  * a result, this task can't be used for perfect rollup.
  */
-public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask implements ChatHandler
+public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunner, ChatHandler
 {
-  private static final Logger log = new Logger(SinglePhaseParallelIndexSupervisorTask.class);
-  private static final String TYPE = "index_single_phase_parallel";
+  private static final Logger log = new Logger(SinglePhaseParallelIndexTaskRunner.class);
 
-  private final SinglePhaseParallelIndexIngestionSpec ingestionSchema;
+  private final String taskId;
+  private final String groupId;
+  private final ParallelIndexIngestionSpec ingestionSchema;
+  private final Map<String, Object> context;
   private final FiniteFirehoseFactory<?, ?> baseFirehoseFactory;
   private final int maxNumTasks;
   private final IndexingServiceClient indexingServiceClient;
   private final ChatHandlerProvider chatHandlerProvider;
   private final AuthorizerMapper authorizerMapper;
 
-  private final BlockingQueue<SubTaskCompleteEvent<SinglePhaseParallelIndexSubTask>> taskCompleteEvents =
+  private final BlockingQueue<SubTaskCompleteEvent<ParallelIndexSubTask>> taskCompleteEvents =
       new LinkedBlockingDeque<>();
 
   // subTaskId -> report
   private final ConcurrentMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
 
   private volatile boolean stopped;
-  private volatile TaskMonitor<SinglePhaseParallelIndexSubTask> taskMonitor;
+  private volatile TaskMonitor<ParallelIndexSubTask> taskMonitor;
 
   private int nextSpecId = 0;
 
-  @JsonCreator
-  public SinglePhaseParallelIndexSupervisorTask(
-      @JsonProperty("id") String id,
-      @JsonProperty("resource") TaskResource taskResource,
-      @JsonProperty("spec") SinglePhaseParallelIndexIngestionSpec ingestionSchema,
+  SinglePhaseParallelIndexTaskRunner(
+      @JsonProperty("id") String taskId,
+      String groupId,
+      @JsonProperty("spec") ParallelIndexIngestionSpec ingestionSchema,
       @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject @Nullable IndexingServiceClient indexingServiceClient, // null in overlords
-      @JacksonInject @Nullable ChatHandlerProvider chatHandlerProvider,     // null in overlords
+      @JacksonInject IndexingServiceClient indexingServiceClient,
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper
   )
   {
-    super(
-        getOrMakeId(id, TYPE, ingestionSchema.getDataSchema().getDataSource()),
-        null,
-        taskResource,
-        ingestionSchema.getDataSchema().getDataSource(),
-        context
-    );
-
+    this.taskId = taskId;
+    this.groupId = groupId;
     this.ingestionSchema = ingestionSchema;
-
-    final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-    if (!(firehoseFactory instanceof FiniteFirehoseFactory)) {
-      throw new IAE("[%s] should implement FiniteFirehoseFactory", firehoseFactory.getClass().getSimpleName());
-    }
-
-    this.baseFirehoseFactory = (FiniteFirehoseFactory) firehoseFactory;
-    this.maxNumTasks = ingestionSchema.getTuningConfig().getMaxNumBatchTasks();
-    this.indexingServiceClient = indexingServiceClient;
-    this.chatHandlerProvider = chatHandlerProvider;
+    this.context = context;
+    this.baseFirehoseFactory = (FiniteFirehoseFactory) ingestionSchema.getIOConfig().getFirehoseFactory();
+    this.maxNumTasks = ingestionSchema.getTuningConfig().getMaxNumSubTasks();
+    this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
+    this.chatHandlerProvider = Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider");
     this.authorizerMapper = authorizerMapper;
-
-    if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
-      log.warn("maxSavedParseExceptions is not supported yet");
-    }
-    if (ingestionSchema.getTuningConfig().getMaxParseExceptions() > 0) {
-      log.warn("maxParseExceptions is not supported yet");
-    }
-    if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
-      log.warn("logParseExceptions is not supported yet");
-    }
   }
 
   @Override
-  public int getPriority()
-  {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
-  }
-
-  @Override
-  public String getType()
-  {
-    return TYPE;
-  }
-
-  @JsonProperty("spec")
-  public SinglePhaseParallelIndexIngestionSpec getIngestionSchema()
-  {
-    return ingestionSchema;
-  }
-
-  @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
-  {
-    final Optional<SortedSet<Interval>> intervals = ingestionSchema.getDataSchema()
-                                                                   .getGranularitySpec()
-                                                                   .bucketIntervals();
-
-    return !intervals.isPresent() || isReady(taskActionClient, intervals.get());
-  }
-
-  static boolean isReady(TaskActionClient actionClient, SortedSet<Interval> intervals) throws IOException
-  {
-    final List<TaskLock> locks = getTaskLocks(actionClient);
-    if (locks.size() == 0) {
-      try {
-        Tasks.tryAcquireExclusiveLocks(actionClient, intervals);
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
-  {
-    if (baseFirehoseFactory.isSplittable()) {
-      return runParallel(toolbox);
-    } else {
-      log.warn(
-          "firehoseFactory[%s] is not splittable. Running sequentially",
-          baseFirehoseFactory.getClass().getSimpleName()
-      );
-      return runSequential(toolbox);
-    }
-  }
-
-  private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
+  public TaskState run(TaskToolbox toolbox) throws Exception
   {
     log.info(
         "Found chat handler of class[%s]",
         Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider").getClass().getName()
     );
-    chatHandlerProvider.register(getId(), this, false);
+    chatHandlerProvider.register(taskId, this, false);
 
-    final Iterator<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator().iterator();
+    final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator().iterator();
     final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
@@ -248,7 +162,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
 
       log.info("Waiting for subTasks to be completed");
       while (!stopped && !Thread.currentThread().isInterrupted()) {
-        final SubTaskCompleteEvent<SinglePhaseParallelIndexSubTask> taskCompleteEvent = taskCompleteEvents.poll(
+        final SubTaskCompleteEvent<ParallelIndexSubTask> taskCompleteEvent = taskCompleteEvents.poll(
             taskStatusCheckingPeriod,
             TimeUnit.MILLISECONDS
         );
@@ -281,9 +195,9 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
                     final Status monitorStatus = taskMonitor.getStatus();
                     throw new ISE(
                         "Expected for [%d] tasks to succeed, but we got [%d] succeeded tasks and [%d] failed tasks",
-                        monitorStatus.expectedSucceeded,
-                        monitorStatus.succeeded,
-                        monitorStatus.failed
+                        monitorStatus.getExpectedSucceeded(),
+                        monitorStatus.getSucceeded(),
+                        monitorStatus.getFailed()
                     );
                   }
                 }
@@ -303,8 +217,8 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
               if (lastStatus != null) {
                 log.error("Failed because of the failed sub task[%s]", lastStatus.getId());
               } else {
-                final SinglePhaseParallelIndexSubTaskSpec spec =
-                    (SinglePhaseParallelIndexSubTaskSpec) taskCompleteEvent.getSpec();
+                final ParallelIndexSubTaskSpec spec =
+                    (ParallelIndexSubTaskSpec) taskCompleteEvent.getSpec();
                 log.error(
                     "Failed to run sub tasks for inputSplits[%s]",
                     getSplitsIfSplittable(spec.getIngestionSpec().getIOConfig().getFirehoseFactory())
@@ -322,7 +236,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       // Cleanup resources
       taskCompleteEvents.clear();
       taskMonitor.stop();
-      chatHandlerProvider.unregister(getId());
+      chatHandlerProvider.unregister(taskId);
 
       if (state != TaskState.SUCCESS) {
         log.info(
@@ -337,25 +251,18 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       }
     }
 
-    return TaskStatus.fromCode(getId(), state);
+    return state;
   }
 
-  private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
+  @VisibleForTesting
+  ParallelIndexIngestionSpec getIngestionSchema()
   {
-    return new IndexTask(
-        getId(),
-        getGroupId(),
-        getTaskResource(),
-        getDataSource(),
-        new IndexIngestionSpec(
-            getIngestionSchema().getDataSchema(),
-            getIngestionSchema().getIOConfig(),
-            convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
-        ),
-        getContext(),
-        authorizerMapper,
-        chatHandlerProvider
-    ).run(toolbox);
+    return ingestionSchema;
+  }
+
+  private String getDataSource()
+  {
+    return ingestionSchema.getDataSchema().getDataSource();
   }
 
   // Internal API for collecting reports from subTasks
@@ -368,7 +275,12 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       @Context final HttpServletRequest req
   )
   {
-    ChatHandlers.authorizationCheck(req, Action.WRITE, getDataSource(), authorizerMapper);
+    ChatHandlers.authorizationCheck(
+        req,
+        Action.WRITE,
+        getDataSource(),
+        authorizerMapper
+    );
     collectReport(report);
     return Response.status(Response.Status.OK).build();
   }
@@ -390,30 +302,6 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       }
       return report;
     });
-  }
-
-  private static IndexTuningConfig convertToIndexTuningConfig(SinglePhaseParallelIndexTuningConfig tuningConfig)
-  {
-    return new IndexTuningConfig(
-        tuningConfig.getTargetPartitionSize(),
-        tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getMaxBytesInMemory(),
-        tuningConfig.getMaxTotalRows(),
-        null,
-        tuningConfig.getNumShards(),
-        tuningConfig.getIndexSpec(),
-        tuningConfig.getMaxPendingPersists(),
-        true,
-        tuningConfig.isForceExtendableShardSpecs(),
-        false,
-        tuningConfig.isReportParseExceptions(),
-        null,
-        tuningConfig.getPushTimeout(),
-        tuningConfig.getSegmentWriteOutMediumFactory(),
-        tuningConfig.isLogParseExceptions(),
-        tuningConfig.getMaxParseExceptions(),
-        tuningConfig.getMaxSavedParseExceptions()
-    );
   }
 
   private void publish(TaskToolbox toolbox) throws IOException
@@ -450,18 +338,18 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   private void submitNewTask(
-      TaskMonitor<SinglePhaseParallelIndexSubTask> taskMonitor,
-      SinglePhaseParallelIndexSubTaskSpec spec
+      TaskMonitor<ParallelIndexSubTask> taskMonitor,
+      ParallelIndexSubTaskSpec spec
   )
   {
     log.info("Submit a new task for spec[%s] and inputSplit[%s]", spec.getId(), spec.getInputSplit());
-    final ListenableFuture<SubTaskCompleteEvent<SinglePhaseParallelIndexSubTask>> future = taskMonitor.submit(spec);
+    final ListenableFuture<SubTaskCompleteEvent<ParallelIndexSubTask>> future = taskMonitor.submit(spec);
     Futures.addCallback(
         future,
-        new FutureCallback<SubTaskCompleteEvent<SinglePhaseParallelIndexSubTask>>()
+        new FutureCallback<SubTaskCompleteEvent<ParallelIndexSubTask>>()
         {
           @Override
-          public void onSuccess(SubTaskCompleteEvent<SinglePhaseParallelIndexSubTask> completeEvent)
+          public void onSuccess(SubTaskCompleteEvent<ParallelIndexSubTask> completeEvent)
           {
             // this callback is called if a task completed wheter it succeeded or not.
             taskCompleteEvents.offer(completeEvent);
@@ -485,27 +373,27 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   }
 
   @VisibleForTesting
-  Stream<SinglePhaseParallelIndexSubTaskSpec> subTaskSpecIterator() throws IOException
+  Stream<ParallelIndexSubTaskSpec> subTaskSpecIterator() throws IOException
   {
     return baseFirehoseFactory.getSplits().map(this::newTaskSpec);
   }
 
   @VisibleForTesting
-  SinglePhaseParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
+  ParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
   {
-    return new SinglePhaseParallelIndexSubTaskSpec(
-        getId() + "_" + getAndIncrementNextSpecId(),
-        getGroupId(),
-        getId(),
-        new SinglePhaseParallelIndexIngestionSpec(
+    return new ParallelIndexSubTaskSpec(
+        taskId + "_" + getAndIncrementNextSpecId(),
+        groupId,
+        taskId,
+        new ParallelIndexIngestionSpec(
             ingestionSchema.getDataSchema(),
-            new SinglePhaseParallelIndexIOConfig(
+            new ParallelIndexIOConfig(
                 baseFirehoseFactory.withSplit(split),
                 ingestionSchema.getIOConfig().isAppendToExisting()
             ),
             ingestionSchema.getTuningConfig()
         ),
-        getContext(),
+        context,
         split
     );
   }
@@ -557,12 +445,12 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     if (taskMonitor != null) {
-      final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor.getRunningSubTaskSpecs();
-      final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> completeSubTaskSpecs = taskMonitor
+      final List<SubTaskSpec<ParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor.getRunningSubTaskSpecs();
+      final List<SubTaskSpec<ParallelIndexSubTask>> completeSubTaskSpecs = taskMonitor
           .getCompleteSubTaskSpecs();
       // Deduplicate subTaskSpecs because some subTaskSpec might exist both in runningSubTaskSpecs and
       // completeSubTaskSpecs.
-      final Map<String, SubTaskSpec<SinglePhaseParallelIndexSubTask>> subTaskSpecMap = new HashMap<>(
+      final Map<String, SubTaskSpec<ParallelIndexSubTask>> subTaskSpecMap = new HashMap<>(
           runningSubTaskSpecs.size() + completeSubTaskSpecs.size()
       );
       runningSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));
@@ -579,9 +467,9 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   public Response getRunningSubTaskSpecs(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor == null ?
-                                                                                   Collections.emptyList() :
-                                                                                   taskMonitor.getRunningSubTaskSpecs();
+    final List<SubTaskSpec<ParallelIndexSubTask>> runningSubTaskSpecs = taskMonitor == null ?
+                                                                        Collections.emptyList() :
+                                                                        taskMonitor.getRunningSubTaskSpecs();
     return Response.ok(runningSubTaskSpecs).build();
   }
 
@@ -591,7 +479,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
   public Response getCompleteSubTaskSpecs(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    final List<SubTaskSpec<SinglePhaseParallelIndexSubTask>> completeSubTaskSpecs =
+    final List<SubTaskSpec<ParallelIndexSubTask>> completeSubTaskSpecs =
         taskMonitor == null ?
         Collections.emptyList() :
         taskMonitor.getCompleteSubTaskSpecs();
@@ -608,8 +496,8 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
       // adding them to taskHistory.
       final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(id);
-      final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
-      final SubTaskSpec<SinglePhaseParallelIndexSubTask> subTaskSpec;
+      final TaskHistory<ParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
+      final SubTaskSpec<ParallelIndexSubTask> subTaskSpec;
 
       if (monitorEntry != null) {
         subTaskSpec = monitorEntry.getSpec();
@@ -643,20 +531,20 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
       // Running tasks should be checked first because, in taskMonitor, subTaskSpecs are removed from runningTasks after
       // adding them to taskHistory.
       final MonitorEntry monitorEntry = taskMonitor.getRunningTaskMonitorEntory(id);
-      final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
+      final TaskHistory<ParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
 
       final SubTaskStateResponse subTaskStateResponse;
 
       if (monitorEntry != null) {
         subTaskStateResponse = new SubTaskStateResponse(
-            (SinglePhaseParallelIndexSubTaskSpec) monitorEntry.getSpec(),
+            (ParallelIndexSubTaskSpec) monitorEntry.getSpec(),
             monitorEntry.getRunningStatus(),
             monitorEntry.getTaskHistory()
         );
       } else {
         if (taskHistory != null && !taskHistory.isEmpty()) {
           subTaskStateResponse = new SubTaskStateResponse(
-              (SinglePhaseParallelIndexSubTaskSpec) taskHistory.getSpec(),
+              (ParallelIndexSubTaskSpec) taskHistory.getSpec(),
               null,
               taskHistory.getAttemptHistory()
           );
@@ -685,7 +573,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
     if (taskMonitor == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     } else {
-      final TaskHistory<SinglePhaseParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
+      final TaskHistory<ParallelIndexSubTask> taskHistory = taskMonitor.getCompleteSubTaskSpecHistory(id);
 
       if (taskHistory == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
@@ -695,85 +583,16 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
     }
   }
 
-  static class Status
-  {
-    private final int running;
-    private final int succeeded;
-    private final int failed;
-    private final int complete;
-    private final int total;
-    private final int expectedSucceeded;
-
-    static Status empty()
-    {
-      return new Status(0, 0, 0, 0, 0, 0);
-    }
-
-    @JsonCreator
-    Status(
-        @JsonProperty("running") int running,
-        @JsonProperty("succeeded") int succeeded,
-        @JsonProperty("failed") int failed,
-        @JsonProperty("complete") int complete,
-        @JsonProperty("total") int total,
-        @JsonProperty("expectedSucceeded") int expectedSucceeded
-    )
-    {
-      this.running = running;
-      this.succeeded = succeeded;
-      this.failed = failed;
-      this.complete = complete;
-      this.total = total;
-      this.expectedSucceeded = expectedSucceeded;
-    }
-
-    @JsonProperty
-    public int getRunning()
-    {
-      return running;
-    }
-
-    @JsonProperty
-    public int getSucceeded()
-    {
-      return succeeded;
-    }
-
-    @JsonProperty
-    public int getFailed()
-    {
-      return failed;
-    }
-
-    @JsonProperty
-    public int getComplete()
-    {
-      return complete;
-    }
-
-    @JsonProperty
-    public int getTotal()
-    {
-      return total;
-    }
-
-    @JsonProperty
-    public int getExpectedSucceeded()
-    {
-      return expectedSucceeded;
-    }
-  }
-
   static class SubTaskStateResponse
   {
-    private final SinglePhaseParallelIndexSubTaskSpec spec;
+    private final ParallelIndexSubTaskSpec spec;
     @Nullable
     private final TaskStatusPlus currentStatus;
     private final List<TaskStatusPlus> taskHistory;
 
     @JsonCreator
     public SubTaskStateResponse(
-        @JsonProperty("spec") SinglePhaseParallelIndexSubTaskSpec spec,
+        @JsonProperty("spec") ParallelIndexSubTaskSpec spec,
         @JsonProperty("currentStatus") @Nullable TaskStatusPlus currentStatus,
         @JsonProperty("taskHistory") List<TaskStatusPlus> taskHistory
     )
@@ -784,7 +603,7 @@ public class SinglePhaseParallelIndexSupervisorTask extends AbstractTask impleme
     }
 
     @JsonProperty
-    public SinglePhaseParallelIndexSubTaskSpec getSpec()
+    public ParallelIndexSubTaskSpec getSpec()
     {
       return spec;
     }

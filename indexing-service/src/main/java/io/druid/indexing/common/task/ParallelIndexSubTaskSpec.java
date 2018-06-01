@@ -25,16 +25,16 @@ import io.druid.data.input.InputSplit;
 
 import java.util.Map;
 
-class SinglePhaseParallelIndexSubTaskSpec extends SubTaskSpec<SinglePhaseParallelIndexSubTask>
+class ParallelIndexSubTaskSpec extends SubTaskSpec<ParallelIndexSubTask>
 {
-  private final SinglePhaseParallelIndexIngestionSpec ingestionSpec;
+  private final ParallelIndexIngestionSpec ingestionSpec;
 
   @JsonCreator
-  SinglePhaseParallelIndexSubTaskSpec(
+  ParallelIndexSubTaskSpec(
       String id,
       String groupId,
       String supervisorTaskId,
-      SinglePhaseParallelIndexIngestionSpec indexIngestionSpec,
+      ParallelIndexIngestionSpec indexIngestionSpec,
       Map<String, Object> context,
       InputSplit inputSplit
   )
@@ -44,15 +44,15 @@ class SinglePhaseParallelIndexSubTaskSpec extends SubTaskSpec<SinglePhaseParalle
   }
 
   @JsonProperty
-  public SinglePhaseParallelIndexIngestionSpec getIngestionSpec()
+  public ParallelIndexIngestionSpec getIngestionSpec()
   {
     return ingestionSpec;
   }
 
   @Override
-  public SinglePhaseParallelIndexSubTask newSubTask(int numAttempts)
+  public ParallelIndexSubTask newSubTask(int numAttempts)
   {
-    return new SinglePhaseParallelIndexSubTask(
+    return new ParallelIndexSubTask(
         null,
         getGroupId(),
         null,

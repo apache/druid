@@ -3,16 +3,16 @@ layout: doc_page
 ---
 # Native Index Tasks
 
-Druid currently has two types of native batch indexing tasks, `index_single_phase_parallel` which runs tasks
+Druid currently has two types of native batch indexing tasks, `index_parallel` which runs tasks
 in parallel on multiple middle manager nodes, and `index` which will run a single indexing task locally on a single
 middle manager.
 
-Single Phase Parallel Index Task
+Parallel Index Task
 --------------------------------
 
-The Single Phase Parallel Index Task is a task for parallel batch indexing. This task only uses Druid's resource and
-doesn't depend on other external systems like Hadoop. This task works in a single phase without shuffling intermediate
-data. `index_single_phase_parallel` task is a supervisor task which basically generates multiple worker tasks and submits
+The Parallel Index Task is a task for parallel batch indexing. This task only uses Druid's resource and
+doesn't depend on other external systems like Hadoop. This task currently works in a single phase without shuffling intermediate
+data. `index_parallel` task is a supervisor task which basically generates multiple worker tasks and submits
 them to overlords. Each worker task reads input data and makes segments. Once they successfully generate segments for all
 input, they report the generated segment list to the supervisor task. The supervisor task periodically checks the worker
 task statuses. If one of them fails, it retries the failed task until the retrying number reaches the configured limit.
@@ -34,10 +34,10 @@ An example ingestion spec is:
 
 ```json
 {
-  "type": "index_single_phase_parallel",
+  "type": "index_parallel",
   "spec": {
     "dataSchema": {
-      "dataSource": "wikipedia_parallel_single_phase_index_test",
+      "dataSource": "wikipedia_parallel_index_test",
       "metricsSpec": [
         {
           "type": "count",
@@ -90,7 +90,7 @@ An example ingestion spec is:
         }
     },
     "ioConfig": {
-        "type": "index_single_phase_parallel",
+        "type": "index_parallel",
         "firehose": {
           "type": "local",
           "baseDir": "examples/indexing/",
@@ -105,7 +105,7 @@ An example ingestion spec is:
 
 |property|description|required?|
 |--------|-----------|---------|
-|type|The task type, this should always be `index_single_phase_parallel`.|yes|
+|type|The task type, this should always be `index_parallel`.|yes|
 |id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, and date-time stamp. |no|
 |spec|The ingestion spec including the data schema, IOConfig, and TuningConfig. See below for more details. |yes|
 |context|Context containing various task configuration parameters. See below for more details.|no|
@@ -120,7 +120,7 @@ See [Ingestion](../ingestion/index.html)
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|The task type, this should always be `index_single_phase_parallel`.|none|yes|
+|type|The task type, this should always be `index_parallel`.|none|yes|
 |firehose|Specify a [Firehose](../ingestion/firehose.html) here.|none|yes|
 |appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs (which can be forced by setting 'forceExtendableShardSpecs' in the tuning config).|false|no|
 
@@ -130,7 +130,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|The task type, this should always be `index_single_phase_parallel`.|none|yes|
+|type|The task type, this should always be `index_parallel`.|none|yes|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
@@ -142,7 +142,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used|no|
-|maxNumBatchTasks|Maximum number of tasks which can be run at the same time.|Integer.MAX_VALUE|no|
+|maxNumSubTasks|Maximum number of tasks which can be run at the same time.|Integer.MAX_VALUE|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |taskStatusCheckPeriodMs|Polling period in milleseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
@@ -190,9 +190,9 @@ An example of the result is
 ```json
 {
   "spec": {
-    "id": "index_single_phase_parallel_lineitem_2018-04-20T22:12:43.610Z_2",
-    "groupId": "index_single_phase_parallel_lineitem_2018-04-20T22:12:43.610Z",
-    "supervisorTaskId": "index_single_phase_parallel_lineitem_2018-04-20T22:12:43.610Z",
+    "id": "index_parallel_lineitem_2018-04-20T22:12:43.610Z_2",
+    "groupId": "index_parallel_lineitem_2018-04-20T22:12:43.610Z",
+    "supervisorTaskId": "index_parallel_lineitem_2018-04-20T22:12:43.610Z",
     "context": null,
     "inputSplit": {
       "split": "/path/to/data/lineitem.tbl.5"
@@ -292,7 +292,7 @@ An example of the result is
         }
       },
       "ioConfig": {
-        "type": "index_single_phase_parallel",
+        "type": "index_parallel",
         "firehose": {
           "type": "local",
           "baseDir": "/path/to/data/",
@@ -302,7 +302,7 @@ An example of the result is
         "appendToExisting": false
       },
       "tuningConfig": {
-        "type": "index_single_phase_parallel",
+        "type": "index_parallel",
         "targetPartitionSize": 5000000,
         "maxRowsInMemory": 1000000,
         "maxTotalRows": 20000000,
@@ -320,7 +320,7 @@ An example of the result is
         "reportParseExceptions": false,
         "pushTimeout": 0,
         "segmentWriteOutMediumFactory": null,
-        "maxNumBatchTasks": 2147483647,
+        "maxNumSubTasks": 2147483647,
         "maxRetry": 3,
         "taskStatusCheckPeriodMs": 1000,
         "chatHandlerTimeout": "PT10S",
@@ -334,8 +334,8 @@ An example of the result is
     }
   },
   "currentStatus": {
-    "id": "index_single_phase_sub_lineitem_2018-04-20T22:16:29.922Z",
-    "type": "index_single_phase_sub",
+    "id": "index_sub_lineitem_2018-04-20T22:16:29.922Z",
+    "type": "index_sub",
     "createdTime": "2018-04-20T22:16:29.925Z",
     "queueInsertionTime": "2018-04-20T22:16:29.929Z",
     "statusCode": "RUNNING",

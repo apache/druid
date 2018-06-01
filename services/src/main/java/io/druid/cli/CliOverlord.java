@@ -56,7 +56,7 @@ import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.IndexTaskClientFactory;
-import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClient;
+import io.druid.indexing.common.task.ParallelIndexTaskClient;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -186,7 +186,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(IndexingServiceClient.class).toProvider(Providers.of(null));
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>>(){})
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
                   .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
 

@@ -42,7 +42,7 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.IndexTaskClientFactory;
-import io.druid.indexing.common.task.SinglePhaseParallelIndexTaskClient;
+import io.druid.indexing.common.task.ParallelIndexTaskClient;
 import io.druid.indexing.overlord.ForkingTaskRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.worker.Worker;
@@ -96,7 +96,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
 
             binder.bind(IndexingServiceClient.class).toProvider(Providers.of(null));
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<SinglePhaseParallelIndexTaskClient>>(){})
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
                   .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
 

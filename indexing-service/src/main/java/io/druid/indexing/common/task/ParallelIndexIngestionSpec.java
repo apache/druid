@@ -24,25 +24,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IngestionSpec;
 
-public class SinglePhaseParallelIndexIngestionSpec
-    extends IngestionSpec<SinglePhaseParallelIndexIOConfig, SinglePhaseParallelIndexTuningConfig>
+public class ParallelIndexIngestionSpec extends IngestionSpec<ParallelIndexIOConfig, ParallelIndexTuningConfig>
 {
   private final DataSchema dataSchema;
-  private final SinglePhaseParallelIndexIOConfig ioConfig;
-  private final SinglePhaseParallelIndexTuningConfig tuningConfig;
+  private final ParallelIndexIOConfig ioConfig;
+  private final ParallelIndexTuningConfig tuningConfig;
 
   @JsonCreator
-  public SinglePhaseParallelIndexIngestionSpec(
+  public ParallelIndexIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("ioConfig") SinglePhaseParallelIndexIOConfig ioConfig,
-      @JsonProperty("tuningConfig") SinglePhaseParallelIndexTuningConfig tuningConfig
+      @JsonProperty("ioConfig") ParallelIndexIOConfig ioConfig,
+      @JsonProperty("tuningConfig") ParallelIndexTuningConfig tuningConfig
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
 
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
-    this.tuningConfig = tuningConfig == null ? SinglePhaseParallelIndexTuningConfig.defaultConfig() : tuningConfig;
+    this.tuningConfig = tuningConfig == null ? ParallelIndexTuningConfig.defaultConfig() : tuningConfig;
   }
 
   @Override
@@ -54,14 +53,14 @@ public class SinglePhaseParallelIndexIngestionSpec
 
   @Override
   @JsonProperty("ioConfig")
-  public SinglePhaseParallelIndexIOConfig getIOConfig()
+  public ParallelIndexIOConfig getIOConfig()
   {
     return ioConfig;
   }
 
   @Override
   @JsonProperty("tuningConfig")
-  public SinglePhaseParallelIndexTuningConfig getTuningConfig()
+  public ParallelIndexTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
