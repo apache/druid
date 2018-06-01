@@ -102,6 +102,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
 
   List<TaskInfo> getCompletedTaskInfo(DateTime timestamp, @Nullable Integer maxNumStatuses);
 
+  List<EntryType> getCompletedTasks(DateTime minus, Integer maxTaskStatuses);
+
   List<TaskInfo> getActiveTaskInfo();
 
   /**

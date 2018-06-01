@@ -112,6 +112,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return entryTable;
   }
 
+  public TypeReference getEntryType()
+  {
+    return entryType;
+  }
+
   @Override
   public void insert(
       final String id,
@@ -309,6 +314,34 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                     }
                     catch (IOException e) {
                       log.makeAlert(e, "Failed to parse status payload")
+                         .addData("entry", r.getString("id"))
+                         .emit();
+                      throw new SQLException(e);
+                    }
+                  }
+              ).list();
+        }
+    );
+  }
+
+  @Override
+  public List<EntryType> getCompletedTasks(DateTime timestamp, @Nullable Integer max)
+  {
+    return getConnector().retryWithHandle(
+        handle -> {
+          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, max);
+
+          return query
+              .map(
+                  (ResultSetMapper<EntryType>) (index, r, ctx) -> {
+                    try {
+                      return getJsonMapper().readValue(
+                          r.getBytes("payload"),
+                          getStatusType()
+                      );
+                    }
+                    catch (IOException e) {
+                      log.makeAlert(e, "Failed to parse payload")
                          .addData("entry", r.getString("id"))
                          .emit();
                       throw new SQLException(e);

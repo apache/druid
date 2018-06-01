@@ -21,8 +21,8 @@ package io.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import io.druid.indexer.TaskInfo;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Pair;
@@ -135,6 +135,8 @@ public interface TaskStorage
   List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
 
   List<TaskInfo> getRecentlyFinishedTaskInfo(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
+
+  List<Task> getRecentlyFinishedTasks(@Nullable Integer maxCompletedTasks, @Nullable Duration duration);
 
   @Nullable
   Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);

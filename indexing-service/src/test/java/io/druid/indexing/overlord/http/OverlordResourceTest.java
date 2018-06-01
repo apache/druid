@@ -65,6 +65,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
@@ -362,6 +363,20 @@ public class OverlordResourceTest
             new TaskInfo.TaskInfoBuilder().build("id_5", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "deny"),
             new TaskInfo.TaskInfoBuilder().build("id_6", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow"),
             new TaskInfo.TaskInfoBuilder().build("id_7", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow")
+        )
+    );
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTasks(null, null)).andStubReturn(
+        Lists.transform(
+            tasksIds,
+            new Function<String, Task>()
+            {
+              @Nullable
+              @Override
+              public Task apply(@Nullable String s)
+              {
+                return null;
+              }
+            }
         )
     );
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);

@@ -54,7 +54,10 @@ public class PostgreSQLMetadataStorageActionHandler<EntryType, StatusType, LogTy
     String sql = StringUtils.format(
         "SELECT "
         + "  id, "
-        + "  status_payload "
+        + "  status_payload, "
+        + " created_date, "
+        + " datasource, "
+        + " payload "
         + "FROM "
         + "  %s "
         + "WHERE "

@@ -122,6 +122,7 @@ public class OverlordResource
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   //in memory cache for task info indexed by task id
   private Map<String, TaskInfo> taskInfoCache = new ConcurrentHashMap<>();
+  private Map<String, Task> completeTaskCache = new ConcurrentHashMap<>();
 
 
   @Inject
@@ -716,19 +717,11 @@ public class OverlordResource
       duration = theInterval.toDuration();
     }
 
-    final Function<String, Task> taskFunction = taskId -> {
-      //todo get rid of this call, cache the payload/type
-      final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
-      if (!optionalTask.isPresent()) {
-        throw new WebApplicationException(
-            Response.serverError().entity(
-                StringUtils.format("No task information found for task with id: [%s]", taskId)
-            ).build()
-        );
-      }
-      return optionalTask.get();
-    };
-
+    final List<Task> tasks = taskStorageQueryAdapter.getRecentlyCompletedTasks(
+        maxCompletedTasks, duration);
+    for (Task task : tasks) {
+      completeTaskCache.putIfAbsent(task.getId(), task);
+    }
 
     final List<TaskInfo> taskInfoList = taskStorageQueryAdapter.recentlyCompletedTaskInfo(
         maxCompletedTasks, duration);
@@ -744,7 +737,7 @@ public class OverlordResource
         status -> {
           return new TaskStatusPlus(
               status.getId(),
-              taskFunction.apply(status.getId()).getType(),
+              completeTaskCache.get(status.getId()).getType(),
               taskInfoCache.get(status.getId()).getCreatedTime(),
               // Would be nice to include the real queue insertion time, but the
               // TaskStorage API doesn't yet allow it.

@@ -259,6 +259,26 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
+  @Override
+  public List<Task> getRecentlyFinishedTasks(
+      @Nullable Integer maxCompletedTasks, @Nullable Duration duration
+  )
+  {
+    giant.lock();
+    try {
+      final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : tasks.values()) {
+        if (taskStuff.getStatus().isComplete()) {
+          listBuilder.add(taskStuff.getTask());
+        }
+      }
+      return listBuilder.build();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
   private List<TaskStatus> getRecentlyFinishedTaskStatusesSince(long start, Ordering<TaskStuff> createdDateDesc)
   {
     giant.lock();

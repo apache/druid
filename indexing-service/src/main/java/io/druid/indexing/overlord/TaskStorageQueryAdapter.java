@@ -120,5 +120,10 @@ public class TaskStorageQueryAdapter
   {
     return storage.getCreatedDateTimeAndDataSource(taskId);
   }
-  
+
+  public List<Task> getRecentlyCompletedTasks(Integer maxCompletedTasks, Duration duration)
+  {
+
+    return storage.getRecentlyFinishedTasks(maxCompletedTasks, duration);
+  }
 }
