@@ -37,6 +37,7 @@ import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.ConfigManager.SetResult;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
@@ -473,7 +474,7 @@ public class OverlordResource
                         task.getType(),
                         SettableFuture.create(),
                         task.getDataSource(),
-                        TaskState.WAITING
+                        RuntimeTaskState.WAITING
                     )
                     {
                       @Override
@@ -495,20 +496,20 @@ public class OverlordResource
   {
     private final String taskType;
     private final String dataSource;
-    private final TaskState taskState;
+    private final RuntimeTaskState runtimeTaskState;
 
     AnyTask(
         String taskId,
         String taskType,
         ListenableFuture<TaskStatus> result,
         String dataSource,
-        TaskState taskState
+        RuntimeTaskState runtimeTaskState
     )
     {
       super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
       this.taskType = taskType;
       this.dataSource = dataSource;
-      this.taskState = taskState;
+      this.runtimeTaskState = runtimeTaskState;
     }
 
     @Override
@@ -530,12 +531,12 @@ public class OverlordResource
     }
 
     @Override
-    public TaskState getTaskState()
+    public RuntimeTaskState getRuntimeTaskState()
     {
-      return taskState;
+      return runtimeTaskState;
     }
 
-    public AnyTask withTaskState(TaskState newTaskState)
+    public AnyTask withTaskState(RuntimeTaskState newTaskState)
     {
       return new AnyTask(getTaskId(), getTaskType(), getResult(), getDataSource(), newTaskState);
     }
@@ -633,7 +634,7 @@ public class OverlordResource
               // Would be nice to include the real queue insertion time, but the
               // TaskStorage API doesn't yet allow it.
               DateTimes.EPOCH,
-              status.getStatusCode(),
+              convertToRuntimeTaskState(status.getStatusCode()),
               status.getDuration(),
               TaskLocation.unknown(),
               pair.rhs,
@@ -642,6 +643,26 @@ public class OverlordResource
         }));
 
     return Response.ok(completeTasks).build();
+  }
+
+  private RuntimeTaskState convertToRuntimeTaskState(TaskState statusCode)
+  {
+    RuntimeTaskState runtimeTaskState;
+    switch (statusCode) {
+      case SUCCESS:
+        runtimeTaskState = RuntimeTaskState.SUCCESS;
+        break;
+      case FAILED:
+        runtimeTaskState = RuntimeTaskState.FAILED;
+        break;
+      case RUNNING:
+        runtimeTaskState = RuntimeTaskState.RUNNING;
+        break;
+      default:
+        runtimeTaskState = RuntimeTaskState.UNKNOWN;
+        break;
+    }
+    return runtimeTaskState;
   }
 
   @GET
@@ -662,7 +683,7 @@ public class OverlordResource
         workItem.getTaskType(),
         workItem.getCreatedTime(),
         workItem.getQueueInsertionTime(),
-        workItem.getTaskState(),
+        workItem.getRuntimeTaskState(),
         null,
         workItem.getLocation(),
         workItem.getDataSource(),
@@ -742,7 +763,7 @@ public class OverlordResource
               // Would be nice to include the real queue insertion time, but the
               // TaskStorage API doesn't yet allow it.
               DateTimes.EPOCH,
-              status.getStatusCode(),
+              convertToRuntimeTaskState(status.getStatusCode()),
               status.getDuration(),
               TaskLocation.unknown(),
               taskInfoCache.get(status.getId()).getDataSource(),
@@ -765,7 +786,7 @@ public class OverlordResource
               task.getType(),
               SettableFuture.create(),
               task.getDataSource(),
-              TaskState.UNKNOWN
+              RuntimeTaskState.UNKNOWN
           ));
     }
 
@@ -786,7 +807,7 @@ public class OverlordResource
       final List<TaskRunnerWorkItem> waitingTasks = Lists.newArrayList();
       for (TaskRunnerWorkItem task : allTasks) {
         if (!runnerKnownTaskIds.contains(task.getTaskId())) {
-          waitingTasks.add(((AnyTask) task).withTaskState(TaskState.WAITING));
+          waitingTasks.add(((AnyTask) task).withTaskState(RuntimeTaskState.WAITING));
         }
       }
       return waitingTasks;
@@ -800,7 +821,7 @@ public class OverlordResource
       final List<TaskRunnerWorkItem> runningTasks = Lists.newArrayList();
       for (TaskRunnerWorkItem task : allTasks) {
         if (runningTaskIds.contains(task.getTaskId())) {
-          runningTasks.add(((AnyTask) task).withTaskState(TaskState.RUNNING));
+          runningTasks.add(((AnyTask) task).withTaskState(RuntimeTaskState.RUNNING));
         }
       }
       return runningTasks;
@@ -814,7 +835,7 @@ public class OverlordResource
       final List<TaskRunnerWorkItem> pendingTasks = Lists.newArrayList();
       for (TaskRunnerWorkItem task : allTasks) {
         if (pendingTaskIds.contains(task.getTaskId())) {
-          pendingTasks.add(((AnyTask) task).withTaskState(TaskState.PENDING));
+          pendingTasks.add(((AnyTask) task).withTaskState(RuntimeTaskState.PENDING));
         }
       }
       return pendingTasks;

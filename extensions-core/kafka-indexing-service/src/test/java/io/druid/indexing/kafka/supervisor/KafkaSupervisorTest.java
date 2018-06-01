@@ -31,10 +31,10 @@ import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -2088,9 +2088,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    public TaskState getTaskState()
+    public RuntimeTaskState getRuntimeTaskState()
     {
-      return TaskState.UNKNOWN;
+      return RuntimeTaskState.UNKNOWN;
     }
 
   }

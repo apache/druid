@@ -29,8 +29,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.guice.annotations.Self;
+import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -390,9 +390,9 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     }
 
     @Override
-    public TaskState getTaskState()
+    public RuntimeTaskState getRuntimeTaskState()
     {
-      return TaskState.UNKNOWN;
+      return RuntimeTaskState.UNKNOWN;
     }
   }
 

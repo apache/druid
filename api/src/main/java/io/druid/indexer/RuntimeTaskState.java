@@ -16,15 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.indexer;
 
-public enum TaskState
+/**
+ * This includes the state of a task in the task runner in addition to {@link TaskState}, this state is not stored in database
+ */
+public enum RuntimeTaskState
 {
+  WAITING,
+  PENDING,
   RUNNING,
+  UNKNOWN,
   SUCCESS,
-  FAILED,
-  UNKNOWN;
+  FAILED;
 
   public boolean isRunnable()
   {
@@ -44,5 +48,15 @@ public enum TaskState
   public boolean isFailure()
   {
     return this == FAILED;
+  }
+
+  public boolean isPending()
+  {
+    return this == PENDING;
+  }
+
+  public boolean isWaiting()
+  {
+    return this == WAITING;
   }
 }

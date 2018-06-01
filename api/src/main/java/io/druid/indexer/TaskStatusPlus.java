@@ -33,7 +33,7 @@ public class TaskStatusPlus
   private final String type;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
-  private final TaskState state;
+  private final RuntimeTaskState state;
   private final Long duration;
   private final TaskLocation location;
   private final String dataSource;
@@ -47,7 +47,7 @@ public class TaskStatusPlus
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
-      @JsonProperty("statusCode") @Nullable TaskState state,
+      @JsonProperty("statusCode") @Nullable RuntimeTaskState state,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
       @JsonProperty("dataSource") @Nullable String dataSource, // nullable for backward compatibility
@@ -95,7 +95,7 @@ public class TaskStatusPlus
 
   @Nullable
   @JsonProperty("statusCode")
-  public TaskState getState()
+  public RuntimeTaskState getState()
   {
     return state;
   }
