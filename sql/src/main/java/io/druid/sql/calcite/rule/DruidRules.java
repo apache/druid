@@ -239,19 +239,9 @@ public class DruidRules
     )
     {
       @Override
-      public boolean matches(RelOptRuleCall call)
-      {
-        final Project project = call.rel(0);
-        final Sort sort = call.rel(1);
-        final Aggregate aggregate = call.rel(2);
-
-        return aggregate != null && sort != null && project != null;
-      }
-
-      @Override
       public void onMatch(RelOptRuleCall call)
       {
-        final Project project = call.rel(0);
+        final Project sortProject = call.rel(0);
         final Sort sort = call.rel(1);
         final Aggregate aggregate = call.rel(2);
         final DruidRel druidRel = call.rel(3);
@@ -261,7 +251,7 @@ public class DruidRules
             PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
                              .withAggregate(aggregate)
                              .withSort(sort)
-                             .withSortProject(project)
+                             .withSortProject(sortProject)
         );
         if (outerQueryRel.isValidDruidQuery()) {
           call.transformTo(outerQueryRel);

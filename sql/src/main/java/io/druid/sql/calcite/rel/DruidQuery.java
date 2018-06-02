@@ -144,7 +144,7 @@ public class DruidQuery
     this.sortProject = computeSortProject(partialQuery, plannerContext, sortingInputRowSignature, grouping);
 
     // outputRowSignature is used only for scan and select query, and thus sort and grouping must be null
-    this.outputRowSignature = sortingInputRowSignature;
+    this.outputRowSignature = sortProject == null ? sortingInputRowSignature : sortProject.getOutputRowSignature();
 
     this.limitSpec = computeLimitSpec(partialQuery, sortingInputRowSignature);
     this.query = computeQuery();
@@ -278,8 +278,15 @@ public class DruidQuery
     if (aggregateProject == null) {
       return Grouping.create(dimensions, aggregations, havingFilter, aggregateRowSignature);
     } else {
-      final RowOrderAndPostAggregations rowOrderAndPostAggregations = computePostAggregations(plannerContext, aggregateRowSignature, aggregateProject, 0);
-      aggregations.addAll(rowOrderAndPostAggregations.postAggregations);
+      final ProjectRowOrderAndPostAggregations projectRowOrderAndPostAggregations = computePostAggregations(
+          plannerContext,
+          aggregateRowSignature,
+          aggregateProject,
+          0
+      );
+      projectRowOrderAndPostAggregations.postAggregations.forEach(
+          postAggregator -> aggregations.add(Aggregation.create(postAggregator))
+      );
 
       // Remove literal dimensions that did not appear in the projection. This is useful for queries
       // like "SELECT COUNT(*) FROM tbl GROUP BY 'dummy'" which some tools can generate, and for which we don't
@@ -297,7 +304,7 @@ public class DruidQuery
           dimensions,
           aggregations,
           havingFilter,
-          RowSignature.from(rowOrderAndPostAggregations.rowOrder, aggregateProject.getRowType())
+          RowSignature.from(projectRowOrderAndPostAggregations.rowOrder, aggregateProject.getRowType())
       );
     }
   }
@@ -320,7 +327,7 @@ public class DruidQuery
           .mapToInt(postAggregator -> Integer.parseInt(postAggregator.getName().substring(1)))
           .max();
 
-      final RowOrderAndPostAggregations rowOrderAndPostAggregations = computePostAggregations(
+      final ProjectRowOrderAndPostAggregations projectRowOrderAndPostAggregations = computePostAggregations(
           plannerContext,
           sortingInputRowSignature,
           sortProject,
@@ -329,25 +336,25 @@ public class DruidQuery
 
       return new SortProject(
           sortingInputRowSignature,
-          rowOrderAndPostAggregations.postAggregations,
-          RowSignature.from(rowOrderAndPostAggregations.rowOrder, sortProject.getRowType())
+          projectRowOrderAndPostAggregations.postAggregations,
+          RowSignature.from(projectRowOrderAndPostAggregations.rowOrder, sortProject.getRowType())
       );
     }
   }
 
-  private static class RowOrderAndPostAggregations
+  private static class ProjectRowOrderAndPostAggregations
   {
     private final List<String> rowOrder;
-    private final List<Aggregation> postAggregations;
+    private final List<PostAggregator> postAggregations;
 
-    RowOrderAndPostAggregations(List<String> rowOrder, List<Aggregation> postAggregations)
+    ProjectRowOrderAndPostAggregations(List<String> rowOrder, List<PostAggregator> postAggregations)
     {
       this.rowOrder = rowOrder;
       this.postAggregations = postAggregations;
     }
   }
 
-  private static RowOrderAndPostAggregations computePostAggregations(
+  private static ProjectRowOrderAndPostAggregations computePostAggregations(
       PlannerContext plannerContext,
       RowSignature inputRowSignature,
       Project project,
@@ -355,7 +362,7 @@ public class DruidQuery
   )
   {
     final List<String> rowOrder = new ArrayList<>();
-    final List<Aggregation> aggregations = new ArrayList<>();
+    final List<PostAggregator> aggregations = new ArrayList<>();
 
     for (final RexNode postAggregatorRexNode : project.getChildExps()) {
       // Attempt to convert to PostAggregator.
@@ -381,12 +388,12 @@ public class DruidQuery
             null,
             plannerContext.getExprMacroTable()
         );
-        aggregations.add(Aggregation.create(postAggregator));
+        aggregations.add(postAggregator);
         rowOrder.add(postAggregator.getName());
       }
     }
 
-    return new RowOrderAndPostAggregations(rowOrder, aggregations);
+    return new ProjectRowOrderAndPostAggregations(rowOrder, aggregations);
   }
 
   /**
@@ -611,12 +618,6 @@ public class DruidQuery
     if (selectProjection != null) {
       retVal.addAll(selectProjection.getVirtualColumns());
     } else {
-      if (sortProject != null) {
-        for (Aggregation aggregation : sortProject.getPostAggregators()) {
-          retVal.addAll(aggregation.getVirtualColumns());
-        }
-      }
-
       if (grouping != null) {
         if (includeDimensions) {
           for (DimensionExpression dimensionExpression : grouping.getDimensions()) {
@@ -879,9 +880,7 @@ public class DruidQuery
 
     final List<PostAggregator> postAggregators = new ArrayList<>(grouping.getPostAggregators());
     if (sortProject != null) {
-      postAggregators.addAll(
-          sortProject.getPostAggregators().stream().map(Aggregation::getPostAggregator).collect(Collectors.toList())
-      );
+      postAggregators.addAll(sortProject.getPostAggregators());
     }
 
     return new GroupByQuery(

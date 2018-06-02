@@ -21,7 +21,6 @@ package io.druid.sql.calcite.rel;
 import com.google.common.base.Preconditions;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.PostAggregator;
-import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.table.RowSignature;
 
 import java.util.HashSet;
@@ -32,12 +31,12 @@ import java.util.Set;
 public class SortProject
 {
   private final RowSignature inputRowSignature;
-  private final List<Aggregation> postAggregators;
+  private final List<PostAggregator> postAggregators;
   private final RowSignature outputRowSignature;
 
   SortProject(
       RowSignature inputRowSignature,
-      List<Aggregation> postAggregators,
+      List<PostAggregator> postAggregators,
       RowSignature outputRowSignature
   )
   {
@@ -53,10 +52,9 @@ public class SortProject
       }
     });
 
-    for (Aggregation aggregation : postAggregators) {
-      final PostAggregator postAggregator = aggregation.getPostAggregator();
+    for (PostAggregator postAggregator : postAggregators) {
       if (postAggregator == null) {
-        throw new ISE("aggregation[%s] is not a postAggregator", aggregation);
+        throw new ISE("aggregation[%s] is not a postAggregator", postAggregator);
       }
       if (!seen.add(postAggregator.getName())) {
         throw new ISE("Duplicate field name: %s", postAggregator.getName());
@@ -71,9 +69,14 @@ public class SortProject
     });
   }
 
-  public List<Aggregation> getPostAggregators()
+  public List<PostAggregator> getPostAggregators()
   {
     return postAggregators;
+  }
+
+  public RowSignature getOutputRowSignature()
+  {
+    return outputRowSignature;
   }
 
   @Override
