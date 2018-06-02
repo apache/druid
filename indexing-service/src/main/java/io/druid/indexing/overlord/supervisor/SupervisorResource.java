@@ -202,7 +202,7 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            Optional<Map<String, Object>> stats = manager.getSupervisorStats(id);
+            Optional<Map<String, Map<String, Object>>> stats = manager.getSupervisorStats(id);
             if (!stats.isPresent()) {
               return Response.status(Response.Status.NOT_FOUND)
                              .entity(

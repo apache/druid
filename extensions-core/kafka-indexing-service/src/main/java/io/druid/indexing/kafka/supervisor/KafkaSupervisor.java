@@ -489,14 +489,14 @@ public class KafkaSupervisor implements Supervisor
   }
 
   @Override
-  public Map<String, Object> getStats()
+  public Map<String, Map<String, Object>> getStats()
   {
     try {
       return getCurrentTotalStats();
     }
     catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
-      log.error("getStats() interrupted.");
+      log.error(ie, "getStats() interrupted.");
       throw new RuntimeException(ie);
     }
     catch (ExecutionException | TimeoutException eete) {
@@ -2229,10 +2229,11 @@ public class KafkaSupervisor implements Supervisor
    * @throws ExecutionException
    * @throws TimeoutException
    */
-  private Map<String, Object> getCurrentTotalStats() throws InterruptedException, ExecutionException, TimeoutException
+  private Map<String, Map<String, Object>> getCurrentTotalStats() throws InterruptedException, ExecutionException, TimeoutException
   {
-    Map<String, Object> allStats = Maps.newHashMap();
+    Map<String, Map<String, Object>> allStats = Maps.newHashMap();
     final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
+    final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
 
     for (int groupId : taskGroups.keySet()) {
       TaskGroup group = taskGroups.get(groupId);
@@ -2249,6 +2250,7 @@ public class KafkaSupervisor implements Supervisor
                 }
             )
         );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
       }
     }
 
@@ -2267,16 +2269,27 @@ public class KafkaSupervisor implements Supervisor
                 }
             )
         );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
       }
     }
 
     List<StatsFromTaskResult> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-    for (StatsFromTaskResult result : results) {
-      Map<String, Object> groupMap = (Map<String, Object>) allStats.putIfAbsent(result.getGroupId(), Maps.newHashMap());
-      if (groupMap == null) {
-        groupMap = (Map<String, Object>) allStats.get(result.getGroupId());
+    if (results.size() != futures.size()) {
+      log.error(
+          "getCurrentTotalStats results size[%d] does not match futures size[%d]",
+          results.size(),
+          futures.size()
+      );
+    }
+    for (int i = 0; i < results.size(); i++) {
+      StatsFromTaskResult result = results.get(i);
+      if (result != null) {
+        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> Maps.newHashMap());
+        groupMap.put(result.getTaskId(), result.getStats());
+      } else {
+        Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
+        log.error("Failed to get stats for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
       }
-      groupMap.put(result.getTaskId(), result.getStats());
     }
 
     return allStats;

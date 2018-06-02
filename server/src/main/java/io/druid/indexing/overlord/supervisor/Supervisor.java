@@ -39,7 +39,7 @@ public interface Supervisor
 
   SupervisorReport getStatus();
 
-  default Map<String, Object> getStats()
+  default Map<String, Map<String, Object>> getStats()
   {
     return ImmutableMap.of();
   }

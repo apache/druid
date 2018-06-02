@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -269,11 +270,11 @@ public class KafkaIndexTaskClient
           true
       );
       return response.getContent() == null || response.getContent().isEmpty()
-             ? ImmutableMap.of()
+             ? Collections.emptyMap()
              : jsonMapper.readValue(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
     }
     catch (NoTaskLocationException e) {
-      return ImmutableMap.of();
+      return Collections.emptyMap();
     }
     catch (IOException e) {
       throw new RuntimeException(e);
