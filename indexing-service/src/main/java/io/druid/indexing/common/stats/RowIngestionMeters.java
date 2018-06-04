@@ -19,6 +19,8 @@
 
 package io.druid.indexing.common.stats;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
 import java.util.Map;
 
 /**
@@ -27,6 +29,7 @@ import java.util.Map;
  * FireDepartmentMetrics are not currently supported, so we continue to use FireDepartmentMetrics alongside
  * RowIngestionMeters to avoid unnecessary overhead from maintaining these moving averages.
  */
+@ExtensionPoint
 public interface RowIngestionMeters
 {
   String BUILD_SEGMENTS = "buildSegments";

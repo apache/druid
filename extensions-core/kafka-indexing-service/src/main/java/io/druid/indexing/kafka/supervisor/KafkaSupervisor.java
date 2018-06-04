@@ -2274,13 +2274,6 @@ public class KafkaSupervisor implements Supervisor
     }
 
     List<StatsFromTaskResult> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-    if (results.size() != futures.size()) {
-      log.error(
-          "getCurrentTotalStats results size[%d] does not match futures size[%d]",
-          results.size(),
-          futures.size()
-      );
-    }
     for (int i = 0; i < results.size(); i++) {
       StatsFromTaskResult result = results.get(i);
       if (result != null) {
