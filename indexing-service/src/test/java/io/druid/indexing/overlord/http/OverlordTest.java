@@ -29,11 +29,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
-import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
@@ -404,9 +403,9 @@ public class OverlordTest
         }
 
         @Override
-        public RuntimeTaskState getRuntimeTaskState()
+        public TaskState getTaskState()
         {
-          return RuntimeTaskState.UNKNOWN;
+          return TaskState.UNKNOWN;
         }
       };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);

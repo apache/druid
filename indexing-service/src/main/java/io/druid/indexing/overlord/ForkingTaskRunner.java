@@ -42,8 +42,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
-import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
@@ -793,9 +793,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     }
 
     @Override
-    public RuntimeTaskState getRuntimeTaskState()
+    public TaskState getTaskState()
     {
-      return RuntimeTaskState.UNKNOWN;
+      return TaskState.UNKNOWN;
     }
 
   }

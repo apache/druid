@@ -337,7 +337,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                     try {
                       return getJsonMapper().readValue(
                           r.getBytes("payload"),
-                          getEntryType()
+                          getStatusType()
                       );
                     }
                     catch (IOException e) {

@@ -25,12 +25,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
@@ -918,9 +917,9 @@ public class OverlordResourceTest
     }
 
     @Override
-    public RuntimeTaskState getRuntimeTaskState()
+    public TaskState getTaskState()
     {
-      return RuntimeTaskState.UNKNOWN;
+      return TaskState.UNKNOWN;
     }
   }
 

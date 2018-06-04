@@ -28,8 +28,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.concurrent.TaskThreadPriority;
-import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -323,9 +323,9 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
     }
 
     @Override
-    public RuntimeTaskState getRuntimeTaskState()
+    public TaskState getTaskState()
     {
-      return RuntimeTaskState.UNKNOWN;
+      return TaskState.UNKNOWN;
     }
 
     @Override

@@ -20,8 +20,8 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.SettableFuture;
-import io.druid.indexer.RuntimeTaskState;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
@@ -112,9 +112,9 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
   }
 
   @Override
-  public RuntimeTaskState getRuntimeTaskState()
+  public TaskState getTaskState()
   {
-    return RuntimeTaskState.UNKNOWN;
+    return TaskState.UNKNOWN;
   }
 
   public void setWorker(Worker worker)
