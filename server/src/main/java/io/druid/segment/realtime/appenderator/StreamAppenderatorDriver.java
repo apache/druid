@@ -34,6 +34,7 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ListenableFutures;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -46,6 +47,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -394,7 +396,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     // segmentId -> (appendingSegment, appendFinishedSegments)
     private final NavigableMap<SegmentIdentifier, Pair<SegmentWithState, List<SegmentWithState>>> intervalToSegments =
-        new TreeMap<>();
+        new TreeMap<>(Comparator.comparing(SegmentIdentifier::getInterval, Comparators.intervalsByStartThenEnd()));
     private final String lastSegmentId;
 
     SegmentsForSequenceBuilder(String lastSegmentId)
