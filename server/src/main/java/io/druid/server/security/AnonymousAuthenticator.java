@@ -41,9 +41,6 @@ import java.util.Map;
 public class AnonymousAuthenticator implements Authenticator
 {
   private final AuthenticationResult anonymousResult;
-  private final String name;
-  private final String authorizerName;
-  private final String identity;
   private final String DEFAULT_IDENTITY = "defaultUser";
 
   @JsonCreator
@@ -53,13 +50,10 @@ public class AnonymousAuthenticator implements Authenticator
       @JsonProperty("identity") String identity
   )
   {
-    this.name = name;
-    this.authorizerName = authorizerName;
-    this.identity = identity == null ? DEFAULT_IDENTITY : identity;
     this.anonymousResult = new AuthenticationResult(
-      this.identity,
-      this.authorizerName,
-      this.name,
+      identity == null ? DEFAULT_IDENTITY : identity,
+      authorizerName,
+      name,
       null
     );
   }
