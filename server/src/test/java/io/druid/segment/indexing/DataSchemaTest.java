@@ -21,7 +21,6 @@ package io.druid.segment.indexing;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.druid.data.input.InputRow;
@@ -50,6 +49,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -61,7 +61,7 @@ public class DataSchemaTest
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Test
-  public void testDefaultExclusions() throws Exception
+  public void testDefaultExclusions()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -94,7 +94,7 @@ public class DataSchemaTest
   }
 
   @Test
-  public void testExplicitInclude() throws Exception
+  public void testExplicitInclude()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -131,7 +131,7 @@ public class DataSchemaTest
   }
 
   @Test
-  public void testTransformSpec() throws Exception
+  public void testTransformSpec()
   {
     Map<String, Object> parserMap = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -170,7 +170,7 @@ public class DataSchemaTest
     final StringInputRowParser parser = (StringInputRowParser) schema.getParser();
 
     final InputRow row1bb = parser.parseBatch(
-        ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"foo\"}".getBytes(Charsets.UTF_8))
+        ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"foo\"}".getBytes(StandardCharsets.UTF_8))
     ).get(0);
     Assert.assertEquals(DateTimes.of("2000-01-01"), row1bb.getTimestamp());
     Assert.assertEquals("foo", row1bb.getRaw("dimA"));
@@ -182,13 +182,13 @@ public class DataSchemaTest
     Assert.assertEquals("foofoo", row1string.getRaw("expr"));
 
     final InputRow row2 = parser.parseBatch(
-        ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"x\"}".getBytes(Charsets.UTF_8))
+        ByteBuffer.wrap("{\"time\":\"2000-01-01\",\"dimA\":\"x\"}".getBytes(StandardCharsets.UTF_8))
     ).get(0);
     Assert.assertNull(row2);
   }
 
   @Test(expected = IAE.class)
-  public void testOverlapMetricNameAndDim() throws Exception
+  public void testOverlapMetricNameAndDim()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -222,7 +222,7 @@ public class DataSchemaTest
   }
 
   @Test(expected = IAE.class)
-  public void testDuplicateAggregators() throws Exception
+  public void testDuplicateAggregators()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(
@@ -284,6 +284,43 @@ public class DataSchemaTest
 
     // Jackson creates a default type parser (StringInputRowParser) for an invalid type.
     schema.getParser();
+  }
+  
+  @Test
+  public void testEmptyDatasource() throws Exception
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")),
+                    ImmutableList.of("dimC"),
+                    null
+                ),
+                null,
+                null
+            ),
+            null
+        ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+
+    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectMessage(
+        "dataSource cannot be null or empty. Please provide a dataSource."
+    );
+
+    DataSchema schema = new DataSchema(
+        "",
+        parser,
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1"),
+            new DoubleSumAggregatorFactory("metric2", "col2"),
+            },
+        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        null,
+        jsonMapper
+    );
   }
 
   @Test

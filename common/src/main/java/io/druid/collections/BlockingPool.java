@@ -19,6 +19,7 @@
 
 package io.druid.collections;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public interface BlockingPool<T>
@@ -33,6 +34,7 @@ public interface BlockingPool<T>
    *
    * @return a resource, or null if the timeout was reached
    */
+  @Nullable
   ReferenceCountingResourceHolder<T> take(long timeoutMs);
 
   /**
@@ -49,16 +51,16 @@ public interface BlockingPool<T>
    * @param elementNum number of resources to take
    * @param timeoutMs  maximum time to wait for resources, in milliseconds.
    *
-   * @return a resource, or null if the timeout was reached
+   * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
    */
-  ReferenceCountingResourceHolder<List<T>> takeBatch(int elementNum, long timeoutMs);
+  List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum, long timeoutMs);
 
   /**
    * Take resources from the pool, waiting if necessary until the elements of the given number become available.
    *
    * @param elementNum number of resources to take
    *
-   * @return a resource
+   * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
    */
-  ReferenceCountingResourceHolder<List<T>> takeBatch(int elementNum);
+  List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum);
 }

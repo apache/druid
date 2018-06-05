@@ -89,7 +89,7 @@ public class AppenderatorTester implements AutoCloseable
       final int maxRowsInMemory
   )
   {
-    this(maxRowsInMemory, null, false);
+    this(maxRowsInMemory, -1, null, false);
   }
 
   public AppenderatorTester(
@@ -97,11 +97,21 @@ public class AppenderatorTester implements AutoCloseable
       final boolean enablePushFailure
   )
   {
-    this(maxRowsInMemory, null, enablePushFailure);
+    this(maxRowsInMemory, -1, null, enablePushFailure);
   }
 
   public AppenderatorTester(
       final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
+  }
+
+  public AppenderatorTester(
+      final int maxRowsInMemory,
+      long maxSizeInBytes,
       final File basePersistDirectory,
       final boolean enablePushFailure
   )
@@ -131,9 +141,10 @@ public class AppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-
+    maxSizeInBytes = maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes;
     tuningConfig = new RealtimeTuningConfig(
         maxRowsInMemory,
+        maxSizeInBytes,
         null,
         null,
         basePersistDirectory,
@@ -145,6 +156,7 @@ public class AppenderatorTester implements AutoCloseable
         null,
         0,
         0,
+        null,
         null,
         null,
         null,
@@ -193,7 +205,7 @@ public class AppenderatorTester implements AutoCloseable
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+      public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
       {
         if (enablePushFailure && mustFail) {
           mustFail = false;
@@ -237,25 +249,25 @@ public class AppenderatorTester implements AutoCloseable
         new DataSegmentAnnouncer()
         {
           @Override
-          public void announceSegment(DataSegment segment) throws IOException
+          public void announceSegment(DataSegment segment)
           {
 
           }
 
           @Override
-          public void unannounceSegment(DataSegment segment) throws IOException
+          public void unannounceSegment(DataSegment segment)
           {
 
           }
 
           @Override
-          public void announceSegments(Iterable<DataSegment> segments) throws IOException
+          public void announceSegments(Iterable<DataSegment> segments)
           {
 
           }
 
           @Override
-          public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+          public void unannounceSegments(Iterable<DataSegment> segments)
           {
 
           }
@@ -265,6 +277,11 @@ public class AppenderatorTester implements AutoCloseable
         MapCache.create(2048),
         new CacheConfig()
     );
+  }
+
+  private long getDefaultMaxBytesInMemory()
+  {
+    return (Runtime.getRuntime().totalMemory()) / 3;
   }
 
   public DataSchema getSchema()

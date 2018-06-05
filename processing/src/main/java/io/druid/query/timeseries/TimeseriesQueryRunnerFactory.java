@@ -68,7 +68,7 @@ public class TimeseriesQueryRunnerFactory
       ExecutorService queryExecutor, Iterable<QueryRunner<Result<TimeseriesResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<Result<TimeseriesResultValue>>(
+    return new ChainedExecutionQueryRunner<>(
         queryExecutor, queryWatcher, queryRunners
     );
   }
@@ -104,4 +104,5 @@ public class TimeseriesQueryRunnerFactory
       return engine.process((TimeseriesQuery) input, adapter);
     }
   }
+
 }

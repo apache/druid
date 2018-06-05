@@ -19,6 +19,13 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.CanonicalGrantee;
+import com.amazonaws.services.s3.model.Grant;
+import com.amazonaws.services.s3.model.Owner;
+import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -31,14 +38,13 @@ import org.apache.commons.io.IOUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.FileInputStream;
 
 /**
  */
@@ -65,27 +71,49 @@ public class S3DataSegmentPusherTest
   @Test
   public void testPush() throws Exception
   {
-    RestS3Service s3Client = EasyMock.createStrictMock(RestS3Service.class);
+    testPushInternal(false, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/index\\.zip");
+  }
 
-    Capture<S3Object> capturedS3Object = Capture.newInstance();
+  @Test
+  public void testPushUseUniquePath() throws Exception
+  {
+    testPushInternal(true, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip");
+  }
+
+  private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    final AccessControlList acl = new AccessControlList();
+    acl.setOwner(new Owner("ownerId", "owner"));
+    acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
+    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(acl).once();
+
+    EasyMock.expect(s3Client.putObject(EasyMock.anyObject()))
+            .andReturn(new PutObjectResult())
+            .once();
+
+    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(acl).once();
+
+    Capture<PutObjectRequest> capturedPutRequest = Capture.newInstance();
     ValueContainer<String> capturedS3SegmentJson = new ValueContainer<>();
-    EasyMock.expect(s3Client.putObject(EasyMock.anyString(), EasyMock.capture(capturedS3Object)))
+    EasyMock.expect(s3Client.putObject(EasyMock.capture(capturedPutRequest)))
             .andAnswer(
-                new IAnswer<S3Object>()
+                new IAnswer<PutObjectResult>()
                 {
                   @Override
-                  public S3Object answer() throws Throwable
+                  public PutObjectResult answer() throws Throwable
                   {
                     capturedS3SegmentJson.setValue(
-                        IOUtils.toString(capturedS3Object.getValue().getDataInputStream(), "utf-8")
+                        IOUtils.toString(new FileInputStream(capturedPutRequest.getValue().getFile()), "utf-8")
                     );
-                    return null;
+                    return new PutObjectResult();
                   }
                 }
             )
-            .atLeastOnce();
-    EasyMock.replay(s3Client);
+            .once();
 
+    EasyMock.replay(s3Client);
 
     S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
     config.setBucket("bucket");
@@ -113,14 +141,15 @@ public class S3DataSegmentPusherTest
         size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, true);
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, useUniquePath);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(1, (int) segment.getBinaryVersion());
     Assert.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
-    Assert.assertEquals(
-        "key/foo/2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z/0/0/index.zip",
-        segment.getLoadSpec().get("key"));
+    Assert.assertTrue(
+        segment.getLoadSpec().get("key").toString(),
+        segment.getLoadSpec().get("key").toString().matches(matcher)
+    );
     Assert.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
 
     // Verify that the pushed S3Object contains the correct data

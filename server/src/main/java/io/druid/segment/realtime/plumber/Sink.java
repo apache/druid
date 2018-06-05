@@ -34,6 +34,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
@@ -44,16 +45,18 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sink implements Iterable<FireHydrant>
 {
-  private static final int ADD_FAILED = -1;
+  private static final IncrementalIndexAddResult ALREADY_SWAPPED = new IncrementalIndexAddResult(-1, -1, null, "write after index swapped");
 
   private final Object hydrantLock = new Object();
   private final Interval interval;
@@ -61,12 +64,15 @@ public class Sink implements Iterable<FireHydrant>
   private final ShardSpec shardSpec;
   private final String version;
   private final int maxRowsInMemory;
+  private final long maxBytesInMemory;
   private final boolean reportParseExceptions;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
   private final LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
   private volatile FireHydrant currHydrant;
   private volatile boolean writable = true;
+  private final String dedupColumn;
+  private final Set<Long> dedupSet = new HashSet<>();
 
   public Sink(
       Interval interval,
@@ -74,7 +80,9 @@ public class Sink implements Iterable<FireHydrant>
       ShardSpec shardSpec,
       String version,
       int maxRowsInMemory,
-      boolean reportParseExceptions
+      long maxBytesInMemory,
+      boolean reportParseExceptions,
+      String dedupColumn
   )
   {
     this.schema = schema;
@@ -82,7 +90,9 @@ public class Sink implements Iterable<FireHydrant>
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
+    this.dedupColumn = dedupColumn;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
@@ -93,7 +103,9 @@ public class Sink implements Iterable<FireHydrant>
       ShardSpec shardSpec,
       String version,
       int maxRowsInMemory,
+      long maxBytesInMemory,
       boolean reportParseExceptions,
+      String dedupColumn,
       List<FireHydrant> hydrants
   )
   {
@@ -102,7 +114,9 @@ public class Sink implements Iterable<FireHydrant>
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
+    this.dedupColumn = dedupColumn;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -124,6 +138,11 @@ public class Sink implements Iterable<FireHydrant>
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
 
+  public void clearDedupCache()
+  {
+    dedupSet.clear();
+  }
+
   public String getVersion()
   {
     return version;
@@ -139,7 +158,7 @@ public class Sink implements Iterable<FireHydrant>
     return currHydrant;
   }
 
-  public int add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
   {
     if (currHydrant == null) {
       throw new IAE("No currHydrant but given row[%s]", row);
@@ -147,13 +166,18 @@ public class Sink implements Iterable<FireHydrant>
 
     synchronized (hydrantLock) {
       if (!writable) {
-        return ADD_FAILED;
+        return Plumber.NOT_WRITABLE;
       }
 
       IncrementalIndex index = currHydrant.getIndex();
       if (index == null) {
-        return ADD_FAILED; // the hydrant was swapped without being replaced
+        return ALREADY_SWAPPED; // the hydrant was swapped without being replaced
       }
+
+      if (checkInDedupSet(row)) {
+        return Plumber.DUPLICATE;
+      }
+
       return index.add(row, skipMaxRowsInMemoryCheck);
     }
   }
@@ -203,6 +227,7 @@ public class Sink implements Iterable<FireHydrant>
   {
     synchronized (hydrantLock) {
       writable = false;
+      clearDedupCache();
     }
   }
 
@@ -249,6 +274,53 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
+  public long getBytesInMemory()
+  {
+    synchronized (hydrantLock) {
+      IncrementalIndex index = currHydrant.getIndex();
+      if (index == null) {
+        return 0;
+      }
+
+      return currHydrant.getIndex().getBytesInMemory();
+    }
+  }
+
+  private boolean checkInDedupSet(InputRow row)
+  {
+    if (dedupColumn != null) {
+      Object value = row.getRaw(dedupColumn);
+      if (value != null) {
+        if (value instanceof List) {
+          throw new IAE("Dedup on multi-value field not support");
+        }
+        Long pk;
+        if (value instanceof Long || value instanceof Integer) {
+          pk = ((Number) value).longValue();
+        } else {
+          // use long type hashcode to reduce heap cost.
+          // maybe hash collision, but it's more important to avoid OOM
+          pk = pkHash(String.valueOf(value));
+        }
+        if (dedupSet.contains(pk)) {
+          return true;
+        }
+        dedupSet.add(pk);
+      }
+    }
+    return false;
+  }
+
+  private long pkHash(String s)
+  {
+    long seed = 131; // 31 131 1313 13131 131313 etc..  BKDRHash
+    long hash = 0;
+    for (int i = 0; i < s.length(); i++) {
+      hash = (hash * seed) + s.charAt(i);
+    }
+    return hash;
+  }
+
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
@@ -263,6 +335,7 @@ public class Sink implements Iterable<FireHydrant>
         .setIndexSchema(indexSchema)
         .setReportParseExceptions(reportParseExceptions)
         .setMaxRowCount(maxRowsInMemory)
+        .setMaxBytesInMemory(maxBytesInMemory)
         .buildOnheap();
 
     final FireHydrant old;

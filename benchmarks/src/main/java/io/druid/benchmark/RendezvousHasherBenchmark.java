@@ -35,7 +35,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -56,7 +55,7 @@ public class RendezvousHasherBenchmark
   Set<String> servers;
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     hasher = new RendezvousHasher();
     uuids = new ArrayList<>();
@@ -83,7 +82,7 @@ public class RendezvousHasherBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void hash(Blackhole blackhole) throws Exception
+  public void hash(Blackhole blackhole)
   {
     for (String uuid : uuids) {
       String server = hasher.chooseNode(servers, StringUtils.toUtf8(uuid));

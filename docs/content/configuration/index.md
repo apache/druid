@@ -346,7 +346,7 @@ You can enable caching of results at the broker, historical, or realtime level u
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
+|`druid.cache.type`|`local`, `memcached`, `hybrid`, `caffeine`|The type of cache to use for queries.|`caffeine`|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.unCacheable</code>|All druid query types|All query types to not cache.|["groupBy", "select"]|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|true, false|Whether to use cache for getting query results.|false|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|true, false|Whether to populate cache.|false|
@@ -417,11 +417,13 @@ JavaScript-based functionality is disabled by default. Please refer to the Druid
 
 ### Double Column storage
 
-Druid's storage layer uses a 32-bit float representation to store columns created by the 
-doubleSum, doubleMin, and doubleMax aggregators at indexing time. To instead use 64-bit floats
-for these columns, please set the system-wide property `druid.indexing.doubleStorage=double`.
-This will become the default behavior in a future version of Druid.
-
+Prior to version 0.13.0 Druid's storage layer used a 32-bit float representation to store columns created by the 
+doubleSum, doubleMin, and doubleMax aggregators at indexing time.
+Starting from version 0.13.0 the default will be 64-bit floats for Double columns.
+Using 64-bit representation for double column will lead to avoid precesion loss at the cost of doubling the storage size of such columns.
+To keep the old format set the system-wide property `druid.indexing.doubleStorage=float`.
+You can also use floatSum, floatMin and floatMax to use 32-bit float representation.
+Support for 64-bit floating point columns was released in Druid 0.11.0, so if you use this feature then older versions of Druid will not be able to read your data segments.
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexing.doubleStorage`|Set to "double" to use 64-bit double representation for double columns.|float|
+|`druid.indexing.doubleStorage`|Set to "float" to use 32-bit double representation for double columns.|double|

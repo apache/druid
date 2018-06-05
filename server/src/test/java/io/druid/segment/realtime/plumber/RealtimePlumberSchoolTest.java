@@ -50,6 +50,7 @@ import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -73,7 +74,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -88,7 +88,7 @@ import java.util.concurrent.TimeUnit;
 public class RealtimePlumberSchoolTest
 {
   @Parameterized.Parameters(name = "rejectionPolicy = {0}, segmentWriteOutMediumFactory = {1}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
         new NoopRejectionPolicyFactory(),
@@ -200,6 +200,7 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         null,
+        null,
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,
@@ -209,6 +210,7 @@ public class RealtimePlumberSchoolTest
         0,
         0,
         false,
+        null,
         null,
         null,
         null
@@ -270,7 +272,9 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
     Assert.assertNull(plumber.startJob());
@@ -314,7 +318,9 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
     plumber.startJob();
@@ -368,7 +374,9 @@ public class RealtimePlumberSchoolTest
         tuningConfig.getShardSpec(),
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     );
     plumber2.getSinks().put(0L, sink);
     Assert.assertNull(plumber2.startJob());

@@ -70,7 +70,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -83,7 +82,7 @@ import java.util.Map;
 public class MultiValuedDimensionTest
 {
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
@@ -102,7 +101,6 @@ public class MultiValuedDimensionTest
   private File persistedSegmentDir;
 
   public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
-      throws Exception
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         ImmutableList.<Module>of(),
@@ -151,7 +149,7 @@ public class MultiValuedDimensionTest
   }
 
   @Test
-  public void testGroupByNoFilter() throws Exception
+  public void testGroupByNoFilter()
   {
     GroupByQuery query = GroupByQuery
         .builder()
@@ -185,7 +183,7 @@ public class MultiValuedDimensionTest
   }
 
   @Test
-  public void testGroupByWithDimFilter() throws Exception
+  public void testGroupByWithDimFilter()
   {
     GroupByQuery query = GroupByQuery
         .builder()
@@ -217,7 +215,7 @@ public class MultiValuedDimensionTest
   }
 
   @Test
-  public void testGroupByWithDimFilterAndWithFilteredDimSpec() throws Exception
+  public void testGroupByWithDimFilterAndWithFilteredDimSpec()
   {
     GroupByQuery query = GroupByQuery
         .builder()
@@ -252,7 +250,7 @@ public class MultiValuedDimensionTest
   }
 
   @Test
-  public void testTopNWithDimFilterAndWithFilteredDimSpec() throws Exception
+  public void testTopNWithDimFilterAndWithFilteredDimSpec()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource("xx")

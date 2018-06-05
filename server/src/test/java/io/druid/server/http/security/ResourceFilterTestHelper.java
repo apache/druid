@@ -61,7 +61,7 @@ public class ResourceFilterTestHelper
   public AuthorizerMapper authorizerMapper;
   public ContainerRequest request;
 
-  public void setUp(ResourceFilter resourceFilter) throws Exception
+  public void setUp(ResourceFilter resourceFilter)
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     request = EasyMock.createStrictMock(ContainerRequest.class);
@@ -110,8 +110,9 @@ public class ResourceFilterTestHelper
         )
     ).anyTimes();
     EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .atLeastOnce();
@@ -182,7 +183,7 @@ public class ResourceFilterTestHelper
             for (Key<?> key : mockableKeys) {
               binder.bind((Key<Object>) key).toInstance(EasyMock.createNiceMock(key.getTypeLiteral().getRawType()));
             }
-            binder.bind(AuthConfig.class).toInstance(new AuthConfig(null, null));
+            binder.bind(AuthConfig.class).toInstance(new AuthConfig());
           }
         }
     );

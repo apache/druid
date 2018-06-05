@@ -65,10 +65,12 @@ import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
@@ -88,7 +90,6 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -136,7 +137,7 @@ public class RealtimeManagerTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
 
@@ -160,7 +161,7 @@ public class RealtimeManagerTest
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory)
           {
             return new TestFirehose(rows.iterator());
           }
@@ -192,7 +193,7 @@ public class RealtimeManagerTest
         new FirehoseFactoryV2()
         {
           @Override
-          public FirehoseV2 connect(InputRowParser parser, Object arg1) throws IOException, ParseException
+          public FirehoseV2 connect(InputRowParser parser, Object arg1) throws ParseException
           {
             return new TestFirehoseV2(rows.iterator());
           }
@@ -200,6 +201,7 @@ public class RealtimeManagerTest
     );
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -214,6 +216,7 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
         null
     );
     plumber = new TestPlumber(new Sink(
@@ -222,7 +225,9 @@ public class RealtimeManagerTest
         tuningConfig.getShardSpec(),
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     ));
 
     realtimeManager = new RealtimeManager(
@@ -242,7 +247,9 @@ public class RealtimeManagerTest
         tuningConfig.getShardSpec(),
         DateTimes.nowUtc().toString(),
         tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
+        tuningConfig.isReportParseExceptions(),
+        tuningConfig.getDedupColumn()
     ));
 
     realtimeManager2 = new RealtimeManager(
@@ -259,6 +266,7 @@ public class RealtimeManagerTest
 
     tuningConfig_0 = new RealtimeTuningConfig(
         1,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -273,11 +281,13 @@ public class RealtimeManagerTest
         null,
         null,
         null,
+        null,
         null
     );
 
     tuningConfig_1 = new RealtimeTuningConfig(
         1,
+        null,
         new Period("P1Y"),
         null,
         null,
@@ -289,6 +299,7 @@ public class RealtimeManagerTest
         null,
         0,
         0,
+        null,
         null,
         null,
         null,
@@ -316,7 +327,7 @@ public class RealtimeManagerTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     realtimeManager.stop();
     realtimeManager2.stop();
@@ -366,7 +377,7 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 5000L)
-  public void testNormalStop() throws IOException, InterruptedException
+  public void testNormalStop() throws InterruptedException
   {
     final TestFirehose firehose = new TestFirehose(rows.iterator());
     final TestFirehoseV2 firehoseV2 = new TestFirehoseV2(rows.iterator());
@@ -374,7 +385,7 @@ public class RealtimeManagerTest
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory)
           {
             return firehose;
           }
@@ -411,14 +422,14 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 5000L)
-  public void testStopByInterruption() throws IOException
+  public void testStopByInterruption()
   {
     final SleepingFirehose firehose = new SleepingFirehose();
     final RealtimeIOConfig ioConfig = new RealtimeIOConfig(
         new FirehoseFactory()
         {
           @Override
-          public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+          public Firehose connect(InputRowParser parser, File temporaryDirectory)
           {
             return firehose;
           }
@@ -444,7 +455,7 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testQueryWithInterval() throws IOException, InterruptedException
+  public void testQueryWithInterval() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 270L),
@@ -470,20 +481,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -516,8 +514,26 @@ public class RealtimeManagerTest
 
   }
 
+  private void awaitStarted() throws InterruptedException
+  {
+    while (true) {
+      boolean notAllStarted = realtimeManager3
+          .getFireChiefs("testing").values().stream()
+          .anyMatch(
+              fireChief -> {
+                final Plumber plumber = fireChief.getPlumber();
+                return plumber == null || !((TestPlumber) plumber).isStartedJob();
+              }
+          );
+      if (!notAllStarted) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+  }
+
   @Test(timeout = 10_000L)
-  public void testQueryWithSegmentSpec() throws IOException, InterruptedException
+  public void testQueryWithSegmentSpec() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -543,20 +559,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     for (QueryRunner runner : QueryRunnerTestHelper.makeQueryRunners((GroupByQueryRunnerFactory) factory)) {
       GroupByQuery query = GroupByQuery
@@ -609,7 +612,7 @@ public class RealtimeManagerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testQueryWithMultipleSegmentSpec() throws IOException, InterruptedException
+  public void testQueryWithMultipleSegmentSpec() throws InterruptedException
   {
 
     List<Row> expectedResults_both_partitions = Arrays.asList(
@@ -655,20 +658,7 @@ public class RealtimeManagerTest
 
     realtimeManager3.start();
 
-    while (true) {
-      boolean notAllStarted = realtimeManager3
-          .getFireChiefs("testing").values().stream()
-          .anyMatch(
-              fireChief -> {
-                final Plumber plumber = fireChief.getPlumber();
-                return plumber == null || !((TestPlumber) plumber).isStartedJob();
-              }
-          );
-      if (!notAllStarted) {
-        break;
-      }
-      Thread.sleep(10);
-    }
+    awaitStarted();
 
     final Interval interval_26_28 = Intervals.of("2011-03-26T00:00:00.000Z/2011-03-28T00:00:00.000Z");
     final Interval interval_28_29 = Intervals.of("2011-03-28T00:00:00.000Z/2011-03-29T00:00:00.000Z");
@@ -889,7 +879,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }
@@ -917,7 +907,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }
@@ -964,7 +954,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void start() throws Exception
+    public void start()
     {
       nextMessage();
     }
@@ -1005,7 +995,7 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }
@@ -1050,16 +1040,16 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+    public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
     {
       if (row == null) {
-        return -1;
+        return Plumber.THROWAWAY;
       }
 
       Sink sink = getSink(row.getTimestampFromEpoch());
 
       if (sink == null) {
-        return -1;
+        return Plumber.THROWAWAY;
       }
 
       return sink.add(row, false);

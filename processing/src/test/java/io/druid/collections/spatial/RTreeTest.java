@@ -38,7 +38,7 @@ public class RTreeTest
   private RTree roaringtree;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     BitmapFactory bf = new ConciseBitmapFactory();
     tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);

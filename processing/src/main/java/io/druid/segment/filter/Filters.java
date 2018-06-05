@@ -25,6 +25,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.query.BitmapResultFactory;
 import io.druid.query.ColumnSelectorPlus;
@@ -54,6 +55,7 @@ import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -103,7 +105,8 @@ public class Filters
    *
    * @return converted filter, or null if input was null
    */
-  public static Filter toFilter(DimFilter dimFilter)
+  @Nullable
+  public static Filter toFilter(@Nullable DimFilter dimFilter)
   {
     return dimFilter == null ? null : dimFilter.toFilter();
   }
@@ -132,7 +135,8 @@ public class Filters
             columnSelectorFactory
         );
 
-    return selector.getColumnSelectorStrategy().makeValueMatcher(selector.getSelector(), value);
+    return selector.getColumnSelectorStrategy()
+                   .makeValueMatcher(selector.getSelector(), NullHandling.emptyToNullIfNeeded(value));
   }
 
   /**
@@ -466,7 +470,8 @@ public class Filters
     };
   }
 
-  public static Filter convertToCNFFromQueryContext(Query query, Filter filter)
+  @Nullable
+  public static Filter convertToCNFFromQueryContext(Query query, @Nullable Filter filter)
   {
     if (filter == null) {
       return null;

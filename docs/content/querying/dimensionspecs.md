@@ -263,13 +263,18 @@ Note, if you are working with the `__time` dimension, you should consider using 
 [time extraction function instead](#time-format-extraction-function) instead,
 which works on time value directly as opposed to string values.
 
-Time formats are described in the
-[SimpleDateFormat documentation](http://icu-project.org/apiref/icu4j/com/ibm/icu/text/SimpleDateFormat.html)
+If "joda" is true, time formats are described in the [Joda DateTimeFormat documentation](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html).
+If "joda" is false (or unspecified) then formats are described in the [SimpleDateFormat documentation](http://icu-project.org/apiref/icu4j/com/ibm/icu/text/SimpleDateFormat.html).
+In general, we recommend setting "joda" to true since Joda format strings are more common in Druid APIs and since Joda handles certain edge cases (like weeks and weekyears near
+the start and end of calendar years) in a more ISO8601 compliant way.
+
+If a value cannot be parsed using the provided timeFormat, it will be returned as-is.
 
 ```json
 { "type" : "time",
   "timeFormat" : <input_format>,
-  "resultFormat" : <output_format> }
+  "resultFormat" : <output_format>,
+  "joda" : <true, false> }
 ```
 
 

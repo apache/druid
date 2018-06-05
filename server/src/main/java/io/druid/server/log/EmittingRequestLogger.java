@@ -22,6 +22,7 @@ package io.druid.server.log;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.ImmutableMap;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.emitter.core.Event;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceEventBuilder;
@@ -30,7 +31,6 @@ import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 
-import java.io.IOException;
 import java.util.Map;
 
 public class EmittingRequestLogger implements RequestLogger
@@ -45,7 +45,7 @@ public class EmittingRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(final RequestLogLine requestLogLine) throws IOException
+  public void log(final RequestLogLine requestLogLine)
   {
     emitter.emit(new RequestLogEventBuilder(feed, requestLogLine));
   }
@@ -59,6 +59,7 @@ public class EmittingRequestLogger implements RequestLogger
            '}';
   }
 
+  @PublicApi
   public static class RequestLogEvent implements Event
   {
     final ImmutableMap<String, String> serviceDimensions;
@@ -88,7 +89,6 @@ public class EmittingRequestLogger implements RequestLogger
       return feed;
     }
 
-    @Override
     @JsonProperty("timestamp")
     public DateTime getCreatedTime()
     {
@@ -125,11 +125,6 @@ public class EmittingRequestLogger implements RequestLogger
       return request.getQueryStats();
     }
 
-    @Override
-    public boolean isSafeToBuffer()
-    {
-      return true;
-    }
   }
 
   private static class RequestLogEventBuilder extends ServiceEventBuilder<Event>

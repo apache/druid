@@ -211,6 +211,7 @@ public class GroupByQuery extends BaseQuery<Row>
     return virtualColumns;
   }
 
+  @Nullable
   @JsonProperty("filter")
   public DimFilter getDimFilter()
   {
@@ -574,22 +575,14 @@ public class GroupByQuery extends BaseQuery<Row>
       final StringComparator comparator = comparators.get(i);
 
       final int dimCompare;
-
-      Object lhsObj;
-      Object rhsObj;
-      if (needsReverseList.get(i)) {
-        lhsObj = rhs.getRaw(fieldName);
-        rhsObj = lhs.getRaw(fieldName);
-      } else {
-        lhsObj = lhs.getRaw(fieldName);
-        rhsObj = rhs.getRaw(fieldName);
-      }
+      final Object lhsObj = lhs.getRaw(fieldName);
+      final Object rhsObj = rhs.getRaw(fieldName);
 
       if (isNumericField.get(i)) {
         if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = ((Ordering) Comparators.naturalNullsFirst()).compare(
-              lhs.getRaw(fieldName),
-              rhs.getRaw(fieldName)
+              lhsObj,
+              rhsObj
           );
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
@@ -599,7 +592,7 @@ public class GroupByQuery extends BaseQuery<Row>
       }
 
       if (dimCompare != 0) {
-        return dimCompare;
+        return needsReverseList.get(i) ? -dimCompare : dimCompare;
       }
     }
     return 0;

@@ -85,7 +85,7 @@ public class CompressedColumnarLongsSupplier implements Supplier<ColumnarLongs>,
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return metaSerdeHelper.size(this) + (long) buffer.remaining();
   }

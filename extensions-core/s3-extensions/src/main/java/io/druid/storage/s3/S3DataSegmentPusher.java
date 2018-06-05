@@ -19,21 +19,19 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.acl.gs.GSAccessControlList;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,13 +44,13 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
-  private final RestS3Service s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public S3DataSegmentPusher(
-      RestS3Service s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
       ObjectMapper jsonMapper
   )
@@ -87,54 +85,50 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean replaceExisting)
+  public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
       throws IOException
   {
-    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment));
+    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
 
     log.info("Copying segment[%s] to S3 at location[%s]", inSegment.getIdentifier(), s3Path);
 
     final File zipOutFile = File.createTempFile("druid", "index.zip");
     final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
+    final DataSegment outSegment = inSegment.withSize(indexSize)
+                                            .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+                                            .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+
+    final File descriptorFile = File.createTempFile("druid", "descriptor.json");
+    // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+    // runtime, and because Guava deletes methods over time, that causes incompatibilities.
+    Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
+
     try {
       return S3Utils.retryS3Operation(
           () -> {
-            S3Object toPush = new S3Object(zipOutFile);
-            putObject(config.getBucket(), s3Path, toPush, replaceExisting);
-
-            final DataSegment outSegment = inSegment.withSize(indexSize)
-                                                    .withLoadSpec(makeLoadSpec(config.getBucket(), toPush.getKey()))
-                                                    .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
-
-            File descriptorFile = File.createTempFile("druid", "descriptor.json");
-            // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
-            // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-            Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
-            S3Object descriptorObject = new S3Object(descriptorFile);
-
-            putObject(
+            uploadFileIfPossible(config.getBucket(), s3Path, zipOutFile);
+            uploadFileIfPossible(
                 config.getBucket(),
                 S3Utils.descriptorPathForSegmentPath(s3Path),
-                descriptorObject,
-                replaceExisting
+                descriptorFile
             );
-
-            log.info("Deleting zipped index File[%s]", zipOutFile);
-            zipOutFile.delete();
-
-            log.info("Deleting descriptor file[%s]", descriptorFile);
-            descriptorFile.delete();
 
             return outSegment;
           }
       );
     }
-    catch (ServiceException e) {
+    catch (AmazonServiceException e) {
       throw new IOException(e);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+    finally {
+      log.info("Deleting temporary cached index.zip");
+      zipOutFile.delete();
+      log.info("Deleting temporary cached descriptor.json");
+      descriptorFile.delete();
     }
   }
 
@@ -163,21 +157,14 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  private void putObject(String bucketName, String path, S3Object object, boolean replaceExisting)
-      throws ServiceException
+  private void uploadFileIfPossible(String bucket, String key, File file)
   {
-    object.setBucketName(bucketName);
-    object.setKey(path);
+    final PutObjectRequest indexFilePutRequest = new PutObjectRequest(bucket, key, file);
+
     if (!config.getDisableAcl()) {
-      object.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
+      indexFilePutRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(s3Client, bucket));
     }
-
-    log.info("Pushing %s.", object);
-
-    if (!replaceExisting && S3Utils.isObjectInBucket(s3Client, bucketName, object.getKey())) {
-      log.info("Skipping push because key [%s] exists && replaceExisting == false", object.getKey());
-    } else {
-      s3Client.putObject(bucketName, object);
-    }
+    log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
+    s3Client.putObject(indexFilePutRequest);
   }
 }

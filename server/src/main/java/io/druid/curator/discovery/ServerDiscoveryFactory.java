@@ -24,7 +24,6 @@ import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
-import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -59,19 +58,19 @@ public class ServerDiscoveryFactory
   private static class NoopServiceProvider<T> implements ServiceProvider<T>
   {
     @Override
-    public void start() throws Exception
+    public void start()
     {
       // do nothing
     }
 
     @Override
-    public ServiceInstance<T> getInstance() throws Exception
+    public ServiceInstance<T> getInstance()
     {
       return null;
     }
 
     @Override
-    public Collection<ServiceInstance<T>> getAllInstances() throws Exception
+    public Collection<ServiceInstance<T>> getAllInstances()
     {
       return null;
     }
@@ -83,7 +82,7 @@ public class ServerDiscoveryFactory
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       // do nothing
     }

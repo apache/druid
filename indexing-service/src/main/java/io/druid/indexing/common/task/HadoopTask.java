@@ -35,7 +35,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -127,15 +126,14 @@ public abstract class HadoopTask extends AbstractTask
    *
    * @param toolbox The toolbox to pull the default coordinates from if not present in the task
    * @return An isolated URLClassLoader not tied by parent chain to the ApplicationClassLoader
-   * @throws MalformedURLException from Initialization.getClassLoaderForExtension
    */
-  protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws MalformedURLException
+  protected ClassLoader buildClassLoader(final TaskToolbox toolbox)
   {
     return buildClassLoader(hadoopDependencyCoordinates, toolbox.getConfig().getDefaultHadoopCoordinates());
   }
 
   public static ClassLoader buildClassLoader(final List<String> hadoopDependencyCoordinates,
-                                             final List<String> defaultHadoopCoordinates) throws MalformedURLException
+                                             final List<String> defaultHadoopCoordinates)
   {
     final List<String> finalHadoopDependencyCoordinates = hadoopDependencyCoordinates != null
                                                           ? hadoopDependencyCoordinates
@@ -219,6 +217,34 @@ public abstract class HadoopTask extends AbstractTask
       return (OutputType) method.invoke(null, input);
     }
     catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+      throw Throwables.propagate(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
+    }
+  }
+
+  /**
+   * This method tries to isolate class loading during a Function call
+   *
+   * @param clazzName    The Class which has an instance method called `runTask`
+   * @param loader       The loader to use as the context class loader during invocation
+   *
+   * @return The result of the method invocation
+   */
+  public static Object getForeignClassloaderObject(
+      final String clazzName,
+      final ClassLoader loader
+  )
+  {
+    log.debug("Launching [%s] on class loader [%s]", clazzName, loader);
+    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(loader);
+      final Class<?> clazz = loader.loadClass(clazzName);
+      return clazz.newInstance();
+    }
+    catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
       throw Throwables.propagate(e);
     }
     finally {

@@ -493,7 +493,7 @@ public class Lifecycle
     }
 
     @Override
-    public void start() throws Exception
+    public void start()
     {
       // do nothing
     }

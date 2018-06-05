@@ -68,22 +68,17 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
     HeapByteBufferWriteOutBytes headerBytes = new HeapByteBufferWriteOutBytes();
     HeapByteBufferWriteOutBytes valueBytes = new HeapByteBufferWriteOutBytes();
     int offset = 0;
-    try {
-      headerBytes.writeInt(count);
+    headerBytes.writeInt(count);
 
-      for (VSizeColumnarInts object : objectsIterable) {
-        if (object.getNumBytes() != numBytes) {
-          throw new ISE("val.numBytes[%s] != numBytesInValue[%s]", object.getNumBytes(), numBytes);
-        }
-        offset += object.getNumBytesNoPadding();
-        headerBytes.writeInt(offset);
-        object.writeBytesNoPaddingTo(valueBytes);
+    for (VSizeColumnarInts object : objectsIterable) {
+      if (object.getNumBytes() != numBytes) {
+        throw new ISE("val.numBytes[%s] != numBytesInValue[%s]", object.getNumBytes(), numBytes);
       }
-      valueBytes.write(new byte[Integer.BYTES - numBytes]);
+      offset += object.getNumBytesNoPadding();
+      headerBytes.writeInt(offset);
+      object.writeBytesNoPaddingTo(valueBytes);
     }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    valueBytes.write(new byte[Integer.BYTES - numBytes]);
 
     ByteBuffer theBuffer = ByteBuffer.allocate(Ints.checkedCast(headerBytes.size() + valueBytes.size()));
     headerBytes.writeTo(theBuffer);
@@ -156,7 +151,7 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return metaSerdeHelper.size(this) + (long) theBuffer.remaining();
   }
@@ -198,7 +193,7 @@ public class VSizeColumnarMultiInts implements ColumnarMultiInts, WritableSuppli
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // no-op
   }

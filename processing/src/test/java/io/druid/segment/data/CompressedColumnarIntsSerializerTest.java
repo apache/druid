@@ -41,7 +41,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
@@ -92,7 +91,7 @@ public class CompressedColumnarIntsSerializerTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     vals = null;
   }
@@ -103,7 +102,7 @@ public class CompressedColumnarIntsSerializerTest
     segmentWriteOutMedium.close();
   }
 
-  private void generateVals(final int totalSize, final int maxValue) throws IOException
+  private void generateVals(final int totalSize, final int maxValue)
   {
     vals = new int[totalSize];
     for (int i = 0; i < vals.length; ++i) {
@@ -127,7 +126,7 @@ public class CompressedColumnarIntsSerializerTest
     );
     writer.open();
     for (int val : vals) {
-      writer.add(val);
+      writer.addValue(val);
     }
     long writtenLength = writer.getSerializedSize();
     final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
@@ -205,7 +204,7 @@ public class CompressedColumnarIntsSerializerTest
 
     writer.open();
     for (int val : vals) {
-      writer.add(val);
+      writer.addValue(val);
     }
     final SmooshedWriter channel = smoosher.addWithSmooshedWriter("test", writer.getSerializedSize());
     writer.writeTo(channel, smoosher);

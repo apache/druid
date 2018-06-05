@@ -19,6 +19,10 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
@@ -27,10 +31,6 @@ import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.StorageService;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.StorageObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,25 +43,36 @@ public class S3TaskLogs implements TaskLogs
 {
   private static final Logger log = new Logger(S3TaskLogs.class);
 
-  private final StorageService service;
+  private final ServerSideEncryptingAmazonS3 service;
   private final S3TaskLogsConfig config;
 
   @Inject
-  public S3TaskLogs(S3TaskLogsConfig config, RestS3Service service)
+  public S3TaskLogs(ServerSideEncryptingAmazonS3 service, S3TaskLogsConfig config)
   {
-    this.config = config;
     this.service = service;
+    this.config = config;
   }
 
   @Override
   public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
   {
-    final String taskKey = getTaskLogKey(taskid);
+    final String taskKey = getTaskLogKey(taskid, "log");
+    return streamTaskFile(offset, taskKey);
+  }
 
+  @Override
+  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "report.json");
+    return streamTaskFile(0, taskKey);
+  }
+
+  private Optional<ByteSource> streamTaskFile(final long offset, String taskKey) throws IOException
+  {
     try {
-      final StorageObject objectDetails = service.getObjectDetails(config.getS3Bucket(), taskKey, null, null, null, null);
+      final ObjectMetadata objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
 
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override
@@ -69,36 +80,31 @@ public class S3TaskLogs implements TaskLogs
             {
               try {
                 final long start;
-                final long end = objectDetails.getContentLength() - 1;
+                final long end = objectMetadata.getContentLength() - 1;
 
-                if (offset > 0 && offset < objectDetails.getContentLength()) {
+                if (offset > 0 && offset < objectMetadata.getContentLength()) {
                   start = offset;
-                } else if (offset < 0 && (-1 * offset) < objectDetails.getContentLength()) {
-                  start = objectDetails.getContentLength() + offset;
+                } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
+                  start = objectMetadata.getContentLength() + offset;
                 } else {
                   start = 0;
                 }
 
-                return service.getObject(
-                    config.getS3Bucket(),
-                    taskKey,
-                    null,
-                    null,
-                    new String[]{objectDetails.getETag()},
-                    null,
-                    start,
-                    end
-                ).getDataInputStream();
+                final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
+                    .withMatchingETagConstraint(objectMetadata.getETag())
+                    .withRange(start, end);
+
+                return service.getObject(request).getObjectContent();
               }
-              catch (ServiceException e) {
+              catch (AmazonServiceException e) {
                 throw new IOException(e);
               }
             }
           }
       );
     }
-    catch (ServiceException e) {
-      if (404 == e.getResponseCode()
+    catch (AmazonS3Exception e) {
+      if (404 == e.getStatusCode()
           || "NoSuchKey".equals(e.getErrorCode())
           || "NoSuchBucket".equals(e.getErrorCode())) {
         return Optional.absent();
@@ -111,15 +117,25 @@ public class S3TaskLogs implements TaskLogs
   @Override
   public void pushTaskLog(final String taskid, final File logFile) throws IOException
   {
-    final String taskKey = getTaskLogKey(taskid);
+    final String taskKey = getTaskLogKey(taskid, "log");
     log.info("Pushing task log %s to: %s", logFile, taskKey);
+    pushTaskFile(logFile, taskKey);
+  }
 
+  @Override
+  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "report.json");
+    log.info("Pushing task reports %s to: %s", reportFile, taskKey);
+    pushTaskFile(reportFile, taskKey);
+  }
+
+  private void pushTaskFile(final File logFile, String taskKey) throws IOException
+  {
     try {
       S3Utils.retryS3Operation(
           () -> {
-            final StorageObject object = new StorageObject(logFile);
-            object.setKey(taskKey);
-            service.putObject(config.getS3Bucket(), object);
+            service.putObject(config.getS3Bucket(), taskKey, logFile);
             return null;
           }
       );
@@ -130,19 +146,19 @@ public class S3TaskLogs implements TaskLogs
     }
   }
 
-  private String getTaskLogKey(String taskid)
+  private String getTaskLogKey(String taskid, String filename)
   {
-    return StringUtils.format("%s/%s/log", config.getS3Prefix(), taskid);
+    return StringUtils.format("%s/%s/%s", config.getS3Prefix(), taskid, filename);
   }
 
   @Override
-  public void killAll() throws IOException
+  public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
   }
 
   @Override
-  public void killOlderThan(long timestamp) throws IOException
+  public void killOlderThan(long timestamp)
   {
     throw new UnsupportedOperationException("not implemented");
   }

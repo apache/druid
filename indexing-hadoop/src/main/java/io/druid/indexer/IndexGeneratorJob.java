@@ -37,11 +37,13 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
+import io.druid.indexer.path.DatasourcePathSpec;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
 import io.druid.segment.ProgressIndicator;
@@ -49,6 +51,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.ShardSpec;
@@ -136,6 +139,7 @@ public class IndexGeneratorJob implements Jobby
 
   private final HadoopDruidIndexerConfig config;
   private IndexGeneratorStats jobStats;
+  private Job job;
 
   public IndexGeneratorJob(
       HadoopDruidIndexerConfig config
@@ -150,16 +154,11 @@ public class IndexGeneratorJob implements Jobby
     job.setReducerClass(IndexGeneratorReducer.class);
   }
 
-  public IndexGeneratorStats getJobStats()
-  {
-    return jobStats;
-  }
-
   @Override
   public boolean run()
   {
     try {
-      Job job = Job.getInstance(
+      job = Job.getInstance(
           new Configuration(),
           StringUtils.format("%s-index-generator-%s", config.getDataSource(), config.getIntervals())
       );
@@ -174,7 +173,7 @@ public class IndexGeneratorJob implements Jobby
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
 
-      SortableBytes.useSortableBytesAsMapOutputKey(job);
+      SortableBytes.useSortableBytesAsMapOutputKey(job, IndexGeneratorPartitioner.class);
 
       int numReducers = Iterables.size(config.getAllBuckets().get());
       if (numReducers == 0) {
@@ -187,7 +186,6 @@ public class IndexGeneratorJob implements Jobby
       }
 
       job.setNumReduceTasks(numReducers);
-      job.setPartitionerClass(IndexGeneratorPartitioner.class);
 
       setReducerClass(job);
       job.setOutputKeyClass(BytesWritable.class);
@@ -229,6 +227,45 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
+  @Override
+  public Map<String, Object> getStats()
+  {
+    if (job == null) {
+      return null;
+    }
+
+    try {
+      Counters jobCounters = job.getCounters();
+
+      Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
+      );
+
+      return metrics;
+    }
+    catch (IllegalStateException ise) {
+      log.debug("Couldn't get counters due to job state");
+      return null;
+    }
+    catch (Exception e) {
+      log.debug(e, "Encountered exception in getStats().");
+      return null;
+    }
+  }
+
+  @Override
+  public String getErrorMessage()
+  {
+    if (job == null) {
+      return null;
+    }
+
+    return Utils.getFailureMessage(job, config.JSON_MAPPER);
+  }
+
   private static IncrementalIndex makeIncrementalIndex(
       Bucket theBucket,
       AggregatorFactory[] aggs,
@@ -251,6 +288,7 @@ public class IndexGeneratorJob implements Jobby
         .setIndexSchema(indexSchema)
         .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows())
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
+        .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
         .buildOnheap();
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
@@ -265,7 +303,8 @@ public class IndexGeneratorJob implements Jobby
     private static final HashFunction hashFunction = Hashing.murmur3_128();
 
     private AggregatorFactory[] aggregators;
-    private AggregatorFactory[] combiningAggs;
+
+    private AggregatorFactory[] aggsForSerializingSegmentInputRow;
     private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
 
     @Override
@@ -274,9 +313,16 @@ public class IndexGeneratorJob implements Jobby
     {
       super.setup(context);
       aggregators = config.getSchema().getDataSchema().getAggregators();
-      combiningAggs = new AggregatorFactory[aggregators.length];
-      for (int i = 0; i < aggregators.length; ++i) {
-        combiningAggs[i] = aggregators[i].getCombiningFactory();
+
+      if (DatasourcePathSpec.checkIfReindexingAndIsUseAggEnabled(config.getSchema().getIOConfig().getPathSpec())) {
+        aggsForSerializingSegmentInputRow = aggregators;
+      } else {
+        // Note: this is required for "delta-ingestion" use case where we are reading rows stored in Druid as well
+        // as late arriving data on HDFS etc.
+        aggsForSerializingSegmentInputRow = new AggregatorFactory[aggregators.length];
+        for (int i = 0; i < aggregators.length; ++i) {
+          aggsForSerializingSegmentInputRow[i] = aggregators[i].getCombiningFactory();
+        }
       }
       typeHelperMap = InputRowSerde.getTypeHelperMap(config.getSchema()
                                                            .getDataSchema()
@@ -312,10 +358,18 @@ public class IndexGeneratorJob implements Jobby
       // type SegmentInputRow serves as a marker that these InputRow instances have already been combined
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
-      byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
-                                  InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, reportParseExceptions)
-                                                                      :
-                                  InputRowSerde.toBytes(typeHelperMap, inputRow, aggregators, reportParseExceptions);
+      InputRowSerde.SerializeResult serializeResult = inputRow instanceof SegmentInputRow ?
+                                                 InputRowSerde.toBytes(
+                                                     typeHelperMap,
+                                                     inputRow,
+                                                     aggsForSerializingSegmentInputRow
+                                                 )
+                                                                                     :
+                                                 InputRowSerde.toBytes(
+                                                     typeHelperMap,
+                                                     inputRow,
+                                                     aggregators
+                                                 );
 
       context.write(
           new SortableBytes(
@@ -326,8 +380,19 @@ public class IndexGeneratorJob implements Jobby
                         .put(hashedDimensions)
                         .array()
           ).toBytesWritable(),
-          new BytesWritable(serializedInputRow)
+          new BytesWritable(serializeResult.getSerializedRow())
       );
+
+      ParseException pe = IncrementalIndex.getCombinedParseException(
+          inputRow,
+          serializeResult.getParseExceptionMessages(),
+          null
+      );
+      if (pe != null) {
+        throw pe;
+      } else {
+        context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).increment(1);
+      }
     }
   }
 
@@ -340,7 +405,6 @@ public class IndexGeneratorJob implements Jobby
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
@@ -403,11 +467,11 @@ public class IndexGeneratorJob implements Jobby
         InputRow inputRow = getInputRowFromRow(row, dimensions);
 
         // reportParseExceptions is true as any unparseable data is already handled by the mapper.
-        byte[] serializedRow = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs, true);
+        InputRowSerde.SerializeResult serializeResult = InputRowSerde.toBytes(typeHelperMap, inputRow, combiningAggs);
 
         context.write(
             key,
-            new BytesWritable(serializedRow)
+            new BytesWritable(serializeResult.getSerializedRow())
         );
       }
       index.close();
@@ -472,7 +536,7 @@ public class IndexGeneratorJob implements Jobby
       final ByteBuffer bytes = ByteBuffer.wrap(bytesWritable.getBytes());
       bytes.position(4); // Skip length added by SortableBytes
       int shardNum = bytes.getInt();
-      if ("local".equals(config.get("mapreduce.jobtracker.address")) || "local".equals(config.get("mapred.job.tracker"))) {
+      if ("local".equals(JobHelper.getJobTrackerAddress(config))) {
         return shardNum % numPartitions;
       } else {
         if (shardNum >= numPartitions) {
@@ -544,7 +608,6 @@ public class IndexGeneratorJob implements Jobby
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
@@ -627,7 +690,7 @@ public class IndexGeneratorJob implements Jobby
           context.progress();
 
           final InputRow inputRow = index.formatRow(InputRowSerde.fromBytes(typeHelperMap, bw.getBytes(), aggregators));
-          int numRows = index.add(inputRow);
+          int numRows = index.add(inputRow).getRowCount();
 
           ++lineCount;
 

@@ -28,14 +28,20 @@ import java.util.List;
 
 public class CacheConfig
 {
-  public static final String USE_CACHE = "useCache";
   public static final String POPULATE_CACHE = "populateCache";
-
+  // The defaults defined here for cache related parameters are different from the QueryContext defaults due to legacy reasons.
+  // They should be made the same at some point in the future.
   @JsonProperty
   private boolean useCache = false;
 
   @JsonProperty
   private boolean populateCache = false;
+
+  @JsonProperty
+  private boolean useResultLevelCache = false;
+
+  @JsonProperty
+  private boolean populateResultLevelCache = false;
 
   @JsonProperty
   @Min(0)
@@ -44,6 +50,9 @@ public class CacheConfig
   @JsonProperty
   @Min(0)
   private int cacheBulkMergeLimit = Integer.MAX_VALUE;
+
+  @JsonProperty
+  private int resultLevelCacheLimit = Integer.MAX_VALUE;
 
   @JsonProperty
   private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
@@ -58,6 +67,16 @@ public class CacheConfig
     return useCache;
   }
 
+  public boolean isPopulateResultLevelCache()
+  {
+    return populateResultLevelCache;
+  }
+
+  public boolean isUseResultLevelCache()
+  {
+    return useResultLevelCache;
+  }
+
   public int getNumBackgroundThreads()
   {
     return numBackgroundThreads;
@@ -66,6 +85,11 @@ public class CacheConfig
   public int getCacheBulkMergeLimit()
   {
     return cacheBulkMergeLimit;
+  }
+
+  public int getResultLevelCacheLimit()
+  {
+    return resultLevelCacheLimit;
   }
 
   public boolean isQueryCacheable(Query query)

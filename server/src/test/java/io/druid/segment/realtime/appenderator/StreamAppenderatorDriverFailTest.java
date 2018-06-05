@@ -34,16 +34,20 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.SegmentDescriptor;
-import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestCommitterSupplier;
 import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentAllocator;
 import io.druid.segment.realtime.appenderator.StreamAppenderatorDriverTest.TestSegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockSupport;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -65,7 +69,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class StreamAppenderatorDriverFailTest
+public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 {
   private static final String DATA_SOURCE = "foo";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
@@ -92,6 +96,7 @@ public class StreamAppenderatorDriverFailTest
   SegmentAllocator allocator;
   TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
   StreamAppenderatorDriver driver;
+  DataSegmentKiller dataSegmentKiller;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -101,6 +106,7 @@ public class StreamAppenderatorDriverFailTest
   {
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);
     segmentHandoffNotifierFactory = new TestSegmentHandoffNotifierFactory();
+    dataSegmentKiller = createStrictMock(DataSegmentKiller.class);
   }
 
   @After
@@ -126,6 +132,7 @@ public class StreamAppenderatorDriverFailTest
         allocator,
         segmentHandoffNotifierFactory,
         new NoopUsedSegmentChecker(),
+        dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
     );
@@ -163,6 +170,7 @@ public class StreamAppenderatorDriverFailTest
         allocator,
         segmentHandoffNotifierFactory,
         new NoopUsedSegmentChecker(),
+        dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
     );
@@ -200,6 +208,7 @@ public class StreamAppenderatorDriverFailTest
         allocator,
         segmentHandoffNotifierFactory,
         new NoopUsedSegmentChecker(),
+        dataSegmentKiller,
         OBJECT_MAPPER,
         new FireDepartmentMetrics()
     );
@@ -225,10 +234,98 @@ public class StreamAppenderatorDriverFailTest
     driver.registerHandoff(published).get();
   }
 
+  @Test
+  public void testFailDuringPublish() throws Exception
+  {
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
+    expectedException.expectMessage(
+        "Failed to publish segments[[DataSegment{size=0, shardSpec=NumberedShardSpec{partitionNum=0, partitions=0}, metrics=[], dimensions=[], version='abc123', loadSpec={}, interval=2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z, dataSource='foo', binaryVersion='0'}, DataSegment{size=0, shardSpec=NumberedShardSpec{partitionNum=0, partitions=0}, metrics=[], dimensions=[], version='abc123', loadSpec={}, interval=2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z, dataSource='foo', binaryVersion='0'}]]");
+
+    testFailDuringPublishInternal(false);
+  }
+
+  @Test
+  public void testFailWithExceptionDuringPublish() throws Exception
+  {
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(RuntimeException.class));
+    expectedException.expectMessage("test");
+
+    testFailDuringPublishInternal(true);
+  }
+
+  private void testFailDuringPublishInternal(boolean failWithException) throws Exception
+  {
+    driver = new StreamAppenderatorDriver(
+        new FailableAppenderator(),
+        allocator,
+        segmentHandoffNotifierFactory,
+        new NoopUsedSegmentChecker(),
+        dataSegmentKiller,
+        OBJECT_MAPPER,
+        new FireDepartmentMetrics()
+    );
+
+    driver.startJob();
+
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+    segmentHandoffNotifierFactory.setHandoffDelay(100);
+
+    Assert.assertNull(driver.startJob());
+
+    for (int i = 0; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
+    }
+
+    dataSegmentKiller.killQuietly(new DataSegment(
+        "foo",
+        Intervals.of("2000-01-01T00:00:00.000Z/2000-01-01T01:00:00.000Z"),
+        "abc123",
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
+        new NumberedShardSpec(0, 0),
+        0,
+        0
+    ));
+    EasyMock.expectLastCall().once();
+
+    dataSegmentKiller.killQuietly(new DataSegment(
+        "foo",
+        Intervals.of("2000-01-01T01:00:00.000Z/2000-01-01T02:00:00.000Z"),
+        "abc123",
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
+        new NumberedShardSpec(0, 0),
+        0,
+        0
+    ));
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(dataSegmentKiller);
+
+    try {
+      driver.publish(
+          StreamAppenderatorDriverTest.makeFailingPublisher(failWithException),
+          committerSupplier.get(),
+          ImmutableList.of("dummy")
+      ).get(PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+    catch (Exception e) {
+      throw e;
+    }
+    finally {
+      EasyMock.verify(dataSegmentKiller);
+    }
+  }
+
   private static class NoopUsedSegmentChecker implements UsedSegmentChecker
   {
     @Override
-    public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers) throws IOException
+    public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers)
     {
       return ImmutableSet.of();
     }
@@ -305,12 +402,15 @@ public class StreamAppenderatorDriverFailTest
 
     @Override
     public AppenderatorAddResult add(
-        SegmentIdentifier identifier, InputRow row, Supplier<Committer> committerSupplier, boolean allowIncrementalPersists
-    ) throws IndexSizeExceededException, SegmentNotWritableException
+        SegmentIdentifier identifier,
+        InputRow row,
+        Supplier<Committer> committerSupplier,
+        boolean allowIncrementalPersists
+    )
     {
       rows.computeIfAbsent(identifier, k -> new ArrayList<>()).add(row);
       numRows++;
-      return new AppenderatorAddResult(identifier, numRows, false);
+      return new AppenderatorAddResult(identifier, numRows, false, null);
     }
 
     @Override
@@ -337,7 +437,7 @@ public class StreamAppenderatorDriverFailTest
     }
 
     @Override
-    public void clear() throws InterruptedException
+    public void clear()
     {
       rows.clear();
     }
@@ -354,21 +454,19 @@ public class StreamAppenderatorDriverFailTest
     }
 
     @Override
-    public ListenableFuture<Object> persist(
-        Collection<SegmentIdentifier> identifiers, Committer committer
-    )
+    public ListenableFuture<Object> persistAll(Committer committer)
     {
       if (persistEnabled) {
         // do nothing
         return Futures.immediateFuture(committer.getMetadata());
       } else {
-        return Futures.immediateFailedFuture(new ISE("Fail test while persisting segments[%s]", identifiers));
+        return Futures.immediateFailedFuture(new ISE("Fail test while persisting segments[%s]", rows.keySet()));
       }
     }
 
     @Override
     public ListenableFuture<SegmentsAndMetadata> push(
-        Collection<SegmentIdentifier> identifiers, Committer committer
+        Collection<SegmentIdentifier> identifiers, Committer committer, boolean useUniquePath
     )
     {
       if (pushEnabled) {
@@ -388,7 +486,7 @@ public class StreamAppenderatorDriverFailTest
                                                       )
                                                       .collect(Collectors.toList());
         return Futures.transform(
-            persist(identifiers, committer),
+            persistAll(committer),
             (Function<Object, SegmentsAndMetadata>) commitMetadata -> new SegmentsAndMetadata(segments, commitMetadata)
         );
       } else {
@@ -397,13 +495,13 @@ public class StreamAppenderatorDriverFailTest
           {
             @Override
             public SegmentsAndMetadata get(long timeout, TimeUnit unit)
-                throws InterruptedException, TimeoutException, ExecutionException
+                throws InterruptedException
             {
               throw new InterruptedException("Interrupt test while pushing segments");
             }
 
             @Override
-            public SegmentsAndMetadata get() throws InterruptedException, ExecutionException
+            public SegmentsAndMetadata get() throws InterruptedException
             {
               throw new InterruptedException("Interrupt test while pushing segments");
             }

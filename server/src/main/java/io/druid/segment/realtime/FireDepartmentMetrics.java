@@ -28,8 +28,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class FireDepartmentMetrics
 {
   private final AtomicLong processedCount = new AtomicLong(0);
+  private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
   private final AtomicLong thrownAwayCount = new AtomicLong(0);
   private final AtomicLong unparseableCount = new AtomicLong(0);
+  private final AtomicLong dedupCount = new AtomicLong(0);
   private final AtomicLong rowOutputCount = new AtomicLong(0);
   private final AtomicLong numPersists = new AtomicLong(0);
   private final AtomicLong persistTimeMillis = new AtomicLong(0);
@@ -49,9 +51,19 @@ public class FireDepartmentMetrics
     processedCount.incrementAndGet();
   }
 
+  public void incrementProcessedWithErrors()
+  {
+    processedWithErrorsCount.incrementAndGet();
+  }
+
   public void incrementThrownAway()
   {
     thrownAwayCount.incrementAndGet();
+  }
+
+  public void incrementDedup()
+  {
+    dedupCount.incrementAndGet();
   }
 
   public void incrementUnparseable()
@@ -124,6 +136,11 @@ public class FireDepartmentMetrics
     return processedCount.get();
   }
 
+  public long processedWithErrors()
+  {
+    return processedWithErrorsCount.get();
+  }
+
   public long thrownAway()
   {
     return thrownAwayCount.get();
@@ -132,6 +149,11 @@ public class FireDepartmentMetrics
   public long unparseable()
   {
     return unparseableCount.get();
+  }
+
+  public long dedup()
+  {
+    return dedupCount.get();
   }
 
   public long rowOutput()
@@ -203,8 +225,10 @@ public class FireDepartmentMetrics
   {
     final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
     retVal.processedCount.set(processedCount.get());
+    retVal.processedWithErrorsCount.set(processedWithErrorsCount.get());
     retVal.thrownAwayCount.set(thrownAwayCount.get());
     retVal.unparseableCount.set(unparseableCount.get());
+    retVal.dedupCount.set(dedupCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
     retVal.numPersists.set(numPersists.get());
     retVal.persistTimeMillis.set(persistTimeMillis.get());
@@ -231,9 +255,11 @@ public class FireDepartmentMetrics
     Preconditions.checkNotNull(other, "Cannot merge a null FireDepartmentMetrics");
     FireDepartmentMetrics otherSnapshot = other.snapshot();
     processedCount.addAndGet(otherSnapshot.processed());
+    processedWithErrorsCount.addAndGet(otherSnapshot.processedWithErrors());
     thrownAwayCount.addAndGet(otherSnapshot.thrownAway());
     rowOutputCount.addAndGet(otherSnapshot.rowOutput());
     unparseableCount.addAndGet(otherSnapshot.unparseable());
+    dedupCount.addAndGet(otherSnapshot.dedup());
     numPersists.addAndGet(otherSnapshot.numPersists());
     persistTimeMillis.addAndGet(otherSnapshot.persistTimeMillis());
     persistBackPressureMillis.addAndGet(otherSnapshot.persistBackPressureMillis());
@@ -248,5 +274,4 @@ public class FireDepartmentMetrics
     messageGap.set(Math.max(messageGap(), otherSnapshot.messageGap()));
     return this;
   }
-
 }

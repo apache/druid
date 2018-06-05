@@ -70,7 +70,6 @@ public abstract class AggregatorFactory implements Cacheable
    * @see AggregateCombiner
    * @see io.druid.segment.IndexMerger
    */
-  @SuppressWarnings("unused") // Going to be used when https://github.com/druid-io/druid/projects/2 is complete
   public AggregateCombiner makeAggregateCombiner()
   {
     throw new UOE("[%s] does not implement makeAggregateCombiner()", this.getClass().getName());

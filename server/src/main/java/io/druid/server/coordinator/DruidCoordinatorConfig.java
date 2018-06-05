@@ -39,30 +39,6 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1800s")
   public abstract Duration getCoordinatorIndexingPeriod();
 
-  @Config("druid.coordinator.merge.on")
-  public boolean isMergeSegments()
-  {
-    return false;
-  }
-
-  @Config("druid.coordinator.conversion.on")
-  public boolean isConvertSegments()
-  {
-    return false;
-  }
-
-  @Config("druid.coordinator.kill.on")
-  public boolean isKillSegments()
-  {
-    return false;
-  }
-
-  @Config("druid.coordinator.kill.pendingSegments.on")
-  public boolean isKillPendingSegments()
-  {
-    return false;
-  }
-
   @Config("druid.coordinator.kill.period")
   @Default("P1D")
   public abstract Duration getCoordinatorKillPeriod();

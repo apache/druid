@@ -69,7 +69,7 @@ classloader.
 2. Batch ingestion uses jars from `hadoop-dependencies/` to submit Map/Reduce jobs (location customizable via the
 `druid.extensions.hadoopDependenciesDir` runtime property; see [Configuration](../configuration/index.html)).
 
-`hadoop-client:2.3.0` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
+`hadoop-client:2.8.3` is the default version of the Hadoop client bundled with Druid for both purposes. This works with
 many Hadoop distributions (the version does not necessarily need to match), but if you run into issues, you can instead
 have Druid load libraries that exactly match your distribution. To do this, either copy the jars from your Hadoop
 cluster, or use the `pull-deps` tool to download the jars from a Maven repository.

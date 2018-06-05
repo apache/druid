@@ -79,7 +79,7 @@ public class SketchAggregationTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
@@ -226,7 +226,7 @@ public class SketchAggregationTest
   }
 
   @Test
-  public void testSketchMergeFinalization() throws Exception
+  public void testSketchMergeFinalization()
   {
     SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(128).build());
 
@@ -277,6 +277,14 @@ public class SketchAggregationTest
             2
         )
     );
+    
+    assertPostAggregatorSerde(
+        new SketchEstimatePostAggregator(
+            "name",
+            new SketchConstantPostAggregator("name", "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI="),
+            null
+        )
+    );
   }
 
   @Test
@@ -290,6 +298,18 @@ public class SketchAggregationTest
             Lists.<PostAggregator>newArrayList(
                 new FieldAccessPostAggregator("name1", "fieldName1"),
                 new FieldAccessPostAggregator("name2", "fieldName2")
+            )
+        )
+    );
+    
+    assertPostAggregatorSerde(
+        new SketchSetPostAggregator(
+            "name",
+            "INTERSECT",
+            null,
+            Lists.<PostAggregator>newArrayList(
+                new FieldAccessPostAggregator("name1", "fieldName1"),
+                new SketchConstantPostAggregator("name2", "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=")
             )
         )
     );

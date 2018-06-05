@@ -151,7 +151,7 @@ public class OrderedMergeSequenceTest
   }
 
   @Test
-  public void testLazinessAccumulation() throws Exception
+  public void testLazinessAccumulation()
   {
     final ArrayList<Sequence<Integer>> sequences = makeSyncedSequences();
     OrderedMergeSequence<Integer> seq = new OrderedMergeSequence<Integer>(

@@ -25,7 +25,7 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 |`kafkaTopic`|The kafka topic to read the data from|Yes||
 |`kafkaProperties`|Kafka consumer properties. At least"zookeeper.connect" must be specified. Only the zookeeper connector is supported|Yes||
 |`connectTimeout`|How long to wait for an initial connection|No|`0` (do not wait)|
-|`isOneToOne`|The map is a one-to-one (see[Lookup DimensionSpecs](../querying/dimensionspecs.html))|No|`false`|
+|`isOneToOne`|The map is a one-to-one (see [Lookup DimensionSpecs](../../querying/dimensionspecs.html))|No|`false`|
 
 The extension `kafka-extraction-namespace` enables reading from a kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human readable format.
 

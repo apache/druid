@@ -122,7 +122,7 @@ public class CombiningFirehoseFactoryTest
     }
 
     @Override
-    public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws IOException, ParseException
+    public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws ParseException
     {
       final Iterator<InputRow> iterator = rows.iterator();
       return new Firehose()
@@ -147,7 +147,7 @@ public class CombiningFirehoseFactoryTest
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
           // Do nothing
         }

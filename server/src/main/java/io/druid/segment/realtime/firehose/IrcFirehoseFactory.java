@@ -21,7 +21,6 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.ircclouds.irc.api.Callback;
 import com.ircclouds.irc.api.IRCApi;
@@ -42,7 +41,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -108,7 +107,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
   public Firehose connect(
       final InputRowParser<Pair<DateTime, ChannelPrivMsg>> firehoseParser,
       final File temporaryDirectory
-  ) throws IOException
+  )
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -189,7 +188,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
     return new Firehose()
     {
       InputRow nextRow = null;
-      Iterator<InputRow> nextIterator = Iterators.emptyIterator();
+      Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
@@ -246,7 +245,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         try {
           log.info("disconnecting from irc server [%s]", host);

@@ -72,6 +72,7 @@ public interface StorageAdapter extends CursorFactory
    * @param column column name
    * @return type name
    */
+  @Nullable
   String getColumnTypeName(String column);
   int getNumRows();
   DateTime getMaxIngestedEventTime();

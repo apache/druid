@@ -20,7 +20,6 @@
 package io.druid.java.util.http.client.io;
 
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.logger.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +35,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class AppendableByteArrayInputStreamTest
 {
-  private static final Logger log = new Logger(AppendableByteArrayInputStreamTest.class);
 
   @Test
   public void testSingleByteArray() throws Exception
@@ -226,7 +224,7 @@ public class AppendableByteArrayInputStreamTest
         new Callable()
         {
           @Override
-          public byte[] call() throws Exception
+          public byte[] call()
           {
             try {
               byte[] readBytes = new byte[10];

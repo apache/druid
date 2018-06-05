@@ -19,7 +19,6 @@
 
 package io.druid.io;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
@@ -64,7 +63,7 @@ public final class ByteBufferInputStream extends InputStream
   }
 
   @Override
-  public int available() throws IOException
+  public int available()
   {
     return buffer.remaining();
   }

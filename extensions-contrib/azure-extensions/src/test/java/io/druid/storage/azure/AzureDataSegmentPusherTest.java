@@ -83,6 +83,17 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void testPush() throws Exception
   {
+    testPushInternal(false, "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/index\\.zip");
+  }
+
+  @Test
+  public void testPushUseUniquePath() throws Exception
+  {
+    testPushInternal(true, "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip");
+  }
+
+  private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
+  {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
 
     // Create a mock segment on disk
@@ -104,7 +115,12 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, true);
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, useUniquePath);
+
+    Assert.assertTrue(
+        segment.getLoadSpec().get("blobPath").toString(),
+        segment.getLoadSpec().get("blobPath").toString().matches(matcher)
+    );
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
   }
@@ -114,10 +130,13 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   {
 
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
-    final String storageDir = pusher.getStorageDir(dataSegment);
-    Map<String, String> paths = pusher.getAzurePaths(dataSegment);
+    final String storageDir = pusher.getStorageDir(dataSegment, false);
+    Map<String, String> paths = pusher.getAzurePaths(dataSegment, false);
 
-    assertEquals(StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME), paths.get("index"));
+    assertEquals(
+        StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
+        paths.get("index")
+    );
     assertEquals(
         StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
         paths.get("descriptor")
@@ -131,11 +150,11 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final int binaryVersion = 9;
     final File compressedSegmentData = new File("index.zip");
     final File descriptorFile = new File("descriptor.json");
-    final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment);
+    final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment, false);
 
-    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"), true);
+    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"));
     expectLastCall();
-    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"), true);
+    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"));
     expectLastCall();
 
     replayAll();
@@ -146,8 +165,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         0, // empty file
         compressedSegmentData,
         descriptorFile,
-        azurePaths,
-        true
+        azurePaths
     );
 
     assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());
@@ -172,7 +190,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   {
     AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
     DataSegment withColons = dataSegment.withVersion("2018-01-05T14:54:09.295Z");
-    String segmentPath = pusher.getStorageDir(withColons);
+    String segmentPath = pusher.getStorageDir(withColons, false);
     Assert.assertFalse("Path should not contain any columns", segmentPath.contains(":"));
   }
 }

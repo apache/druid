@@ -20,7 +20,6 @@
 package io.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -37,6 +36,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,8 +73,8 @@ public class InputRowParserSerdeTest
   public void testStringInputRowParserSerdeMultiCharset() throws Exception
   {
     Charset[] testCharsets = {
-        Charsets.US_ASCII, Charsets.ISO_8859_1, Charsets.UTF_8,
-        Charsets.UTF_16BE, Charsets.UTF_16LE, Charsets.UTF_16
+        StandardCharsets.US_ASCII, StandardCharsets.ISO_8859_1, StandardCharsets.UTF_8,
+        StandardCharsets.UTF_16BE, StandardCharsets.UTF_16LE, StandardCharsets.UTF_16
     };
 
     for (Charset testCharset : testCharsets) {
@@ -92,14 +92,18 @@ public class InputRowParserSerdeTest
     final MapInputRowParser parser = new MapInputRowParser(
         new JSONParseSpec(
             new TimestampSpec("timeposix", "posix", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "bar")), ImmutableList.of("baz"), null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "bar")),
+                ImmutableList.of("baz"),
+                null
+            ),
             null,
             null
         )
     );
-    final MapInputRowParser parser2 = jsonMapper.readValue(
+    final MapInputRowParser parser2 = (MapInputRowParser) jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
-        MapInputRowParser.class
+        InputRowParser.class
     );
     final InputRow parsed = parser2.parseBatch(
         ImmutableMap.<String, Object>of(
@@ -121,14 +125,18 @@ public class InputRowParserSerdeTest
     final MapInputRowParser parser = new MapInputRowParser(
         new JSONParseSpec(
             new TimestampSpec("timemillis", "millis", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "values")), ImmutableList.of("toobig", "value"), null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "values")),
+                ImmutableList.of("toobig", "value"),
+                null
+            ),
             null,
             null
         )
     );
-    final MapInputRowParser parser2 = jsonMapper.readValue(
+    final MapInputRowParser parser2 = (MapInputRowParser) jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
-        MapInputRowParser.class
+        InputRowParser.class
     );
     final InputRow parsed = parser2.parseBatch(
         ImmutableMap.<String, Object>of(
@@ -190,6 +198,7 @@ public class InputRowParserSerdeTest
     fields.add(JSONPathFieldSpec.createNestedField("baz2", "$.baz[2]"));
     fields.add(JSONPathFieldSpec.createNestedField("hey0barx", "$.hey[0].barx"));
     fields.add(JSONPathFieldSpec.createNestedField("metA", "$.met.a"));
+    fields.add(JSONPathFieldSpec.createNestedField("missing", "$.nonexistent.nested.field"));
     fields.add(JSONPathFieldSpec.createRootField("timestamp"));
     fields.add(JSONPathFieldSpec.createRootField("foo.bar1"));
 
@@ -212,7 +221,21 @@ public class InputRowParserSerdeTest
     final InputRow parsed = parser2.parse(
         "{\"blah\":[4,5,6], \"newmet\":5, \"foo\":{\"bar1\":\"aaa\", \"bar2\":\"bbb\"}, \"baz\":[1,2,3], \"timestamp\":\"2999\", \"foo.bar1\":\"Hello world!\", \"hey\":[{\"barx\":\"asdf\"}], \"met\":{\"a\":456}}"
     );
-    Assert.assertEquals(ImmutableList.of("foobar1", "foobar2", "baz0", "baz1", "baz2", "hey0barx", "metA", "timestamp", "foo.bar1", "blah", "newmet", "baz"), parsed.getDimensions());
+    Assert.assertEquals(ImmutableList.of(
+        "foobar1",
+        "foobar2",
+        "baz0",
+        "baz1",
+        "baz2",
+        "hey0barx",
+        "metA",
+        "missing",
+        "timestamp",
+        "foo.bar1",
+        "blah",
+        "newmet",
+        "baz"
+    ), parsed.getDimensions());
     Assert.assertEquals(ImmutableList.of("aaa"), parsed.getDimension("foobar1"));
     Assert.assertEquals(ImmutableList.of("bbb"), parsed.getDimension("foobar2"));
     Assert.assertEquals(ImmutableList.of("1"), parsed.getDimension("baz0"));
@@ -222,6 +245,7 @@ public class InputRowParserSerdeTest
     Assert.assertEquals(ImmutableList.of("asdf"), parsed.getDimension("hey0barx"));
     Assert.assertEquals(ImmutableList.of("456"), parsed.getDimension("metA"));
     Assert.assertEquals(ImmutableList.of("5"), parsed.getDimension("newmet"));
+    Assert.assertEquals(ImmutableList.of(), parsed.getDimension("missing"));
     Assert.assertEquals(DateTimes.of("2999").getMillis(), parsed.getTimestampFromEpoch());
 
     String testSpec = "{\"enabled\": true,\"useFieldDiscovery\": true, \"fields\": [\"parseThisRootField\"]}";

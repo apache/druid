@@ -64,7 +64,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,7 +77,7 @@ import java.util.Map;
 public class SchemalessTestFullTest
 {
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return ImmutableList.of(
         new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
@@ -1186,9 +1185,9 @@ public class SchemalessTestFullTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 11L)
+                            .put("rows", 10L)
                             .put("index", 900.0D)
-                            .put("addRowsIndexConstant", 912.0D)
+                            .put("addRowsIndexConstant", 911.0D)
                             .put("uniques", UNIQUES_1)
                             .put("maxIndex", 100.0D)
                             .put("minIndex", 0.0D)

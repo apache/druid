@@ -19,7 +19,6 @@
 
 package io.druid.client.cache;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -33,6 +32,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -55,6 +55,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -86,7 +87,7 @@ public class MemcachedCache implements Cache
     @Override
     public long hash(String k)
     {
-      return fn.hashString(k, Charsets.UTF_8).asLong();
+      return fn.hashString(k, StandardCharsets.UTF_8).asLong();
     }
 
     @Override
@@ -343,8 +344,8 @@ public class MemcachedCache implements Cache
           // (approx < 5% difference in counts across nodes, with 5 cache nodes)
           .setKetamaNodeRepetitions(1000)
           .setHashAlg(MURMUR3_128)
-          .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-          .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+          .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(StringUtils.toUpperCase(config.getProtocol())))
+          .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(StringUtils.toUpperCase(config.getLocator())))
           .setDaemon(true)
           .setFailureMode(FailureMode.Cancel)
           .setTranscoder(transcoder)

@@ -19,13 +19,13 @@ for both broker and historical nodes, when defined in the common properties file
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.cache.type`|`local`, `memcached`, `hybrid`|The type of cache to use for queries. See below of the configuration options for each cache type|`local`|
+|`druid.cache.type`|`local`, `memcached`, `hybrid`, `caffeine`|The type of cache to use for queries. See below of the configuration options for each cache type|`caffeine`|
 
 
 #### Local Cache
 
 <div class="note caution">
-DEPRECATED: Use caffeine instead
+DEPRECATED: Use caffeine (default as of v0.12.0) instead
 </div>
 
 The local cache is deprecated in favor of the Caffeine cache, and may be removed in a future version of Druid. The Caffeine cache affords significantly better performance and control over eviction behavior compared to `local` cache, and is recommended in any situation where you are using JRE 8u60 or higher.
@@ -48,8 +48,8 @@ Below are the configuration options known to this module:
 
 |`runtime.properties`|Description|Default|
 |--------------------|-----------|-------|
-|`druid.cache.type`| Set this to `caffeine`|`local`|
-|`druid.cache.sizeInBytes`|The maximum size of the cache in bytes on heap.|None (unlimited)|
+|`druid.cache.type`| Set this to `caffeine` or leave out parameter|`caffeine`|
+|`druid.cache.sizeInBytes`|The maximum size of the cache in bytes on heap.|min(1GB, Runtime.maxMemory / 10)|
 |`druid.cache.expireAfter`|The time (in ms) after an access for which a cache entry may be expired|None (no time limit)|
 |`druid.cache.cacheExecutorFactory`|The executor factory to use for Caffeine maintenance. One of `COMMON_FJP`, `SINGLE_THREAD`, or `SAME_THREAD`|ForkJoinPool common pool (`COMMON_FJP`)|
 |`druid.cache.evictOnClose`|If a close of a namespace (ex: removing a segment from a node) should cause an eager eviction of associated cache values|`false`|
@@ -84,7 +84,8 @@ Uses memcached as cache backend. This allows all nodes to share the same cache.
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
 |`druid.cache.numConnections`|Number of memcached connections to use.|1|
-
+|`druid.cache.protocol`|Memcached communication protocol. Can be binary or text.|binary|
+|`druid.cache.locator`|Memcached locator. Can be consistent or array_mod.|consistent|
 
 #### Hybrid
 

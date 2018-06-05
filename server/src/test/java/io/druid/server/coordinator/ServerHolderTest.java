@@ -31,8 +31,10 @@ import io.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class ServerHolderTest
 {
@@ -65,19 +67,19 @@ public class ServerHolderTest
       "src1",
       new ImmutableDruidDataSource(
           "src1",
-          ImmutableMap.of(),
-          ImmutableMap.of()
+          Collections.emptyMap(),
+          new TreeMap<>()
       ),
       "src2",
       new ImmutableDruidDataSource(
           "src2",
-          ImmutableMap.of(),
-          ImmutableMap.of()
+          Collections.emptyMap(),
+          new TreeMap<>()
       )
   );
 
   @Test
-  public void testCompareTo() throws Exception
+  public void testCompareTo()
   {
     // available size of 100
     final ServerHolder h1 = new ServerHolder(
@@ -153,7 +155,7 @@ public class ServerHolderTest
   }
 
   @Test
-  public void testEquals() throws Exception
+  public void testEquals()
   {
     final ServerHolder h1 = new ServerHolder(
         new ImmutableDruidServer(

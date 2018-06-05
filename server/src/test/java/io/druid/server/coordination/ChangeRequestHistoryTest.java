@@ -22,6 +22,7 @@ package io.druid.server.coordination;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.druid.utils.CircularBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -119,7 +120,7 @@ public class ChangeRequestHistoryTest
   }
 
   @Test
-  public void testCancel() throws Exception
+  public void testCancel()
   {
     final ChangeRequestHistory<DataSegmentChangeRequest> history = new ChangeRequestHistory();
 
@@ -171,9 +172,9 @@ public class ChangeRequestHistoryTest
   }
 
   @Test
-  public void testCircularBuffer() throws Exception
+  public void testCircularBuffer()
   {
-    ChangeRequestHistory.CircularBuffer<Integer> circularBuffer = new ChangeRequestHistory.CircularBuffer<>(
+    CircularBuffer<Integer> circularBuffer = new CircularBuffer<>(
         3);
 
     circularBuffer.add(1);

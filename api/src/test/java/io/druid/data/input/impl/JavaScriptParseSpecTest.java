@@ -58,9 +58,9 @@ public class JavaScriptParseSpecTest
         "abc",
         JavaScriptConfig.getEnabledInstance()
     );
-    final JavaScriptParseSpec serde = jsonMapper.readValue(
+    final JavaScriptParseSpec serde = (JavaScriptParseSpec) jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
-        JavaScriptParseSpec.class
+        ParseSpec.class
     );
     Assert.assertEquals("abc", serde.getTimestampSpec().getTimestampColumn());
     Assert.assertEquals("iso", serde.getTimestampSpec().getTimestampFormat());

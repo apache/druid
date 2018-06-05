@@ -38,6 +38,12 @@ public class TestLongColumnSelector extends io.druid.segment.TestLongColumnSelec
     return longs[index];
   }
 
+  @Override
+  public boolean isNull()
+  {
+    return false;
+  }
+
   public void increment()
   {
     ++index;

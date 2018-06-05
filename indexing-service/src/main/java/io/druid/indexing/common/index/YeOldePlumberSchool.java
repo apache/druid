@@ -40,9 +40,11 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -105,7 +107,9 @@ public class YeOldePlumberSchool implements PlumberSchool
         config.getShardSpec(),
         version,
         config.getMaxRowsInMemory(),
-        config.isReportParseExceptions()
+        TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
+        config.isReportParseExceptions(),
+        config.getDedupColumn()
     );
 
     // Temporary directory to hold spilled segments.
@@ -123,20 +127,20 @@ public class YeOldePlumberSchool implements PlumberSchool
       }
 
       @Override
-      public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+      public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
       {
         Sink sink = getSink(row.getTimestampFromEpoch());
         if (sink == null) {
-          return -1;
+          return Plumber.THROWAWAY;
         }
 
-        final int numRows = sink.add(row, false);
+        final IncrementalIndexAddResult addResult = sink.add(row, false);
 
         if (!sink.canAppendRow()) {
           persist(committerSupplier.get());
         }
 
-        return numRows;
+        return addResult;
       }
 
       private Sink getSink(long timestamp)
@@ -199,10 +203,7 @@ public class YeOldePlumberSchool implements PlumberSchool
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
                                                      .withBinaryVersion(SegmentUtils.getVersionFromDir(fileToUpload));
 
-          // This plumber is only used in batch ingestion situations where you do not have replica tasks pushing
-          // segments with the same identifier but potentially different contents. In case of conflict, favor the most
-          // recently pushed segment (replaceExisting == true).
-          dataSegmentPusher.push(fileToUpload, segmentToUpload, true);
+          dataSegmentPusher.push(fileToUpload, segmentToUpload, false);
 
           log.info(
               "Uploaded segment[%s]",

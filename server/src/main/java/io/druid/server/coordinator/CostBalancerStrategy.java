@@ -25,17 +25,20 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.java.util.emitter.EmittingLogger;
-
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.NavigableSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -220,6 +223,37 @@ public class CostBalancerStrategy implements BalancerStrategy
     return sampler.getRandomBalancerSegmentHolder(serverHolders);
   }
 
+  @Override
+  public Iterator<ServerHolder> pickServersToDrop(DataSegment toDrop, NavigableSet<ServerHolder> serverHolders)
+  {
+    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
+
+    for (final ServerHolder server : serverHolders) {
+      futures.add(
+          exec.submit(
+              () -> Pair.of(computeCost(toDrop, server, true), server)
+          )
+      );
+    }
+
+    final ListenableFuture<List<Pair<Double, ServerHolder>>> resultsFuture = Futures.allAsList(futures);
+
+    try {
+      // results is an un-ordered list of a pair consisting of the 'cost' of a segment being on a server and the server
+      List<Pair<Double, ServerHolder>> results = resultsFuture.get();
+      return results.stream()
+                    // Comparator.comapringDouble will order by lowest cost...
+                    // reverse it because we want to drop from the highest cost servers first
+                    .sorted(Comparator.comparingDouble((Pair<Double, ServerHolder> o) -> o.lhs).reversed())
+                    .map(x -> x.rhs).collect(Collectors.toList())
+                    .iterator();
+    }
+    catch (Exception e) {
+      log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
+    }
+    return Collections.emptyIterator();
+  }
+
   /**
    * Calculates the initial cost of the Druid segment configuration.
    *
@@ -342,14 +376,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     for (final ServerHolder server : serverHolders) {
       futures.add(
           exec.submit(
-              new Callable<Pair<Double, ServerHolder>>()
-              {
-                @Override
-                public Pair<Double, ServerHolder> call() throws Exception
-                {
-                  return Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server);
-                }
-              }
+              () -> Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server)
           )
       );
     }

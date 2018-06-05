@@ -255,7 +255,7 @@ public class FilteredAggregatorBenchmark
   {
     incIndexFilteredAgg = makeIncIndex(filteredMetrics);
     for (InputRow row : inputRows) {
-      int rv = incIndexFilteredAgg.add(row);
+      int rv = incIndexFilteredAgg.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -263,7 +263,7 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole) throws Exception
+  public void querySingleIncrementalIndex(Blackhole blackhole)
   {
     QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -280,7 +280,7 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndex(Blackhole blackhole)
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,

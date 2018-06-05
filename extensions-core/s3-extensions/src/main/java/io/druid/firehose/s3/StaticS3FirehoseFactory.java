@@ -19,28 +19,32 @@
 
 package io.druid.firehose.s3;
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.IOE;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import io.druid.storage.s3.S3Utils;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.StorageObjectsChunk;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -48,18 +52,18 @@ import java.util.stream.Collectors;
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
  */
-public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<S3Object>
+public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactory<S3ObjectSummary>
 {
   private static final Logger log = new Logger(StaticS3FirehoseFactory.class);
-  private static final long MAX_LISTING_LENGTH = 1024;
+  private static final int MAX_LISTING_LENGTH = 1024;
 
-  private final RestS3Service s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final List<URI> uris;
   private final List<URI> prefixes;
 
   @JsonCreator
   public StaticS3FirehoseFactory(
-      @JacksonInject("s3Client") RestS3Service s3Client,
+      @JacksonInject("s3Client") ServerSideEncryptingAmazonS3 s3Client,
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("prefixes") List<URI> prefixes,
       @JsonProperty("maxCacheCapacityBytes") Long maxCacheCapacityBytes,
@@ -70,7 +74,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   )
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
-    this.s3Client = Preconditions.checkNotNull(s3Client, "null s3Client");
+    this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
     this.uris = uris == null ? new ArrayList<>() : uris;
     this.prefixes = prefixes == null ? new ArrayList<>() : prefixes;
 
@@ -104,62 +108,58 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
   }
 
   @Override
-  protected Collection<S3Object> initObjects() throws IOException
+  protected Collection<S3ObjectSummary> initObjects() throws IOException
   {
     // Here, the returned s3 objects contain minimal information without data.
     // Getting data is deferred until openObjectStream() is called for each object.
     if (!uris.isEmpty()) {
       return uris.stream()
-          .map(
-              uri -> {
-                final String s3Bucket = uri.getAuthority();
-                final S3Object s3Object = new S3Object(extractS3Key(uri));
-                s3Object.setBucketName(s3Bucket);
-                return s3Object;
-              }
-          )
-          .collect(Collectors.toList());
+                 .map(
+                     uri -> {
+                       final String s3Bucket = uri.getAuthority();
+                       final String key = S3Utils.extractS3Key(uri);
+                       return S3Utils.getSingleObjectSummary(s3Client, s3Bucket, key);
+                     }
+                 )
+                 .collect(Collectors.toList());
     } else {
-      final List<S3Object> objects = new ArrayList<>();
+      final List<S3ObjectSummary> objects = new ArrayList<>();
       for (URI uri : prefixes) {
         final String bucket = uri.getAuthority();
-        final String prefix = extractS3Key(uri);
+        final String prefix = S3Utils.extractS3Key(uri);
+
         try {
-          String lastKey = null;
-          StorageObjectsChunk objectsChunk;
-          do {
-            objectsChunk = s3Client.listObjectsChunked(
-                bucket,
-                prefix,
-                null,
-                MAX_LISTING_LENGTH,
-                lastKey
-            );
-            Arrays.stream(objectsChunk.getObjects())
-                  .filter(storageObject -> !storageObject.isDirectoryPlaceholder())
-                  .forEach(storageObject -> objects.add((S3Object) storageObject));
-            lastKey = objectsChunk.getPriorLastKey();
-          } while (!objectsChunk.isListingComplete());
+          final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
+              s3Client,
+              bucket,
+              prefix,
+              MAX_LISTING_LENGTH
+          );
+          objects.addAll(Lists.newArrayList(objectSummaryIterator));
         }
-        catch (ServiceException outerException) {
+        catch (AmazonS3Exception outerException) {
           log.error(outerException, "Exception while listing on %s", uri);
 
-          if (outerException.getResponseCode() == 403) {
+          if (outerException.getStatusCode() == 403) {
             // The "Access Denied" means users might not have a proper permission for listing on the given uri.
             // Usually this is not a problem, but the uris might be the full paths to input objects instead of prefixes.
             // In this case, users should be able to get objects if they have a proper permission for GetObject.
 
             log.warn("Access denied for %s. Try to get the object from the uri without listing", uri);
             try {
-              final S3Object s3Object = s3Client.getObject(bucket, prefix);
-              if (!s3Object.isDirectoryPlaceholder()) {
-                objects.add(s3Object);
+              final ObjectMetadata objectMetadata = s3Client.getObjectMetadata(bucket, prefix);
+
+              if (!S3Utils.isDirectoryPlaceholder(prefix, objectMetadata)) {
+                objects.add(S3Utils.getSingleObjectSummary(s3Client, bucket, prefix));
               } else {
-                throw new IOException(uri + " is a directory placeholder, "
-                                      + "but failed to get the object list under the directory due to permission");
+                throw new IOE(
+                    "[%s] is a directory placeholder, "
+                    + "but failed to get the object list under the directory due to permission",
+                    uri
+                );
               }
             }
-            catch (S3ServiceException innerException) {
+            catch (AmazonS3Exception innerException) {
               throw new IOException(innerException);
             }
           } else {
@@ -171,51 +171,48 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     }
   }
 
-  private static String extractS3Key(URI uri)
-  {
-    return uri.getPath().startsWith("/")
-           ? uri.getPath().substring(1)
-           : uri.getPath();
-  }
-
   @Override
-  protected InputStream openObjectStream(S3Object object) throws IOException
+  protected InputStream openObjectStream(S3ObjectSummary object) throws IOException
   {
     try {
       // Get data of the given object and open an input stream
-      return s3Client.getObject(object.getBucketName(), object.getKey()).getDataInputStream();
+      final S3Object s3Object = s3Client.getObject(object.getBucketName(), object.getKey());
+      if (s3Object == null) {
+        throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", object.getBucketName(), object.getKey());
+      }
+      return s3Object.getObjectContent();
     }
-    catch (ServiceException e) {
+    catch (AmazonS3Exception e) {
       throw new IOException(e);
     }
   }
 
   @Override
-  protected InputStream openObjectStream(S3Object object, long start) throws IOException
+  protected InputStream openObjectStream(S3ObjectSummary object, long start) throws IOException
   {
+    final GetObjectRequest request = new GetObjectRequest(object.getBucketName(), object.getKey());
+    request.setRange(start);
     try {
-      final S3Object result = s3Client.getObject(
-          object.getBucketName(),
-          object.getKey(),
-          null,
-          null,
-          null,
-          null,
-          start,
-          null
-      );
-
-      return result.getDataInputStream();
+      final S3Object s3Object = s3Client.getObject(request);
+      if (s3Object == null) {
+        throw new ISE(
+            "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
+            object.getBucketName(),
+            object.getKey(),
+            start
+        );
+      }
+      return s3Object.getObjectContent();
     }
-    catch (ServiceException e) {
+    catch (AmazonS3Exception e) {
       throw new IOException(e);
     }
   }
 
   @Override
-  protected InputStream wrapObjectStream(S3Object object, InputStream stream) throws IOException
+  protected InputStream wrapObjectStream(S3ObjectSummary object, InputStream stream) throws IOException
   {
-    return object.getKey().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return CompressionUtils.decompress(stream, object.getKey());
   }
 
   @Override

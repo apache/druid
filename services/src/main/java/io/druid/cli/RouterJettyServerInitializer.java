@@ -34,9 +34,11 @@ import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.router.ManagementProxyConfig;
 import io.druid.server.router.Router;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
+import io.druid.sql.avatica.DruidAvaticaHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -50,7 +52,11 @@ import java.util.List;
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/status/health"
+      "/status/health",
+      // JDBC authentication uses the JDBC connection context instead of HTTP headers, skip the normal auth checks.
+      // The router will keep the connection context in the forwarded message, and the broker is responsible for
+      // performing the auth checks.
+      DruidAvaticaHandler.AVATICA_PATH
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;
@@ -58,6 +64,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   private final ManagementProxyConfig managementProxyConfig;
   private final AsyncQueryForwardingServlet asyncQueryForwardingServlet;
   private final AsyncManagementForwardingServlet asyncManagementForwardingServlet;
+  private final AuthConfig authConfig;
 
   @Inject
   public RouterJettyServerInitializer(
@@ -65,7 +72,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       @Global DruidHttpClientConfig globalHttpClientConfig,
       ManagementProxyConfig managementProxyConfig,
       AsyncQueryForwardingServlet asyncQueryForwardingServlet,
-      AsyncManagementForwardingServlet asyncManagementForwardingServlet
+      AsyncManagementForwardingServlet asyncManagementForwardingServlet,
+      AuthConfig authConfig
   )
   {
     this.routerHttpClientConfig = routerHttpClientConfig;
@@ -73,6 +81,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     this.managementProxyConfig = managementProxyConfig;
     this.asyncQueryForwardingServlet = asyncQueryForwardingServlet;
     this.asyncManagementForwardingServlet = asyncManagementForwardingServlet;
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -100,9 +109,12 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 

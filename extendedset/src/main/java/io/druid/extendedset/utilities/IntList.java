@@ -1,6 +1,5 @@
 package io.druid.extendedset.utilities;
 
-import java.nio.IntBuffer;
 import java.util.ArrayList;
 
 /**
@@ -66,27 +65,6 @@ public class IntList
     }
 
     return baseList[index % ALLOCATION_SIZE];
-  }
-
-  public int baseListCount()
-  {
-    return baseLists.size();
-  }
-
-  public IntBuffer getBaseList(int index)
-  {
-    final int[] array = baseLists.get(index);
-    if (array == null) {
-      return null;
-    }
-
-    final IntBuffer retVal = IntBuffer.wrap(array);
-
-    if (index + 1 == baseListCount()) {
-      retVal.limit(maxIndex - (index * ALLOCATION_SIZE));
-    }
-
-    return retVal.asReadOnlyBuffer();
   }
 
   public int[] toArray()

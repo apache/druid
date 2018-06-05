@@ -162,7 +162,7 @@ public class DruidStatement implements Closeable
     try (final DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       synchronized (lock) {
         ensure(State.NEW);
-        this.plannerResult = planner.plan(query, null, authenticationResult);
+        this.plannerResult = planner.plan(query, authenticationResult);
         this.maxRowCount = maxRowCount;
         this.query = query;
         this.signature = Meta.Signature.create(

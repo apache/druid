@@ -25,13 +25,13 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.segment.TestHelper;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
-import io.druid.segment.TestHelper;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -44,7 +44,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -52,7 +51,7 @@ import java.util.List;
 public class SegmentLoaderLocalCacheManagerTest
 {
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return ImmutableList.of(
         new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
@@ -102,7 +101,7 @@ public class SegmentLoaderLocalCacheManagerTest
   }
 
   @Test
-  public void testIfSegmentIsLoaded() throws Exception
+  public void testIfSegmentIsLoaded()
   {
     final DataSegment cachedSegment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
     final File cachedSegmentFile = new File(

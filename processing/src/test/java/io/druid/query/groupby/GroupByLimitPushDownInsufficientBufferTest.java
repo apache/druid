@@ -34,7 +34,6 @@ import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
@@ -43,12 +42,12 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.query.BySegmentQueryRunner;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -79,6 +78,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -419,7 +419,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
   }
 
   @Test
-  public void testPartialLimitPushDownMerge() throws Exception
+  public void testPartialLimitPushDownMerge()
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
@@ -508,7 +508,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
   }
 
   @Test
-  public void testPartialLimitPushDownMergeForceAggs() throws Exception
+  public void testPartialLimitPushDownMergeForceAggs()
   {
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 

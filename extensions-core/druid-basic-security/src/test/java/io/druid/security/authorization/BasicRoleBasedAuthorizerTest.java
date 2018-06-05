@@ -57,7 +57,7 @@ public class BasicRoleBasedAuthorizerTest
   private CoordinatorBasicAuthorizerMetadataStorageUpdater updater;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
@@ -96,7 +96,7 @@ public class BasicRoleBasedAuthorizerTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
   }
 
@@ -116,7 +116,7 @@ public class BasicRoleBasedAuthorizerTest
 
     updater.setPermissions(AUTHORIZER_NAME, "druidRole", permissions);
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
 
     Access access = authorizer.authorize(
         authenticationResult,

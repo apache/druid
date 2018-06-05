@@ -19,13 +19,13 @@
 
 package io.druid.server.router;
 
-import com.google.common.base.Charsets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectSortedMap;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -119,7 +119,7 @@ public class ConsistentHasher
     long[] hashes = new long[REPLICATION_FACTOR];
     for (int i = 0; i < REPLICATION_FACTOR; i++) {
       String vnode = key + "-" + i;
-      hashes[i] = hashFn.hashString(vnode, Charsets.UTF_8).asLong();
+      hashes[i] = hashFn.hashString(vnode, StandardCharsets.UTF_8).asLong();
     }
 
     nodeKeyHashes.put(key, hashes);

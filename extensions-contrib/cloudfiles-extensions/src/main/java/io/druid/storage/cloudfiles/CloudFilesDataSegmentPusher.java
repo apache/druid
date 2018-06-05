@@ -31,7 +31,6 @@ import io.druid.timeline.DataSegment;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.util.Map;
@@ -73,10 +72,12 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean replaceExisting)
-      throws IOException
+  public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
   {
-    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), getStorageDir(inSegment));
+    final String segmentPath = CloudFilesUtils.buildCloudFilesPath(
+        this.config.getBasePath(),
+        getStorageDir(inSegment, useUniquePath)
+    );
 
     File descriptorFile = null;
     File zipOutFile = null;
@@ -95,22 +96,18 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
                 objectApi.getContainer()
             );
 
-            if (!replaceExisting && objectApi.exists(segmentData.getPath())) {
-              log.info("Skipping push because object [%s] exists && replaceExisting == false", segmentData.getPath());
-            } else {
-              log.info("Pushing %s.", segmentData.getPath());
-              objectApi.put(segmentData);
+            log.info("Pushing %s.", segmentData.getPath());
+            objectApi.put(segmentData);
 
-              // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
-              // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-              Files.write(descFile.toPath(), jsonMapper.writeValueAsBytes(inSegment));
-              CloudFilesObject descriptorData = new CloudFilesObject(
-                  segmentPath, descFile,
-                  objectApi.getRegion(), objectApi.getContainer()
-              );
-              log.info("Pushing %s.", descriptorData.getPath());
-              objectApi.put(descriptorData);
-            }
+            // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
+            // runtime, and because Guava deletes methods over time, that causes incompatibilities.
+            Files.write(descFile.toPath(), jsonMapper.writeValueAsBytes(inSegment));
+            CloudFilesObject descriptorData = new CloudFilesObject(
+                segmentPath, descFile,
+                objectApi.getRegion(), objectApi.getContainer()
+            );
+            log.info("Pushing %s.", descriptorData.getPath());
+            objectApi.put(descriptorData);
 
             final DataSegment outSegment = inSegment
                 .withSize(indexSize)

@@ -19,27 +19,23 @@
 
 package io.druid.segment.incremental;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
-import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.Metadata;
-import io.druid.segment.Rowboat;
+import io.druid.segment.TransformableRowIterator;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.ListIndexed;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 
-import java.util.Iterator;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -67,32 +63,38 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
   }
 
-  public IncrementalIndexAdapter(
-      Interval dataInterval, IncrementalIndex<?> index, BitmapFactory bitmapFactory
-  )
+  public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndex<?> index, BitmapFactory bitmapFactory)
   {
     this.dataInterval = dataInterval;
     this.index = index;
 
-    /* Sometimes it's hard to tell whether one dimension contains a null value or not.
-     * If one dimension had show a null or empty value explicitly, then yes, it contains
-     * null value. But if one dimension's values are all non-null, it still early to say
-     * this dimension does not contain null value. Consider a two row case, first row had
-     * "dimA=1" and "dimB=2", the second row only had "dimA=3". To dimB, its value are "2" and
-     * never showed a null or empty value. But when we combines these two rows, dimB is null
-     * in row 2. So we should iterate all rows to determine whether one dimension contains
-     * a null value.
-     */
     final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
+    accessors = dimensions
+        .stream()
+        .collect(Collectors.toMap(IncrementalIndex.DimensionDesc::getName, DimensionAccessor::new));
 
-    accessors = Maps.newHashMapWithExpectedSize(dimensions.size());
-    for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-      accessors.put(dimension.getName(), new DimensionAccessor(dimension));
-    }
+    processRows(index, bitmapFactory, dimensions);
+  }
 
+  /**
+   * Sometimes it's hard to tell whether one dimension contains a null value or not.
+   * If one dimension had show a null or empty value explicitly, then yes, it contains
+   * null value. But if one dimension's values are all non-null, it still early to say
+   * this dimension does not contain null value. Consider a two row case, first row had
+   * "dimA=1" and "dimB=2", the second row only had "dimA=3". To dimB, its value are "2" and
+   * never showed a null or empty value. But when we combines these two rows, dimB is null
+   * in row 2. So we should iterate all rows to determine whether one dimension contains
+   * a null value.
+   */
+  private void processRows(
+      IncrementalIndex<?> index,
+      BitmapFactory bitmapFactory,
+      List<IncrementalIndex.DimensionDesc> dimensions
+  )
+  {
     int rowNum = 0;
-    for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
-      final Object[] dims = timeAndDims.getDims();
+    for (IncrementalIndexRow row : index.getFacts().keySet()) {
+      final Object[] dims = row.getDims();
 
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
         final int dimIndex = dimension.getIndex();
@@ -128,19 +130,20 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getDimensionNames()
+  public List<String> getDimensionNames()
   {
-    return new ListIndexed<String>(index.getDimensionNames(), String.class);
+    return index.getDimensionNames();
   }
 
   @Override
-  public Indexed<String> getMetricNames()
+  public List<String> getMetricNames()
   {
-    return new ListIndexed<String>(index.getMetricNames(), String.class);
+    return index.getMetricNames();
   }
 
+  @Nullable
   @Override
-  public Indexed<Comparable> getDimValueLookup(String dimension)
+  public <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension)
   {
     final DimensionAccessor accessor = accessors.get(dimension);
     if (accessor == null) {
@@ -153,68 +156,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Iterable<Rowboat> getRows()
+  public TransformableRowIterator getRows()
   {
-    return new Iterable<Rowboat>()
-    {
-      @Override
-      public Iterator<Rowboat> iterator()
-      {
-        final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
-        final DimensionHandler[] handlers = new DimensionHandler[dimensions.size()];
-        final DimensionIndexer[] indexers = new DimensionIndexer[dimensions.size()];
-        for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-          handlers[dimension.getIndex()] = dimension.getHandler();
-          indexers[dimension.getIndex()] = dimension.getIndexer();
-        }
-
-        /*
-         * Note that the transform function increments a counter to determine the rowNum of
-         * the iterated Rowboats. We need to return a new iterator on each
-         * iterator() call to ensure the counter starts at 0.
-         */
-        return Iterators.transform(
-            index.getFacts().keySet().iterator(),
-            new Function<IncrementalIndex.TimeAndDims, Rowboat>()
-            {
-              int count = 0;
-
-              @Override
-              public Rowboat apply(IncrementalIndex.TimeAndDims timeAndDims)
-              {
-                final Object[] dimValues = timeAndDims.getDims();
-                final int rowOffset = timeAndDims.getRowIndex();
-
-                Object[] dims = new Object[dimValues.length];
-                for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-                  final int dimIndex = dimension.getIndex();
-
-                  if (dimIndex >= dimValues.length || dimValues[dimIndex] == null) {
-                    continue;
-                  }
-
-                  final DimensionIndexer indexer = indexers[dimIndex];
-                  Object sortedDimVals = indexer.convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(dimValues[dimIndex]);
-                  dims[dimIndex] = sortedDimVals;
-                }
-
-                Object[] metrics = new Object[index.getMetricAggs().length];
-                for (int i = 0; i < metrics.length; i++) {
-                  metrics[i] = index.getMetricObjectValue(rowOffset, i);
-                }
-
-                return new Rowboat(
-                    timeAndDims.getTimestamp(),
-                    dims,
-                    metrics,
-                    count++,
-                    handlers
-                );
-              }
-            }
-        );
-      }
-    };
+    return new IncrementalIndexRowIterator(index);
   }
 
   @Override
@@ -245,18 +189,6 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return new MutableBitmapValues(bitmapIndex);
   }
 
-  @Override
-  public String getMetricType(String metric)
-  {
-    return index.getMetricType(metric);
-  }
-
-  @Override
-  public ColumnCapabilities getCapabilities(String column)
-  {
-    return index.getCapabilities(column);
-  }
-
   static class MutableBitmapValues implements BitmapValues
   {
     private final MutableBitmap bitmapIndex;
@@ -280,14 +212,20 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Metadata getMetadata()
+  public String getMetricType(String metric)
   {
-    return index.getMetadata();
+    return index.getMetricType(metric);
   }
 
   @Override
-  public Map<String, DimensionHandler> getDimensionHandlers()
+  public ColumnCapabilities getCapabilities(String column)
   {
-    return index.getDimensionHandlers();
+    return index.getCapabilities(column);
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
   }
 }

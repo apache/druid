@@ -41,8 +41,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
@@ -57,9 +55,10 @@ import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import io.druid.server.metrics.MonitorsConfig;
@@ -261,6 +260,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             final File taskFile = new File(taskDir, "task.json");
                             final File statusFile = new File(attemptDir, "status.json");
                             final File logFile = new File(taskDir, "log");
+                            final File reportsFile = new File(attemptDir, "report.json");
 
                             // time to adjust process holders
                             synchronized (tasks) {
@@ -358,7 +358,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 }
                               }
 
-                              // Add dataSource and taskId for metrics or logging
+                              // Add dataSource, taskId and taskType for metrics or logging
                               command.add(
                                   StringUtils.format(
                                       "-D%s%s=%s",
@@ -373,6 +373,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                       MonitorsConfig.METRIC_DIMENSION_PREFIX,
                                       DruidMetrics.TASK_ID,
                                       task.getId()
+                                  )
+                              );
+                              command.add(
+                                  StringUtils.format(
+                                      "-D%s%s=%s",
+                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                                      DruidMetrics.TASK_TYPE,
+                                      task.getType()
                                   )
                               );
 
@@ -409,6 +417,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("peon");
                               command.add(taskFile.toString());
                               command.add(statusFile.toString());
+                              command.add(reportsFile.toString());
                               String nodeType = task.getNodeType();
                               if (nodeType != null) {
                                 command.add("--nodeType");
@@ -460,6 +469,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               Thread.currentThread().setName(priorThreadName);
                               // Upload task logs
                               taskLogPusher.pushTaskLog(task.getId(), logFile);
+                              if (reportsFile.exists()) {
+                                taskLogPusher.pushTaskReports(task.getId(), reportsFile);
+                              }
                             }
 
                             TaskStatus status;
@@ -772,6 +784,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     {
       return task.getType();
     }
+
+    @Override
+    public String getDataSource()
+    {
+      return task.getDataSource();
+    }
   }
 
   private static class ProcessHolder
@@ -804,7 +822,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
  */
 class QuotableWhiteSpaceSplitter implements Iterable<String>
 {
-  private static final Logger LOG = new Logger(QuotableWhiteSpaceSplitter.class);
   private final String string;
 
   public QuotableWhiteSpaceSplitter(String string)

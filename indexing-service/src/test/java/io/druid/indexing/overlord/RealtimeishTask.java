@@ -48,11 +48,6 @@ public class RealtimeishTask extends AbstractTask
     super("rt1", "rt", new TaskResource("rt1", 1), "foo", null);
   }
 
-  public RealtimeishTask(String id, String groupId, TaskResource taskResource, String dataSource)
-  {
-    super(id, groupId, taskResource, dataSource, null);
-  }
-
   @Override
   public String getType()
   {
@@ -60,7 +55,7 @@ public class RealtimeishTask extends AbstractTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
   }

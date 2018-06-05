@@ -19,6 +19,20 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.CanonicalGrantee;
+import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.CopyObjectResult;
+import com.amazonaws.services.s3.model.Grant;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.Owner;
+import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -28,14 +42,11 @@ import io.druid.java.util.common.MapUtils;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
-import org.jets3t.service.model.StorageObject;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -61,11 +72,17 @@ public class S3DataSegmentMoverTest
   @Test
   public void testMove() throws Exception
   {
-    MockStorageService mockS3Client = new MockStorageService();
+    MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
 
-    mockS3Client.putObject("main", new S3Object("baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"));
-    mockS3Client.putObject("main", new S3Object("baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/descriptor.json"));
+    mockS3Client.putObject(
+        "main",
+        "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
+    );
+    mockS3Client.putObject(
+        "main",
+        "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/descriptor.json"
+    );
 
     DataSegment movedSegment = mover.move(
         sourceSegment,
@@ -81,11 +98,17 @@ public class S3DataSegmentMoverTest
   @Test
   public void testMoveNoop() throws Exception
   {
-    MockStorageService mockS3Client = new MockStorageService();
+    MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
 
-    mockS3Client.putObject("archive", new S3Object("targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"));
-    mockS3Client.putObject("archive", new S3Object("targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/descriptor.json"));
+    mockS3Client.putObject(
+        "archive",
+        "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
+    );
+    mockS3Client.putObject(
+        "archive",
+        "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/descriptor.json"
+    );
 
     DataSegment movedSegment = mover.move(
         sourceSegment,
@@ -102,7 +125,7 @@ public class S3DataSegmentMoverTest
   @Test(expected = SegmentLoadingException.class)
   public void testMoveException() throws Exception
   {
-    MockStorageService mockS3Client = new MockStorageService();
+    MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
 
     mover.move(
@@ -114,7 +137,7 @@ public class S3DataSegmentMoverTest
   @Test
   public void testIgnoresGoneButAlreadyMoved() throws Exception
   {
-    MockStorageService mockS3Client = new MockStorageService();
+    MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
     mover.move(new DataSegment(
         "test",
@@ -137,7 +160,7 @@ public class S3DataSegmentMoverTest
   @Test(expected = SegmentLoadingException.class)
   public void testFailsToMoveMissing() throws Exception
   {
-    MockStorageService mockS3Client = new MockStorageService();
+    MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
     mover.move(new DataSegment(
         "test",
@@ -157,15 +180,15 @@ public class S3DataSegmentMoverTest
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
-  private static class MockStorageService extends RestS3Service
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     Map<String, Set<String>> storage = Maps.newHashMap();
     boolean copied = false;
     boolean deletedOld = false;
 
-    private MockStorageService() throws S3ServiceException
+    private MockAmazonS3Client()
     {
-      super(null);
+      super(new AmazonS3Client(), new NoopServerSideEncryption());
     }
 
     public boolean didMove()
@@ -174,59 +197,84 @@ public class S3DataSegmentMoverTest
     }
 
     @Override
-    public boolean isObjectInBucket(String bucketName, String objectKey) throws ServiceException
+    public AccessControlList getBucketAcl(String bucketName)
+    {
+      final AccessControlList acl = new AccessControlList();
+      acl.setOwner(new Owner("ownerId", "owner"));
+      acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
+      return acl;
+    }
+
+    @Override
+    public boolean doesObjectExist(String bucketName, String objectKey)
     {
       Set<String> objects = storage.get(bucketName);
       return (objects != null && objects.contains(objectKey));
     }
 
     @Override
-    public S3Object[] listObjects(String bucketName, String objectKey, String separator)
+    public ListObjectsV2Result listObjectsV2(ListObjectsV2Request listObjectsV2Request)
     {
-      try {
-        if (isObjectInBucket(bucketName, objectKey)) {
-          final S3Object object = new S3Object(objectKey);
-          object.setStorageClass(S3Object.STORAGE_CLASS_STANDARD);
-          return new S3Object[]{object};
-        }
+      final String bucketName = listObjectsV2Request.getBucketName();
+      final String objectKey = listObjectsV2Request.getPrefix();
+      if (doesObjectExist(bucketName, objectKey)) {
+        final S3ObjectSummary objectSummary = new S3ObjectSummary();
+        objectSummary.setBucketName(bucketName);
+        objectSummary.setKey(objectKey);
+        objectSummary.setStorageClass(StorageClass.Standard.name());
+
+        final ListObjectsV2Result result = new ListObjectsV2Result();
+        result.setBucketName(bucketName);
+        result.setPrefix(objectKey);
+        result.setKeyCount(1);
+        result.getObjectSummaries().add(objectSummary);
+        result.setTruncated(true);
+        return result;
+      } else {
+        return new ListObjectsV2Result();
       }
-      catch (ServiceException e) {
-        // return empty list
-      }
-      return new S3Object[]{};
     }
 
     @Override
-    public Map<String, Object> copyObject(
-        String sourceBucketName,
-        String sourceObjectKey,
-        String destinationBucketName,
-        StorageObject destinationObject,
-        boolean replaceMetadata
-    ) throws ServiceException
+    public CopyObjectResult copyObject(CopyObjectRequest copyObjectRequest)
     {
+      final String sourceBucketName = copyObjectRequest.getSourceBucketName();
+      final String sourceObjectKey = copyObjectRequest.getSourceKey();
+      final String destinationBucketName = copyObjectRequest.getDestinationBucketName();
+      final String destinationObjectKey = copyObjectRequest.getDestinationKey();
       copied = true;
-      if (isObjectInBucket(sourceBucketName, sourceObjectKey)) {
-        this.putObject(destinationBucketName, new S3Object(destinationObject.getKey()));
+      if (doesObjectExist(sourceBucketName, sourceObjectKey)) {
+        storage.computeIfAbsent(destinationBucketName, k -> new HashSet<>())
+               .add(destinationObjectKey);
+        return new CopyObjectResult();
+      } else {
+        final AmazonS3Exception exception = new AmazonS3Exception("S3DataSegmentMoverTest");
+        exception.setErrorCode("NoSuchKey");
+        exception.setStatusCode(404);
+        throw exception;
       }
-      return null;
     }
 
     @Override
-    public void deleteObject(String bucket, String objectKey) throws S3ServiceException
+    public void deleteObject(String bucket, String objectKey)
     {
       deletedOld = true;
       storage.get(bucket).remove(objectKey);
     }
 
+    public PutObjectResult putObject(String bucketName, String key)
+    {
+      return putObject(bucketName, key, (File) null);
+    }
+
     @Override
-    public S3Object putObject(String bucketName, S3Object object) throws S3ServiceException
+    public PutObjectResult putObject(String bucketName, String key, File file)
     {
       if (!storage.containsKey(bucketName)) {
         storage.put(bucketName, Sets.newHashSet());
       }
-      storage.get(bucketName).add(object.getKey());
-      return object;
+      storage.get(bucketName).add(key);
+      return new PutObjectResult();
     }
   }
 }

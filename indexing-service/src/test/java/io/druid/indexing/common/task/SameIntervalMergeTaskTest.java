@@ -41,7 +41,6 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.Segment;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoader;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -53,7 +52,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -119,7 +117,7 @@ public class SameIntervalMergeTaskTest
     boolean isReady = mergeTask.isReady(new TaskActionClient()
     {
       @Override
-      public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+      public <RetType> RetType submit(TaskAction<RetType> taskAction)
       {
         if (taskAction instanceof LockTryAcquireAction) {
           // the lock of this interval is required
@@ -148,7 +146,7 @@ public class SameIntervalMergeTaskTest
             new TaskActionClient()
             {
               @Override
-              public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+              public <RetType> RetType submit(TaskAction<RetType> taskAction)
               {
                 if (taskAction instanceof LockListAction) {
                   Assert.assertNotNull("taskLock should be acquired before list", taskLock);
@@ -201,7 +199,7 @@ public class SameIntervalMergeTaskTest
               }
 
               @Override
-              public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+              public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
               {
                 // the merged segment is pushed to storage
                 segments.add(segment);
@@ -226,26 +224,26 @@ public class SameIntervalMergeTaskTest
             new SegmentLoader()
             {
               @Override
-              public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+              public boolean isSegmentLoaded(DataSegment segment)
               {
                 return false;
               }
 
               @Override
-              public Segment getSegment(DataSegment segment) throws SegmentLoadingException
+              public Segment getSegment(DataSegment segment)
               {
                 return null;
               }
 
               @Override
-              public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+              public File getSegmentFiles(DataSegment segment)
               {
                 // dummy file to represent the downloaded segment's dir
                 return new File("" + segment.getShardSpec().getPartitionNum());
               }
 
               @Override
-              public void cleanup(DataSegment segment) throws SegmentLoadingException
+              public void cleanup(DataSegment segment)
               {
               }
             },
@@ -258,7 +256,8 @@ public class SameIntervalMergeTaskTest
             null,
             null,
             null,
-            null
+            null,
+            new NoopTestTaskFileWriter()
         )
     );
 

@@ -20,21 +20,14 @@
 package io.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.RetryUtils;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
-import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -47,15 +40,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A file fetcher used by {@link PrefetchableTextFilesFirehoseFactory}.
+ * A file fetcher used by {@link PrefetchableTextFilesFirehoseFactory} and {@link PrefetchSqlFirehoseFactory}.
  * See the javadoc of {@link PrefetchableTextFilesFirehoseFactory} for more details.
  */
-public class Fetcher<T> implements Iterator<OpenedObject<T>>
+public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
 {
   private static final Logger LOG = new Logger(Fetcher.class);
   private static final String FETCH_FILE_PREFIX = "fetch-";
-  private static final int BUFFER_SIZE = 1024 * 4;
-
   private final CacheManager<T> cacheManager;
   private final List<T> objects;
   private final ExecutorService fetchExecutor;
@@ -63,21 +54,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   @Nullable
   private final File temporaryDirectory;
 
-  // A roughly max size of total fetched objects, but the actual fetched size can be bigger. The reason is our current
-  // client implementations for cloud storages like s3 don't support range scan yet, so we must download the whole file
-  // at once. It's still possible for the size of cached/fetched data to not exceed these variables by estimating the
-  // after-fetch size, but it makes us consider the case when any files cannot be fetched due to their large size, which
-  // makes the implementation complicated.
-  private final long maxFetchCapacityBytes;
   private final boolean prefetchEnabled;
-
-  private final long prefetchTriggerBytes;
-
-  // timeout for fetching an object from the remote site
-  private final long fetchTimeout;
-
-  // maximum retry for fetching an object from the remote site
-  private final int maxFetchRetry;
 
   private final LinkedBlockingQueue<FetchedFile<T>> fetchedFiles = new LinkedBlockingQueue<>();
 
@@ -85,12 +62,8 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   // This is updated when a file is successfully fetched, a fetched file is deleted, or a fetched file is
   // cached.
   private final AtomicLong fetchedBytes = new AtomicLong(0);
-
-  private final ObjectOpenFunction<T> openObjectFunction;
-  private final Predicate<Throwable> retryCondition;
-  private final byte[] buffer;
-
   private Future<Void> fetchFuture;
+  private PrefetchConfig prefetchConfig;
 
   // nextFetchIndex indicates which object should be downloaded when fetch is triggered.
   // This variable is always read by the same thread regardless of prefetch is enabled or not.
@@ -103,49 +76,35 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
       List<T> objects,
       ExecutorService fetchExecutor,
       @Nullable File temporaryDirectory,
-      long maxFetchCapacityBytes,
-      long prefetchTriggerBytes,
-      long fetchTimeout,
-      int maxFetchRetry,
-      ObjectOpenFunction<T> openObjectFunction,
-      Predicate<Throwable> retryCondition
+      PrefetchConfig prefetchConfig
   )
   {
     this.cacheManager = cacheManager;
     this.objects = objects;
     this.fetchExecutor = fetchExecutor;
     this.temporaryDirectory = temporaryDirectory;
-    this.maxFetchCapacityBytes = maxFetchCapacityBytes;
-    this.prefetchTriggerBytes = prefetchTriggerBytes;
-    this.fetchTimeout = fetchTimeout;
-    this.maxFetchRetry = maxFetchRetry;
-    this.openObjectFunction = openObjectFunction;
-    this.retryCondition = retryCondition;
-    this.buffer = new byte[BUFFER_SIZE];
-
-    this.prefetchEnabled = maxFetchCapacityBytes > 0;
+    this.prefetchConfig = prefetchConfig;
+    this.prefetchEnabled = prefetchConfig.getMaxFetchCapacityBytes() > 0;
     this.numRemainingObjects = objects.size();
 
     // (*) If cache is initialized, put all cached files to the queue.
     this.fetchedFiles.addAll(cacheManager.getFiles());
     this.nextFetchIndex = fetchedFiles.size();
-
     if (cacheManager.isEnabled() || prefetchEnabled) {
       Preconditions.checkNotNull(temporaryDirectory, "temporaryDirectory");
     }
-
     if (prefetchEnabled) {
       fetchIfNeeded(0L);
     }
   }
 
   /**
-   * Submit a fetch task if remainingBytes is smaller than {@link #prefetchTriggerBytes}.
+   * Submit a fetch task if remainingBytes is smaller than prefetchTriggerBytes.
    */
   private void fetchIfNeeded(long remainingBytes)
   {
     if ((fetchFuture == null || fetchFuture.isDone())
-        && remainingBytes <= prefetchTriggerBytes) {
+        && remainingBytes <= prefetchConfig.getPrefetchTriggerBytes()) {
       fetchFuture = fetchExecutor.submit(() -> {
         fetch();
         return null;
@@ -154,18 +113,19 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   }
 
   /**
-   * Fetch objects to a local disk up to {@link PrefetchableTextFilesFirehoseFactory#maxFetchCapacityBytes}.
+   * Fetch objects to a local disk up to {@link PrefetchConfig#maxFetchCapacityBytes}.
    * This method is not thread safe and must be called by a single thread.  Note that even
-   * {@link PrefetchableTextFilesFirehoseFactory#maxFetchCapacityBytes} is 0, at least 1 file is always fetched.
+   * {@link PrefetchConfig#maxFetchCapacityBytes} is 0, at least 1 file is always fetched.
    * This is for simplifying design, and should be improved when our client implementations for cloud storages
    * like S3 support range scan.
-   *
+   * <p>
    * This method is called by {@link #fetchExecutor} if prefetch is enabled.  Otherwise, it is called by the same
    * thread.
    */
   private void fetch() throws Exception
   {
-    for (; nextFetchIndex < objects.size() && fetchedBytes.get() <= maxFetchCapacityBytes; nextFetchIndex++) {
+    for (; nextFetchIndex < objects.size()
+           && fetchedBytes.get() <= prefetchConfig.getMaxFetchCapacityBytes(); nextFetchIndex++) {
       final T object = objects.get(nextFetchIndex);
       LOG.info("Fetching [%d]th object[%s], fetchedBytes[%d]", nextFetchIndex, object, fetchedBytes.get());
       final File outFile = File.createTempFile(FETCH_FILE_PREFIX, null, temporaryDirectory);
@@ -175,34 +135,20 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   }
 
   /**
-   * Downloads an object. It retries downloading {@link PrefetchableTextFilesFirehoseFactory#maxFetchRetry}
-   * times and throws an exception.
+   * Downloads an object into a file. The download process could be retried depending on the object source.
    *
-   * @param object   an object to be downloaded
-   * @param outFile  a file which the object data is stored
+   * @param object  an object to be downloaded
+   * @param outFile a file which the object data is stored
    *
    * @return number of downloaded bytes
    */
-  private long download(T object, File outFile) throws IOException
-  {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (final InputStream is = openObjectFunction.open(object);
-                 final OutputStream os = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(is, os, buffer);
-            }
-          },
-          retryCondition,
-          outFile::delete,
-          maxFetchRetry + 1,
-          StringUtils.format("Failed to download object[%s]", object)
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
-  }
+  protected abstract long download(T object, File outFile) throws IOException;
+
+  /**
+   * Generates an instance of {@link OpenedObject} for the given object.
+   */
+  protected abstract OpenedObject<T> generateOpenObject(T object) throws IOException;
+
 
   @Override
   public boolean hasNext()
@@ -235,7 +181,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
   {
     try {
       if (wait) {
-        fetchFuture.get(fetchTimeout, TimeUnit.MILLISECONDS);
+        fetchFuture.get(prefetchConfig.getFetchTimeout(), TimeUnit.MILLISECONDS);
         fetchFuture = null;
       } else if (fetchFuture != null && fetchFuture.isDone()) {
         fetchFuture.get();
@@ -246,7 +192,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
       throw new RuntimeException(e);
     }
     catch (TimeoutException e) {
-      throw new ISE(e, "Failed to fetch, but cannot check the reason in [%d] ms", fetchTimeout);
+      throw new ISE(e, "Failed to fetch, but cannot check the reason in [%d] ms", prefetchConfig.getFetchTimeout());
     }
   }
 
@@ -261,7 +207,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
       // Otherwise, wait for fetching
       try {
         fetchIfNeeded(fetchedBytes.get());
-        fetchedFile = fetchedFiles.poll(fetchTimeout, TimeUnit.MILLISECONDS);
+        fetchedFile = fetchedFiles.poll(prefetchConfig.getFetchTimeout(), TimeUnit.MILLISECONDS);
         if (fetchedFile == null) {
           // Check the latest fetch is failed
           checkFetchException(true);
@@ -304,11 +250,7 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
       final T object = objects.get(nextFetchIndex);
       LOG.info("Reading [%d]th object[%s]", nextFetchIndex, object);
       nextFetchIndex++;
-      return new OpenedObject<>(
-          object,
-          new RetryingInputStream<>(object, openObjectFunction, retryCondition, maxFetchRetry),
-          getNoopCloser()
-      );
+      return generateOpenObject(object);
     }
   }
 
@@ -323,11 +265,6 @@ public class Fetcher<T> implements Iterator<OpenedObject<T>>
     } else {
       return fetchedFile;
     }
-  }
-
-  private static Closeable getNoopCloser()
-  {
-    return () -> {};
   }
 
   private static Closeable getFileCloser(

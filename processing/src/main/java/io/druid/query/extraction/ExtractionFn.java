@@ -28,6 +28,12 @@ import io.druid.query.lookup.LookupExtractionFn;
 import javax.annotation.Nullable;
 
 /**
+ * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension).
+ * Note that ExtractionFn implementations are expected to be Threadsafe.
+ *
+ * A simple example of the type of operation this enables is the RegexDimExtractionFn which applies a
+ * regular expression with a capture group.  When the regular expression matches the value of a dimension,
+ * the value captured by the group is used for grouping operations instead of the dimension value.
  */
 @ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -48,14 +54,6 @@ import javax.annotation.Nullable;
     @JsonSubTypes.Type(name = "bucket", value = BucketExtractionFn.class),
     @JsonSubTypes.Type(name = "strlen", value = StrlenExtractionFn.class)
 })
-/**
- * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension).
- * Note that ExtractionFn implementations are expected to be Threadsafe.
- *
- * A simple example of the type of operation this enables is the RegexDimExtractionFn which applies a
- * regular expression with a capture group.  When the regular expression matches the value of a dimension,
- * the value captured by the group is used for grouping operations instead of the dimension value.
- */
 public interface ExtractionFn extends Cacheable
 {
   /**

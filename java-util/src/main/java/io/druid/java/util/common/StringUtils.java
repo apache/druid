@@ -19,12 +19,13 @@
 
 package io.druid.java.util.common;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 
+import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.IllegalFormatException;
 import java.util.Locale;
 
@@ -36,8 +37,8 @@ public class StringUtils
 {
   public static final byte[] EMPTY_BYTES = new byte[0];
   @Deprecated // Charset parameters to String are currently slower than the charset's string name
-  public static final Charset UTF8_CHARSET = Charsets.UTF_8;
-  public static final String UTF8_STRING = Charsets.UTF_8.toString();
+  public static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
+  public static final String UTF8_STRING = StandardCharsets.UTF_8.toString();
 
   // should be used only for estimation
   // returns the same result with StringUtils.fromUtf8(value).length for valid string values
@@ -81,7 +82,7 @@ public class StringUtils
   {
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
-    return StringUtils.fromUtf8(bytes);
+    return fromUtf8(bytes);
   }
 
   public static String fromUtf8(final ByteBuffer buffer)
@@ -98,6 +99,15 @@ public class StringUtils
       // Should never happen
       throw Throwables.propagate(e);
     }
+  }
+
+  @Nullable
+  public static byte[] toUtf8Nullable(@Nullable final String string)
+  {
+    if (string == null) {
+      return null;
+    }
+    return toUtf8(string);
   }
 
   /**

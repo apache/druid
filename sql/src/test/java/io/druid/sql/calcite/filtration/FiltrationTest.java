@@ -24,10 +24,11 @@ import io.druid.java.util.common.Intervals;
 import io.druid.query.filter.IntervalDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.segment.column.Column;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class FiltrationTest
+public class FiltrationTest extends CalciteTestBase
 {
   @Test
   public void testNotIntervals()

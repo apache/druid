@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class TaskStatusPlus
 {
@@ -35,6 +36,10 @@ public class TaskStatusPlus
   private final TaskState state;
   private final Long duration;
   private final TaskLocation location;
+  private final String dataSource;
+
+  @Nullable
+  private final String errorMsg;
 
   @JsonCreator
   public TaskStatusPlus(
@@ -42,21 +47,25 @@ public class TaskStatusPlus
       @JsonProperty("type") @Nullable String type, // nullable for backward compatibility
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
-      @JsonProperty("state") @Nullable TaskState state,
+      @JsonProperty("statusCode") @Nullable TaskState state,
       @JsonProperty("duration") @Nullable Long duration,
-      @JsonProperty("location") TaskLocation location
+      @JsonProperty("location") TaskLocation location,
+      @JsonProperty("dataSource") @Nullable String dataSource, // nullable for backward compatibility
+      @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
     if (state != null && state.isComplete()) {
       Preconditions.checkNotNull(duration, "duration");
     }
     this.id = Preconditions.checkNotNull(id, "id");
-    this.type = Preconditions.checkNotNull(type, "type");
+    this.type = type;
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
     this.state = state;
     this.duration = duration;
     this.location = Preconditions.checkNotNull(location, "location");
+    this.dataSource = dataSource;
+    this.errorMsg = errorMsg;
   }
 
   @JsonProperty
@@ -85,7 +94,7 @@ public class TaskStatusPlus
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("statusCode")
   public TaskState getState()
   {
     return state;
@@ -102,5 +111,55 @@ public class TaskStatusPlus
   public TaskLocation getLocation()
   {
     return location;
+  }
+
+  @JsonProperty
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  @Nullable
+  @JsonProperty("errorMsg")
+  public String getErrorMsg()
+  {
+    return errorMsg;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskStatusPlus that = (TaskStatusPlus) o;
+    return Objects.equals(getId(), that.getId()) &&
+           Objects.equals(getType(), that.getType()) &&
+           Objects.equals(getCreatedTime(), that.getCreatedTime()) &&
+           Objects.equals(getQueueInsertionTime(), that.getQueueInsertionTime()) &&
+           getState() == that.getState() &&
+           Objects.equals(getDuration(), that.getDuration()) &&
+           Objects.equals(getLocation(), that.getLocation()) &&
+           Objects.equals(getDataSource(), that.getDataSource()) &&
+           Objects.equals(getErrorMsg(), that.getErrorMsg());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        getId(),
+        getType(),
+        getCreatedTime(),
+        getQueueInsertionTime(),
+        getState(),
+        getDuration(),
+        getLocation(),
+        getDataSource(),
+        getErrorMsg()
+    );
   }
 }

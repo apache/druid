@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -33,8 +32,10 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ListenableFutures;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
@@ -89,11 +90,12 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       UsedSegmentChecker usedSegmentChecker,
+      DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
       FireDepartmentMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker);
+    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
                                         .createSegmentHandoffNotifier(appenderator.getDataSource());
@@ -210,7 +212,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Blocks until complete.
-   * <p>
+   *
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -236,7 +238,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Returns a future of persisted commitMetadata.
-   * <p>
+   *
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -269,21 +271,22 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = Futures.transform(
-        pushInBackground(wrapCommitter(committer), theSegments),
-        (AsyncFunction<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> publishInBackground(
-            segmentsAndMetadata,
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = ListenableFutures.transformAsync(
+        // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
+        // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
+        pushInBackground(wrapCommitter(committer), theSegments, true),
+        sam -> publishInBackground(
+            sam,
             publisher
         )
     );
-
     return Futures.transform(
         publishFuture,
-        (Function<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> {
+        (Function<? super SegmentsAndMetadata, ? extends SegmentsAndMetadata>) sam -> {
           synchronized (segments) {
             sequenceNames.forEach(segments::remove);
           }
-          return segmentsAndMetadata;
+          return sam;
         }
     );
   }
@@ -378,7 +381,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    return Futures.transform(
+    return ListenableFutures.transformAsync(
         publish(publisher, committer, sequenceNames),
         this::registerHandoff
     );

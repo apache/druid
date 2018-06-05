@@ -72,7 +72,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       }
     }
     catch (Exception e) {
-      throw new ParseException(e, "Unparseable timestamp found!");
+      throw new ParseException(e, "Unparseable timestamp found! Event: %s", theMap);
     }
 
     return ImmutableList.of(new MapBasedInputRow(timestamp.getMillis(), dimensions, theMap));

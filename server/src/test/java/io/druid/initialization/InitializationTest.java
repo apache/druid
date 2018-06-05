@@ -61,7 +61,7 @@ public class InitializationTest
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void test01InitialModulesEmpty() throws Exception
+  public void test01InitialModulesEmpty()
   {
     Initialization.clearLoadedImplementations();
     Assert.assertEquals(
@@ -72,7 +72,7 @@ public class InitializationTest
   }
 
   @Test
-  public void test02MakeStartupInjector() throws Exception
+  public void test02MakeStartupInjector()
   {
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Assert.assertNotNull(startupInjector);
@@ -130,7 +130,7 @@ public class InitializationTest
   }
 
   @Test
-  public void test05MakeInjectorWithModules() throws Exception
+  public void test05MakeInjectorWithModules()
   {
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(

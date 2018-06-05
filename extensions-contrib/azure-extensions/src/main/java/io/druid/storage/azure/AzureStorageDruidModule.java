@@ -81,10 +81,6 @@ public class AzureStorageDruidModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, "druid.azure", AzureAccountConfig.class);
 
-    Binders.dataSegmentPullerBinder(binder)
-           .addBinding(SCHEME)
-           .to(AzureDataSegmentPuller.class).in(LazySingleton.class);
-
     Binders.dataSegmentPusherBinder(binder)
            .addBinding(SCHEME)
            .to(AzureDataSegmentPusher.class).in(LazySingleton.class);

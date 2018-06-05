@@ -37,7 +37,7 @@ import java.io.File;
 @JsonTypeName("realtime_appenderator")
 public class RealtimeAppenderatorTuningConfig implements TuningConfig, AppenderatorConfig
 {
-  private static final int defaultMaxRowsInMemory = 75000;
+  private static final int defaultMaxRowsInMemory = TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY;
   private static final int defaultMaxRowsPerSegment = 5_000_000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final int defaultMaxPendingPersists = 0;
@@ -52,8 +52,11 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return Files.createTempDir();
   }
 
+
+
   private final int maxRowsInMemory;
   private final int maxRowsPerSegment;
+  private final long maxBytesInMemory;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   private final int maxPendingPersists;
@@ -65,10 +68,15 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
+  private final boolean logParseExceptions;
+  private final int maxParseExceptions;
+  private final int maxSavedParseExceptions;
+
   @JsonCreator
   public RealtimeAppenderatorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
@@ -77,11 +85,17 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("publishAndHandoffTimeout") Long publishAndHandoffTimeout,
       @JsonProperty("alertTimeout") Long alertTimeout,
-      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
+      @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? defaultMaxRowsPerSegment : maxRowsPerSegment;
+    // initializing this to 0, it will be lazily intialized to a value
+    // @see server.src.main.java.io.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
+    this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
@@ -100,6 +114,17 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     this.alertTimeout = alertTimeout == null ? defaultAlertTimeout : alertTimeout;
     Preconditions.checkArgument(this.alertTimeout >= 0, "alertTimeout must be >= 0");
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+
+    if (this.reportParseExceptions) {
+      this.maxParseExceptions = 0;
+      this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
+    } else {
+      this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+      this.maxSavedParseExceptions = maxSavedParseExceptions == null
+                                     ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                     : maxSavedParseExceptions;
+    }
+    this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
   }
 
   @Override
@@ -107,6 +132,12 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   public int getMaxRowsInMemory()
   {
     return maxRowsInMemory;
+  }
+
+  @Override
+  public long getMaxBytesInMemory()
+  {
+    return maxBytesInMemory;
   }
 
   @JsonProperty
@@ -176,11 +207,30 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return segmentWriteOutMediumFactory;
   }
 
+  @JsonProperty
+  public boolean isLogParseExceptions()
+  {
+    return logParseExceptions;
+  }
+
+  @JsonProperty
+  public int getMaxParseExceptions()
+  {
+    return maxParseExceptions;
+  }
+
+  @JsonProperty
+  public int getMaxSavedParseExceptions()
+  {
+    return maxSavedParseExceptions;
+  }
+
   public RealtimeAppenderatorTuningConfig withBasePersistDirectory(File dir)
   {
     return new RealtimeAppenderatorTuningConfig(
         maxRowsInMemory,
         maxRowsPerSegment,
+        maxBytesInMemory,
         intermediatePersistPeriod,
         dir,
         maxPendingPersists,
@@ -189,7 +239,10 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
         reportParseExceptions,
         publishAndHandoffTimeout,
         alertTimeout,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        logParseExceptions,
+        maxParseExceptions,
+        maxSavedParseExceptions
     );
   }
 }

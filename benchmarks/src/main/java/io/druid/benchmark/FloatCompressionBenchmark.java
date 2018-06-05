@@ -19,12 +19,10 @@
 
 package io.druid.benchmark;
 
-// Run FloatCompressionBenchmarkFileGenerator to generate the required files before running this benchmark
-
 import com.google.common.base.Supplier;
 import com.google.common.io.Files;
-import io.druid.segment.data.CompressedColumnarFloatsSupplier;
 import io.druid.segment.data.ColumnarFloats;
+import io.druid.segment.data.CompressedColumnarFloatsSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -39,12 +37,14 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Run {@link FloatCompressionBenchmarkFileGenerator} to generate the required files before running this benchmark
+ */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
@@ -76,7 +76,7 @@ public class FloatCompressionBenchmark
   }
 
   @Benchmark
-  public void readContinuous(Blackhole bh) throws IOException
+  public void readContinuous(Blackhole bh)
   {
     ColumnarFloats columnarFloats = supplier.get();
     int count = columnarFloats.size();
@@ -89,7 +89,7 @@ public class FloatCompressionBenchmark
   }
 
   @Benchmark
-  public void readSkipping(Blackhole bh) throws IOException
+  public void readSkipping(Blackhole bh)
   {
     ColumnarFloats columnarFloats = supplier.get();
     int count = columnarFloats.size();

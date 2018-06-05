@@ -48,7 +48,7 @@ public class ITWikipediaQueryTest
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE);
           }

@@ -49,7 +49,7 @@ public class SchemaRegistryBasedAvroBytesDecoderTest
   SchemaRegistryClient registry;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     registry = mock(SchemaRegistryClient.class);
   }

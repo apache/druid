@@ -19,13 +19,10 @@
 
 package io.druid.indexing.test;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.segment.loading.DataSegmentKiller;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
 import java.util.Set;
 
 public class TestDataSegmentKiller implements DataSegmentKiller
@@ -33,18 +30,13 @@ public class TestDataSegmentKiller implements DataSegmentKiller
   private final Set<DataSegment> killedSegments = Sets.newConcurrentHashSet();
 
   @Override
-  public void kill(DataSegment segment) throws SegmentLoadingException
+  public void kill(DataSegment segment)
   {
     killedSegments.add(segment);
   }
 
-  public Set<DataSegment> getKilledSegments()
-  {
-    return ImmutableSet.copyOf(killedSegments);
-  }
-
   @Override
-  public void killAll() throws IOException
+  public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
   }

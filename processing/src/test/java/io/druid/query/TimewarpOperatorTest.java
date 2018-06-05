@@ -53,7 +53,7 @@ public class TimewarpOperatorTest
   );
 
   @Test
-  public void testComputeOffset() throws Exception
+  public void testComputeOffset()
   {
     {
       final DateTime t = DateTimes.of("2014-01-23");
@@ -81,7 +81,7 @@ public class TimewarpOperatorTest
   }
 
   @Test
-  public void testPostProcess() throws Exception
+  public void testPostProcess()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -190,7 +190,7 @@ public class TimewarpOperatorTest
   }
 
   @Test
-  public void testPostProcessWithTimezonesAndDstShift() throws Exception
+  public void testPostProcessWithTimezonesAndDstShift()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -250,7 +250,7 @@ public class TimewarpOperatorTest
   }
 
   @Test
-  public void testPostProcessWithTimezonesAndNoDstShift() throws Exception
+  public void testPostProcessWithTimezonesAndNoDstShift()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -310,7 +310,7 @@ public class TimewarpOperatorTest
   }
 
   @Test
-  public void testEmptyFutureInterval() throws Exception
+  public void testEmptyFutureInterval()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
         new QueryRunner<Result<TimeseriesResultValue>>()

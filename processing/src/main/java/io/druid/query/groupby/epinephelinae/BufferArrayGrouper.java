@@ -21,15 +21,14 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorStrategy;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
@@ -62,7 +61,7 @@ public class BufferArrayGrouper implements IntGrouper
   private ByteBuffer usedFlagBuffer;
   private ByteBuffer valBuffer;
 
-  static int requiredBufferCapacity(
+  static long requiredBufferCapacity(
       int cardinality,
       AggregatorFactory[] aggregatorFactories
   )
@@ -73,7 +72,7 @@ public class BufferArrayGrouper implements IntGrouper
                                  .sum();
 
     return getUsedFlagBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
-           cardinalityWithMissingValue * recordSize;                 // total values size
+        (long) cardinalityWithMissingValue * recordSize;                 // total values size
   }
 
   /**
@@ -279,7 +278,7 @@ public class BufferArrayGrouper implements IntGrouper
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         // do nothing
       }

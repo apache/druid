@@ -78,6 +78,7 @@ public class TaskToolboxFactory
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
+  private final TaskReportFileWriter taskReportFileWriter;
 
   @Inject
   public TaskToolboxFactory(
@@ -103,7 +104,8 @@ public class TaskToolboxFactory
       DruidNodeAnnouncer druidNodeAnnouncer,
       @RemoteChatHandler DruidNode druidNode,
       LookupNodeService lookupNodeService,
-      DataNodeService dataNodeService
+      DataNodeService dataNodeService,
+      TaskReportFileWriter taskReportFileWriter
   )
   {
     this.config = config;
@@ -129,6 +131,7 @@ public class TaskToolboxFactory
     this.druidNode = druidNode;
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
+    this.taskReportFileWriter = taskReportFileWriter;
   }
 
   public TaskToolbox build(Task task)
@@ -158,7 +161,8 @@ public class TaskToolboxFactory
         druidNodeAnnouncer,
         druidNode,
         lookupNodeService,
-        dataNodeService
+        dataNodeService,
+        taskReportFileWriter
     );
   }
 }

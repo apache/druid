@@ -121,7 +121,7 @@ public class NoopTask extends AbstractTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  public boolean isReady(TaskActionClient taskActionClient)
   {
     switch (isReadyResult) {
       case YES:

@@ -19,13 +19,11 @@
 
 package io.druid.indexing.test;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
@@ -48,7 +46,7 @@ public class TestDataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(File file, DataSegment segment, boolean replaceExisting) throws IOException
+  public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
   {
     pushedSegments.add(segment);
     return segment;
@@ -60,8 +58,4 @@ public class TestDataSegmentPusher implements DataSegmentPusher
     throw new UnsupportedOperationException();
   }
 
-  public Set<DataSegment> getPushedSegments()
-  {
-    return ImmutableSet.copyOf(pushedSegments);
-  }
 }

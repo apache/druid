@@ -19,10 +19,8 @@
 
 package io.druid.java.util.emitter.core;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.Futures;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -39,17 +37,15 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class HttpPostEmitterStressTest
 {
   private static final int N = 10_000;
-  private static final Future OK_FUTURE = Futures.immediateFuture(EmitterTest.OK_RESPONSE);
   private static final ObjectMapper objectMapper = new ObjectMapper()
   {
     @Override
-    public byte[] writeValueAsBytes(Object value) throws JsonProcessingException
+    public byte[] writeValueAsBytes(Object value)
     {
       return Ints.toByteArray(((IntEvent) value).index);
     }
@@ -145,10 +141,8 @@ public class HttpPostEmitterStressTest
   }
 
   @Test
-  public void testLargeEventsQueueLimit() throws InterruptedException, IOException
+  public void testLargeEventsQueueLimit() throws IOException
   {
-    ObjectMapper mapper = new ObjectMapper();
-
     HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setFlushMillis(100)
         .setFlushCount(4)

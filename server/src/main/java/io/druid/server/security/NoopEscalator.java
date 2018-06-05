@@ -19,10 +19,19 @@
 
 package io.druid.server.security;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import io.druid.java.util.http.client.HttpClient;
 
 public class NoopEscalator implements Escalator
 {
+  private static final NoopEscalator INSTANCE = new NoopEscalator();
+
+  @JsonCreator
+  public static NoopEscalator getInstance()
+  {
+    return INSTANCE;
+  }
+
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {
@@ -33,5 +42,24 @@ public class NoopEscalator implements Escalator
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
     return AllowAllAuthenticator.ALLOW_ALL_RESULT;
+  }
+
+  @Override
+  public boolean equals(final Object obj)
+  {
+    //noinspection ObjectEquality
+    return obj.getClass() == getClass();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NoopEscalator{}";
   }
 }

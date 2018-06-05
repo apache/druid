@@ -137,7 +137,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -154,7 +153,7 @@ import java.util.concurrent.Executors;
 @RunWith(Parameterized.class)
 public class GroupByQueryRunnerTest
 {
-  public static final ObjectMapper DEFAULT_MAPPER = TestHelper.getSmileMapper();
+  public static final ObjectMapper DEFAULT_MAPPER = TestHelper.makeSmileMapper();
   public static final DruidProcessingConfig DEFAULT_PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override
@@ -172,8 +171,9 @@ public class GroupByQueryRunnerTest
     @Override
     public int getNumMergeBuffers()
     {
-      // There are some tests that need to allocate two buffers (simulating two levels of merging)
-      return 2;
+      // Some tests need two buffers for testing nested groupBy (simulating two levels of merging).
+      // Some tests need more buffers for parallel combine (testMergedPostAggHavingSpec).
+      return 4;
     }
 
     @Override
@@ -398,7 +398,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : testConfigs()) {
@@ -2865,7 +2865,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByOrderLimit() throws Exception
+  public void testGroupByOrderLimit()
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -2962,7 +2962,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithOrderLimit2() throws Exception
+  public void testGroupByWithOrderLimit2()
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -3004,7 +3004,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithOrderLimit3() throws Exception
+  public void testGroupByWithOrderLimit3()
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -3047,7 +3047,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByOrderLimitNumeric() throws Exception
+  public void testGroupByOrderLimitNumeric()
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -4198,7 +4198,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithRegEx() throws Exception
+  public void testGroupByWithRegEx()
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -4225,7 +4225,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByWithNonexistentDimension() throws Exception
+  public void testGroupByWithNonexistentDimension()
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()

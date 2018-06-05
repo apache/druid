@@ -22,10 +22,11 @@ package io.druid.segment.realtime.appenderator;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.ListenableFutures;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import io.druid.timeline.DataSegment;
 
@@ -41,11 +42,11 @@ import java.util.stream.Collectors;
 
 /**
  * This class is specifialized for batch ingestion. In batch ingestion, the segment lifecycle is like:
- *
+ * <p>
  * <pre>
  * APPENDING -> PUSHED_AND_DROPPED -> PUBLISHED
  * </pre>
- *
+ * <p>
  * <ul>
  * <li>APPENDING: Segment is available for appending.</li>
  * <li>PUSHED_AND_DROPPED: Segment is pushed to deep storage and dropped from the local storage.</li>
@@ -57,22 +58,23 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   /**
    * Create a driver.
    *
-   * @param appenderator           appenderator
-   * @param segmentAllocator       segment allocator
-   * @param usedSegmentChecker     used segment checker
+   * @param appenderator       appenderator
+   * @param segmentAllocator   segment allocator
+   * @param usedSegmentChecker used segment checker
    */
   public BatchAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      UsedSegmentChecker usedSegmentChecker
+      UsedSegmentChecker usedSegmentChecker,
+      DataSegmentKiller dataSegmentKiller
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker);
+    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
   }
 
   /**
    * This method always returns null because batch ingestion doesn't support restoring tasks on failures.
-
+   *
    * @return always null
    */
   @Override
@@ -132,8 +134,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
-    final ListenableFuture<SegmentsAndMetadata> future = Futures.transform(
-        pushInBackground(null, segmentIdentifierList),
+    final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
+        pushInBackground(null, segmentIdentifierList, false),
         this::dropInBackground
     );
 
@@ -195,10 +197,12 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 .values()
                 .stream()
                 .flatMap(SegmentsForSequence::segmentStateStream)
-                .map(segmentWithState -> Preconditions.checkNotNull(
-                    segmentWithState.getDataSegment(),
-                    "dataSegment for segmentId[%s]",
-                    segmentWithState.getSegmentIdentifier())
+                .map(segmentWithState -> Preconditions
+                    .checkNotNull(
+                        segmentWithState.getDataSegment(),
+                        "dataSegment for segmentId[%s]",
+                        segmentWithState.getSegmentIdentifier()
+                    )
                 )
                 .collect(Collectors.toList()),
             null

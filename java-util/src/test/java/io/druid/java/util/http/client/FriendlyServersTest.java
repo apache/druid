@@ -19,7 +19,6 @@
 
 package io.druid.java.util.http.client;
 
-import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -81,7 +80,7 @@ public class FriendlyServersTest
                 while (!in.readLine().equals("")) {
                   // skip lines
                 }
-                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(Charsets.UTF_8));
+                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
               }
               catch (Exception e) {
                 // Suppress
@@ -98,7 +97,7 @@ public class FriendlyServersTest
       final StatusResponseHolder response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           ).get();
 
       Assert.assertEquals(200, response.getStatus().getCode());
@@ -138,7 +137,7 @@ public class FriendlyServersTest
                     foundAcceptEncoding.set(true);
                   }
                 }
-                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(Charsets.UTF_8));
+                out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
               }
               catch (Exception e) {
                 // Suppress
@@ -157,7 +156,7 @@ public class FriendlyServersTest
       final StatusResponseHolder response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))),
-              new StatusResponseHandler(Charsets.UTF_8)
+              new StatusResponseHandler(StandardCharsets.UTF_8)
           ).get();
 
       Assert.assertEquals(200, response.getStatus().getCode());
@@ -214,7 +213,7 @@ public class FriendlyServersTest
                     HttpMethod.GET,
                     new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
-                new StatusResponseHandler(Charsets.UTF_8)
+                new StatusResponseHandler(StandardCharsets.UTF_8)
             ).get().getStatus();
         Assert.assertEquals(404, status.getCode());
       }
@@ -227,7 +226,7 @@ public class FriendlyServersTest
                     HttpMethod.GET,
                     new URL(StringUtils.format("https://127.0.0.1:%d/", sslConnector.getLocalPort()))
                 ),
-                new StatusResponseHandler(Charsets.UTF_8)
+                new StatusResponseHandler(StandardCharsets.UTF_8)
             );
 
         Throwable ea = null;
@@ -249,7 +248,7 @@ public class FriendlyServersTest
                 new Request(
                     HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", sslConnector.getLocalPort()))
                 ),
-                new StatusResponseHandler(Charsets.UTF_8)
+                new StatusResponseHandler(StandardCharsets.UTF_8)
             );
 
         Throwable eb = null;
@@ -285,7 +284,7 @@ public class FriendlyServersTest
         final HttpResponseStatus status = client
             .go(
                 new Request(HttpMethod.GET, new URL("https://httpbin.org/get")),
-                new StatusResponseHandler(Charsets.UTF_8)
+                new StatusResponseHandler(StandardCharsets.UTF_8)
             ).get().getStatus();
 
         Assert.assertEquals(200, status.getCode());
@@ -296,7 +295,7 @@ public class FriendlyServersTest
             .go(
                 new Request(HttpMethod.POST, new URL("https://httpbin.org/post"))
                     .setContent(new byte[]{'a', 'b', 'c', 1, 2, 3}),
-                new StatusResponseHandler(Charsets.UTF_8)
+                new StatusResponseHandler(StandardCharsets.UTF_8)
             ).get().getStatus();
 
         Assert.assertEquals(200, status.getCode());

@@ -118,7 +118,7 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testCostBalancerMultiThreadedStrategy() throws InterruptedException
+  public void testCostBalancerMultiThreadedStrategy()
   {
     List<ServerHolder> serverHolderList = setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
@@ -132,7 +132,7 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testCostBalancerSingleThreadStrategy() throws InterruptedException
+  public void testCostBalancerSingleThreadStrategy()
   {
     List<ServerHolder> serverHolderList = setupDummyCluster(10, 20);
     DataSegment segment = getSegment(1000);
@@ -182,7 +182,7 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testIntervalCost() throws Exception
+  public void testIntervalCost()
   {
     // additivity
     Assert.assertEquals(CostBalancerStrategy.intervalCost(1, 1, 3),

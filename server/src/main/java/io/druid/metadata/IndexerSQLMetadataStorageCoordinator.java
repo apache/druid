@@ -26,8 +26,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -65,7 +65,6 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -114,7 +113,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public List<DataSegment> getUsedSegmentsForInterval(
       final String dataSource,
       final Interval interval
-  ) throws IOException
+  )
   {
     return getUsedSegmentsForIntervals(dataSource, ImmutableList.of(interval));
   }
@@ -122,7 +121,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(
       final String dataSource, final List<Interval> intervals
-  ) throws IOException
+  )
   {
     return connector.retryWithHandle(
         new HandleCallback<List<DataSegment>>()
@@ -209,7 +208,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
-  ) throws IOException
+  )
   {
     if (intervals == null || intervals.isEmpty()) {
       throw new IAE("null/empty intervals");
@@ -242,29 +241,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .bind(2 * i + 2, interval.getStart().toString());
     }
 
-    final ResultIterator<byte[]> dbSegments = sql
-        .map(ByteArrayMapper.FIRST)
-        .iterator();
-
-    final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-        Ordering.natural()
-    );
-
-    while (dbSegments.hasNext()) {
-      final byte[] payload = dbSegments.next();
-
-      DataSegment segment = jsonMapper.readValue(
-          payload,
-          DataSegment.class
+    try (final ResultIterator<byte[]> dbSegments = sql.map(ByteArrayMapper.FIRST).iterator()) {
+      return VersionedIntervalTimeline.forSegments(
+          Iterators.transform(
+              dbSegments,
+              payload -> {
+                try {
+                  return jsonMapper.readValue(payload, DataSegment.class);
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+          )
       );
-
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-
     }
-
-    dbSegments.close();
-
-    return timeline;
   }
 
   /**
@@ -585,7 +576,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 StringUtils.format(
                     "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
-                    dbTables.getPendingSegmentsTable(), connector.getQuoteString()
+                    dbTables.getPendingSegmentsTable(),
+                    connector.getQuoteString()
                 )
             )
                   .bind("id", newIdentifier.getIdentifierAsString())
@@ -657,7 +649,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           StringUtils.format(
               "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
               + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(), connector.getQuoteString()
+              dbTables.getSegmentsTable(),
+              connector.getQuoteString()
           )
       )
             .bind("id", segment.getIdentifier())
@@ -848,7 +841,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new HandleCallback<Boolean>()
         {
           @Override
-          public Boolean withHandle(Handle handle) throws Exception
+          public Boolean withHandle(Handle handle)
           {
             int rows = handle.createStatement(
                 StringUtils.format("DELETE from %s WHERE dataSource = :dataSource", dbTables.getDataSourceTable())
@@ -876,7 +869,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new HandleCallback<Boolean>()
         {
           @Override
-          public Boolean withHandle(Handle handle) throws Exception
+          public Boolean withHandle(Handle handle)
           {
             final int numRows = handle.createStatement(
                 StringUtils.format(
@@ -898,7 +891,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
+  public void updateSegmentMetadata(final Set<DataSegment> segments)
   {
     connector.getDBI().inTransaction(
         new TransactionCallback<Void>()
@@ -917,13 +910,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public void deleteSegments(final Set<DataSegment> segments) throws IOException
+  public void deleteSegments(final Set<DataSegment> segments)
   {
     connector.getDBI().inTransaction(
         new TransactionCallback<Void>()
         {
           @Override
-          public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
+          public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
           {
             for (final DataSegment segment : segments) {
               deleteSegment(handle, segment);
@@ -967,7 +960,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new TransactionCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
+          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status)
           {
             // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
             // Some databases can only use an index on one of the columns. An additional condition provides
@@ -995,7 +988,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                           byte[] payload,
                           FoldController foldController,
                           StatementContext statementContext
-                      ) throws SQLException
+                      )
                       {
                         try {
                           accumulator.add(jsonMapper.readValue(payload, DataSegment.class));

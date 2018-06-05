@@ -63,8 +63,10 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -83,6 +85,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -96,6 +99,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -122,11 +126,13 @@ public class AppenderatorImpl implements Appenderator
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
   );
+  private final long maxBytesTuningConfig;
 
   private final QuerySegmentWalker texasRanger;
   // This variable updated in add(), persist(), and drop()
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
+  private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
   // Synchronize persisting commitMetadata so that multiple persist threads (if present)
   // and abandon threads do not step over each other
   private final Lock commitLock = new ReentrantLock();
@@ -142,7 +148,7 @@ public class AppenderatorImpl implements Appenderator
   private volatile FileChannel basePersistDirLockChannel = null;
   private AtomicBoolean closed = new AtomicBoolean(false);
 
-  public AppenderatorImpl(
+  AppenderatorImpl(
       DataSchema schema,
       AppenderatorConfig tuningConfig,
       FireDepartmentMetrics metrics,
@@ -177,7 +183,7 @@ public class AppenderatorImpl implements Appenderator
         Preconditions.checkNotNull(cache, "cache"),
         cacheConfig
     );
-
+    maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
 
@@ -218,9 +224,14 @@ public class AppenderatorImpl implements Appenderator
     metrics.reportMessageMaxTimestamp(row.getTimestampFromEpoch());
     final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
     final int sinkRowsInMemoryAfterAdd;
+    final long bytesInMemoryBeforeAdd = sink.getBytesInMemory();
+    final long bytesInMemoryAfterAdd;
+    final IncrementalIndexAddResult addResult;
 
     try {
-      sinkRowsInMemoryAfterAdd = sink.add(row, !allowIncrementalPersists);
+      addResult = sink.add(row, !allowIncrementalPersists);
+      sinkRowsInMemoryAfterAdd = addResult.getRowCount();
+      bytesInMemoryAfterAdd = addResult.getBytesInMemory();
     }
     catch (IndexSizeExceededException e) {
       // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
@@ -237,20 +248,50 @@ public class AppenderatorImpl implements Appenderator
     final int numAddedRows = sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd;
     rowsCurrentlyInMemory.addAndGet(numAddedRows);
     totalRows.addAndGet(numAddedRows);
+    bytesCurrentlyInMemory.addAndGet(bytesInMemoryAfterAdd - bytesInMemoryBeforeAdd);
 
     boolean isPersistRequired = false;
-    if (!sink.canAppendRow()
-        || System.currentTimeMillis() > nextFlush
-        || rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
+    boolean persist = false;
+    List<String> persistReasons = new ArrayList();
+
+    if (!sink.canAppendRow()) {
+      persist = true;
+      persistReasons.add("No more rows can be appended to sink");
+    }
+    if (System.currentTimeMillis() > nextFlush) {
+      persist = true;
+      persistReasons.add(StringUtils.format(
+          "current time[%d] is greater than nextFlush[%d]",
+          System.currentTimeMillis(),
+          nextFlush
+      ));
+    }
+    if (rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
+      persist = true;
+      persistReasons.add(StringUtils.format(
+          "rowsCurrentlyInMemory[%d] is greater than maxRowsInMemory[%d]",
+          rowsCurrentlyInMemory.get(),
+          tuningConfig.getMaxRowsInMemory()
+      ));
+    }
+    if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
+      persist = true;
+      persistReasons.add(StringUtils.format(
+          "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
+          bytesCurrentlyInMemory.get(),
+          maxBytesTuningConfig
+      ));
+    }
+    if (persist) {
       if (allowIncrementalPersists) {
         // persistAll clears rowsCurrentlyInMemory, no need to update it.
+        log.info("Persisting rows in memory due to: [%s]", String.join(",", persistReasons));
         persistAll(committerSupplier == null ? null : committerSupplier.get());
       } else {
         isPersistRequired = true;
       }
     }
-
-    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired);
+    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired, addResult.getParseException());
   }
 
   @Override
@@ -283,6 +324,24 @@ public class AppenderatorImpl implements Appenderator
     return rowsCurrentlyInMemory.get();
   }
 
+  @VisibleForTesting
+  long getBytesCurrentlyInMemory()
+  {
+    return bytesCurrentlyInMemory.get();
+  }
+
+  @VisibleForTesting
+  long getBytesInMemory(SegmentIdentifier identifier)
+  {
+    final Sink sink = sinks.get(identifier);
+
+    if (sink == null) {
+      throw new ISE("No such sink: %s", identifier);
+    } else {
+      return sink.getBytesInMemory();
+    }
+  }
+
   private Sink getOrCreateSink(final SegmentIdentifier identifier)
   {
     Sink retVal = sinks.get(identifier);
@@ -294,7 +353,9 @@ public class AppenderatorImpl implements Appenderator
           identifier.getShardSpec(),
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
-          tuningConfig.isReportParseExceptions()
+          maxBytesTuningConfig,
+          tuningConfig.isReportParseExceptions(),
+          null
       );
 
       try {
@@ -389,12 +450,13 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
-  public ListenableFuture<Object> persist(Collection<SegmentIdentifier> identifiers, @Nullable Committer committer)
+  public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
   {
     final Map<String, Integer> currentHydrants = Maps.newHashMap();
     final List<Pair<FireHydrant, SegmentIdentifier>> indexesToPersist = Lists.newArrayList();
     int numPersistedRows = 0;
-    for (SegmentIdentifier identifier : identifiers) {
+    long bytesPersisted = 0L;
+    for (SegmentIdentifier identifier : sinks.keySet()) {
       final Sink sink = sinks.get(identifier);
       if (sink == null) {
         throw new ISE("No sink for identifier: %s", identifier);
@@ -402,6 +464,7 @@ public class AppenderatorImpl implements Appenderator
       final List<FireHydrant> hydrants = Lists.newArrayList(sink);
       currentHydrants.put(identifier.getIdentifierAsString(), hydrants.size());
       numPersistedRows += sink.getNumRowsInMemory();
+      bytesPersisted += sink.getBytesInMemory();
 
       final int limit = sink.isWritable() ? hydrants.size() - 1 : hydrants.size();
 
@@ -492,21 +555,15 @@ public class AppenderatorImpl implements Appenderator
 
     // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
     rowsCurrentlyInMemory.addAndGet(-numPersistedRows);
-
+    bytesCurrentlyInMemory.addAndGet(-bytesPersisted);
     return future;
-  }
-
-  @Override
-  public ListenableFuture<Object> persistAll(@Nullable final Committer committer)
-  {
-    // Submit persistAll task to the persistExecutor
-    return persist(sinks.keySet(), committer);
   }
 
   @Override
   public ListenableFuture<SegmentsAndMetadata> push(
       final Collection<SegmentIdentifier> identifiers,
-      @Nullable final Committer committer
+      @Nullable final Committer committer,
+      final boolean useUniquePath
   )
   {
     final Map<SegmentIdentifier, Sink> theSinks = Maps.newHashMap();
@@ -520,7 +577,9 @@ public class AppenderatorImpl implements Appenderator
     }
 
     return Futures.transform(
-        persist(identifiers, committer),
+        // We should always persist all segments regardless of the input because metadata should be committed for all
+        // segments.
+        persistAll(committer),
         (Function<Object, SegmentsAndMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = Lists.newArrayList();
 
@@ -530,7 +589,7 @@ public class AppenderatorImpl implements Appenderator
               continue;
             }
 
-            final DataSegment dataSegment = mergeAndPush(entry.getKey(), entry.getValue());
+            final DataSegment dataSegment = mergeAndPush(entry.getKey(), entry.getValue(), useUniquePath);
             if (dataSegment != null) {
               dataSegments.add(dataSegment);
             } else {
@@ -560,17 +619,13 @@ public class AppenderatorImpl implements Appenderator
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
    * be run in the single-threaded pushExecutor.
    *
-   * Note that this calls DataSegmentPusher.push() with replaceExisting == true which is appropriate for the indexing
-   * tasks it is currently being used for (local indexing and Kafka indexing). If this is going to be used by an
-   * indexing task type that requires replaceExisting == false, this setting will need to be pushed to the caller.
-   *
    * @param identifier sink identifier
    * @param sink       sink to push
+   * @param useUniquePath true if the segment should be written to a path with a unique identifier
    *
    * @return segment descriptor, or null if the sink is no longer valid
    */
-
-  private DataSegment mergeAndPush(final SegmentIdentifier identifier, final Sink sink)
+  private DataSegment mergeAndPush(final SegmentIdentifier identifier, final Sink sink, final boolean useUniquePath)
   {
     // Bail out if this sink is null or otherwise not what we expect.
     if (sinks.get(identifier) != sink) {
@@ -642,17 +697,12 @@ public class AppenderatorImpl implements Appenderator
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
       final DataSegment segment = RetryUtils.retry(
           // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
-          // Kafka indexing task, pushers MUST overwrite any existing objects in deep storage with the same identifier
-          // in order to maintain exactly-once semantics. If they do not and instead favor existing objects, in case of
-          // failure during publishing, the indexed data may not represent the checkpointed state and data loss or
-          // duplication may occur. See: https://github.com/druid-io/druid/issues/5161. The local indexing task does not
-          // support replicas where different tasks could generate segments with the same identifier but potentially
-          // different contents so it is okay if existing objects are overwritten. In both of these cases, we want to
-          // favor the most recently pushed segment so replaceExisting == true.
+          // Kafka indexing task, pushers must use unique file paths in deep storage in order to maintain exactly-once
+          // semantics.
           () -> dataSegmentPusher.push(
               mergedFile,
               sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
-              true
+              useUniquePath
           ),
           exception -> exception instanceof Exception,
           5
@@ -975,7 +1025,9 @@ public class AppenderatorImpl implements Appenderator
             identifier.getShardSpec(),
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
+            maxBytesTuningConfig,
             tuningConfig.isReportParseExceptions(),
+            null,
             hydrants
         );
         sinks.put(identifier, currSink);
@@ -1031,6 +1083,7 @@ public class AppenderatorImpl implements Appenderator
     // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
     rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
     totalRows.addAndGet(-sink.getNumRows());
+    bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(

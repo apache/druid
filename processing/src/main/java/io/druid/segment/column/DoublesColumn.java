@@ -19,17 +19,33 @@
 
 package io.druid.segment.column;
 
+import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.IndexIO;
 import io.druid.segment.data.ColumnarDoubles;
 import io.druid.segment.data.ReadableOffset;
 
 
+/**
+ */
 public class DoublesColumn implements GenericColumn
 {
-  private final ColumnarDoubles column;
+  /**
+   * Factory method to create DoublesColumn.
+   */
+  public static DoublesColumn create(ColumnarDoubles column, ImmutableBitmap nullValueBitmap)
+  {
+    if (nullValueBitmap.isEmpty()) {
+      return new DoublesColumn(column);
+    } else {
+      return new DoublesColumnWithNulls(column, nullValueBitmap);
+    }
+  }
 
-  public DoublesColumn(ColumnarDoubles columnarDoubles)
+  final ColumnarDoubles column;
+
+  DoublesColumn(ColumnarDoubles columnarDoubles)
   {
     column = columnarDoubles;
   }
@@ -43,25 +59,13 @@ public class DoublesColumn implements GenericColumn
   @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
-    return column.makeColumnValueSelector(offset);
-  }
-
-  @Override
-  public float getFloatSingleValueRow(int rowNum)
-  {
-    return (float) column.get(rowNum);
+    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap());
   }
 
   @Override
   public long getLongSingleValueRow(int rowNum)
   {
     return (long) column.get(rowNum);
-  }
-
-  @Override
-  public double getDoubleSingleValueRow(int rowNum)
-  {
-    return column.get(rowNum);
   }
 
   @Override
