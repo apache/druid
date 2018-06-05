@@ -19,7 +19,7 @@
 
 package io.druid.storage.google;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpResponseException;
 
 import java.io.IOException;
 
@@ -39,9 +39,9 @@ public class GoogleUtils
 
   public static boolean isRetryable(Throwable t)
   {
-    if (t instanceof GoogleJsonResponseException) {
-      final GoogleJsonResponseException e = (GoogleJsonResponseException) t;
-      return e.getStatusCode() == 429; // backoff warchild
+    if (t instanceof HttpResponseException) {
+      final HttpResponseException e = (HttpResponseException) t;
+      return e.getStatusCode() == 429 || (e.getStatusCode() / 500 == 1);
     }
     return t instanceof IOException;
   }
