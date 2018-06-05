@@ -48,7 +48,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       GoogleStorage storage = createMock(GoogleStorage.class);
       final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
           JacksonFactory.getDefaultInstance(),
-          500,
+          300,
           "test"
       );
       expect(storage.get(bucket, path)).andThrow(exception);
