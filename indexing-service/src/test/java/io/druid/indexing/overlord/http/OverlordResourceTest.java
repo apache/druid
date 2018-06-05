@@ -28,8 +28,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
@@ -60,12 +60,10 @@ import org.joda.time.chrono.ISOChronology;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
@@ -180,13 +178,13 @@ public class OverlordResourceTest
     expectAuthorizationTokenCheck();
 
     EasyMock.expect(taskStorageQueryAdapter.getActiveTasks()).andReturn(
-        ImmutableList.of(
-            getTaskWithIdAndDatasource("id_1", "allow"),
-            getTaskWithIdAndDatasource("id_2", "allow"),
-            getTaskWithIdAndDatasource("id_3", "deny"),
-            getTaskWithIdAndDatasource("id_4", "deny")
-        )
-    ).once();
+      ImmutableList.of(
+          getTaskWithIdAndDatasource("id_1", "allow"),
+          getTaskWithIdAndDatasource("id_2", "allow"),
+          getTaskWithIdAndDatasource("id_3", "deny"),
+          getTaskWithIdAndDatasource("id_4", "deny")
+      )
+  ).once();
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
@@ -286,7 +284,6 @@ public class OverlordResourceTest
   }
 
   @Test
-  @Ignore
   public void testGetTasks()
   {
     expectAuthorizationTokenCheck();
@@ -302,10 +299,30 @@ public class OverlordResourceTest
 
     EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
         ImmutableList.of(
-            new TaskInfo.TaskInfoBuilder().build("id_1", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow"),
-            new TaskInfo.TaskInfoBuilder().build("id_2", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow"),
-            new TaskInfo.TaskInfoBuilder().build("id_3", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "deny"),
-            new TaskInfo.TaskInfoBuilder().build("id_4", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "deny")
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_4",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            )
         )
     );
 
@@ -361,25 +378,34 @@ public class OverlordResourceTest
         ));
     EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
-            new TaskInfo.TaskInfoBuilder().build("id_5", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "deny"),
-            new TaskInfo.TaskInfoBuilder().build("id_6", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow"),
-            new TaskInfo.TaskInfoBuilder().build("id_7", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow")
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_5",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_6",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_7",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            )
         )
     );
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTasks(null, null)).andStubReturn(
-        Lists.transform(
-            tasksIds,
-            new Function<String, Task>()
-            {
-              @Nullable
-              @Override
-              public Task apply(@Nullable String s)
-              {
-                return null;
-              }
-            }
+
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTasks(null, null)).andReturn(
+        ImmutableList.of(
+            getTaskWithIdAndDatasource("id_5", "deny"),
+            getTaskWithIdAndDatasource("id_6", "allow"),
+            getTaskWithIdAndDatasource("id_7", "allow")
         )
-    );
+    ).once();
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks(null, null, null, null, req)
@@ -388,7 +414,6 @@ public class OverlordResourceTest
   }
 
   @Test
-  @Ignore
   public void testGetTasksFilterDataSource()
   {
     expectAuthorizationTokenCheck();
@@ -410,12 +435,47 @@ public class OverlordResourceTest
             getTaskWithIdAndDatasource("id_4", "deny")
         )
     ).once();
+
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_4",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            )
+        )
+    );
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem("id_1", null),
             new MockTaskRunnerWorkItem("id_4", null)
         )
+    ).atLeastOnce();
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getPendingTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_4", null)
+        )
     );
+
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
         ImmutableList.of(
             new MockTaskRunnerWorkItem("id_1", null)
@@ -424,24 +484,6 @@ public class OverlordResourceTest
     //completed tasks
     List<String> tasksIds = ImmutableList.of("id_5", "id_6", "id_7");
 
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny")));
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow")));
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(2))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(2), "allow")));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(0)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(1)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(2)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(0)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(1)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(2)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
     EasyMock.expect(taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(null, null)).andStubReturn(
         Lists.transform(
             tasksIds,
@@ -454,18 +496,46 @@ public class OverlordResourceTest
               }
             }
         ));
+    EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, null)).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_5",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_6",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_7",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            )
+        )
+    );
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTasks(null, null)).andReturn(
+        ImmutableList.of(
+            getTaskWithIdAndDatasource("id_5", "deny"),
+            getTaskWithIdAndDatasource("id_6", "allow"),
+            getTaskWithIdAndDatasource("id_7", "allow")
+        )
+    ).once();
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks(null, "ds_test", null, null, req)
+        .getTasks(null, "allow", null, null, req)
         .getEntity();
-    Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals("id_6", responseObjects.get(0).getId());
-    Assert.assertTrue("DataSource Check", "ds_test".equals(responseObjects.get(0).getDataSource()));
+    Assert.assertEquals(4, responseObjects.size());
+    Assert.assertEquals("id_2", responseObjects.get(0).getId());
+    Assert.assertTrue("DataSource Check", "allow".equals(responseObjects.get(0).getDataSource()));
   }
 
   @Test
-  @Ignore
   public void testGetTasksFilterWaitingState()
   {
     expectAuthorizationTokenCheck();
@@ -487,6 +557,34 @@ public class OverlordResourceTest
             getTaskWithIdAndDatasource("id_4", "deny")
         )
     ).once();
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_4",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            )
+        )
+    );
 
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
         ImmutableList.of(
@@ -509,7 +607,6 @@ public class OverlordResourceTest
   }
 
   @Test
-  @Ignore
   public void testGetTasksFilterRunningState()
   {
     expectAuthorizationTokenCheck();
@@ -522,6 +619,41 @@ public class OverlordResourceTest
             getTaskWithIdAndDatasource("id_4", "deny")
         )
     ).once();
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_4",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            )
+        )
+    );
+
+    EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getKnownTasks()).andReturn(
+        ImmutableList.of(
+            new MockTaskRunnerWorkItem("id_1", null),
+            new MockTaskRunnerWorkItem("id_2", null)
+        )
+    );
 
     List<String> tasksIds = ImmutableList.of("id_1", "id_2");
     EasyMock.<Collection<? extends TaskRunnerWorkItem>>expect(taskRunner.getRunningTasks()).andReturn(
@@ -531,23 +663,17 @@ public class OverlordResourceTest
         )
     );
 
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny"))
-    ).once();
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow"))
-    ).once();
 
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
 
     List<TaskStatusPlus> responseObjects = (List) overlordResource
-        .getTasks("running", "ds_test", null, null, req)
+        .getTasks("running", "allow", null, null, req)
         .getEntity();
 
     Assert.assertEquals(1, responseObjects.size());
     Assert.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
     String ds = responseObjects.get(0).getDataSource();
-    Assert.assertTrue("DataSource Check", "ds_test".equals(responseObjects.get(0).getDataSource()));
+    Assert.assertTrue("DataSource Check", "allow".equals(responseObjects.get(0).getDataSource()));
   }
 
   @Test
@@ -574,10 +700,30 @@ public class OverlordResourceTest
 
     EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
         ImmutableList.of(
-            new TaskInfo.TaskInfoBuilder().build("id_1", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "deny"),
-            new TaskInfo.TaskInfoBuilder().build("id_2", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow"),
-            new TaskInfo.TaskInfoBuilder().build("id_3", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "allow"),
-            new TaskInfo.TaskInfoBuilder().build("id_4", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "deny")
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_4",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            )
         )
     );
 
@@ -587,14 +733,7 @@ public class OverlordResourceTest
             new MockTaskRunnerWorkItem("id_2", null)
         )
     );
-    /*
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny"))
-    ).once();
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow"))
-    ).once();
- */
+
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
@@ -608,30 +747,48 @@ public class OverlordResourceTest
   }
 
   @Test
-  @Ignore
   public void testGetTasksFilterCompleteState()
   {
     expectAuthorizationTokenCheck();
     List<String> tasksIds = ImmutableList.of("id_1", "id_2", "id_3");
 
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny")));
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow")));
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(2))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(2), "allow")));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(0)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(1)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(2)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(0)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(1)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(2)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTasks()).andReturn(
+        ImmutableList.of(
+            getTaskWithIdAndDatasource("id_5", "deny"),
+            getTaskWithIdAndDatasource("id_6", "allow"),
+            getTaskWithIdAndDatasource("id_7", "allow"),
+            getTaskWithIdAndDatasource("id_8", "deny")
+        )
+    ).once();
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_5",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_6",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_7",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_8",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            )
+        )
+    );
+
     EasyMock.expect(taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(null, null)).andStubReturn(
         Lists.transform(
             tasksIds,
@@ -647,45 +804,85 @@ public class OverlordResourceTest
 
     EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
-            new TaskInfo.TaskInfoBuilder().build("id_1", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "ds_test"),
-            new TaskInfo.TaskInfoBuilder().build("id_2", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "ds_test"),
-            new TaskInfo.TaskInfoBuilder().build("id_3", DateTime.now(ISOChronology.getInstanceUTC()), TaskState.SUCCESS, "ds_test")
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            )
         )
     );
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTasks(null, null)).andReturn(
+        ImmutableList.of(
+            getTaskWithIdAndDatasource("id_1", "allow"),
+            getTaskWithIdAndDatasource("id_2", "deny"),
+            getTaskWithIdAndDatasource("id_3", "allow")
+        )
+    ).once();
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", "ds_test", null, null, req)
+        .getTasks("complete", "allow", null, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals("id_2", responseObjects.get(0).getId());
-    Assert.assertTrue("DataSource Check", "ds_test".equals(responseObjects.get(0).getDataSource()));
+    Assert.assertEquals("id_1", responseObjects.get(0).getId());
+    Assert.assertTrue("DataSource Check", "allow".equals(responseObjects.get(0).getDataSource()));
   }
 
   @Test
-  @Ignore
   public void testGetTasksFilterCompleteStateWithInterval()
   {
     expectAuthorizationTokenCheck();
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTasks()).andReturn(
+        ImmutableList.of(
+            getTaskWithIdAndDatasource("id_5", "deny"),
+            getTaskWithIdAndDatasource("id_6", "allow"),
+            getTaskWithIdAndDatasource("id_7", "allow"),
+            getTaskWithIdAndDatasource("id_8", "deny")
+        )
+    ).once();
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo()).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_5",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_6",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_7",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_8",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            )
+        )
+    );
+
     List<String> tasksIds = ImmutableList.of("id_1", "id_2", "id_3");
 
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(0))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(0), "deny")));
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(1))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(1), "allow")));
-    EasyMock.expect(taskStorageQueryAdapter.getTask(tasksIds.get(2))).andStubReturn(
-        Optional.of(getTaskWithIdAndDatasource(tasksIds.get(2), "allow")));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(0)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(1)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedTime(tasksIds.get(2)))
-            .andStubReturn(DateTimes.EPOCH);
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(0)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(1)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
-    EasyMock.expect(taskStorageQueryAdapter.getCreatedDateAndDataSource(tasksIds.get(2)))
-            .andStubReturn(new Pair<>(DateTime.now(ISOChronology.getInstanceUTC()), "ds_test"));
     Duration duration = new Period("PT86400S").toStandardDuration();
     EasyMock.expect(taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(null, duration)).andStubReturn(
         Lists.transform(
@@ -699,19 +896,47 @@ public class OverlordResourceTest
               }
             }
         ));
+    EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, duration)).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "deny"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            ),
+            new TaskInfo.TaskInfoBuilder().build(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskState.SUCCESS,
+                "allow"
+            )
+        )
+    );
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTasks(null, duration)).andReturn(
+        ImmutableList.of(
+            getTaskWithIdAndDatasource("id_1", "deny"),
+            getTaskWithIdAndDatasource("id_2", "allow"),
+            getTaskWithIdAndDatasource("id_3", "allow")
+        )
+    ).once();
 
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
     String interval = "2010-01-01_P1D";
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
-        .getTasks("complete", "ds_test", interval, null, req)
+        .getTasks("complete", "allow", interval, null, req)
         .getEntity();
     Assert.assertEquals(2, responseObjects.size());
     Assert.assertEquals("id_2", responseObjects.get(0).getId());
-    Assert.assertTrue("DataSource Check", "ds_test".equals(responseObjects.get(0).getDataSource()));
+    Assert.assertTrue("DataSource Check", "allow".equals(responseObjects.get(0).getDataSource()));
   }
 
   @Test
-  @Ignore
   public void testGetTasksNegativeState()
   {
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);

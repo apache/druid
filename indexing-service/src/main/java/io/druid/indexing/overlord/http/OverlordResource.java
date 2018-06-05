@@ -656,6 +656,14 @@ public class OverlordResource
   )
   {
 
+    //check for valid state
+    if (state != null) {
+      List validStates = ImmutableList.of("pending", "waiting", "running", "complete");
+      if (!validStates.contains(StringUtils.toLowerCase(state))) {
+        return Response.status(Status.BAD_REQUEST)
+                       .entity("Bad state query param passed : " + state).entity(ImmutableList.of()).build();
+      }
+    }
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();
     Function<TaskRunnerWorkItem, TaskStatusPlus> transformFunc = workItem -> new TaskStatusPlus(
         workItem.getTaskId(),
