@@ -36,26 +36,25 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.data.input.impl.FloatDimensionSchema;
-import io.druid.data.input.impl.LongDimensionSchema;
-import io.druid.data.input.impl.StringDimensionSchema;
-import io.druid.indexer.TaskMetricsUtils;
-import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-import io.druid.indexing.common.TaskReport;
-import io.druid.indexing.common.TaskReportFileWriter;
-import io.druid.indexing.common.task.IndexTaskTest;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.JSONParseSpec;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.LookupNodeService;
+import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
+import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskReport;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -65,6 +64,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.IndexTaskTest;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import io.druid.indexing.kafka.test.TestBroker;
@@ -432,7 +432,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -505,13 +505,13 @@ public class KafkaIndexTaskTest
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
-    while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
       Thread.sleep(10);
     }
-    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getCurrentOffsets());
+    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
     Assert.assertTrue(checkpoint1.getPartitionOffsetMap().equals(currentOffsets) || checkpoint2.getPartitionOffsetMap()
                                                                                                .equals(currentOffsets));
-    task.setEndOffsets(currentOffsets, true, false);
+    task.getRunner().setEndOffsets(currentOffsets, true, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     Assert.assertEquals(1, checkpointRequestsHash.size());
@@ -596,12 +596,12 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // task will pause for checkpointing
-    while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
       Thread.sleep(10);
     }
-    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getCurrentOffsets());
+    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
     Assert.assertTrue(checkpoint.getPartitionOffsetMap().equals(currentOffsets));
-    task.setEndOffsets(currentOffsets, true, false);
+    task.getRunner().setEndOffsets(currentOffsets, true, false);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     Assert.assertEquals(1, checkpointRequestsHash.size());
@@ -654,7 +654,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -708,7 +708,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -772,7 +772,7 @@ public class KafkaIndexTaskTest
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for the task to start reading
-    while (task.getStatus() != KafkaIndexTask.Status.READING) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.READING) {
       Thread.sleep(10);
     }
 
@@ -1616,15 +1616,15 @@ public class KafkaIndexTaskTest
     }
 
     Assert.assertEquals(2, countEvents(task));
-    Assert.assertEquals(KafkaIndexTask.Status.READING, task.getStatus());
+    Assert.assertEquals(KafkaIndexTask.Status.READING, task.getRunner().getStatus());
 
     Map<Integer, Long> currentOffsets = objectMapper.readValue(
-        task.pause(0).getEntity().toString(),
+        task.getRunner().pause(0).getEntity().toString(),
         new TypeReference<Map<Integer, Long>>()
         {
         }
     );
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
 
     // Insert remaining data
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
@@ -1641,12 +1641,12 @@ public class KafkaIndexTaskTest
       // carry on..
     }
 
-    Assert.assertEquals(currentOffsets, task.getCurrentOffsets());
+    Assert.assertEquals(currentOffsets, task.getRunner().getCurrentOffsets());
 
-    task.resume();
+    task.getRunner().resume();
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
-    Assert.assertEquals(task.getEndOffsets(), task.getCurrentOffsets());
+    Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
 
     // Check metrics
     Assert.assertEquals(3, task.getFireDepartmentMetrics().processed());
@@ -1693,43 +1693,43 @@ public class KafkaIndexTaskTest
       }
     }
 
-    while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
       Thread.sleep(25);
     }
 
     // reached the end of the assigned offsets and paused instead of publishing
-    Assert.assertEquals(task.getEndOffsets(), task.getCurrentOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+    Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
 
-    Assert.assertEquals(ImmutableMap.of(0, 3L), task.getEndOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 3L), task.getRunner().getEndOffsets());
     Map<Integer, Long> newEndOffsets = ImmutableMap.of(0, 4L);
-    task.setEndOffsets(newEndOffsets, false, true);
-    Assert.assertEquals(newEndOffsets, task.getEndOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
-    task.resume();
+    task.getRunner().setEndOffsets(newEndOffsets, false, true);
+    Assert.assertEquals(newEndOffsets, task.getRunner().getEndOffsets());
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
+    task.getRunner().resume();
 
-    while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
       Thread.sleep(25);
     }
 
     // reached the end of the updated offsets and paused
-    Assert.assertEquals(newEndOffsets, task.getCurrentOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+    Assert.assertEquals(newEndOffsets, task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
 
     // try again but with resume flag == true
     newEndOffsets = ImmutableMap.of(0, 7L);
-    task.setEndOffsets(newEndOffsets, true, true);
-    Assert.assertEquals(newEndOffsets, task.getEndOffsets());
-    Assert.assertNotEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+    task.getRunner().setEndOffsets(newEndOffsets, true, true);
+    Assert.assertEquals(newEndOffsets, task.getRunner().getEndOffsets());
+    Assert.assertNotEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
 
-    while (task.getStatus() != KafkaIndexTask.Status.PAUSED) {
+    while (task.getRunner().getStatus() != KafkaIndexTask.Status.PAUSED) {
       Thread.sleep(25);
     }
 
-    Assert.assertEquals(newEndOffsets, task.getCurrentOffsets());
-    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+    Assert.assertEquals(newEndOffsets, task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getRunner().getStatus());
 
-    task.resume();
+    task.getRunner().resume();
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
@@ -1774,13 +1774,13 @@ public class KafkaIndexTaskTest
 
     runTask(task);
 
-    while (!task.getStatus().equals(KafkaIndexTask.Status.READING)) {
+    while (!task.getRunner().getStatus().equals(KafkaIndexTask.Status.READING)) {
       Thread.sleep(2000);
     }
 
-    task.pause(0);
+    task.getRunner().pause(0);
 
-    while (!task.getStatus().equals(KafkaIndexTask.Status.PAUSED)) {
+    while (!task.getRunner().getStatus().equals(KafkaIndexTask.Status.PAUSED)) {
       Thread.sleep(25);
     }
   }
@@ -1813,14 +1813,14 @@ public class KafkaIndexTaskTest
 
     runTask(task);
 
-    while (!task.getStatus().equals(KafkaIndexTask.Status.READING)) {
+    while (!task.getRunner().getStatus().equals(KafkaIndexTask.Status.READING)) {
       Thread.sleep(20);
     }
 
     for (int i = 0; i < 5; i++) {
-      Assert.assertEquals(task.getStatus(), KafkaIndexTask.Status.READING);
+      Assert.assertEquals(task.getRunner().getStatus(), KafkaIndexTask.Status.READING);
       // Offset should not be reset
-      Assert.assertTrue(task.getCurrentOffsets().get(0) == 200L);
+      Assert.assertTrue(task.getRunner().getCurrentOffsets().get(0) == 200L);
     }
   }
 
