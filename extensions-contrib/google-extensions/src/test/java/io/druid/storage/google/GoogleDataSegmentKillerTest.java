@@ -84,11 +84,31 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   {
     final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
         JacksonFactory.getDefaultInstance(),
-        500,
+        300,
         "test"
     );
     storage.delete(bucket, indexPath);
     expectLastCall().andThrow(exception);
+
+    replayAll();
+
+    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage);
+
+    killer.kill(dataSegment);
+
+    verifyAll();
+  }
+
+  @Test
+  public void killRetryWithErrorTest() throws SegmentLoadingException, IOException
+  {
+    final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+        JacksonFactory.getDefaultInstance(),
+        500,
+        "test"
+    );
+    storage.delete(bucket, indexPath);
+    expectLastCall().andThrow(exception).once();
 
     replayAll();
 
