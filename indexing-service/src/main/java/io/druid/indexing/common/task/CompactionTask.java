@@ -44,6 +44,7 @@ import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -66,6 +67,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.security.AuthorizerMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -108,6 +110,12 @@ public class CompactionTask extends AbstractTask
   @JsonIgnore
   private final AuthorizerMapper authorizerMapper;
 
+  @JsonIgnore
+  private final ChatHandlerProvider chatHandlerProvider;
+
+  @JsonIgnore
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
+
   @JsonCreator
   public CompactionTask(
       @JsonProperty("id") final String id,
@@ -119,7 +127,9 @@ public class CompactionTask extends AbstractTask
       @Nullable @JsonProperty("tuningConfig") final IndexTuningConfig tuningConfig,
       @Nullable @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject ObjectMapper jsonMapper,
-      @JacksonInject AuthorizerMapper authorizerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(getOrMakeId(id, TYPE, dataSource), null, taskResource, dataSource, context);
@@ -133,6 +143,8 @@ public class CompactionTask extends AbstractTask
     this.jsonMapper = jsonMapper;
     this.segmentProvider = segments == null ? new SegmentProvider(dataSource, interval) : new SegmentProvider(segments);
     this.authorizerMapper = authorizerMapper;
+    this.chatHandlerProvider = chatHandlerProvider;
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
   }
 
   @JsonProperty
@@ -206,7 +218,8 @@ public class CompactionTask extends AbstractTask
             ingestionSpec,
             getContext(),
             authorizerMapper,
-            null
+            chatHandlerProvider,
+            rowIngestionMetersFactory
         );
       }
     }

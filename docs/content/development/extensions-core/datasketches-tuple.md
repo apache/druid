@@ -123,7 +123,7 @@ Returns a result of a specified set operation on the given array of sketches. Su
 {
   "type"  : "arrayOfDoublesSketchSetOp",
   "name": <output name>,
-  "func": <"UNION"|"INTERSECT"|"NOT">,
+  "operation": <"UNION"|"INTERSECT"|"NOT">,
   "fields"  : <array of post aggregators to access sketch aggregators or post aggregators to allow arbitrary combination of set operations>,
   "nominalEntries" : <parameter that determines the accuracy and size of the sketch>,
   "numberOfValues" : <number of values associated with each distinct key>

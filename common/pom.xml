@@ -152,6 +152,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+        </dependency>
+
         <!-- com.lmax.disruptor is optional in log4j-core, so we explicitly include it here -->
         <dependency>
             <groupId>com.lmax</groupId>

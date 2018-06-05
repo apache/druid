@@ -188,6 +188,39 @@ public class SupervisorResource
     );
   }
 
+  @GET
+  @Path("/{id}/stats")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response getAllTaskStats(
+      @PathParam("id") final String id
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        new Function<SupervisorManager, Response>()
+        {
+          @Override
+          public Response apply(SupervisorManager manager)
+          {
+            Optional<Map<String, Map<String, Object>>> stats = manager.getSupervisorStats(id);
+            if (!stats.isPresent()) {
+              return Response.status(Response.Status.NOT_FOUND)
+                             .entity(
+                                 ImmutableMap.of(
+                                     "error",
+                                     StringUtils.format("[%s] does not exist", id)
+                                 )
+                             )
+                             .build();
+            }
+
+            return Response.ok(stats.get()).build();
+          }
+        }
+    );
+  }
+
+
   @POST
   @Path("/{id}/shutdown")
   @Produces(MediaType.APPLICATION_JSON)

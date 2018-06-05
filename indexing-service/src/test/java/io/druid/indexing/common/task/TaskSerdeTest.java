@@ -30,6 +30,7 @@ import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -69,6 +70,7 @@ import java.util.List;
 public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final IndexSpec indexSpec = new IndexSpec();
 
   @Rule
@@ -78,6 +80,7 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
@@ -214,7 +217,8 @@ public class TaskSerdeTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -298,7 +302,8 @@ public class TaskSerdeTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {

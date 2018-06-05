@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.guice.annotations.Json;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskMaster;
@@ -53,6 +54,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   private final ObjectMapper mapper;
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   @JsonCreator
   public KafkaSupervisorSpec(
@@ -66,7 +68,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JacksonInject KafkaIndexTaskClientFactory kafkaIndexTaskClientFactory,
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
-      @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig
+      @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -106,6 +109,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     this.mapper = mapper;
     this.emitter = emitter;
     this.monitorSchedulerConfig = monitorSchedulerConfig;
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
   }
 
   @JsonProperty
@@ -157,7 +161,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
         indexerMetadataStorageCoordinator,
         kafkaIndexTaskClientFactory,
         mapper,
-        this
+        this,
+        rowIngestionMetersFactory
     );
   }
 

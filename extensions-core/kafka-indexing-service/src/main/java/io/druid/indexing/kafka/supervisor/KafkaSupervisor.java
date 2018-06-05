@@ -45,6 +45,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -228,6 +229,7 @@ public class KafkaSupervisor implements Supervisor
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
   private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
@@ -254,7 +256,8 @@ public class KafkaSupervisor implements Supervisor
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       final KafkaIndexTaskClientFactory taskClientFactory,
       final ObjectMapper mapper,
-      final KafkaSupervisorSpec spec
+      final KafkaSupervisorSpec spec,
+      final RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     this.taskStorage = taskStorage;
@@ -264,6 +267,7 @@ public class KafkaSupervisor implements Supervisor
     this.spec = spec;
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
@@ -482,6 +486,22 @@ public class KafkaSupervisor implements Supervisor
   public SupervisorReport getStatus()
   {
     return generateReport(true);
+  }
+
+  @Override
+  public Map<String, Map<String, Object>> getStats()
+  {
+    try {
+      return getCurrentTotalStats();
+    }
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      log.error(ie, "getStats() interrupted.");
+      throw new RuntimeException(ie);
+    }
+    catch (ExecutionException | TimeoutException eete) {
+      throw new RuntimeException(eete);
+    }
   }
 
   @Override
@@ -1787,7 +1807,8 @@ public class KafkaSupervisor implements Supervisor
           kafkaIOConfig,
           context,
           null,
-          null
+          null,
+          rowIngestionMetersFactory
       );
 
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
@@ -2198,4 +2219,106 @@ public class KafkaSupervisor implements Supervisor
       }
     };
   }
+
+  /**
+   * Collect row ingestion stats from all tasks managed by this supervisor.
+   *
+   * @return A map of groupId->taskId->task row stats
+   *
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
+  private Map<String, Map<String, Object>> getCurrentTotalStats() throws InterruptedException, ExecutionException, TimeoutException
+  {
+    Map<String, Map<String, Object>> allStats = Maps.newHashMap();
+    final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
+    final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
+
+    for (int groupId : taskGroups.keySet()) {
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId),
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
+                }
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
+
+    for (int groupId : pendingCompletionTaskGroups.keySet()) {
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId),
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
+                }
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
+
+    List<StatsFromTaskResult> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      StatsFromTaskResult result = results.get(i);
+      if (result != null) {
+        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> Maps.newHashMap());
+        groupMap.put(result.getTaskId(), result.getStats());
+      } else {
+        Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
+        log.error("Failed to get stats for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
+      }
+    }
+
+    return allStats;
+  }
+
+  private static class StatsFromTaskResult
+  {
+    private final String groupId;
+    private final String taskId;
+    private final Map<String, Object> stats;
+
+    public StatsFromTaskResult(
+        int groupId,
+        String taskId,
+        Map<String, Object> stats
+    )
+    {
+      this.groupId = String.valueOf(groupId);
+      this.taskId = taskId;
+      this.stats = stats;
+    }
+
+    public String getGroupId()
+    {
+      return groupId;
+    }
+
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    public Map<String, Object> getStats()
+    {
+      return stats;
+    }
+  }
+
 }
