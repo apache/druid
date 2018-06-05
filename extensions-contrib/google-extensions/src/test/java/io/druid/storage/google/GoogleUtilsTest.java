@@ -25,6 +25,8 @@ import com.google.api.client.http.HttpResponseException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 public class GoogleUtilsTest
 {
   @Test
@@ -69,6 +71,11 @@ public class GoogleUtilsTest
     Assert.assertFalse(
         GoogleUtils.isRetryable(
             new HttpResponseException.Builder(404, "ignored", new HttpHeaders()).build()
+        )
+    );
+    Assert.assertTrue(
+        GoogleUtils.isRetryable(
+            new IOException("generic io exception")
         )
     );
   }
