@@ -27,6 +27,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +40,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 {
   private static final String bucket = "bucket";
   private static final String indexPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+  private static final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf("/")) + "/descriptor.json";
 
   private static final DataSegment dataSegment = new DataSegment(
       "test",
@@ -47,7 +49,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
       ImmutableMap.<String, Object>of("bucket", bucket, "path", indexPath),
       null,
       null,
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1
   );
@@ -63,11 +65,9 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test
   public void killTest() throws SegmentLoadingException, IOException
   {
-    final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf("/")) + "/descriptor.json";
-
-    storage.delete(bucket, indexPath);
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
     expectLastCall();
-    storage.delete(bucket, descriptorPath);
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
     expectLastCall();
 
     replayAll();
@@ -87,7 +87,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
         300,
         "test"
     );
-    storage.delete(bucket, indexPath);
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
     expectLastCall().andThrow(exception);
 
     replayAll();
@@ -107,8 +107,10 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
         500,
         "test"
     );
-    storage.delete(bucket, indexPath);
-    expectLastCall().andThrow(exception).once();
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
+    expectLastCall().andThrow(exception).once().andVoid().once();
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
+    expectLastCall().andThrow(exception).once().andVoid().once();
 
     replayAll();
 

@@ -24,6 +24,7 @@ import com.google.api.client.googleapis.testing.json.GoogleJsonResponseException
 import com.google.api.client.json.jackson2.JacksonFactory;
 import io.druid.segment.loading.SegmentLoadingException;
 import org.apache.commons.io.FileUtils;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Test;
 
@@ -51,7 +52,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
           300,
           "test"
       );
-      expect(storage.get(bucket, path)).andThrow(exception);
+      expect(storage.get(EasyMock.eq(bucket), EasyMock.eq(path))).andThrow(exception);
 
       replayAll();
 

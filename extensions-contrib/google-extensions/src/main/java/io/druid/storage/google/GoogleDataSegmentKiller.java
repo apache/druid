@@ -19,7 +19,7 @@
 
 package io.druid.storage.google;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpResponseException;
 import com.google.inject.Inject;
 import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.RE;
@@ -76,7 +76,7 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
           5
       );
     }
-    catch (GoogleJsonResponseException e) {
+    catch (HttpResponseException e) {
       if (e.getStatusCode() != 404) {
         throw e;
       }
