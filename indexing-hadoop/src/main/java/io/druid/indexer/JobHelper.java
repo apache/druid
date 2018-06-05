@@ -715,10 +715,7 @@ public class JobHelper
                       outDir
                   );
 
-                  try (final OutputStream out = new BufferedOutputStream(
-                      new FileOutputStream(outputPath),
-                      1 << 13
-                  )) {
+                  try (final OutputStream out = new BufferedOutputStream(new FileOutputStream(outputPath))) {
                     for (int len = in.read(buffer); len >= 0; len = in.read(buffer)) {
                       progressable.progress();
                       if (len == 0) {
