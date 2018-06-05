@@ -16,32 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.indexer;
-
-public enum TaskState
+/**
+ * This includes the state of a task in the task runner not covered by {@link TaskState}, this state is not stored in database
+ */
+public enum RunnerTaskState
 {
+  WAITING,
+  PENDING,
   RUNNING,
-  SUCCESS,
-  FAILED;
-
-  public boolean isRunnable()
-  {
-    return this == RUNNING;
-  }
-
-  public boolean isComplete()
-  {
-    return this != RUNNING;
-  }
-
-  public boolean isSuccess()
-  {
-    return this == SUCCESS;
-  }
-
-  public boolean isFailure()
-  {
-    return this == FAILED;
-  }
+  NONE; // is used for a completed task
 }

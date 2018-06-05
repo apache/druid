@@ -1141,11 +1141,6 @@ public class OverlordResourceTest
       return "ds_test";
     }
 
-    @Override
-    public TaskState getTaskState()
-    {
-      return TaskState.UNKNOWN;
-    }
   }
 
 }

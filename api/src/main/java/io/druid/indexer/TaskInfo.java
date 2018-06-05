@@ -25,6 +25,7 @@ public class TaskInfo
   private String id;
   private DateTime createdTime;
   private TaskState state;
+  private RunnerTaskState runnerTaskState;
   private String dataSource;
 
   private TaskInfo(String id, DateTime createdTime, TaskState state, String datasource)

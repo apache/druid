@@ -43,7 +43,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
@@ -790,12 +789,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     public String getDataSource()
     {
       return task.getDataSource();
-    }
-
-    @Override
-    public TaskState getTaskState()
-    {
-      return TaskState.UNKNOWN;
     }
 
   }

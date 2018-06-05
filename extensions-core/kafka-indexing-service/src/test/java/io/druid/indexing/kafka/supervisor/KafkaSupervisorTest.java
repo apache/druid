@@ -32,9 +32,8 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.RealtimeIndexTask;
@@ -2092,12 +2091,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     public String getDataSource() 
     {
       return dataSource;
-    }
-
-    @Override
-    public TaskState getTaskState()
-    {
-      return TaskState.UNKNOWN;
     }
 
   }

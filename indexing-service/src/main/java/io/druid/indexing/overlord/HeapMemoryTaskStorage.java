@@ -242,7 +242,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
         } else if (status.isFailure()) {
           state = TaskState.FAILED;
         } else {
-          state = TaskState.UNKNOWN;
+          state = null;
         }
         TaskInfo t = new TaskInfo.TaskInfoBuilder().build(
             id,

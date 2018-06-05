@@ -402,11 +402,6 @@ public class OverlordTest
           return task.getDataSource();
         }
 
-        @Override
-        public TaskState getTaskState()
-        {
-          return TaskState.UNKNOWN;
-        }
       };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);
       return future;
