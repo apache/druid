@@ -103,6 +103,8 @@ public class TaskStatusPlus
     return state;
   }
 
+  @Nullable
+  @JsonProperty("runnerStatusCode")
   public RunnerTaskState getRunnerTaskState()
   {
     return runnerTaskState;
