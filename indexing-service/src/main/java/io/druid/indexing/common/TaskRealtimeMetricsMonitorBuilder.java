@@ -21,6 +21,8 @@ package io.druid.indexing.common;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.DruidMetrics;
 import io.druid.segment.realtime.FireDepartment;
@@ -34,6 +36,18 @@ public class TaskRealtimeMetricsMonitorBuilder
   {
     return new RealtimeMetricsMonitor(
         ImmutableList.of(fireDepartment),
+        ImmutableMap.of(
+            DruidMetrics.TASK_ID, new String[]{task.getId()},
+            DruidMetrics.TASK_TYPE, new String[]{task.getType()}
+        )
+    );
+  }
+
+  public static TaskRealtimeMetricsMonitor build(Task task, FireDepartment fireDepartment, RowIngestionMeters meters)
+  {
+    return new TaskRealtimeMetricsMonitor(
+        fireDepartment,
+        meters,
         ImmutableMap.of(
             DruidMetrics.TASK_ID, new String[]{task.getId()},
             DruidMetrics.TASK_TYPE, new String[]{task.getType()}

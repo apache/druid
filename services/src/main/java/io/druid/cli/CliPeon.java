@@ -62,6 +62,8 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -158,6 +160,19 @@ public class CliPeon extends GuiceRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                 .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             PolyBind.createChoice(
                 binder,
