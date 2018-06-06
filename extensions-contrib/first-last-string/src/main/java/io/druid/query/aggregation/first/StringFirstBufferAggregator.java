@@ -64,10 +64,23 @@ public class StringFirstBufferAggregator implements BufferAggregator
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
 
-    long time = timeSelector.getLong();
+    Object value = valueSelector.getObject();
+
+    long time;
+    String lastString;
+
+    if (value instanceof SerializablePair) {
+      SerializablePair<Long, String> serializablePair = (SerializablePair) value;
+      time = serializablePair.lhs;
+      lastString = serializablePair.rhs;
+    } else {
+      time = timeSelector.getLong();
+      lastString = (String) value;
+    }
+
     long lastTime = mutationBuffer.getLong(position);
     if (time < lastTime) {
-      byte[] valueBytes = ((String) valueSelector.getObject()).getBytes(StandardCharsets.UTF_8);
+      byte[] valueBytes = lastString.getBytes(StandardCharsets.UTF_8);
 
       mutationBuffer.putLong(position, time);
       mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
