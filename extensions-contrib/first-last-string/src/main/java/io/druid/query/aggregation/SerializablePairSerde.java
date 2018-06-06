@@ -90,10 +90,20 @@ public class SerializablePairSerde extends ComplexMetricSerde
           comparation = -1;
         }
 
-        if (comparation == 0 && o1.rhs.equals(o2.rhs)) {
-          comparation = 0;
-        } else if (comparation == 0) {
-          comparation = -1;
+        if (comparation == 0) {
+          if (o1.rhs != null && o2.rhs != null) {
+            if (o1.rhs.equals(o2.rhs)) {
+              comparation = 0;
+            } else {
+              comparation = -1;
+            }
+          } else if (o1.rhs != null) {
+            comparation = 1;
+          } else if (o2.rhs != null) {
+            comparation = -1;
+          } else {
+            comparation = 0;
+          }
         }
 
         return comparation;
@@ -113,22 +123,35 @@ public class SerializablePairSerde extends ComplexMetricSerde
         Long lhs = readOnlyBuffer.getLong();
         Integer stringSize = readOnlyBuffer.getInt();
 
-        byte[] stringBytes = new byte[stringSize];
-        readOnlyBuffer.get(stringBytes, 0, stringSize);
+        String lastString = null;
+        if (stringSize > 0) {
+          byte[] stringBytes = new byte[stringSize];
+          readOnlyBuffer.get(stringBytes, 0, stringSize);
+          lastString = new String(stringBytes, StandardCharsets.UTF_8);
+        }
 
-        return new SerializablePair<>(lhs, new String(stringBytes, StandardCharsets.UTF_8));
+        return new SerializablePair<>(lhs, lastString);
       }
 
       @Override
       public byte[] toBytes(SerializablePair val)
       {
         String rhsString = (String) val.rhs;
+        ByteBuffer bbuf;
 
-        ByteBuffer bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES + rhsString.length());
-        bbuf.putLong((Long) val.lhs);
-        bbuf.putInt(Long.BYTES, rhsString.length());
-        bbuf.position(Long.BYTES + Integer.BYTES);
-        bbuf.put(rhsString.getBytes(StandardCharsets.UTF_8));
+
+        if (rhsString != null) {
+          byte[] rhsBytes = rhsString.getBytes(StandardCharsets.UTF_8);
+          bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES + rhsBytes.length);
+          bbuf.putLong((Long) val.lhs);
+          bbuf.putInt(Long.BYTES, rhsBytes.length);
+          bbuf.position(Long.BYTES + Integer.BYTES);
+          bbuf.put(rhsBytes);
+        } else {
+          bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
+          bbuf.putLong((Long) val.lhs);
+          bbuf.putInt(Long.BYTES, 0);
+        }
 
         return bbuf.array();
       }

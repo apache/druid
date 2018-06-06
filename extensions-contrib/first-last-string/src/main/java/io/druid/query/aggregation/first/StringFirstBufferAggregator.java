@@ -86,10 +86,18 @@ public class StringFirstBufferAggregator implements BufferAggregator
     Long timeValue = mutationBuffer.getLong(position);
     Integer stringSizeBytes = mutationBuffer.getInt(position + Long.BYTES);
 
-    byte[] valueBytes = new byte[stringSizeBytes];
-    mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-    mutationBuffer.get(valueBytes, 0, stringSizeBytes);
-    return new SerializablePair<>(timeValue, new String(valueBytes, StandardCharsets.UTF_8));
+    SerializablePair<Long, String> serializablePair;
+
+    if (stringSizeBytes > 0) {
+      byte[] valueBytes = new byte[stringSizeBytes];
+      mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
+      mutationBuffer.get(valueBytes, 0, stringSizeBytes);
+      serializablePair = new SerializablePair<>(timeValue, new String(valueBytes, StandardCharsets.UTF_8));
+    } else {
+      serializablePair = new SerializablePair<>(timeValue, null);
+    }
+
+    return serializablePair;
   }
 
   @Override
