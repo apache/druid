@@ -526,7 +526,9 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
             for (int id : dimsInt) {
               if (checkedIds.get(id)) {
-                return matchingIds.get(id);
+                if (matchingIds.get(id)) {
+                  return true;
+                }
               } else {
                 final boolean matches = predicate.apply(lookupName(id));
                 checkedIds.set(id);
