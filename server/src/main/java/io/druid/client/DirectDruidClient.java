@@ -120,7 +120,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
    */
   public static void removeMagicResponseContextFields(Map<String, Object> responseContext)
   {
-    responseContext.remove(DirectDruidClient.QUERY_FAIL_TIME);
     responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
   }
 
