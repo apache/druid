@@ -145,8 +145,8 @@ public interface TaskStorage
    * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
    * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
    *
-   * @param maxTaskStatuses
-   * @param duration
+   * @param maxTaskStatuses maxTaskStatuses
+   * @param duration duration
    *
    * @return list of {@link TaskInfo}
    */
@@ -156,8 +156,8 @@ public interface TaskStorage
    * Returns up to {@code maxCompletedTasks} recently finished tasks as stored in the storage facility. No particular order
    * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
    *
-   * @param maxCompletedTasks
-   * @param duration
+   * @param maxCompletedTasks maxCompletedTasks
+   * @param duration duration
    *
    * @return list of recently finished tasks
    */

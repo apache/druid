@@ -103,8 +103,8 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   /**
    * Return up to {@code maxNumStatuses} {@link TaskInfo} objects for all inactive entries created on or later than the given timestamp
    *
-   * @param timestamp
-   * @param maxNumStatuses
+   * @param timestamp timestamp
+   * @param maxNumStatuses maxNumStatuses
    *
    * @return list of {@link TaskInfo}
    */
@@ -113,12 +113,12 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   /**
    * Return up to {@code maxNumStatuses} inactive entries created on or later than the given timestamp
    *
-   * @param minus
-   * @param maxTaskStatuses
+   * @param timestamp timestamp
+   * @param maxTaskStatuses maxTaskStatuses
    *
    * @return list of entry
    */
-  List<EntryType> getCompletedTasks(DateTime minus, Integer maxTaskStatuses);
+  List<EntryType> getCompletedTasks(DateTime timestamp, Integer maxTaskStatuses);
 
   /**
    * Return {@link TaskInfo} objects for all active entries

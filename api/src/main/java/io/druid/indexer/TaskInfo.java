@@ -21,7 +21,7 @@ package io.druid.indexer;
 import org.joda.time.DateTime;
 
 /**
- * This class is used to store task info from runner query and cache in {@link OverlordResource}
+ * This class is used to store task info from runner query and cache in OverlordResource
  */
 public class TaskInfo
 {
