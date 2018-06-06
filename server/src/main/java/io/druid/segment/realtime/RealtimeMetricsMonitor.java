@@ -33,6 +33,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * RealtimeMetricsMonitor is only used by RealtimeIndexTask, this monitor only supports FireDepartmentMetrics.
+ * New ingestion task types should support RowIngestionMeters and use TaskRealtimeMetricsMonitor instead.
+ * Please see the comment on RowIngestionMeters for more information regarding the relationship between
+ * RowIngestionMeters and FireDepartmentMetrics.
  */
 public class RealtimeMetricsMonitor extends AbstractMonitor
 {

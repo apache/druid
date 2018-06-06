@@ -20,6 +20,7 @@ package io.druid.indexing.kafka;
 
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.kafka.KafkaIndexTask.Status;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.Appenderator;
@@ -42,6 +43,7 @@ public interface KafkaIndexTaskRunner extends ChatHandler
   TaskStatus run(TaskToolbox toolbox);
 
   Appenderator getAppenderator();
+  RowIngestionMeters getRowIngestionMeters();
   FireDepartmentMetrics getFireDepartmentMetrics();
   Status getStatus();
 

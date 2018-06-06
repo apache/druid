@@ -45,7 +45,6 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -55,6 +54,8 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.kafka.KafkaIndexTask.Status;
@@ -68,7 +69,6 @@ import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
@@ -180,6 +180,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
   private final CircularBuffer<Throwable> savedParseExceptions;
   private final String topic;
+  private final RowIngestionMeters rowIngestionMeters;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final BlockingQueue<SequenceMetadata> publishQueue = new LinkedBlockingQueue<>();
@@ -194,7 +195,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private volatile FireDepartmentMetrics fireDepartmentMetrics;
-  private volatile TaskMetricsGetter metricsGetter;
   private volatile IngestionState ingestionState;
 
   private volatile boolean pauseRequested = false;
@@ -210,7 +210,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
       InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
-      CircularBuffer<Throwable> savedParseExceptions
+      CircularBuffer<Throwable> savedParseExceptions,
+      RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     this.task = task;
@@ -221,6 +222,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     this.chatHandlerProvider = chatHandlerProvider;
     this.savedParseExceptions = savedParseExceptions;
     this.topic = ioConfig.getStartPartitions().getTopic();
+    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
     this.sequences = new CopyOnWriteArrayList<>();
@@ -315,8 +317,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
-    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics));
+    toolbox.getMonitorScheduler()
+           .addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters));
 
     final String lookupTier = task.getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER);
     LookupNodeService lookupNodeService = lookupTier == null ?
@@ -563,10 +565,10 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                     if (addResult.getParseException() != null) {
                       handleParseException(addResult.getParseException(), record);
                     } else {
-                      fireDepartmentMetrics.incrementProcessed();
+                      rowIngestionMeters.incrementProcessed();
                     }
                   } else {
-                    fireDepartmentMetrics.incrementThrownAway();
+                    rowIngestionMeters.incrementThrownAway();
                   }
                 }
                 if (isPersistRequired) {
@@ -840,9 +842,11 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        savedParseExceptions
+    );
     if (buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
     return unparseableEventsMap;
   }
@@ -850,12 +854,10 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (metricsGetter != null) {
-      metrics.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
-      );
-    }
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
     return metrics;
   }
 
@@ -1028,9 +1030,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private void handleParseException(ParseException pe, ConsumerRecord<byte[], byte[]> record)
   {
     if (pe.isFromPartiallyValidRow()) {
-      fireDepartmentMetrics.incrementProcessedWithErrors();
+      rowIngestionMeters.incrementProcessedWithError();
     } else {
-      fireDepartmentMetrics.incrementUnparseable();
+      rowIngestionMeters.incrementUnparseable();
     }
 
     if (tuningConfig.isLogParseExceptions()) {
@@ -1046,7 +1048,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
       savedParseExceptions.add(pe);
     }
 
-    if (fireDepartmentMetrics.unparseable() + fireDepartmentMetrics.processedWithErrors()
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > tuningConfig.getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
@@ -1106,6 +1108,12 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   public Appenderator getAppenderator()
   {
     return appenderator;
+  }
+
+  @Override
+  public RowIngestionMeters getRowIngestionMeters()
+  {
+    return rowIngestionMeters;
   }
 
   @Override
@@ -1241,14 +1249,18 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     authorizationCheck(req, Action.READ);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
-    if (metricsGetter != null) {
-      totalsMap.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
-      );
-    }
+    totalsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    averagesMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getMovingAverages()
+    );
 
+    returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     return Response.ok(returnMap).build();
   }

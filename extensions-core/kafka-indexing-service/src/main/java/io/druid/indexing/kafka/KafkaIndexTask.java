@@ -29,11 +29,17 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
+import io.druid.indexer.IngestionState;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.common.task.Tasks;
@@ -108,7 +114,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("ioConfig") KafkaIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(
@@ -139,7 +146,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           parser,
           authorizerMapper,
           this.chatHandlerProvider,
-          savedParseExceptions
+          savedParseExceptions,
+          rowIngestionMetersFactory
       );
     } else {
       runner = new IncrementalPublishingKafkaIndexTaskRunner(
@@ -147,7 +155,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           parser,
           authorizerMapper,
           this.chatHandlerProvider,
-          savedParseExceptions
+          savedParseExceptions,
+          rowIngestionMetersFactory
       );
     }
   }

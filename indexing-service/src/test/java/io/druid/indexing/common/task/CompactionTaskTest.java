@@ -44,9 +44,11 @@ import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.CompactionTask.SegmentProvider;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
@@ -80,6 +82,8 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.transform.TransformingInputRowParser;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.security.AuthTestUtils;
@@ -130,6 +134,7 @@ public class CompactionTaskTest
   private static Map<String, DimensionSchema> DIMENSIONS;
   private static Map<String, AggregatorFactory> AGGREGATORS;
   private static List<DataSegment> SEGMENTS;
+  private static RowIngestionMetersFactory rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
   private static ObjectMapper objectMapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static Map<DataSegment, File> segmentMap;
 
@@ -211,6 +216,8 @@ public class CompactionTaskTest
                   public void configure(Binder binder)
                   {
                     binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+                    binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+                    binder.bind(RowIngestionMetersFactory.class).toInstance(rowIngestionMetersFactory);
                   }
                 }
             )
@@ -294,7 +301,9 @@ public class CompactionTaskTest
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        rowIngestionMetersFactory
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);
@@ -321,7 +330,9 @@ public class CompactionTaskTest
         createTuningConfig(),
         ImmutableMap.of("testKey", "testContext"),
         objectMapper,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        rowIngestionMetersFactory
     );
     final byte[] bytes = objectMapper.writeValueAsBytes(task);
     final CompactionTask fromJson = objectMapper.readValue(bytes, CompactionTask.class);

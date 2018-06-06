@@ -46,6 +46,8 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.kafka.KafkaIndexTask.Status;
@@ -58,7 +60,6 @@ import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -163,6 +164,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private final AuthorizerMapper authorizerMapper;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
   private final CircularBuffer<Throwable> savedParseExceptions;
+  private final RowIngestionMeters rowIngestionMeters;
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -182,7 +184,8 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
-      CircularBuffer<Throwable> savedParseExceptions
+      CircularBuffer<Throwable> savedParseExceptions,
+      RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     this.task = task;
@@ -192,6 +195,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
     this.savedParseExceptions = savedParseExceptions;
+    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
     this.ingestionState = IngestionState.NOT_STARTED;
@@ -218,6 +222,12 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   public Appenderator getAppenderator()
   {
     return appenderator;
+  }
+
+  @Override
+  public RowIngestionMeters getRowIngestionMeters()
+  {
+    return rowIngestionMeters;
   }
 
   @Override
@@ -249,8 +259,8 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
-    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics));
+    toolbox.getMonitorScheduler()
+           .addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters));
 
     final String lookupTier = task.getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER);
     LookupNodeService lookupNodeService = lookupTier == null ?
@@ -448,10 +458,10 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
                     if (addResult.getParseException() != null) {
                       handleParseException(addResult.getParseException(), record);
                     } else {
-                      fireDepartmentMetrics.incrementProcessed();
+                      rowIngestionMeters.incrementProcessed();
                     }
                   } else {
-                    fireDepartmentMetrics.incrementThrownAway();
+                    rowIngestionMeters.incrementThrownAway();
                   }
                 }
 
@@ -765,9 +775,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private void handleParseException(ParseException pe, ConsumerRecord<byte[], byte[]> record)
   {
     if (pe.isFromPartiallyValidRow()) {
-      fireDepartmentMetrics.incrementProcessedWithErrors();
+      rowIngestionMeters.incrementProcessedWithError();
     } else {
-      fireDepartmentMetrics.incrementUnparseable();
+      rowIngestionMeters.incrementUnparseable();
     }
 
     if (tuningConfig.isLogParseExceptions()) {
@@ -783,7 +793,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       savedParseExceptions.add(pe);
     }
 
-    if (fireDepartmentMetrics.unparseable() + fireDepartmentMetrics.processedWithErrors()
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > tuningConfig.getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
@@ -808,9 +818,11 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
+    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
+        savedParseExceptions
+    );
     if (buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
     return unparseableEventsMap;
   }
@@ -969,14 +981,18 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     authorizationCheck(req, Action.READ);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
-    if (metricsGetter != null) {
-      totalsMap.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
-      );
-    }
+    totalsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    averagesMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getMovingAverages()
+    );
 
+    returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     return Response.ok(returnMap).build();
   }
