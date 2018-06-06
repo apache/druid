@@ -288,7 +288,7 @@ public class OverlordResourceTest
                 return TaskStatus.success(input);
               }
             }));
-    EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo.TaskInfoBuilder().build(
                 "id_1",
@@ -431,7 +431,7 @@ public class OverlordResourceTest
               }
             }
         ));
-    EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo.TaskInfoBuilder().build(
                 "id_5",
@@ -543,7 +543,7 @@ public class OverlordResourceTest
               }
             }
         ));
-    EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo.TaskInfoBuilder().build(
                 "id_5",
@@ -841,7 +841,7 @@ public class OverlordResourceTest
             }
         ));
 
-    EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, null)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo.TaskInfoBuilder().build(
                 "id_1",
@@ -935,7 +935,7 @@ public class OverlordResourceTest
               }
             }
         ));
-    EasyMock.expect(taskStorageQueryAdapter.recentlyCompletedTaskInfo(null, duration)).andStubReturn(
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, duration)).andStubReturn(
         ImmutableList.of(
             new TaskInfo.TaskInfoBuilder().build(
                 "id_1",

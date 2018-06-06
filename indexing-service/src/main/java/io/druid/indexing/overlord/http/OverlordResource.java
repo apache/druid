@@ -666,7 +666,7 @@ public class OverlordResource
       completeTaskCache.putIfAbsent(task.getId(), task);
     }
 
-    final List<TaskInfo> taskInfoList = taskStorageQueryAdapter.recentlyCompletedTaskInfo(
+    final List<TaskInfo> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
         maxCompletedTasks, duration);
     for (TaskInfo taskInfo : taskInfoList) {
       taskInfoCache.putIfAbsent(taskInfo.getId(), taskInfo);

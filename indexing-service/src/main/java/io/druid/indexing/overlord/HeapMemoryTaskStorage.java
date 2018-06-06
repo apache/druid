@@ -30,8 +30,8 @@ import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
@@ -301,11 +301,12 @@ public class HeapMemoryTaskStorage implements TaskStorage
     giant.lock();
 
     try {
-      return createdDateDesc.sortedCopy(tasks.values())
-                            .stream()
-                            .limit(n)
-                            .map(TaskStuff::getStatus)
-                            .collect(Collectors.toList());
+      return createdDateDesc
+          .sortedCopy(tasks.values())
+          .stream()
+          .limit(n)
+          .map(TaskStuff::getStatus)
+          .collect(Collectors.toList());
     }
     finally {
       giant.unlock();

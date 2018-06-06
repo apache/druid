@@ -20,12 +20,14 @@ package io.druid.indexer;
 
 import org.joda.time.DateTime;
 
+/**
+ * This class is used to store task info from runner query and cache in {@link OverlordResource}
+ */
 public class TaskInfo
 {
   private String id;
   private DateTime createdTime;
   private TaskState state;
-  private RunnerTaskState runnerTaskState;
   private String dataSource;
 
   private TaskInfo(String id, DateTime createdTime, TaskState state, String datasource)
@@ -61,7 +63,6 @@ public class TaskInfo
     return dataSource;
   }
 
-
   public static class TaskInfoBuilder
   {
     private String id;
@@ -95,12 +96,12 @@ public class TaskInfo
 
     public TaskInfo build()
     {
-      TaskInfo t = new TaskInfo();
-      t.id = this.id;
-      t.createdTime = this.createdTime;
-      t.state = this.state;
-      t.dataSource = this.dataSource;
-      return t;
+      TaskInfo taskInfo = new TaskInfo();
+      taskInfo.id = this.id;
+      taskInfo.createdTime = this.createdTime;
+      taskInfo.state = this.state;
+      taskInfo.dataSource = this.dataSource;
+      return taskInfo;
     }
 
     public TaskInfo build(String id, DateTime createdTime, TaskState state, String datasource)
