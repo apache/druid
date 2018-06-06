@@ -58,6 +58,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
@@ -154,12 +155,14 @@ public class TaskLifecycleTest
   private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
+  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY;
 
   static {
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
     INDEX_MERGER_V9 = TEST_UTILS.getTestIndexMergerV9();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
+    ROW_INGESTION_METERS_FACTORY = TEST_UTILS.getRowIngestionMetersFactory();
   }
 
   private static final String HEAP_TASK_STORAGE = "HeapMemoryTaskStorage";
@@ -701,7 +704,8 @@ public class TaskLifecycleTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        ROW_INGESTION_METERS_FACTORY
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
@@ -780,7 +784,8 @@ public class TaskLifecycleTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        ROW_INGESTION_METERS_FACTORY
     );
 
     final TaskStatus status = runTask(indexTask);
@@ -1166,7 +1171,8 @@ public class TaskLifecycleTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        ROW_INGESTION_METERS_FACTORY
     );
 
     final long startTime = System.currentTimeMillis();

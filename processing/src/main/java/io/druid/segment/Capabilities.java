@@ -21,6 +21,7 @@ package io.druid.segment;
 
 /**
  */
+
 public class Capabilities
 {
   private final boolean dimensionValuesSorted;
@@ -37,6 +38,10 @@ public class Capabilities
     this.dimensionValuesSorted = dimensionValuesSorted;
   }
 
+  /**
+   * Is dimension value dictionary sorted?
+   * @return
+   */
   public boolean dimensionValuesSorted()
   {
     return dimensionValuesSorted;

@@ -25,6 +25,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
@@ -39,8 +40,11 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.PolyBind;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTaskClientFactory;
 import io.druid.indexing.common.task.ParallelIndexTaskClient;
 import io.druid.indexing.overlord.ForkingTaskRunner;
@@ -99,6 +103,19 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
                   .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+
 
             binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
             binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);

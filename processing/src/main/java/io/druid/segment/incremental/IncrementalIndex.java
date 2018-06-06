@@ -299,7 +299,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ValueType type = TYPE_MAP.get(dimSchema.getValueType());
       String dimName = dimSchema.getName();
-      ColumnCapabilitiesImpl capabilities = makeCapabilitesFromValueType(type);
+      ColumnCapabilitiesImpl capabilities = makeCapabilitiesFromValueType(type);
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
 
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
@@ -875,7 +875,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  private ColumnCapabilitiesImpl makeCapabilitesFromValueType(ValueType type)
+  private ColumnCapabilitiesImpl makeCapabilitiesFromValueType(ValueType type)
   {
     ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     capabilities.setDictionaryEncoded(type == ValueType.STRING);

@@ -26,7 +26,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -281,9 +280,14 @@ public abstract class IndexTaskClient implements AutoCloseable
           log.debug("HTTP %s: %s", method.getName(), serviceUri.toString());
           response = httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
         }
+        catch (IOException | ChannelException ioce) {
+          throw ioce;
+        }
+        catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(ie);
+        }
         catch (Exception e) {
-          Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
-          Throwables.propagateIfInstanceOf(e.getCause(), ChannelException.class);
           throw new RuntimeException(e);
         }
 
@@ -350,8 +354,9 @@ public abstract class IndexTaskClient implements AutoCloseable
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
+            Thread.currentThread().interrupt();
             e.addSuppressed(e2);
-            throw e;
+            throw new RuntimeException(e);
           }
         }
       }

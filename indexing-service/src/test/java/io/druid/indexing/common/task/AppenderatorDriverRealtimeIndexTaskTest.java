@@ -46,7 +46,6 @@ import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.Counters;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
@@ -64,6 +63,8 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.SegmentPublishResult;
@@ -270,6 +271,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private TaskToolboxFactory taskToolboxFactory;
   private File baseDir;
   private File reportsFile;
+  private RowIngestionMetersFactory rowIngestionMetersFactory;
 
   @Before
   public void setUp() throws IOException
@@ -361,9 +363,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -423,9 +425,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -488,9 +490,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2000, task.getMetrics().processed());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2000, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2000, sumMetric(task, null, "rows"));
@@ -556,9 +558,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Collection<DataSegment> publishedSegments = awaitSegments();
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(1, task.getMetrics().thrownAway());
-    Assert.assertEquals(0, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(2, sumMetric(task, null, "rows"));
@@ -624,7 +626,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:50:00.000Z, event={t=3000000, dim1=foo, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [Unable to parse value[foo] for field[met1],]"
         )
@@ -676,10 +678,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(1, task.getMetrics().processedWithErrors());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(2, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRowIngestionMeters().getProcessedWithError());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(3, sumMetric(task, null, "rows"));
@@ -703,12 +705,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     handOffCallbacks.clear();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 2,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+            RowIngestionMeters.PROCESSED, 2,
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 1,
+            RowIngestionMeters.UNPARSEABLE, 2,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
 
@@ -768,10 +770,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     DataSegment publishedSegment = Iterables.getOnlyElement(publishedSegments);
 
     // Check metrics.
-    Assert.assertEquals(2, task.getMetrics().processed());
-    Assert.assertEquals(2, task.getMetrics().processedWithErrors());
-    Assert.assertEquals(0, task.getMetrics().thrownAway());
-    Assert.assertEquals(2, task.getMetrics().unparseable());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getProcessedWithError());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task.getRowIngestionMeters().getUnparseable());
 
     // Do some queries.
     Assert.assertEquals(4, sumMetric(task, null, "rows"));
@@ -795,12 +797,12 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     handOffCallbacks.clear();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 2,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+            RowIngestionMeters.PROCESSED, 2,
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
+            RowIngestionMeters.UNPARSEABLE, 2,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
 
@@ -812,7 +814,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
@@ -872,17 +874,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 2,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 2,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 2,
+            RowIngestionMeters.UNPARSEABLE, 2,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {dim1=foo, met1=2.0, __fail__=x}",
             "Found unparseable columns in row: [MapBasedInputRow{timestamp=2018-03-17T01:59:20.729Z, event={t=1521251960729, dim1=foo, dimLong=notnumber, dimFloat=notnumber, met1=foo}, dimensions=[dim1, dim2, dim1t, dimLong, dimFloat]}], exceptions: [could not convert value [notnumber] to long,could not convert value [notnumber] to float,Unable to parse value[foo] for field[met1],]",
@@ -1124,17 +1126,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       // Wait for the task to finish.
       TaskStatus status = statusFuture.get();
 
-      IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
-
       Map<String, Object> expectedMetrics = ImmutableMap.of(
-          "buildSegments",
+          RowIngestionMeters.BUILD_SEGMENTS,
           ImmutableMap.of(
-              TaskMetricsUtils.ROWS_PROCESSED, 0,
-              TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-              TaskMetricsUtils.ROWS_UNPARSEABLE, 0,
-              TaskMetricsUtils.ROWS_THROWN_AWAY, 0
+              RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+              RowIngestionMeters.PROCESSED, 0,
+              RowIngestionMeters.UNPARSEABLE, 0,
+              RowIngestionMeters.THROWN_AWAY, 0
           )
       );
+
+      IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
       Assert.assertEquals(expectedMetrics, reportData.getRowStats());
       Assert.assertTrue(status.getErrorMsg().contains("java.lang.IllegalArgumentException\n\tat java.nio.Buffer.position"));
     }
@@ -1262,7 +1264,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         new RealtimeAppenderatorIngestionSpec(dataSchema, realtimeIOConfig, tuningConfig),
         null,
         null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        rowIngestionMetersFactory
     )
     {
       @Override
@@ -1426,6 +1429,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       }
     };
     final TestUtils testUtils = new TestUtils();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
     SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
     {
       @Override

@@ -50,7 +50,6 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -64,6 +63,8 @@ import io.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
@@ -87,7 +88,6 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
@@ -245,6 +245,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final CountDownLatch waitForPublishes = new CountDownLatch(1);
   private final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<>();
   private final String topic;
+  private final RowIngestionMeters rowIngestionMeters;
 
   private volatile CopyOnWriteArrayList<SequenceMetadata> sequences;
   private ListeningExecutorService publishExecService;
@@ -252,7 +253,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private CircularBuffer<Throwable> savedParseExceptions;
   private IngestionState ingestionState;
 
-  private TaskMetricsGetter metricsGetter;
   private String errorMsg;
 
   @JsonCreator
@@ -264,7 +264,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("ioConfig") KafkaIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(
@@ -285,6 +286,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.topic = ioConfig.getStartPartitions().getTopic();
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
     if (context != null && context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
@@ -512,8 +514,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
-    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics));
+    toolbox.getMonitorScheduler()
+           .addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics, rowIngestionMeters));
 
     LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
@@ -759,10 +761,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                     if (addResult.getParseException() != null) {
                       handleParseException(addResult.getParseException(), record);
                     } else {
-                      fireDepartmentMetrics.incrementProcessed();
+                      rowIngestionMeters.incrementProcessed();
                     }
                   } else {
-                    fireDepartmentMetrics.incrementThrownAway();
+                    rowIngestionMeters.incrementThrownAway();
                   }
                 }
                 if (isPersistRequired) {
@@ -951,8 +953,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         null
     );
     fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(fireDepartmentMetrics);
-    toolbox.getMonitorScheduler().addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics));
+    toolbox.getMonitorScheduler()
+           .addMonitor(TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics, rowIngestionMeters));
 
     LookupNodeService lookupNodeService = getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
@@ -1149,10 +1151,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                     if (addResult.getParseException() != null) {
                       handleParseException(addResult.getParseException(), record);
                     } else {
-                      fireDepartmentMetrics.incrementProcessed();
+                      rowIngestionMeters.incrementProcessed();
                     }
                   } else {
-                    fireDepartmentMetrics.incrementThrownAway();
+                    rowIngestionMeters.incrementThrownAway();
                   }
                 }
 
@@ -1297,9 +1299,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private void handleParseException(ParseException pe, ConsumerRecord<byte[], byte[]> record)
   {
     if (pe.isFromPartiallyValidRow()) {
-      fireDepartmentMetrics.incrementProcessedWithErrors();
+      rowIngestionMeters.incrementProcessedWithError();
     } else {
-      fireDepartmentMetrics.incrementUnparseable();
+      rowIngestionMeters.incrementUnparseable();
     }
 
     if (tuningConfig.isLogParseExceptions()) {
@@ -1315,7 +1317,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       savedParseExceptions.add(pe);
     }
 
-    if (fireDepartmentMetrics.unparseable() + fireDepartmentMetrics.processedWithErrors()
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > tuningConfig.getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
@@ -1342,7 +1344,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
     if (buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
     return unparseableEventsMap;
   }
@@ -1350,12 +1352,10 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (metricsGetter != null) {
-      metrics.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
-      );
-    }
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
     return metrics;
   }
 
@@ -1575,14 +1575,18 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     authorizationCheck(req, Action.READ);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
-    if (metricsGetter != null) {
-      totalsMap.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
-      );
-    }
+    totalsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    averagesMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getMovingAverages()
+    );
 
+    returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     return Response.ok(returnMap).build();
   }
@@ -1884,6 +1888,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   FireDepartmentMetrics getFireDepartmentMetrics()
   {
     return fireDepartmentMetrics;
+  }
+
+  @VisibleForTesting
+  RowIngestionMeters getRowIngestionMeters()
+  {
+    return rowIngestionMeters;
   }
 
   private boolean isPaused()

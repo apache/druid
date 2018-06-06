@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -38,7 +39,6 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -52,6 +52,9 @@ import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import io.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
@@ -66,8 +69,6 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
-import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import io.druid.segment.realtime.appenderator.Appenderators;
@@ -144,7 +145,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private volatile FireDepartmentMetrics metrics = null;
 
   @JsonIgnore
-  private TaskMetricsGetter metricsGetter;
+  private final RowIngestionMeters rowIngestionMeters;
 
   @JsonIgnore
   private volatile boolean gracefullyStopped = false;
@@ -177,7 +178,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       @JsonProperty("spec") RealtimeAppenderatorIngestionSpec spec,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(
@@ -197,6 +199,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     }
 
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
   }
 
   @Override
@@ -249,10 +252,13 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         dataSchema, new RealtimeIOConfig(null, null, null), null
     );
 
-    final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
+    final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+        this,
+        fireDepartmentForMetrics,
+        rowIngestionMeters
+    );
 
     this.metrics = fireDepartmentForMetrics.getMetrics();
-    metricsGetter = new FireDepartmentMetricsTaskMetricsGetter(metrics);
 
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
@@ -269,6 +275,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       } else {
         log.warn("No chat handler detected");
       }
+
 
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -310,7 +317,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
           if (inputRow == null) {
             log.debug("Discarded null row, considering thrownAway.");
-            metrics.incrementThrownAway();
+            rowIngestionMeters.incrementThrownAway();
           } else {
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
@@ -331,7 +338,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             if (addResult.getParseException() != null) {
               handleParseException(addResult.getParseException());
             } else {
-              metrics.incrementProcessed();
+              rowIngestionMeters.incrementProcessed();
             }
           }
         }
@@ -432,6 +439,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
    * Public for tests.
    */
   @JsonIgnore
+  @VisibleForTesting
   public Firehose getFirehose()
   {
     return firehose;
@@ -441,9 +449,17 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
    * Public for tests.
    */
   @JsonIgnore
+  @VisibleForTesting
   public FireDepartmentMetrics getMetrics()
   {
     return metrics;
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  public RowIngestionMeters getRowIngestionMeters()
+  {
+    return rowIngestionMeters;
   }
 
   @JsonProperty("spec")
@@ -463,14 +479,18 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
-    if (metricsGetter != null) {
-      totalsMap.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
-      );
-    }
+    totalsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
+    averagesMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getMovingAverages()
+    );
 
+    returnMap.put("movingAverages", averagesMap);
     returnMap.put("totals", totalsMap);
     return Response.ok(returnMap).build();
   }
@@ -524,7 +544,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     Map<String, Object> unparseableEventsMap = Maps.newHashMap();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(savedParseExceptions);
     if (buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
     return unparseableEventsMap;
   }
@@ -532,21 +552,19 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metricsMap = Maps.newHashMap();
-    if (metricsGetter != null) {
-      metricsMap.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
-      );
-    }
+    metricsMap.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
     return metricsMap;
   }
 
   private void handleParseException(ParseException pe)
   {
     if (pe.isFromPartiallyValidRow()) {
-      metrics.incrementProcessedWithErrors();
+      rowIngestionMeters.incrementProcessedWithError();
     } else {
-      metrics.incrementUnparseable();
+      rowIngestionMeters.incrementUnparseable();
     }
 
     if (spec.getTuningConfig().isLogParseExceptions()) {
@@ -557,7 +575,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       savedParseExceptions.add(pe);
     }
 
-    if (metrics.unparseable() + metrics.processedWithErrors()
+    if (rowIngestionMeters.getUnparseable() + rowIngestionMeters.getProcessedWithError()
         > spec.getTuningConfig().getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...");

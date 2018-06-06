@@ -52,8 +52,6 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     return Files.createTempDir();
   }
 
-
-
   private final int maxRowsInMemory;
   private final int maxRowsPerSegment;
   private final long maxBytesInMemory;

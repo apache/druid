@@ -63,6 +63,7 @@
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <avatica.version>1.10.0</avatica.version>
         <calcite.version>1.15.0</calcite.version>
+        <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <fastutil.version>8.1.0</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
@@ -676,6 +677,11 @@
                 <groupId>net.java.dev.jna</groupId>
                 <artifactId>jna</artifactId>
                 <version>4.5.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${dropwizard.metrics.version}</version>
             </dependency>
 
             <!-- Test Scope -->

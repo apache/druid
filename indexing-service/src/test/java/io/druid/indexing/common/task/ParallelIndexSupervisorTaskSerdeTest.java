@@ -21,7 +21,6 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.client.indexing.NoopIndexingServiceClient;
 import io.druid.data.input.impl.CSVParseSpec;
@@ -30,6 +29,7 @@ import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -155,7 +155,8 @@ public class ParallelIndexSupervisorTaskSerdeTest
         new HashMap<>(),
         new NoopIndexingServiceClient(),
         new NoopChatHandlerProvider(),
-        new AuthorizerMapper(ImmutableMap.of())
+        new AuthorizerMapper(Collections.emptyMap()),
+        new DropwizardRowIngestionMetersFactory()
     );
   }
 }

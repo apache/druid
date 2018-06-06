@@ -41,7 +41,6 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
@@ -54,6 +53,9 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import io.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
@@ -72,8 +74,6 @@ import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
-import io.druid.segment.realtime.FireDepartmentMetricsTaskMetricsGetter;
-import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
 import io.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
@@ -166,22 +166,19 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private FireDepartmentMetrics buildSegmentsFireDepartmentMetrics;
 
   @JsonIgnore
-  private TaskMetricsGetter buildSegmentsMetricsGetter;
-
-  @JsonIgnore
   private CircularBuffer<Throwable> buildSegmentsSavedParseExceptions;
-
-  @JsonIgnore
-  private FireDepartmentMetrics determinePartitionsFireDepartmentMetrics;
-
-  @JsonIgnore
-  private TaskMetricsGetter determinePartitionsMetricsGetter;
 
   @JsonIgnore
   private CircularBuffer<Throwable> determinePartitionsSavedParseExceptions;
 
   @JsonIgnore
   private String errorMsg;
+
+  @JsonIgnore
+  private final RowIngestionMeters determinePartitionsMeters;
+
+  @JsonIgnore
+  private final RowIngestionMeters buildSegmentsMeters;
 
   @JsonCreator
   public IndexTask(
@@ -190,7 +187,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("spec") final IndexIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider
+      @JacksonInject ChatHandlerProvider chatHandlerProvider,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
      this(
@@ -201,7 +199,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
         ingestionSchema,
         context,
         authorizerMapper,
-        chatHandlerProvider
+        chatHandlerProvider,
+        rowIngestionMetersFactory
     );
   }
 
@@ -213,7 +212,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       IndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
       AuthorizerMapper authorizerMapper,
-      ChatHandlerProvider chatHandlerProvider
+      ChatHandlerProvider chatHandlerProvider,
+      RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(
@@ -236,6 +236,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
     }
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.determinePartitionsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
+    this.buildSegmentsMeters = rowIngestionMetersFactory.createRowIngestionMeters();
   }
 
   @Override
@@ -311,14 +313,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     if (needsDeterminePartitions) {
       events.put(
-          "determinePartitions",
+          RowIngestionMeters.DETERMINE_PARTITIONS,
           IndexTaskUtils.getMessagesFromSavedParseExceptions(determinePartitionsSavedParseExceptions)
       );
     }
 
     if (needsBuildSegments) {
       events.put(
-          "buildSegments",
+          RowIngestionMeters.BUILD_SEGMENTS,
           IndexTaskUtils.getMessagesFromSavedParseExceptions(buildSegmentsSavedParseExceptions)
       );
     }
@@ -337,6 +339,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
     Map<String, Object> returnMap = Maps.newHashMap();
     Map<String, Object> totalsMap = Maps.newHashMap();
+    Map<String, Object> averagesMap = Maps.newHashMap();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
@@ -359,24 +362,29 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     if (needsDeterminePartitions) {
-      if (determinePartitionsMetricsGetter != null) {
-        totalsMap.put(
-            "determinePartitions",
-            determinePartitionsMetricsGetter.getTotalMetrics()
-        );
-      }
+      totalsMap.put(
+          RowIngestionMeters.DETERMINE_PARTITIONS,
+          determinePartitionsMeters.getTotals()
+      );
+      averagesMap.put(
+          RowIngestionMeters.DETERMINE_PARTITIONS,
+          determinePartitionsMeters.getMovingAverages()
+      );
     }
 
     if (needsBuildSegments) {
-      if (buildSegmentsMetricsGetter != null) {
-        totalsMap.put(
-            "buildSegments",
-            buildSegmentsMetricsGetter.getTotalMetrics()
-        );
-      }
+      totalsMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          buildSegmentsMeters.getTotals()
+      );
+      averagesMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          buildSegmentsMeters.getMovingAverages()
+      );
     }
 
     returnMap.put("totals", totalsMap);
+    returnMap.put("movingAverages", averagesMap);
     return Response.ok(returnMap).build();
   }
 
@@ -487,8 +495,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
         buildSegmentsSavedParseExceptions);
 
     if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put("determinePartitions", determinePartitionsParseExceptionMessages);
-      unparseableEventsMap.put("buildSegments", buildSegmentsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsParseExceptionMessages);
+      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
     }
 
     return unparseableEventsMap;
@@ -497,18 +505,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (determinePartitionsMetricsGetter != null) {
-      metrics.put(
-          "determinePartitions",
-          determinePartitionsMetricsGetter.getTotalMetrics()
-      );
-    }
-    if (buildSegmentsMetricsGetter != null) {
-      metrics.put(
-          "buildSegments",
-          buildSegmentsMetricsGetter.getTotalMetrics()
-      );
-    }
+    metrics.put(
+        RowIngestionMeters.DETERMINE_PARTITIONS,
+        determinePartitionsMeters.getTotals()
+    );
+
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        buildSegmentsMeters.getTotals()
+    );
+
     return metrics;
   }
 
@@ -700,11 +706,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
       boolean determineNumPartitions
   ) throws IOException
   {
-    determinePartitionsFireDepartmentMetrics = new FireDepartmentMetrics();
-    determinePartitionsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(
-        determinePartitionsFireDepartmentMetrics
-    );
-
     final Map<Interval, Optional<HyperLogLogCollector>> hllCollectors = new TreeMap<>(
         Comparators.intervalsByStartThenEnd()
     );
@@ -722,7 +723,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
           // The null inputRow means the caller must skip this row.
           if (inputRow == null) {
-            determinePartitionsFireDepartmentMetrics.incrementThrownAway();
+            determinePartitionsMeters.incrementThrownAway();
             continue;
           }
 
@@ -740,7 +741,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
             final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
             if (!optInterval.isPresent()) {
-              determinePartitionsFireDepartmentMetrics.incrementThrownAway();
+              determinePartitionsMeters.incrementThrownAway();
               continue;
             }
             interval = optInterval.get();
@@ -764,7 +765,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
               hllCollectors.put(interval, Optional.absent());
             }
           }
-          determinePartitionsFireDepartmentMetrics.incrementProcessed();
+          determinePartitionsMeters.incrementProcessed();
         }
         catch (ParseException e) {
           if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
@@ -775,9 +776,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
             determinePartitionsSavedParseExceptions.add(e);
           }
 
-          determinePartitionsFireDepartmentMetrics.incrementUnparseable();
-          if (determinePartitionsFireDepartmentMetrics.unparseable() > ingestionSchema.getTuningConfig()
-                                                                                      .getMaxParseExceptions()) {
+          determinePartitionsMeters.incrementUnparseable();
+          if (determinePartitionsMeters.getUnparseable() > ingestionSchema.getTuningConfig().getMaxParseExceptions()) {
             throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
           }
         }
@@ -840,10 +840,13 @@ public class IndexTask extends AbstractTask implements ChatHandler
         dataSchema, new RealtimeIOConfig(null, null, null), null
     );
     buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    buildSegmentsMetricsGetter = new FireDepartmentMetricsTaskMetricsGetter(buildSegmentsFireDepartmentMetrics);
 
     if (toolbox.getMonitorScheduler() != null) {
-      final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartmentForMetrics);
+      final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+          this,
+          fireDepartmentForMetrics,
+          buildSegmentsMeters
+      );
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
     }
 
@@ -937,7 +940,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           final InputRow inputRow = firehose.nextRow();
 
           if (inputRow == null) {
-            buildSegmentsFireDepartmentMetrics.incrementThrownAway();
+            buildSegmentsMeters.incrementThrownAway();
             continue;
           }
 
@@ -951,7 +954,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
           final Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
           if (!optInterval.isPresent()) {
-            buildSegmentsFireDepartmentMetrics.incrementThrownAway();
+            buildSegmentsMeters.incrementThrownAway();
             continue;
           }
 
@@ -987,7 +990,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           if (addResult.getParseException() != null) {
             handleParseException(addResult.getParseException());
           } else {
-            buildSegmentsFireDepartmentMetrics.incrementProcessed();
+            buildSegmentsMeters.incrementProcessed();
           }
         }
         catch (ParseException e) {
@@ -1015,9 +1018,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
       } else {
         log.info(
             "Processed[%,d] events, unparseable[%,d], thrownAway[%,d].",
-            buildSegmentsFireDepartmentMetrics.processed(),
-            buildSegmentsFireDepartmentMetrics.unparseable(),
-            buildSegmentsFireDepartmentMetrics.thrownAway()
+            buildSegmentsMeters.getProcessed(),
+            buildSegmentsMeters.getUnparseable(),
+            buildSegmentsMeters.getThrownAway()
         );
         log.info(
             "Published segments[%s]", Joiner.on(", ").join(
@@ -1040,9 +1043,9 @@ public class IndexTask extends AbstractTask implements ChatHandler
   private void handleParseException(ParseException e)
   {
     if (e.isFromPartiallyValidRow()) {
-      buildSegmentsFireDepartmentMetrics.incrementProcessedWithErrors();
+      buildSegmentsMeters.incrementProcessedWithError();
     } else {
-      buildSegmentsFireDepartmentMetrics.incrementUnparseable();
+      buildSegmentsMeters.incrementUnparseable();
     }
 
     if (ingestionSchema.tuningConfig.isLogParseExceptions()) {
@@ -1053,8 +1056,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       buildSegmentsSavedParseExceptions.add(e);
     }
 
-    if (buildSegmentsFireDepartmentMetrics.unparseable()
-        + buildSegmentsFireDepartmentMetrics.processedWithErrors() > ingestionSchema.tuningConfig.getMaxParseExceptions()) {
+    if (buildSegmentsMeters.getUnparseable()
+        + buildSegmentsMeters.getProcessedWithError() > ingestionSchema.tuningConfig.getMaxParseExceptions()) {
       log.error("Max parse exceptions exceeded, terminating task...");
       throw new RuntimeException("Max parse exceptions exceeded, terminating task...", e);
     }

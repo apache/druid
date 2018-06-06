@@ -31,6 +31,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.java.util.common.IAE;
@@ -64,6 +65,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private final IndexingServiceClient indexingServiceClient;
   private final ChatHandlerProvider chatHandlerProvider;
   private final AuthorizerMapper authorizerMapper;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private ParallelIndexTaskRunner runner;
 
@@ -75,7 +77,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject @Nullable IndexingServiceClient indexingServiceClient, // null in overlords
       @JacksonInject @Nullable ChatHandlerProvider chatHandlerProvider,     // null in overlords
-      @JacksonInject AuthorizerMapper authorizerMapper
+      @JacksonInject AuthorizerMapper authorizerMapper,
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     super(
@@ -97,6 +100,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     this.indexingServiceClient = indexingServiceClient;
     this.chatHandlerProvider = chatHandlerProvider;
     this.authorizerMapper = authorizerMapper;
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
 
     if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
       log.warn("maxSavedParseExceptions is not supported yet");
@@ -218,7 +222,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
         ),
         getContext(),
         authorizerMapper,
-        chatHandlerProvider
+        chatHandlerProvider,
+        rowIngestionMetersFactory
     ).run(toolbox);
   }
 

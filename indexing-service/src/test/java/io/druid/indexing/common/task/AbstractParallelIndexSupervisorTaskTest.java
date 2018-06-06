@@ -39,6 +39,7 @@ import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
@@ -279,7 +280,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             {
               return new AllowAllAuthorizer();
             }
-          }
+          },
+          new DropwizardRowIngestionMetersFactory()
       );
     }
 

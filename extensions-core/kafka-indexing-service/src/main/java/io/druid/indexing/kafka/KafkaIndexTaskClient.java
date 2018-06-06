@@ -28,6 +28,7 @@ import io.druid.indexing.common.IndexTaskClient;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.http.client.HttpClient;
 import io.druid.java.util.http.client.response.FullResponseHolder;
@@ -38,6 +39,7 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -146,8 +148,10 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
-      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(
+          StringUtils.format("Exception [%s] while pausing Task [%s]", e.getMessage(), id),
+          e
+      );
     }
   }
 
@@ -163,7 +167,7 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       return KafkaIndexTask.Status.NOT_STARTED;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -182,7 +186,31 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       return null;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  public Map<String, Object> getMovingAverages(final String id)
+  {
+    log.debug("GetMovingAverages task[%s]", id);
+
+    try {
+      final FullResponseHolder response = submitRequestWithEmptyContent(
+          id,
+          HttpMethod.GET,
+          "rowStats",
+          null,
+          true
+      );
+      return response.getContent() == null || response.getContent().isEmpty()
+             ? Collections.emptyMap()
+             : deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+    }
+    catch (NoTaskLocationException e) {
+      return Collections.emptyMap();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -206,7 +234,7 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -226,7 +254,7 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       return EMPTY_TREE_MAP;
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -252,7 +280,7 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       return ImmutableMap.of();
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -332,5 +360,10 @@ public class KafkaIndexTaskClient extends IndexTaskClient
   )
   {
     return doAsync(() -> setEndOffsets(id, endOffsets, resume, finalize));
+  }
+
+  public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id)
+  {
+    return doAsync(() -> getMovingAverages(id));
   }
 }
