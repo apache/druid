@@ -29,16 +29,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.discovery.DiscoveryDruidNode;
-import io.druid.discovery.DruidNodeDiscoveryProvider;
-import io.druid.discovery.LookupNodeService;
-import io.druid.indexer.IngestionState;
 import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
@@ -141,7 +136,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     if (context != null && context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
         && ((boolean) context.get(KafkaSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
-      runner = new LegacyKafkaIndexTaskRunner(
+      runner = new IncrementalPublishingKafkaIndexTaskRunner(
           this,
           parser,
           authorizerMapper,
@@ -150,7 +145,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           rowIngestionMetersFactory
       );
     } else {
-      runner = new IncrementalPublishingKafkaIndexTaskRunner(
+      runner = new LegacyKafkaIndexTaskRunner(
           this,
           parser,
           authorizerMapper,
