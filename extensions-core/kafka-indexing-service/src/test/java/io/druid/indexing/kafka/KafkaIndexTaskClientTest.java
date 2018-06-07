@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexing.common.IndexTaskClient;
 import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
@@ -157,7 +158,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testTaskNotRunnableException()
   {
-    expectedException.expect(KafkaIndexTaskClient.TaskNotRunnableException.class);
+    expectedException.expect(IndexTaskClient.TaskNotRunnableException.class);
     expectedException.expectMessage("Aborting request because task [test-id] is not runnable");
 
     reset(taskInfoProvider);
