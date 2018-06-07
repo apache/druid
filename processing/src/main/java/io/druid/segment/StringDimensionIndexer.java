@@ -177,7 +177,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       this.idToIndex = new int[length];
       this.indexToId = new int[length];
       int index = 0;
-      for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext();) {
+      for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
         int id = iterator.nextInt();
         idToIndex[id] = index;
         indexToId[index] = id;
@@ -496,7 +496,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             return BooleanValueMatcher.of(false);
           }
         } else {
-          // Employ precomputed BitSet optimization
+          // Employ caching BitSet optimization
           return makeValueMatcher(Predicates.equalTo(value));
         }
       }
@@ -504,8 +504,11 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
       {
-        final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(this, predicate);
+        final BitSet checkedIds = new BitSet(maxId);
+        final BitSet matchingIds = new BitSet(maxId);
         final boolean matchNull = predicate.apply(null);
+
+        // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
         {
           @Override
@@ -522,8 +525,17 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             }
 
             for (int id : dimsInt) {
-              if (predicateMatchingValueIds.get(id)) {
-                return true;
+              if (checkedIds.get(id)) {
+                if (matchingIds.get(id)) {
+                  return true;
+                }
+              } else {
+                final boolean matches = predicate.apply(lookupName(id));
+                checkedIds.set(id);
+                if (matches) {
+                  matchingIds.set(id);
+                  return true;
+                }
               }
             }
             return false;
