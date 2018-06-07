@@ -37,7 +37,6 @@ import io.druid.discovery.DiscoveryDruidNode;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexer.IngestionState;
-import io.druid.indexer.TaskMetricsGetter;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -173,7 +172,6 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private volatile FireDepartmentMetrics fireDepartmentMetrics;
-  private volatile TaskMetricsGetter metricsGetter;
   private volatile IngestionState ingestionState;
 
   private volatile long pauseMillis = 0;
@@ -830,12 +828,10 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-    if (metricsGetter != null) {
       metrics.put(
-          "buildSegments",
-          metricsGetter.getTotalMetrics()
+          RowIngestionMeters.BUILD_SEGMENTS,
+          rowIngestionMeters.getTotals()
       );
-    }
     return metrics;
   }
 
