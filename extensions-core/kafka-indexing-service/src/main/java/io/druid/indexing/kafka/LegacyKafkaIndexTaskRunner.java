@@ -822,10 +822,10 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private Map<String, Object> getTaskCompletionRowStats()
   {
     Map<String, Object> metrics = Maps.newHashMap();
-      metrics.put(
-          RowIngestionMeters.BUILD_SEGMENTS,
-          rowIngestionMeters.getTotals()
-      );
+    metrics.put(
+        RowIngestionMeters.BUILD_SEGMENTS,
+        rowIngestionMeters.getTotals()
+    );
     return metrics;
   }
 
