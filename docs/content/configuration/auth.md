@@ -37,8 +37,8 @@ This built-in Authenticator authenticates all requests, and always directs them 
 
 ### Anonymous Authenticator
 
-This built-in Authenticator authenticates all requests, and directs them to an Authorizer specified in the configuration by the user. It is intended to be used for adding a default level of access.
-The Anonymous Authenticator would be added to the end of the authentication chain so if a user sends a request which fails the first part of the chain, the request will succeed or fail depending on how the Authorizer linked to the Anonymous Authenticator is configured.
+This built-in Authenticator authenticates all requests, and directs them to an Authorizer specified in the configuration by the user. It is intended to be used for adding a default level of access so 
+the Anonymous Authenticator should be added to the end of the authentication chain. A request that reaches the Anonymous Authenticator at the end of the chain will succeed or fail depending on how the Authorizer linked to the Anonymous Authenticator is configured.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
