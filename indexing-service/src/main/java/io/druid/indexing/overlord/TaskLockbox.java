@@ -383,7 +383,7 @@ public class TaskLockbox
     );
     Preconditions.checkArgument(
         task.getPriority() == taskLock.getPriority(),
-        "lock priority[%d] is different from task priority[%d]",
+        "lock priority[%s] is different from task priority[%s]",
         taskLock.getPriority(),
         task.getPriority()
     );
