@@ -358,12 +358,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   }
 
   @VisibleForTesting
-  FireDepartmentMetrics getFireDepartmentMetrics()
-  {
-    return runner.getFireDepartmentMetrics();
-  }
-
-  @VisibleForTesting
   KafkaIndexTaskRunner getRunner()
   {
     return runner;

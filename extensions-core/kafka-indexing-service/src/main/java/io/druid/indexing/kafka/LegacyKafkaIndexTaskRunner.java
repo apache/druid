@@ -228,12 +228,6 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return rowIngestionMeters;
   }
 
-  @Override
-  public FireDepartmentMetrics getFireDepartmentMetrics()
-  {
-    return fireDepartmentMetrics;
-  }
-
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
     log.info("Starting up!");

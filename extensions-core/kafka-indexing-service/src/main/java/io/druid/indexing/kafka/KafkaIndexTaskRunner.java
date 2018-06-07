@@ -18,11 +18,11 @@
  */
 package io.druid.indexing.kafka;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.kafka.KafkaIndexTask.Status;
-import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.appenderator.Appenderator;
 import io.druid.segment.realtime.firehose.ChatHandler;
 
@@ -40,23 +40,32 @@ import java.util.Map;
  */
 public interface KafkaIndexTaskRunner extends ChatHandler
 {
+  Appenderator getAppenderator();
+
   TaskStatus run(TaskToolbox toolbox);
 
-  Appenderator getAppenderator();
+  void stopGracefully();
+
+  // The below methods are mostly for unit testing.
+
+  @VisibleForTesting
   RowIngestionMeters getRowIngestionMeters();
-  FireDepartmentMetrics getFireDepartmentMetrics();
+  @VisibleForTesting
   Status getStatus();
 
+  @VisibleForTesting
   Map<Integer, Long> getCurrentOffsets();
+  @VisibleForTesting
   Map<Integer, Long> getEndOffsets();
+  @VisibleForTesting
   Response setEndOffsets(
       Map<Integer, Long> offsets,
       boolean resume,
       boolean finish // this field is only for internal purposes, shouldn't be usually set by users
   ) throws InterruptedException;
 
+  @VisibleForTesting
   Response pause(long timeout) throws InterruptedException;
+  @VisibleForTesting
   void resume() throws InterruptedException;
-
-  void stopGracefully();
 }

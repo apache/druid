@@ -1117,12 +1117,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   }
 
   @Override
-  public FireDepartmentMetrics getFireDepartmentMetrics()
-  {
-    return fireDepartmentMetrics;
-  }
-
-  @Override
   public void stopGracefully()
   {
     log.info("Stopping gracefully (status: [%s])", status);
