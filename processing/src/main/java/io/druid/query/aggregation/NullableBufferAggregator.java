@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import io.druid.common.config.NullHandling;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.segment.BaseNullableColumnValueSelector;
 
 import javax.annotation.Nullable;
@@ -31,7 +32,8 @@ import java.nio.ByteBuffer;
  * Note that the delegate aggregator is not required to perform check for {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values
  * will be passed to the delegate aggregator.
  */
-public class NullableBufferAggregator implements BufferAggregator
+@PublicApi
+public final class NullableBufferAggregator implements BufferAggregator
 {
 
   private final BufferAggregator delegate;
@@ -75,7 +77,7 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    if (isNull(buf, position)) {
+    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
       throw new IllegalStateException("Cannot return float for Null Value");
     }
     return delegate.getFloat(buf, position + Byte.BYTES);
@@ -84,7 +86,7 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    if (isNull(buf, position)) {
+    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
       throw new IllegalStateException("Cannot return long for Null Value");
     }
     return delegate.getLong(buf, position + Byte.BYTES);
@@ -93,7 +95,7 @@ public class NullableBufferAggregator implements BufferAggregator
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    if (isNull(buf, position)) {
+    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
       throw new IllegalStateException("Cannot return double for Null Value");
     }
     return delegate.getDouble(buf, position + Byte.BYTES);

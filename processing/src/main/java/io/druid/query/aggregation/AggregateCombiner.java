@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 
@@ -39,6 +40,7 @@ import io.druid.segment.ColumnValueSelector;
  * @see DoubleAggregateCombiner
  * @see ObjectAggregateCombiner
  */
+@ExtensionPoint
 public interface AggregateCombiner<T> extends ColumnValueSelector<T>
 {
   /**

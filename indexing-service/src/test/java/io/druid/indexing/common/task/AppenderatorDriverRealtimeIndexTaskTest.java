@@ -495,7 +495,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(2000, sumMetric(task, null, "met1").longValue());
+    Assert.assertEquals(2000, sumMetric(task, null, "rows").longValue());
     Assert.assertEquals(2000, sumMetric(task, null, "met1").longValue());
 
     awaitHandoffs();
@@ -523,7 +523,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
-  @Test(timeout = 60_00000L)
+  @Test(timeout = 60_000L)
   public void testTransformSpec() throws Exception
   {
     expectPublishedSegments(2);
@@ -697,7 +697,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     Assert.assertEquals(2, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(3, sumMetric(task, null, "met1").longValue());
+    Assert.assertEquals(3, sumMetric(task, null, "rows").longValue());
     Assert.assertEquals(3, sumMetric(task, null, "met1").longValue());
 
     awaitHandoffs();

@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -54,7 +54,7 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected BaseDoubleColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
     return getDoubleColumnSelector(
         metricFactory,
@@ -63,13 +63,13 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
   {
     return new DoubleMaxAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
   {
     return new DoubleMaxBufferAggregator(selector);
   }

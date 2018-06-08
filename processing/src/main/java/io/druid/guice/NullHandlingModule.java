@@ -34,6 +34,5 @@ public class NullHandlingModule implements Module
     JsonConfigProvider.bind(binder, "druid.generic", NullValueHandlingConfig.class);
     binder.requestStaticInjection(NullHandling.class);
     binder.requestStaticInjection(NullHandling.class);
-
   }
 }

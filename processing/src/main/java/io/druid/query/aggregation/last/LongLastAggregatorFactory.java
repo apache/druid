@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class LongLastAggregatorFactory extends NullableAggregatorFactory
+public class LongLastAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
   private final String fieldName;
   private final String name;

@@ -397,8 +397,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
           "Must specify more than one column to have a key value pair"
       );
       final DelimitedParser delegate = new DelimitedParser(
-              StringUtils.emptyToNullNonDruidDataString(delimiter),
-              StringUtils.emptyToNullNonDruidDataString(listDelimiter),
+          StringUtils.emptyToNullNonDruidDataString(delimiter),
+          StringUtils.emptyToNullNonDruidDataString(listDelimiter),
           hasHeaderRow,
           skipHeaderRows
       );

@@ -19,6 +19,8 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnValueSelector;
 
@@ -30,13 +32,14 @@ import javax.annotation.Nullable;
  * Note that the delegate combiner is not required to perform check for {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values
  * will be passed to the delegate combiner.
  */
-public class NullableAggregateCombiner implements AggregateCombiner
+@PublicApi
+public final class NullableAggregateCombiner<T> implements AggregateCombiner<T>
 {
   private boolean isNullResult = true;
 
-  private final AggregateCombiner delegate;
+  private final AggregateCombiner<T> delegate;
 
-  public NullableAggregateCombiner(AggregateCombiner delegate)
+  public NullableAggregateCombiner(AggregateCombiner<T> delegate)
   {
     this.delegate = delegate;
   }

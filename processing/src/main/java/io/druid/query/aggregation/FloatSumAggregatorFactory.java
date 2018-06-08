@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
+import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -53,7 +53,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected BaseFloatColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
     return makeColumnValueSelectorWithFloatDefault(
         metricFactory,
@@ -62,13 +62,13 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseFloatColumnValueSelector selector)
   {
     return new FloatSumAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseFloatColumnValueSelector selector)
   {
     return new FloatSumBufferAggregator(selector);
   }

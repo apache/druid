@@ -44,7 +44,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-public class LongFirstAggregatorFactory extends NullableAggregatorFactory
+public class LongFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
   public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Longs.compare(
       ((SerializablePair<Long, Long>) o1).rhs,

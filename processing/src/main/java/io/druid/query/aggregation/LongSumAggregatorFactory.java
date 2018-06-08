@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -39,7 +39,7 @@ import java.util.Objects;
 
 /**
  */
-public class LongSumAggregatorFactory extends NullableAggregatorFactory
+public class LongSumAggregatorFactory extends NullableAggregatorFactory<BaseLongColumnValueSelector>
 {
   private final String name;
   private final String fieldName;
@@ -72,7 +72,7 @@ public class LongSumAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  protected ColumnValueSelector selector(ColumnSelectorFactory metricFactory)
+  protected BaseLongColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
     return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
         metricFactory,
@@ -84,13 +84,13 @@ public class LongSumAggregatorFactory extends NullableAggregatorFactory
   }
 
   @Override
-  protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected Aggregator factorize(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
   {
     return new LongSumAggregator(selector);
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
   {
     return new LongSumBufferAggregator(selector);
   }

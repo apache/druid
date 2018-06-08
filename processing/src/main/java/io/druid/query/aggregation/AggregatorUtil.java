@@ -27,6 +27,9 @@ import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DoubleColumnSelector;
@@ -145,7 +148,7 @@ public class AggregatorUtil
     return new Pair(condensedAggs, condensedPostAggs);
   }
 
-  public static ColumnValueSelector makeColumnValueSelectorWithFloatDefault(
+  public static BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
       final String fieldName,
@@ -186,7 +189,7 @@ public class AggregatorUtil
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
-  public static ColumnValueSelector makeColumnValueSelectorWithLongDefault(
+  public static BaseLongColumnValueSelector makeColumnValueSelectorWithLongDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
       final String fieldName,
@@ -227,7 +230,7 @@ public class AggregatorUtil
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
-  public static ColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
+  public static BaseDoubleColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
       final String fieldName,

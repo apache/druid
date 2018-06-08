@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 
 import io.druid.common.config.NullHandling;
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 
@@ -31,12 +32,12 @@ import io.druid.segment.ColumnValueSelector;
  * Support Nullable Aggregations are encouraged to extend this class.
  */
 @ExtensionPoint
-public abstract class NullableAggregatorFactory extends AggregatorFactory
+public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValueSelector> extends AggregatorFactory
 {
   @Override
   public final Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ColumnValueSelector selector = selector(metricFactory);
+    T selector = selector(metricFactory);
     Aggregator aggregator = factorize(metricFactory, selector);
     return NullHandling.replaceWithDefault() ? aggregator : new NullableAggregator(aggregator, selector);
   }
@@ -44,7 +45,7 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
   @Override
   public final BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ColumnValueSelector selector = selector(metricFactory);
+    T selector = selector(metricFactory);
     BufferAggregator aggregator = factorizeBuffered(metricFactory, selector);
     return NullHandling.replaceWithDefault() ? aggregator : new NullableBufferAggregator(aggregator, selector);
   }
@@ -69,7 +70,7 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
    *
    * @see ColumnValueSelector
    */
-  protected abstract ColumnValueSelector selector(ColumnSelectorFactory metricFactory);
+  protected abstract T selector(ColumnSelectorFactory metricFactory);
 
   /**
    * Creates an {@link Aggregator} to aggregate values from several rows, by using the provided selector.
@@ -78,7 +79,7 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
    *
    * @see Aggregator
    */
-  protected abstract Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector);
+  protected abstract Aggregator factorize(ColumnSelectorFactory metricFactory, T selector);
 
   /**
    * Creates an {@link BufferAggregator} to aggregate values from several rows into a ByteBuffer.
@@ -89,7 +90,7 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
    */
   protected abstract BufferAggregator factorizeBuffered(
       ColumnSelectorFactory metricFactory,
-      ColumnValueSelector selector
+      T selector
   );
 
   /**
@@ -101,7 +102,6 @@ public abstract class NullableAggregatorFactory extends AggregatorFactory
    * @see AggregateCombiner
    * @see io.druid.segment.IndexMerger
    */
-  @SuppressWarnings("unused") // Going to be used when https://github.com/druid-io/druid/projects/2 is complete
   protected abstract AggregateCombiner makeAggregateCombiner2();
 
   /**

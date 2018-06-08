@@ -144,7 +144,7 @@ public class PollingLookup extends LookupExtractor
       // valueEquivalent is null only for SQL Compatible Null Behavior
       // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       // null value maps to empty list when SQL Compatible
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
 
     CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();

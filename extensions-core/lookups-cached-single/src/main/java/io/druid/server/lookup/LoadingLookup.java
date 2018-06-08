@@ -139,7 +139,7 @@ public class LoadingLookup extends LookupExtractor
     @Override
     public String call()
     {
-      // When SQL based null handling is disabled,
+      // When SQL compatible null handling is disabled,
       // avoid returning null and return an empty string to cache it.
       return NullHandling.nullToEmptyIfNeeded(dataFetcher.fetch(key));
     }

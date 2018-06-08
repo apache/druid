@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class FloatFirstAggregatorFactory extends NullableAggregatorFactory
+public class FloatFirstAggregatorFactory extends NullableAggregatorFactory<ColumnValueSelector>
 {
   public static final Comparator VALUE_COMPARATOR = (o1, o2) -> Doubles.compare(
       ((SerializablePair<Long, Float>) o1).rhs,

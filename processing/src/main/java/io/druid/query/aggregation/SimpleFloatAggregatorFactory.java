@@ -23,8 +23,8 @@ package io.druid.query.aggregation;
 import com.google.common.base.Preconditions;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -32,7 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleFloatAggregatorFactory extends NullableAggregatorFactory
+public abstract class SimpleFloatAggregatorFactory extends NullableAggregatorFactory<BaseFloatColumnValueSelector>
 {
   protected final String name;
   protected final String fieldName;
@@ -57,7 +57,7 @@ public abstract class SimpleFloatAggregatorFactory extends NullableAggregatorFac
     );
   }
 
-  ColumnValueSelector makeColumnValueSelectorWithFloatDefault(
+  BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
       ColumnSelectorFactory metricFactory,
       float nullValue
   )

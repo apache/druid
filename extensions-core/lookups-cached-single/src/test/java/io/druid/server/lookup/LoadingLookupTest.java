@@ -44,7 +44,7 @@ public class LoadingLookupTest
   public void testApplyEmptyOrNull()
   {
     Assert.assertEquals(null, loadingLookup.apply(null));
-    if (!NullHandling.replaceWithDefault()) {
+    if (NullHandling.sqlCompatible()) {
       // empty string should also have same behavior
       Assert.assertEquals(null, loadingLookup.apply(""));
     }
@@ -54,7 +54,7 @@ public class LoadingLookupTest
   public void testUnapplyNull()
   {
     if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(Collections.EMPTY_LIST, loadingLookup.unapply(null));
+      Assert.assertEquals(Collections.emptyList(), loadingLookup.unapply(null));
     } else {
       Assert.assertEquals(null, loadingLookup.unapply(null));
     }

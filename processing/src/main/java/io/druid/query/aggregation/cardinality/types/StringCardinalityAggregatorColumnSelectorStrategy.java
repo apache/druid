@@ -52,7 +52,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
         // SQL standard spec does not count null values,
         // Skip counting null values when we are not replacing null with default value.
         // A special value for null in case null handling is configured to use empty string for null.
-        if (!NullHandling.replaceWithDefault() && !hasNonNullValue && value != null) {
+        if (NullHandling.sqlCompatible() && !hasNonNullValue && value != null) {
           hasNonNullValue = true;
         }
         values[i] = nullToSpecial(value);
