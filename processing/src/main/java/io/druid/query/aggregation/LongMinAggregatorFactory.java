@@ -27,7 +27,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -37,7 +37,7 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   @JsonCreator
   public LongMinAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
+      @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("expression") String expression,
       @JacksonInject ExprMacroTable macroTable
   )
@@ -53,13 +53,13 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongMinAggregator(makeColumnValueSelectorWithLongDefault(metricFactory, Long.MAX_VALUE));
+    return new LongMinAggregator(getLongColumnSelector(metricFactory, Long.MAX_VALUE));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongMinBufferAggregator(makeColumnValueSelectorWithLongDefault(metricFactory, Long.MAX_VALUE));
+    return new LongMinBufferAggregator(getLongColumnSelector(metricFactory, Long.MAX_VALUE));
   }
 
   @Override
@@ -83,26 +83,7 @@ public class LongMinAggregatorFactory extends SimpleLongAggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongMinAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
+    return Collections.singletonList(new LongMinAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override

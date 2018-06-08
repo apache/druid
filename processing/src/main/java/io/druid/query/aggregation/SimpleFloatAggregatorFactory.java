@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
@@ -56,10 +57,7 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
     );
   }
 
-  BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
-      ColumnSelectorFactory metricFactory,
-      float nullValue
-  )
+  BaseFloatColumnValueSelector getFloatColumnSelector(ColumnSelectorFactory metricFactory, float nullValue)
   {
     return AggregatorUtil.makeColumnValueSelectorWithFloatDefault(
         metricFactory,
@@ -150,5 +148,24 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
       return false;
     }
     return true;
+  }
+
+  @Override
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public String getFieldName()
+  {
+    return fieldName;
+  }
+
+  @JsonProperty
+  public String getExpression()
+  {
+    return expression;
   }
 }
