@@ -21,7 +21,6 @@ package io.druid.server;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.DirectDruidClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
@@ -29,6 +28,7 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.DruidMetrics;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
@@ -249,10 +249,7 @@ public class QueryLifecycle
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
-    final Map<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery(
-        queryPlus.getQuery(),
-        System.currentTimeMillis()
-    );
+    final Map<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     final Sequence res = queryPlus.run(texasRanger, responseContext);
 
