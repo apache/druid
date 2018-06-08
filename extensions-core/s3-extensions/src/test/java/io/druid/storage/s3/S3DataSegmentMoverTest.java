@@ -25,11 +25,9 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectResult;
@@ -182,7 +180,7 @@ public class S3DataSegmentMoverTest
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
   }
 
-  private static class MockAmazonS3Client extends AmazonS3Client
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     Map<String, Set<String>> storage = Maps.newHashMap();
     boolean copied = false;
@@ -190,7 +188,7 @@ public class S3DataSegmentMoverTest
 
     private MockAmazonS3Client()
     {
-      super();
+      super(new AmazonS3Client(), new NoopServerSideEncryption());
     }
 
     public boolean didMove()
@@ -205,12 +203,6 @@ public class S3DataSegmentMoverTest
       acl.setOwner(new Owner("ownerId", "owner"));
       acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
       return acl;
-    }
-
-    @Override
-    public ObjectMetadata getObjectMetadata(GetObjectMetadataRequest getObjectMetadataRequest)
-    {
-      return new ObjectMetadata();
     }
 
     @Override

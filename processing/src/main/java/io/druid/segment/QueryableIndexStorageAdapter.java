@@ -167,7 +167,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return getColumnCapabilites(index, column);
+    return getColumnCapabilities(index, column);
   }
 
   @Override
@@ -316,7 +316,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Nullable
-  static ColumnCapabilities getColumnCapabilites(ColumnSelector index, String columnName)
+  static ColumnCapabilities getColumnCapabilities(ColumnSelector index, String columnName)
   {
     Column columnObj = index.getColumn(columnName);
     if (columnObj == null) {

@@ -259,7 +259,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
               return BooleanValueMatcher.of(false);
             }
           } else {
-            // Employ precomputed BitSet optimization
+            // Employ caching BitSet optimization
             return makeValueMatcher(Predicates.equalTo(value));
           }
         }
@@ -267,16 +267,27 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
         {
-          final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(
-              this,
-              predicate
-          );
+          final BitSet checkedIds = new BitSet(getCardinality());
+          final BitSet matchingIds = new BitSet(getCardinality());
+
+          // Lazy matcher; only check an id if matches() is called.
           return new ValueMatcher()
           {
             @Override
             public boolean matches()
             {
-              return predicateMatchingValueIds.get(getRowValue());
+              final int id = getRowValue();
+
+              if (checkedIds.get(id)) {
+                return matchingIds.get(id);
+              } else {
+                final boolean matches = predicate.apply(lookupName(id));
+                checkedIds.set(id);
+                if (matches) {
+                  matchingIds.set(id);
+                }
+                return matches;
+              }
             }
 
             @Override

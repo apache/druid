@@ -19,7 +19,6 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
@@ -41,7 +40,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
   private static final int MAX_LISTING_KEYS = 1000;
 
   @Inject
-  public S3TimestampVersionedDataFinder(AmazonS3 s3Client)
+  public S3TimestampVersionedDataFinder(ServerSideEncryptingAmazonS3 s3Client)
   {
     super(s3Client);
   }

@@ -30,7 +30,6 @@ import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
@@ -109,7 +108,6 @@ public class TopNQueryEngine
       final @Nullable TopNQueryMetrics queryMetrics
   )
   {
-    final Capabilities capabilities = adapter.getCapabilities();
     final String dimension = query.getDimensionSpec().getDimension();
     final int cardinality = adapter.getDimensionCardinality(dimension);
     if (queryMetrics != null) {
@@ -137,19 +135,19 @@ public class TopNQueryEngine
         ) {
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting
-      topNAlgorithm = new TimeExtractionTopNAlgorithm(capabilities, query);
+      topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isHasExtractionFn()) {
-      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
     } else if (columnCapabilities != null && !(columnCapabilities.getType() == ValueType.STRING
-                                              && columnCapabilities.isDictionaryEncoded())) {
+                                               && columnCapabilities.isDictionaryEncoded())) {
       // Use DimExtraction for non-Strings and for non-dictionary-encoded Strings.
-      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+      topNAlgorithm = new DimExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isAggregateAllMetrics()) {
-      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
-      topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
     } else {
-      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
     }
     if (queryMetrics != null) {
       queryMetrics.algorithm(topNAlgorithm);
@@ -162,7 +160,9 @@ public class TopNQueryEngine
   {
     return query.getDimensionSpec() != null
            && query.getDimensionSpec().getExtractionFn() != null
-           && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(query.getDimensionSpec().getExtractionFn().getExtractionType())
+           && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(query.getDimensionSpec()
+                                                                 .getExtractionFn()
+                                                                 .getExtractionType())
            && query.getTopNMetricSpec().canBeOptimizedUnordered();
   }
 }

@@ -28,7 +28,6 @@ public class PrefetchConfig
   public static final long DEFAULT_MAX_CACHE_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   public static final long DEFAULT_MAX_FETCH_CAPACITY_BYTES = 1024 * 1024 * 1024; // 1GB
   public static final long DEFAULT_FETCH_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(60);
-  public static final int DEFAULT_MAX_FETCH_RETRY = 3;
 
   // A roughly max size of total fetched objects, but the actual fetched size can be bigger. The reason is our current
   // client implementations for cloud storages like s3 don't support range scan yet, so we must download the whole file

@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -34,7 +33,6 @@ import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
-import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.UOE;
@@ -42,7 +40,6 @@ import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
-import io.druid.timeline.DataSegment;
 
 import javax.tools.FileObject;
 import java.io.File;
@@ -53,7 +50,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
-import java.util.Map;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
@@ -62,7 +58,110 @@ public class S3DataSegmentPuller implements URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
-  private static FileObject buildFileObject(final URI uri, final AmazonS3 s3Client) throws AmazonServiceException
+  public static final String scheme = S3StorageDruidModule.SCHEME;
+
+  private static final Logger log = new Logger(S3DataSegmentPuller.class);
+
+  protected static final String BUCKET = "bucket";
+  protected static final String KEY = "key";
+
+  protected final ServerSideEncryptingAmazonS3 s3Client;
+
+  @Inject
+  public S3DataSegmentPuller(ServerSideEncryptingAmazonS3 s3Client)
+  {
+    this.s3Client = s3Client;
+  }
+
+  FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir) throws SegmentLoadingException
+  {
+
+    log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);
+
+    if (!isObjectInBucket(s3Coords)) {
+      throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
+    }
+
+    try {
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+
+      final URI uri = URI.create(StringUtils.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
+      final ByteSource byteSource = new ByteSource()
+      {
+        @Override
+        public InputStream openStream() throws IOException
+        {
+          try {
+            return buildFileObject(uri).openInputStream();
+          }
+          catch (AmazonServiceException e) {
+            if (e.getCause() != null) {
+              if (S3Utils.S3RETRY.apply(e)) {
+                throw new IOException("Recoverable exception", e);
+              }
+            }
+            throw Throwables.propagate(e);
+          }
+        }
+      };
+      if (CompressionUtils.isZip(s3Coords.path)) {
+        final FileUtils.FileCopyResult result = CompressionUtils.unzip(
+            byteSource,
+            outDir,
+            S3Utils.S3RETRY,
+            false
+        );
+        log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
+        return result;
+      }
+      if (CompressionUtils.isGz(s3Coords.path)) {
+        final String fname = Files.getNameWithoutExtension(uri.getPath());
+        final File outFile = new File(outDir, fname);
+
+        final FileUtils.FileCopyResult result = CompressionUtils.gunzip(byteSource, outFile, S3Utils.S3RETRY);
+        log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outFile.getAbsolutePath());
+        return result;
+      }
+      throw new IAE("Do not know how to load file type at [%s]", uri.toString());
+    }
+    catch (Exception e) {
+      try {
+        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+      }
+      catch (IOException ioe) {
+        log.warn(
+            ioe,
+            "Failed to remove output directory [%s] for segment pulled from [%s]",
+            outDir.getAbsolutePath(),
+            s3Coords.toString()
+        );
+      }
+      throw new SegmentLoadingException(e, e.getMessage());
+    }
+  }
+
+  public static URI checkURI(URI uri)
+  {
+    if (uri.getScheme().equalsIgnoreCase(scheme)) {
+      uri = URI.create("s3" + uri.toString().substring(scheme.length()));
+    } else if (!uri.getScheme().equalsIgnoreCase("s3")) {
+      throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
+    }
+    return uri;
+  }
+
+  @Override
+  public InputStream getInputStream(URI uri) throws IOException
+  {
+    try {
+      return buildFileObject(uri).openInputStream();
+    }
+    catch (AmazonServiceException e) {
+      throw new IOE(e, "Could not load URI [%s]", uri);
+    }
+  }
+
+  private FileObject buildFileObject(final URI uri) throws AmazonServiceException
   {
     final S3Coords coords = new S3Coords(checkURI(uri));
     final S3ObjectSummary objectSummary = S3Utils.getSingleObjectSummary(s3Client, coords.bucket, coords.path);
@@ -154,111 +253,6 @@ public class S3DataSegmentPuller implements URIDataPuller
     };
   }
 
-  public static final String scheme = S3StorageDruidModule.SCHEME;
-
-  private static final Logger log = new Logger(S3DataSegmentPuller.class);
-
-  protected static final String BUCKET = "bucket";
-  protected static final String KEY = "key";
-
-  protected final AmazonS3 s3Client;
-
-  @Inject
-  public S3DataSegmentPuller(
-      AmazonS3 s3Client
-  )
-  {
-    this.s3Client = s3Client;
-  }
-
-  FileUtils.FileCopyResult getSegmentFiles(final S3Coords s3Coords, final File outDir) throws SegmentLoadingException
-  {
-
-    log.info("Pulling index at path[%s] to outDir[%s]", s3Coords, outDir);
-
-    if (!isObjectInBucket(s3Coords)) {
-      throw new SegmentLoadingException("IndexFile[%s] does not exist.", s3Coords);
-    }
-
-    try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
-
-      final URI uri = URI.create(StringUtils.format("s3://%s/%s", s3Coords.bucket, s3Coords.path));
-      final ByteSource byteSource = new ByteSource()
-      {
-        @Override
-        public InputStream openStream() throws IOException
-        {
-          try {
-            return buildFileObject(uri, s3Client).openInputStream();
-          }
-          catch (AmazonServiceException e) {
-            if (e.getCause() != null) {
-              if (S3Utils.S3RETRY.apply(e)) {
-                throw new IOException("Recoverable exception", e);
-              }
-            }
-            throw Throwables.propagate(e);
-          }
-        }
-      };
-      if (CompressionUtils.isZip(s3Coords.path)) {
-        final FileUtils.FileCopyResult result = CompressionUtils.unzip(
-            byteSource,
-            outDir,
-            S3Utils.S3RETRY,
-            false
-        );
-        log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outDir.getAbsolutePath());
-        return result;
-      }
-      if (CompressionUtils.isGz(s3Coords.path)) {
-        final String fname = Files.getNameWithoutExtension(uri.getPath());
-        final File outFile = new File(outDir, fname);
-
-        final FileUtils.FileCopyResult result = CompressionUtils.gunzip(byteSource, outFile, S3Utils.S3RETRY);
-        log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outFile.getAbsolutePath());
-        return result;
-      }
-      throw new IAE("Do not know how to load file type at [%s]", uri.toString());
-    }
-    catch (Exception e) {
-      try {
-        org.apache.commons.io.FileUtils.deleteDirectory(outDir);
-      }
-      catch (IOException ioe) {
-        log.warn(
-            ioe,
-            "Failed to remove output directory [%s] for segment pulled from [%s]",
-            outDir.getAbsolutePath(),
-            s3Coords.toString()
-        );
-      }
-      throw new SegmentLoadingException(e, e.getMessage());
-    }
-  }
-
-  public static URI checkURI(URI uri)
-  {
-    if (uri.getScheme().equalsIgnoreCase(scheme)) {
-      uri = URI.create("s3" + uri.toString().substring(scheme.length()));
-    } else if (!uri.getScheme().equalsIgnoreCase("s3")) {
-      throw new IAE("Don't know how to load scheme for URI [%s]", uri.toString());
-    }
-    return uri;
-  }
-
-  @Override
-  public InputStream getInputStream(URI uri) throws IOException
-  {
-    try {
-      return buildFileObject(uri, s3Client).openInputStream();
-    }
-    catch (AmazonServiceException e) {
-      throw new IOE(e, "Could not load URI [%s]", uri);
-    }
-  }
-
   @Override
   public Predicate<Throwable> shouldRetryPredicate()
   {
@@ -341,16 +335,6 @@ public class S3DataSegmentPuller implements URIDataPuller
         path = path.substring(1);
       }
       this.path = path;
-    }
-
-    public S3Coords(DataSegment segment)
-    {
-      Map<String, Object> loadSpec = segment.getLoadSpec();
-      bucket = MapUtils.getString(loadSpec, BUCKET);
-      path = MapUtils.getString(loadSpec, KEY);
-      if (path.startsWith("/")) {
-        path = path.substring(1);
-      }
     }
 
     public S3Coords(String bucket, String key)

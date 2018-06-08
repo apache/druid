@@ -109,6 +109,7 @@ A type of inputSpec where a static path to the data files is provided.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
+|inputFormat|String|Specifies the Hadoop InputFormat class to use. e.g. `org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat` |no|
 |paths|Array of String|A String of input paths indicating where the raw data is located.|yes|
 
 For example, using the static input paths:
@@ -124,6 +125,7 @@ A type of inputSpec that expects data to be organized in directories according t
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |dataGranularity|String|Specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
+|inputFormat|String|Specifies the Hadoop InputFormat class to use. e.g. `org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat` |no|
 |inputPath|String|Base path to append the datetime path to.|yes|
 |filePattern|String|Pattern that files should match to be included.|yes|
 |pathFormat|String|Joda datetime format for each directory. Default value is `"'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"`, or see [Joda documentation](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)|no|
