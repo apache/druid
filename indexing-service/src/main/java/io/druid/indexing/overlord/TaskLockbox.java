@@ -144,7 +144,7 @@ public class TaskLockbox
             taskLockCount++;
             log.info(
                 "Reacquired lock[%s] for task: %s",
-                savedTaskLock,
+                taskLock,
                 task.getId()
             );
           } else {
