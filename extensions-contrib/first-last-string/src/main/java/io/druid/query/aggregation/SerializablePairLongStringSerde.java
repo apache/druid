@@ -36,7 +36,7 @@ import java.nio.ByteBuffer;
 /**
  * The SerializablePairLongStringSerde serializes a Long-String pair.
  * The serialization structure is: Long:Integer:String
- *
+ * <p>
  * The class is used on first/last String aggregators to store the time and the first/last string.
  * Long:Integer:String -> Timestamp:StringSize:StringData
  */
@@ -85,28 +85,36 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
       @Override
       public int compare(SerializablePairLongString o1, SerializablePairLongString o2)
       {
-        //TODO: DOCS
-        int comparation = 0;
+        int comparation;
 
-        if (o1.lhs > o2.lhs) {
-          comparation = 1;
-        } else if (o1.lhs < o2.lhs) {
+        // First we check if the objects are null
+        if (o1 == null && o2 == null) {
+          comparation = 0;
+        } else if (o1 == null) {
           comparation = -1;
-        }
+        } else if (o2 == null) {
+          comparation = 1;
+        } else {
 
-        if (comparation == 0) {
-          if (o1.rhs != null && o2.rhs != null) {
-            if (o1.rhs.equals(o2.rhs)) {
+          // If the objects are not null, we will try to compare using timestamp
+          comparation = o1.lhs.compareTo(o2.lhs);
+
+          // If both timestamp are the same, we try to compare the Strings
+          if (comparation == 0) {
+
+            // First we check if the strings are null
+            if (o1.rhs == null && o2.rhs == null) {
               comparation = 0;
-            } else {
+            } else if (o1.rhs == null) {
               comparation = -1;
+            } else if (o2.rhs == null) {
+              comparation = 1;
+            } else {
+
+              // If the strings are not null, we will compare them
+              // Note: This comparation maybe doesn't make sense to first/last aggregators
+              comparation = o1.rhs.compareTo(o2.rhs);
             }
-          } else if (o1.rhs != null) {
-            comparation = 1;
-          } else if (o2.rhs != null) {
-            comparation = -1;
-          } else {
-            comparation = 0;
           }
         }
 
