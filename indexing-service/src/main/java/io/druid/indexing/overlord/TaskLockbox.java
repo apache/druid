@@ -369,26 +369,26 @@ public class TaskLockbox
   {
     giant.lock();
 
-    Preconditions.checkArgument(
-        task.getGroupId().equals(taskLock.getGroupId()),
-        "lock groupId[%s] is different from task groupId[%s]",
-        taskLock.getGroupId(),
-        task.getGroupId()
-    );
-    Preconditions.checkArgument(
-        task.getDataSource().equals(taskLock.getDataSource()),
-        "lock dataSource[%s] is different from task dataSource[%s]",
-        taskLock.getDataSource(),
-        task.getDataSource()
-    );
-    Preconditions.checkArgument(
-        task.getPriority() == taskLock.getPriority(),
-        "lock priority[%s] is different from task priority[%s]",
-        taskLock.getPriority(),
-        task.getPriority()
-    );
-
     try {
+      Preconditions.checkArgument(
+          task.getGroupId().equals(taskLock.getGroupId()),
+          "lock groupId[%s] is different from task groupId[%s]",
+          taskLock.getGroupId(),
+          task.getGroupId()
+      );
+      Preconditions.checkArgument(
+          task.getDataSource().equals(taskLock.getDataSource()),
+          "lock dataSource[%s] is different from task dataSource[%s]",
+          taskLock.getDataSource(),
+          task.getDataSource()
+      );
+      Preconditions.checkArgument(
+          task.getPriority() == taskLock.getPriority(),
+          "lock priority[%s] is different from task priority[%s]",
+          taskLock.getPriority(),
+          task.getPriority()
+      );
+
       return createOrFindLockPosse(
           taskLock.getType(),
           task.getId(),
