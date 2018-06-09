@@ -72,8 +72,11 @@ public class StringLastBufferAggregator implements BufferAggregator
       time = timeSelector.getLong();
       lastString = (String) value;
     } else if (value != null) {
-      time = timeSelector.getLong();
-      lastString = value.toString();
+      throw new IllegalStateException(
+          "Try to aggregate unsuported class type ["
+          + value.getClass().getName() +
+          "]. Supported class types: String or SerializablePairLongString"
+      );
     }
 
     long lastTime = mutationBuffer.getLong(position);

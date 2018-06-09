@@ -61,7 +61,11 @@ public class StringLastAggregator implements Aggregator
       } else if (value instanceof SerializablePairLongString) {
         lastValue = ((SerializablePairLongString) value).rhs;
       } else if (value != null) {
-        lastValue = value.toString();
+        throw new IllegalStateException(
+            "Try to aggregate unsuported class type ["
+            + value.getClass().getName() +
+            "]. Supported class types: String or SerializablePairLongString"
+        );
       }
 
       if (lastValue != null && lastValue.length() > maxStringBytes) {
