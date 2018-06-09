@@ -22,6 +22,7 @@ package io.druid.storage.s3;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -114,7 +115,7 @@ public class S3DataSegmentFinderTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  MockAmazonS3Client mockS3Client;
+  ServerSideEncryptingAmazonS3 mockS3Client;
   S3DataSegmentPusherConfig config;
 
   private String bucket;
@@ -350,14 +351,14 @@ public class S3DataSegmentFinderTest
     return S3Utils.descriptorPathForSegmentPath(String.valueOf(segment.getLoadSpec().get("key")));
   }
 
-  private static class MockAmazonS3Client extends AmazonS3Client
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     private final File baseDir;
     private final Map<String, Map<String, ObjectMetadata>> storage = Maps.newHashMap();
 
     public MockAmazonS3Client(File baseDir)
     {
-      super();
+      super(new AmazonS3Client(), new NoopServerSideEncryption());
       this.baseDir = baseDir;
     }
 
@@ -460,6 +461,12 @@ public class S3DataSegmentFinderTest
       }
 
       return storageObject;
+    }
+
+    @Override
+    public S3Object getObject(GetObjectRequest request)
+    {
+      return getObject(request.getBucketName(), request.getKey());
     }
 
     @Override

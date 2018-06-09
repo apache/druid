@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
@@ -45,12 +44,16 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
-  private final AmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public S3DataSegmentPusher(AmazonS3 s3Client, S3DataSegmentPusherConfig config, ObjectMapper jsonMapper)
+  public S3DataSegmentPusher(
+      ServerSideEncryptingAmazonS3 s3Client,
+      S3DataSegmentPusherConfig config,
+      ObjectMapper jsonMapper
+  )
   {
     this.s3Client = s3Client;
     this.config = config;
@@ -104,9 +107,8 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     try {
       return S3Utils.retryS3Operation(
           () -> {
-            uploadFileIfPossible(s3Client, config.getBucket(), s3Path, zipOutFile);
+            uploadFileIfPossible(config.getBucket(), s3Path, zipOutFile);
             uploadFileIfPossible(
-                s3Client,
                 config.getBucket(),
                 S3Utils.descriptorPathForSegmentPath(s3Path),
                 descriptorFile
@@ -155,7 +157,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  private void uploadFileIfPossible(AmazonS3 s3Client, String bucket, String key, File file)
+  private void uploadFileIfPossible(String bucket, String key, File file)
   {
     final PutObjectRequest indexFilePutRequest = new PutObjectRequest(bucket, key, file);
 

@@ -19,19 +19,12 @@
 
 package io.druid.storage.google;
 
-import com.google.common.base.Predicate;
+import com.google.api.client.http.HttpResponseException;
+
+import java.io.IOException;
 
 public class GoogleUtils
 {
-  public static final Predicate<Throwable> GOOGLE_RETRY = new Predicate<Throwable>()
-  {
-    @Override
-    public boolean apply(Throwable e)
-    {
-      return false;
-    }
-  };
-
   public static String toFilename(String path)
   {
     String filename = path.substring(path.lastIndexOf("/") + 1); // characters after last '/'
@@ -42,5 +35,14 @@ public class GoogleUtils
   public static String indexZipForSegmentPath(String path)
   {
     return path.substring(0, path.lastIndexOf("/")) + "/index.zip";
+  }
+
+  public static boolean isRetryable(Throwable t)
+  {
+    if (t instanceof HttpResponseException) {
+      final HttpResponseException e = (HttpResponseException) t;
+      return e.getStatusCode() == 429 || (e.getStatusCode() / 500 == 1);
+    }
+    return t instanceof IOException;
   }
 }

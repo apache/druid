@@ -54,6 +54,8 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -90,6 +92,7 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.AuthConfig;
@@ -183,6 +186,19 @@ public class CliOverlord extends ServerRunnable
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             configureTaskStorage(binder);
             configureAutoscale(binder);
@@ -307,11 +323,13 @@ public class CliOverlord extends ServerRunnable
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
     private final AuthConfig authConfig;
+    private final ServerConfig serverConfig;
 
     @Inject
-    OverlordJettyServerInitializer(AuthConfig authConfig)
+    OverlordJettyServerInitializer(AuthConfig authConfig, ServerConfig serverConfig)
     {
       this.authConfig = authConfig;
+      this.serverConfig = serverConfig;
     }
 
     @Override
@@ -375,7 +393,11 @@ public class CliOverlord extends ServerRunnable
       handlerList.setHandlers(
           new Handler[]{
               JettyServerInitUtils.getJettyRequestLogHandler(),
-              JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+              JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                  root,
+                  serverConfig.getInflateBufferSize(),
+                  serverConfig.getCompressionLevel()
+              )
           }
       );
 

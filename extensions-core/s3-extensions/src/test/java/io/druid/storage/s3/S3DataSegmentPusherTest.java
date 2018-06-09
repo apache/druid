@@ -19,7 +19,6 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.Grant;
@@ -83,7 +82,7 @@ public class S3DataSegmentPusherTest
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
   {
-    AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     final AccessControlList acl = new AccessControlList();
     acl.setOwner(new Owner("ownerId", "owner"));

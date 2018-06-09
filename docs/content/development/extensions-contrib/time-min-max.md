@@ -57,7 +57,7 @@ To query for results, the same aggregators "timeMin" and "timeMax" is used.
     {
       "type": "count",
       "name": "count"
-    }
+    },
     {
       "type": "timeMin",
       "name": "<output_name of timeMin>",

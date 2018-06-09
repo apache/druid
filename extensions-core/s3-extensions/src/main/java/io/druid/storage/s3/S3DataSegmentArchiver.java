@@ -19,7 +19,6 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +39,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
   @Inject
   public S3DataSegmentArchiver(
       @Json ObjectMapper mapper,
-      AmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentArchiverConfig archiveConfig,
       S3DataSegmentPusherConfig restoreConfig
   )

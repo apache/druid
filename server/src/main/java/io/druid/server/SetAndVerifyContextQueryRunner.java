@@ -25,6 +25,8 @@ import io.druid.query.QueryContexts;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.client.DirectDruidClient;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 
@@ -35,11 +37,13 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
 {
   private final ServerConfig serverConfig;
   private final QueryRunner<T> baseRunner;
+  private final long startTimeMillis;
 
   public SetAndVerifyContextQueryRunner(ServerConfig serverConfig, QueryRunner<T> baseRunner)
   {
     this.serverConfig = serverConfig;
     this.baseRunner = baseRunner;
+    this.startTimeMillis = System.currentTimeMillis();
   }
 
   @Override
@@ -53,7 +57,7 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
 
   public Query<T> withTimeoutAndMaxScatterGatherBytes(Query<T> query, ServerConfig serverConfig)
   {
-    return QueryContexts.verifyMaxQueryTimeout(
+    Query<T> newQuery = QueryContexts.verifyMaxQueryTimeout(
         QueryContexts.withMaxScatterGatherBytes(
             QueryContexts.withDefaultTimeout(
                 query,
@@ -63,5 +67,6 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
         ),
         serverConfig.getMaxQueryTimeout()
     );
+    return newQuery.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, this.startTimeMillis + QueryContexts.getTimeout(newQuery)));
   }
 }

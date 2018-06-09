@@ -436,7 +436,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root)});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
       server.setHandler(handlerList);
     }
   }
