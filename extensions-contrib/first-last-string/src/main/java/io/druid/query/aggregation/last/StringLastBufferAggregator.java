@@ -62,7 +62,6 @@ public class StringLastBufferAggregator implements BufferAggregator
     Object value = valueSelector.getObject();
 
     long time = Long.MIN_VALUE;
-    ;
     String lastString = null;
 
     if (value instanceof SerializablePairLongString) {
