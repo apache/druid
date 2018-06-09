@@ -21,15 +21,15 @@ package io.druid.query.aggregation.first;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 @JsonTypeName("stringFirstFold")
 public class StringFirstFoldingAggregatorFactory extends StringFirstAggregatorFactory
@@ -46,14 +46,14 @@ public class StringFirstFoldingAggregatorFactory extends StringFirstAggregatorFa
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
+    final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
     return new StringFirstAggregator(null, null, maxStringBytes)
     {
       @Override
       public void aggregate()
       {
-        SerializablePair<Long, String> pair = (SerializablePair<Long, String>) selector.getObject();
-        if (pair.lhs < firstTime) {
+        SerializablePairLongString pair = (SerializablePairLongString) selector.getObject();
+        if (pair != null && pair.lhs < firstTime) {
           firstTime = pair.lhs;
           firstValue = pair.rhs;
         }
@@ -64,7 +64,7 @@ public class StringFirstFoldingAggregatorFactory extends StringFirstAggregatorFa
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(name);
+    final BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(getName());
     return new StringFirstBufferAggregator(null, null, maxStringBytes)
     {
       @Override
@@ -73,11 +73,11 @@ public class StringFirstFoldingAggregatorFactory extends StringFirstAggregatorFa
         ByteBuffer mutationBuffer = buf.duplicate();
         mutationBuffer.position(position);
 
-        SerializablePair<Long, String> pair = (SerializablePair<Long, String>) selector.getObject();
+        SerializablePairLongString pair = (SerializablePairLongString) selector.getObject();
         long lastTime = mutationBuffer.getLong(position);
-        if (pair.lhs < lastTime) {
+        if (pair != null && pair.lhs < lastTime) {
           mutationBuffer.putLong(position, pair.lhs);
-          byte[] valueBytes = pair.rhs.getBytes(StandardCharsets.UTF_8);
+          byte[] valueBytes = StringUtils.toUtf8(pair.rhs);
 
           mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
           mutationBuffer.position(position + Long.BYTES + Integer.BYTES);

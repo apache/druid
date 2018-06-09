@@ -23,41 +23,30 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
-import io.druid.collections.SerializablePair;
-import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
-import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.SerializablePairLongString;
+import io.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+
 @JsonTypeName("stringLast")
 public class StringLastAggregatorFactory extends AggregatorFactory
 {
-  public static final Integer MAX_SIZE_STRING = 1024;
-  public static final Comparator VALUE_COMPARATOR = (o1, o2) -> ((SerializablePair<Long, String>) o1).rhs.equals(((SerializablePair<Long, String>) o2).rhs)
-                                                                ? 1
-                                                                : 0;
-
-  public static final Comparator TIME_COMPARATOR = (o1, o2) -> Longs.compare(
-      ((SerializablePair<Long, Object>) o1).lhs,
-      ((SerializablePair<Long, Object>) o2).lhs
-  );
-
-  public final String fieldName;
-  public final String name;
-  public final Integer maxStringBytes;
+  private final String fieldName;
+  private final String name;
+  protected final int maxStringBytes;
 
   @JsonCreator
   public StringLastAggregatorFactory(
@@ -70,7 +59,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
-    this.maxStringBytes = maxStringBytes == null ? MAX_SIZE_STRING : maxStringBytes;
+    this.maxStringBytes = maxStringBytes == null ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE : maxStringBytes;
   }
 
   @Override
@@ -96,13 +85,13 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return VALUE_COMPARATOR;
+    return StringFirstAggregatorFactory.VALUE_COMPARATOR;
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
+    return StringFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
   }
 
   @Override
@@ -127,13 +116,13 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   public Object deserialize(Object object)
   {
     Map map = (Map) object;
-    return new SerializablePair<>(((Number) map.get("lhs")).longValue(), ((String) map.get("rhs")));
+    return new SerializablePairLongString(((Number) map.get("lhs")).longValue(), ((String) map.get("rhs")));
   }
 
   @Override
   public Object finalizeComputation(Object object)
   {
-    return ((SerializablePair<Long, String>) object).rhs;
+    return ((SerializablePairLongString) object).rhs;
   }
 
   @Override
@@ -164,12 +153,10 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-
-    return ByteBuffer.allocate(1 + fieldNameBytes.length)
-                     .put(AggregatorUtil.STRING_LAST_CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .array();
+    return new CacheKeyBuilder(AggregatorUtil.STRING_LAST_CACHE_TYPE_ID)
+        .appendString(fieldName)
+        .appendInt(maxStringBytes)
+        .build();
   }
 
   @Override
@@ -196,13 +183,13 @@ public class StringLastAggregatorFactory extends AggregatorFactory
 
     StringLastAggregatorFactory that = (StringLastAggregatorFactory) o;
 
-    return fieldName.equals(that.fieldName) && name.equals(that.name);
+    return fieldName.equals(that.fieldName) && name.equals(that.name) && maxStringBytes == that.maxStringBytes;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName);
+    return Objects.hash(name, fieldName, maxStringBytes);
   }
 
   @Override

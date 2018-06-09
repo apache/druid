@@ -54,7 +54,7 @@ public class FirstLastStringDruidModule implements DruidModule
   public void configure(Binder binder)
   {
     if (ComplexMetrics.getSerdeForType("serializablePairLongString") == null) {
-      ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairSerde());
+      ComplexMetrics.registerSerde("serializablePairLongString", new SerializablePairLongStringSerde());
     }
   }
 }

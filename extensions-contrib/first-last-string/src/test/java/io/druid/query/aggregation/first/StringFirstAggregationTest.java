@@ -19,9 +19,9 @@
 
 package io.druid.query.aggregation.first;
 
-import io.druid.collections.SerializablePair;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.FirstLastStringDruidModule;
+import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
@@ -45,11 +45,11 @@ public class StringFirstAggregationTest
 
   private String[] strings = {"1111", "2222", "3333", "4444"};
   private long[] times = {8224, 6879, 2436, 7888};
-  private SerializablePair[] pairs = {
-      new SerializablePair<>(52782L, "AAAA"),
-      new SerializablePair<>(65492L, "BBBB"),
-      new SerializablePair<>(69134L, "CCCC"),
-      new SerializablePair<>(11111L, "DDDD")
+  private SerializablePairLongString[] pairs = {
+      new SerializablePairLongString(52782L, "AAAA"),
+      new SerializablePairLongString(65492L, "BBBB"),
+      new SerializablePairLongString(69134L, "CCCC"),
+      new SerializablePairLongString(11111L, "DDDD")
   };
 
   @Before
@@ -107,8 +107,8 @@ public class StringFirstAggregationTest
   @Test
   public void testCombine()
   {
-    SerializablePair pair1 = new SerializablePair<>(1467225000L, "AAAA");
-    SerializablePair pair2 = new SerializablePair<>(1467240000L, "BBBB");
+    SerializablePairLongString pair1 = new SerializablePairLongString(1467225000L, "AAAA");
+    SerializablePairLongString pair2 = new SerializablePairLongString(1467240000L, "BBBB");
     Assert.assertEquals(pair2, stringLastAggFactory.combine(pair1, pair2));
   }
 

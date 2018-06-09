@@ -19,8 +19,8 @@
 
 package io.druid.query.aggregation.last;
 
-import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import org.junit.Assert;
@@ -80,7 +80,7 @@ public class StringLastAggregatorTest
       aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
     }
 
-    SerializablePair<Long, String> sp = ((SerializablePair<Long, String>) agg.get(buf, position));
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
     Assert.assertEquals("expectec last string value", "DDDD", sp.rhs);

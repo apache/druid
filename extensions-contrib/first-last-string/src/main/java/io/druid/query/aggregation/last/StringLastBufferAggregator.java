@@ -19,25 +19,26 @@
 
 package io.druid.query.aggregation.last;
 
-import io.druid.collections.SerializablePair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
+//TODO: Unit Test
 public class StringLastBufferAggregator implements BufferAggregator
 {
   private final BaseLongColumnValueSelector timeSelector;
   private final BaseObjectColumnValueSelector valueSelector;
-  private final Integer maxStringBytes;
+  private final int maxStringBytes;
 
   public StringLastBufferAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      Integer maxStringBytes
+      int maxStringBytes
   )
   {
     this.timeSelector = timeSelector;
@@ -48,14 +49,8 @@ public class StringLastBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-
-    mutationBuffer.putLong(position, Long.MIN_VALUE);
-    mutationBuffer.putInt(position + Long.BYTES, 0);
-    for (int i = 0; i < maxStringBytes - 1; i++) {
-      mutationBuffer.putChar(position + Long.BYTES + Integer.BYTES + i, '\0');
-    }
+    buf.putLong(position, Long.MIN_VALUE);
+    buf.putInt(position + Long.BYTES, 0);
   }
 
   @Override
@@ -66,21 +61,29 @@ public class StringLastBufferAggregator implements BufferAggregator
 
     Object value = valueSelector.getObject();
 
-    long time;
-    String lastString;
+    long time = Long.MIN_VALUE;
+    ;
+    String lastString = null;
 
-    if (value instanceof SerializablePair) {
-      SerializablePair<Long, String> serializablePair = (SerializablePair) value;
+    if (value instanceof SerializablePairLongString) {
+      SerializablePairLongString serializablePair = (SerializablePairLongString) value;
       time = serializablePair.lhs;
       lastString = serializablePair.rhs;
-    } else {
+    } else if (value instanceof String) {
       time = timeSelector.getLong();
       lastString = (String) value;
+    } else if (value != null) {
+      time = timeSelector.getLong();
+      lastString = value.toString();
     }
 
     long lastTime = mutationBuffer.getLong(position);
-    if (time >= lastTime) {
-      byte[] valueBytes = lastString.getBytes(StandardCharsets.UTF_8);
+    if (lastString != null && time >= lastTime) {
+      if (lastString.length() > maxStringBytes) {
+        lastString = lastString.substring(0, maxStringBytes);
+      }
+
+      byte[] valueBytes = StringUtils.toUtf8(lastString);
 
       mutationBuffer.putLong(position, time);
       mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
@@ -99,15 +102,15 @@ public class StringLastBufferAggregator implements BufferAggregator
     Long timeValue = mutationBuffer.getLong(position);
     Integer stringSizeBytes = mutationBuffer.getInt(position + Long.BYTES);
 
-    SerializablePair<Long, String> serializablePair;
+    SerializablePairLongString serializablePair;
 
     if (stringSizeBytes > 0) {
       byte[] valueBytes = new byte[stringSizeBytes];
       mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
       mutationBuffer.get(valueBytes, 0, stringSizeBytes);
-      serializablePair = new SerializablePair<>(timeValue, new String(valueBytes, StandardCharsets.UTF_8));
+      serializablePair = new SerializablePairLongString(timeValue, StringUtils.fromUtf8(valueBytes));
     } else {
-      serializablePair = new SerializablePair<>(timeValue, null);
+      serializablePair = new SerializablePairLongString(timeValue, null);
     }
 
     return serializablePair;

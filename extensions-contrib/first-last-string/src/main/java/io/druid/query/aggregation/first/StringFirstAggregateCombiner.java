@@ -26,25 +26,25 @@ import javax.annotation.Nullable;
 
 public class StringFirstAggregateCombiner extends ObjectAggregateCombiner<String>
 {
-  String lastString;
+  private String firstString;
 
   @Override
   public void reset(ColumnValueSelector selector)
   {
-    lastString = (String) selector.getObject();
+    firstString = (String) selector.getObject();
   }
 
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    lastString = (String) selector.getObject();
+    // Nothing to do. It needs to keep the first string value.
   }
 
   @Nullable
   @Override
   public String getObject()
   {
-    return lastString;
+    return firstString;
   }
 
   @Override

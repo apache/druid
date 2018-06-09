@@ -19,8 +19,8 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.collections.SerializablePair;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.StringUtils;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
@@ -32,20 +32,17 @@ import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
-public class SerializablePairSerde extends ComplexMetricSerde
+//TODO: JAVA DOCS
+public class SerializablePairLongStringSerde extends ComplexMetricSerde
 {
 
-  public SerializablePairSerde()
-  {
-
-  }
+  public static final String TYPE_NAME = "serializablePairLongString";
 
   @Override
   public String getTypeName()
   {
-    return "serializablePairLongString";
+    return TYPE_NAME;
   }
 
   @Override
@@ -54,9 +51,9 @@ public class SerializablePairSerde extends ComplexMetricSerde
     return new ComplexMetricExtractor()
     {
       @Override
-      public Class<SerializablePair> extractedClass()
+      public Class<SerializablePairLongString> extractedClass()
       {
-        return SerializablePair.class;
+        return SerializablePairLongString.class;
       }
 
       @Override
@@ -77,16 +74,17 @@ public class SerializablePairSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePair>()
+    return new ObjectStrategy<SerializablePairLongString>()
     {
       @Override
-      public int compare(SerializablePair o1, SerializablePair o2)
+      public int compare(SerializablePairLongString o1, SerializablePairLongString o2)
       {
-        Integer comparation = 0;
+        //TODO: DOCS
+        int comparation = 0;
 
-        if ((Long) o1.lhs > (Long) o2.lhs) {
+        if (o1.lhs > o2.lhs) {
           comparation = 1;
-        } else if ((Long) o1.lhs < (Long) o2.lhs) {
+        } else if (o1.lhs < o2.lhs) {
           comparation = -1;
         }
 
@@ -110,13 +108,13 @@ public class SerializablePairSerde extends ComplexMetricSerde
       }
 
       @Override
-      public Class<? extends SerializablePair> getClazz()
+      public Class<? extends SerializablePairLongString> getClazz()
       {
-        return SerializablePair.class;
+        return SerializablePairLongString.class;
       }
 
       @Override
-      public SerializablePair<Long, String> fromByteBuffer(ByteBuffer buffer, int numBytes)
+      public SerializablePairLongString fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
 
@@ -127,29 +125,29 @@ public class SerializablePairSerde extends ComplexMetricSerde
         if (stringSize > 0) {
           byte[] stringBytes = new byte[stringSize];
           readOnlyBuffer.get(stringBytes, 0, stringSize);
-          lastString = new String(stringBytes, StandardCharsets.UTF_8);
+          lastString = StringUtils.fromUtf8(stringBytes);
         }
 
-        return new SerializablePair<>(lhs, lastString);
+        return new SerializablePairLongString(lhs, lastString);
       }
 
       @Override
-      public byte[] toBytes(SerializablePair val)
+      public byte[] toBytes(SerializablePairLongString val)
       {
-        String rhsString = (String) val.rhs;
+        String rhsString = val.rhs;
         ByteBuffer bbuf;
 
 
         if (rhsString != null) {
-          byte[] rhsBytes = rhsString.getBytes(StandardCharsets.UTF_8);
+          byte[] rhsBytes = StringUtils.toUtf8(rhsString);
           bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES + rhsBytes.length);
-          bbuf.putLong((Long) val.lhs);
+          bbuf.putLong(val.lhs);
           bbuf.putInt(Long.BYTES, rhsBytes.length);
           bbuf.position(Long.BYTES + Integer.BYTES);
           bbuf.put(rhsBytes);
         } else {
           bbuf = ByteBuffer.allocate(Long.BYTES + Integer.BYTES);
-          bbuf.putLong((Long) val.lhs);
+          bbuf.putLong(val.lhs);
           bbuf.putInt(Long.BYTES, 0);
         }
 

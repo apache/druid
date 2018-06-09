@@ -19,8 +19,8 @@
 
 package io.druid.query.aggregation.first;
 
-import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 
@@ -58,12 +58,14 @@ public class StringFirstAggregator implements Aggregator
 
       if (value instanceof String) {
         firstValue = (String) value;
+      } else if (value instanceof SerializablePairLongString) {
+        firstValue = ((SerializablePairLongString) value).rhs;
+      } else if (value != null) {
+        firstValue = value.toString();
+      }
 
-        if (firstValue.length() > maxStringBytes) {
-          firstValue = firstValue.substring(0, maxStringBytes);
-        }
-      } else if (value instanceof SerializablePair) {
-        firstValue = ((SerializablePair<Long, String>) value).rhs;
+      if (firstValue != null && firstValue.length() > maxStringBytes) {
+        firstValue = firstValue.substring(0, maxStringBytes);
       }
     }
   }
@@ -71,7 +73,7 @@ public class StringFirstAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return new SerializablePair<>(firstTime, firstValue);
+    return new SerializablePairLongString(firstTime, firstValue);
   }
 
   @Override

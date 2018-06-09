@@ -21,7 +21,6 @@ package io.druid.query.aggregation.last;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.druid.collections.SerializablePair;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
@@ -30,6 +29,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FirstLastStringDruidModule;
+import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesResultValue;
@@ -121,7 +121,7 @@ public class StringLastTimeseriesQueryTest
         new Result<>(
             time,
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("last_client_type", new SerializablePair<>(timestamp1, "android"))
+                ImmutableMap.<String, Object>of("last_client_type", new SerializablePairLongString(timestamp1, "android"))
             )
         )
     );
