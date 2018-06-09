@@ -34,7 +34,7 @@ import io.druid.segment.writeout.SegmentWriteOutMedium;
 import java.nio.ByteBuffer;
 
 /**
- * The SerializablePairLongStringSerde serializes a Long-String pair.
+ * The SerializablePairLongStringSerde serializes a Long-String pair (SerializablePairLongString).
  * The serialization structure is: Long:Integer:String
  * <p>
  * The class is used on first/last String aggregators to store the time and the first/last string.
