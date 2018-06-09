@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import io.druid.java.util.common.Pair;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -43,6 +44,15 @@ public interface IndexerMetadataStorageCoordinator
    */
   List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval);
 
+  /**
+   * Get all used segments and the created_date of these segments in a given datasource and interval
+   * 
+   * @param dataSource The datasource to query
+   * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive, end is exclusive
+   * @return The DataSegments and the related created_date of segments which include data in the requested interval
+   */
+  List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
+  
   /**
    * Get all segments which may include any data in the interval and are flagged as used.
    *
@@ -154,6 +164,16 @@ public interface IndexerMetadataStorageCoordinator
    */
   boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata) throws IOException;
 
+  /**
+   * Insert dataSourceMetadata entry for 'dataSource'.
+   *
+   * @param dataSource         identifier
+   * @param dataSourceMetadata value to set
+   *
+   * @return true if the entry was inserted, false otherwise
+   */
+  boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
+  
   void updateSegmentMetadata(Set<DataSegment> segments);
 
   void deleteSegments(Set<DataSegment> segments);
