@@ -81,7 +81,7 @@ public class CpuAcctDeltaMonitorTest
     try (final FileOutputStream fos = new FileOutputStream(cpuacct)) {
       fos.write(StringUtils.toUtf8("cpu user system\n"));
       for (int i = 0; i < 128; ++i) {
-        fos.write(StringUtils.toUtf8(String.format("%d 0 0\n", i)));
+        fos.write(StringUtils.toUtf8(StringUtils.format("%d 0 0\n", i)));
       }
     }
     final CpuAcctDeltaMonitor monitor = new CpuAcctDeltaMonitor(
