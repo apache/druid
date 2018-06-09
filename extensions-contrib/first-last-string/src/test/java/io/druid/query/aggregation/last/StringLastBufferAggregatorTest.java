@@ -17,21 +17,19 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.first;
+package io.druid.query.aggregation.last;
 
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
-import io.druid.query.aggregation.last.StringLastAggregatorFactory;
-import io.druid.query.aggregation.last.StringLastBufferAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class StringFirstAggregatorTest
+public class StringLastBufferAggregatorTest
 {
   private void aggregateBuffer(
       TestLongColumnSelector timeSelector,

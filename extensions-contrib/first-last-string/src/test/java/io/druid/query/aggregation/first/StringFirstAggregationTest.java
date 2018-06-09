@@ -123,14 +123,14 @@ public class StringFirstAggregationTest
     aggregate(agg);
 
     Pair<Long, String> result = (Pair<Long, String>) agg.get();
-    Pair<Long, String> expected = (Pair<Long, String>) pairs[3];
+    Pair<Long, String> expected = pairs[3];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);
   }
 
   @Test
-  public void testStringLastCombiningBufferAggregator()
+  public void testStringFirstCombiningBufferAggregator()
   {
     StringFirstBufferAggregator agg = (StringFirstBufferAggregator) combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
@@ -144,10 +144,33 @@ public class StringFirstAggregationTest
     aggregate(agg, buffer, 0);
 
     Pair<Long, String> result = (Pair<Long, String>) agg.get(buffer, 0);
-    Pair<Long, String> expected = (Pair<Long, String>) pairs[3];
+    Pair<Long, String> expected = pairs[3];
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);
+  }
+
+  @Test
+  public void testStringFirstAggregateCombiner()
+  {
+    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
+    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringFirstAggregateCombiner stringFirstAggregateCombiner =
+        (StringFirstAggregateCombiner) combiningAggFactory.makeAggregateCombiner();
+
+    stringFirstAggregateCombiner.reset(columnSelector);
+
+    Assert.assertEquals(strings[0], stringFirstAggregateCombiner.getObject());
+
+    columnSelector.increment();
+    stringFirstAggregateCombiner.fold(columnSelector);
+
+    Assert.assertEquals(strings[0], stringFirstAggregateCombiner.getObject());
+
+    stringFirstAggregateCombiner.reset(columnSelector);
+
+    Assert.assertEquals(strings[1], stringFirstAggregateCombiner.getObject());
   }
 
   private void aggregate(

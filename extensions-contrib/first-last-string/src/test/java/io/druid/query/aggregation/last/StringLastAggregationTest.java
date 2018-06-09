@@ -24,6 +24,7 @@ import io.druid.query.aggregation.FirstLastStringDruidModule;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
+import io.druid.query.aggregation.first.StringFirstAggregateCombiner;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
 import org.easymock.EasyMock;
@@ -148,6 +149,29 @@ public class StringLastAggregationTest
 
     Assert.assertEquals(expected.lhs, result.lhs);
     Assert.assertEquals(expected.rhs, result.rhs);
+  }
+
+  @Test
+  public void testStringLastAggregateCombiner()
+  {
+    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
+    TestObjectColumnSelector columnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringLastAggregateCombiner stringFirstAggregateCombiner =
+        (StringLastAggregateCombiner) combiningAggFactory.makeAggregateCombiner();
+
+    stringFirstAggregateCombiner.reset(columnSelector);
+
+    Assert.assertEquals(strings[0], stringFirstAggregateCombiner.getObject());
+
+    columnSelector.increment();
+    stringFirstAggregateCombiner.fold(columnSelector);
+
+    Assert.assertEquals(strings[1], stringFirstAggregateCombiner.getObject());
+
+    stringFirstAggregateCombiner.reset(columnSelector);
+
+    Assert.assertEquals(strings[1], stringFirstAggregateCombiner.getObject());
   }
 
   private void aggregate(

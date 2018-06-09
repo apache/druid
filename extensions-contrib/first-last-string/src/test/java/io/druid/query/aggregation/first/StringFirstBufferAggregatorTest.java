@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.last;
+package io.druid.query.aggregation.first;
 
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.SerializablePairLongString;
@@ -29,7 +29,7 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class StringLastAggregatorTest
+public class StringFirstBufferAggregatorTest
 {
   private void aggregateBuffer(
       TestLongColumnSelector timeSelector,
@@ -55,11 +55,11 @@ public class StringLastAggregatorTest
     TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
+    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
         "billy", "billy", maxStringBytes
     );
 
-    StringLastBufferAggregator agg = new StringLastBufferAggregator(
+    StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
         maxStringBytes
@@ -83,8 +83,8 @@ public class StringLastAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expectec last string value", "DDDD", sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), new Long(sp.lhs));
+    Assert.assertEquals("expectec last string value", strings[0], sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[0]), new Long(sp.lhs));
 
   }
 
