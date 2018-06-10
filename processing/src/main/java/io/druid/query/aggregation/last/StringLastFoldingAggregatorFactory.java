@@ -70,18 +70,21 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
       @Override
       public void aggregate(ByteBuffer buf, int position)
       {
-        ByteBuffer mutationBuffer = buf.duplicate();
-        mutationBuffer.position(position);
-
         SerializablePairLongString pair = (SerializablePairLongString) selector.getObject();
-        long lastTime = mutationBuffer.getLong(position);
-        if (pair != null && pair.lhs >= lastTime) {
-          mutationBuffer.putLong(position, pair.lhs);
-          byte[] valueBytes = StringUtils.toUtf8(pair.rhs);
+        if (pair != null && pair.rhs != null) {
+          ByteBuffer mutationBuffer = buf.duplicate();
+          mutationBuffer.position(position);
 
-          mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
-          mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
-          mutationBuffer.put(valueBytes);
+          long lastTime = mutationBuffer.getLong(position);
+
+          if (pair.lhs >= lastTime) {
+            mutationBuffer.putLong(position, pair.lhs);
+            byte[] valueBytes = StringUtils.toUtf8(pair.rhs);
+
+            mutationBuffer.putInt(position + Long.BYTES, valueBytes.length);
+            mutationBuffer.position(position + Long.BYTES + Integer.BYTES);
+            mutationBuffer.put(valueBytes);
+          }
         }
       }
 
