@@ -147,7 +147,6 @@
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
         <module>extensions-contrib/opentsdb-emitter</module>
-        <module>extensions-contrib/first-last-string</module>
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
         <!-- distribution packaging -->

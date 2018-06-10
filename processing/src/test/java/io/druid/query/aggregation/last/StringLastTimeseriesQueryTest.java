@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.first;
+package io.druid.query.aggregation.last;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -28,7 +28,6 @@ import io.druid.query.Druids;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.FirstLastStringDruidModule;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
@@ -38,21 +37,13 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-public class StringFirstTimeseriesQueryTest
+public class StringLastTimeseriesQueryTest
 {
-
-  @Before
-  public void setup()
-  {
-    FirstLastStringDruidModule module = new FirstLastStringDruidModule();
-    module.configure(null);
-  }
 
   @Test
   public void testTopNWithDistinctCountAgg() throws Exception
@@ -67,7 +58,7 @@ public class StringFirstTimeseriesQueryTest
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringFirstAggregatorFactory(
+                .withMetrics(new StringLastAggregatorFactory(
                     "last_client_type", "client_type", 1024)
                 )
                 .build()
@@ -109,7 +100,7 @@ public class StringFirstTimeseriesQueryTest
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Lists.newArrayList(
-                                          new StringFirstAggregatorFactory("last_client_type", client_type, 1024)
+                                          new StringLastAggregatorFactory("last_client_type", client_type, 1024)
                                       )
                                   )
                                   .build();
@@ -121,7 +112,7 @@ public class StringFirstTimeseriesQueryTest
         new Result<>(
             time,
             new TimeseriesResultValue(
-                ImmutableMap.<String, Object>of("last_client_type", new SerializablePairLongString(timestamp, "iphone"))
+                ImmutableMap.<String, Object>of("last_client_type", new SerializablePairLongString(timestamp1, "android"))
             )
         )
     );

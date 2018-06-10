@@ -20,7 +20,6 @@
 package io.druid.query.aggregation.last;
 
 import io.druid.java.util.common.Pair;
-import io.druid.query.aggregation.FirstLastStringDruidModule;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
@@ -65,9 +64,6 @@ public class StringLastAggregationTest
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
-
-    FirstLastStringDruidModule module = new FirstLastStringDruidModule();
-    module.configure(null);
   }
 
   @Test
