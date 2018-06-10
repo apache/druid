@@ -44,6 +44,7 @@ import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import io.druid.query.aggregation.first.StringFirstFoldingAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -52,6 +53,7 @@ import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import io.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import io.druid.query.aggregation.last.LongLastAggregatorFactory;
 import io.druid.query.aggregation.last.StringLastAggregatorFactory;
+import io.druid.query.aggregation.last.StringLastFoldingAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.DoubleGreatestPostAggregator;
@@ -77,7 +79,10 @@ public class AggregatorsModule extends SimpleModule
     }
 
     if (ComplexMetrics.getSerdeForType("preComputedHyperUnique") == null) {
-      ComplexMetrics.registerSerde("preComputedHyperUnique", new PreComputedHyperUniquesSerde(HyperLogLogHash.getDefault()));
+      ComplexMetrics.registerSerde(
+          "preComputedHyperUnique",
+          new PreComputedHyperUniquesSerde(HyperLogLogHash.getDefault())
+      );
     }
 
     if (ComplexMetrics.getSerdeForType("serializablePairLongString") == null) {
@@ -109,10 +114,12 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleFirst", value = DoubleFirstAggregatorFactory.class),
       @JsonSubTypes.Type(name = "floatFirst", value = FloatFirstAggregatorFactory.class),
       @JsonSubTypes.Type(name = "stringFirst", value = StringFirstAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "stringFirstFold", value = StringFirstFoldingAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longLast", value = LongLastAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleLast", value = DoubleLastAggregatorFactory.class),
       @JsonSubTypes.Type(name = "floatLast", value = FloatLastAggregatorFactory.class),
       @JsonSubTypes.Type(name = "stringLast", value = StringLastAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "stringLastFold", value = StringLastFoldingAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {
