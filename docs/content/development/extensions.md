@@ -72,7 +72,6 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |kafka-emitter|Kafka metrics emitter|[link](../development/extensions-contrib/kafka-emitter.html)|
 |druid-thrift-extensions|Support thrift ingestion |[link](../development/extensions-contrib/thrift.html)|
 |druid-opentsdb-emitter|OpenTSDB metrics emitter |[link](../development/extensions-contrib/opentsdb-emitter.html)|
-|druid-first-last-string|First/Last String Aggregators |[link](../development/extensions-contrib/first-last-string.html)|
 
 ## Promoting Community Extension to Core Extension
 
