@@ -42,13 +42,14 @@ public class StringLastAggregationTest
   private TestObjectColumnSelector<String> valueSelector;
   private TestObjectColumnSelector objectSelector;
 
-  private String[] strings = {"1111", "2222", "3333", "4444"};
-  private long[] times = {8224, 6879, 2436, 7888};
+  private String[] strings = {"1111", "2222", "3333", null, "4444"};
+  private long[] times = {8224, 6879, 2436, 3546, 7888};
   private SerializablePairLongString[] pairs = {
       new SerializablePairLongString(52782L, "AAAA"),
       new SerializablePairLongString(65492L, "BBBB"),
       new SerializablePairLongString(69134L, "CCCC"),
-      new SerializablePairLongString(11111L, "DDDD")
+      new SerializablePairLongString(11111L, "DDDD"),
+      new SerializablePairLongString(51223L, null)
   };
 
   @Before

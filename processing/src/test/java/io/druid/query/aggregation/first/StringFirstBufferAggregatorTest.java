@@ -88,4 +88,85 @@ public class StringFirstBufferAggregatorTest
 
   }
 
+  @Test
+  public void testNullBufferAggregate() throws Exception
+  {
+
+    final long[] timestamps = {1526724000L, 1526724600L, 1526724700L, 1526725900L, 1526725000L};
+    final String[] strings = {null, "AAAA", "BBBB", "DDDD", "EEEE"};
+    Integer maxStringBytes = 1024;
+
+    TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
+        "billy", "billy", maxStringBytes
+    );
+
+    StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
+        longColumnSelector,
+        objectColumnSelector,
+        maxStringBytes
+    );
+
+    String testString = "ZZZZ";
+
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    buf.putLong(1526728500L);
+    buf.putInt(testString.length());
+    buf.put(testString.getBytes(StandardCharsets.UTF_8));
+
+    int position = 0;
+
+    agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < timestamps.length; i++) {
+      aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
+    }
+
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+
+    Assert.assertEquals("expectec last string value", strings[1], sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[1]), new Long(sp.lhs));
+
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testNoStringValue()
+  {
+
+    final long[] timestamps = {1526724000L, 1526724600L};
+    final Double[] doubles = {null, 2.00};
+    Integer maxStringBytes = 1024;
+
+    TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
+    TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);
+
+    StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
+        "billy", "billy", maxStringBytes
+    );
+
+    StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
+        longColumnSelector,
+        objectColumnSelector,
+        maxStringBytes
+    );
+
+    String testString = "ZZZZ";
+
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    buf.putLong(1526728500L);
+    buf.putInt(testString.length());
+    buf.put(testString.getBytes(StandardCharsets.UTF_8));
+
+    int position = 0;
+
+    agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < timestamps.length; i++) {
+      aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
+    }
+  }
+
 }
