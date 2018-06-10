@@ -23,8 +23,6 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
-import io.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import io.druid.query.aggregation.first.StringFirstBufferAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
