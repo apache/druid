@@ -587,7 +587,7 @@ public class CompressionUtils
     }
   }
 
-  // Helper method for unit tests
+  // Helper method for unit tests (for checking that we fixed https://snyk.io/research/zip-slip-vulnerability)
   public static void makeEvilZip(File outputFile) throws IOException
   {
     ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(outputFile));
