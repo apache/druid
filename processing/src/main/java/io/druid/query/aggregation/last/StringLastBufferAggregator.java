@@ -29,7 +29,6 @@ import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-//TODO: Unit Test
 public class StringLastBufferAggregator implements BufferAggregator
 {
   private final BaseLongColumnValueSelector timeSelector;
