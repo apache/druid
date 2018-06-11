@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.first;
 
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.SerializablePairLongString;
@@ -72,10 +73,9 @@ public class StringFirstBufferAggregator implements BufferAggregator
       time = timeSelector.getLong();
       firstString = (String) value;
     } else if (value != null) {
-      throw new IllegalStateException(
-          "Try to aggregate unsuported class type ["
-          + value.getClass().getName() +
-          "]. Supported class types: String or SerializablePairLongString"
+      throw new ISE(
+          "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
+          value.getClass().getCanonicalName()
       );
     }
 

@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.first;
 
+import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.SerializablePairLongString;
 import io.druid.segment.BaseLongColumnValueSelector;
@@ -61,10 +62,9 @@ public class StringFirstAggregator implements Aggregator
       } else if (value instanceof SerializablePairLongString) {
         firstValue = ((SerializablePairLongString) value).rhs;
       } else if (value != null) {
-        throw new IllegalStateException(
-            "Try to aggregate unsuported class type ["
-            + value.getClass().getName() +
-            "]. Supported class types: String or SerializablePairLongString"
+        throw new ISE(
+            "Try to aggregate unsuported class type [%s].Supported class types: String or SerializablePairLongString",
+            value.getClass().getCanonicalName()
         );
       }
 
