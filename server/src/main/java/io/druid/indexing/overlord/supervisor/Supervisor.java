@@ -36,4 +36,6 @@ public interface Supervisor
   SupervisorReport getStatus();
 
   void reset(DataSourceMetadata dataSourceMetadata);
+
+  boolean isPendingTaskGroupEmpty();
 }

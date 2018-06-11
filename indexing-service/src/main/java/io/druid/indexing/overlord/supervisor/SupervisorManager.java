@@ -74,6 +74,13 @@ public class SupervisorManager
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
+      // check pending task group is empty
+      if (supervisors.containsKey(spec.getId())) {
+        Supervisor supervisor = supervisors.get(spec.getId()).lhs;
+        if (!supervisor.isPendingTaskGroupEmpty()) {
+          return false;
+        }
+      }
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
       return createAndStartSupervisorInternal(spec, true);
     }
