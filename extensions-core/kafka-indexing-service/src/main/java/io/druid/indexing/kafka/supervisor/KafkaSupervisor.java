@@ -489,6 +489,17 @@ public class KafkaSupervisor implements Supervisor
   }
 
   @Override
+  public boolean isPendingTaskGroupEmpty()
+  {
+    for (List<TaskGroup> taskGroups : pendingCompletionTaskGroups.values()) {
+      for (TaskGroup taskGroup : taskGroups) {
+        if (taskGroup.tasks.size() > 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+
   public Map<String, Map<String, Object>> getStats()
   {
     try {

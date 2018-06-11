@@ -46,6 +46,9 @@ public interface Supervisor
 
   void reset(DataSourceMetadata dataSourceMetadata);
 
+
+  boolean isPendingTaskGroupEmpty();
+
   /**
    * The definition of checkpoint is not very strict as currently it does not affect data or control path.
    * On this call Supervisor can potentially checkpoint data processed so far to some durable storage

@@ -82,6 +82,10 @@ public class NoopSupervisorSpec implements SupervisorSpec
       public void reset(DataSourceMetadata dataSourceMetadata) {}
 
       @Override
+      public boolean isPendingTaskGroupEmpty()
+      {
+        return true;
+
       public void checkpoint(
           @Nullable String sequenceName,
           @Nullable DataSourceMetadata previousCheckPoint,
