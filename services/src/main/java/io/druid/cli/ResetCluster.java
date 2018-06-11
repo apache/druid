@@ -143,7 +143,7 @@ public class ResetCluster extends GuiceRunnable
         tablesConfig.getConfigTable(),
         tablesConfig.getTasksTable(),
         tablesConfig.getTaskLockTable(),
-        tablesConfig.getTaskLogTable(),
+        tablesConfig.getTaskActionsTable(),
         tablesConfig.getAuditTable(),
         tablesConfig.getSupervisorTable()
     };

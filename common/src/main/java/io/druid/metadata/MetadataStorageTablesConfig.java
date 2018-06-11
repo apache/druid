@@ -64,8 +64,8 @@ public class MetadataStorageTablesConfig
   @JsonProperty("tasks")
   private final String tasksTable;
 
-  @JsonProperty("taskLog")
-  private final String taskLogTable;
+  @JsonProperty("taskActions")
+  private final String taskActionsTable;
 
   @JsonProperty("taskLock")
   private final String taskLockTable;
@@ -85,7 +85,7 @@ public class MetadataStorageTablesConfig
       @JsonProperty("rules") String rulesTable,
       @JsonProperty("config") String configTable,
       @JsonProperty("tasks") String tasksTable,
-      @JsonProperty("taskLog") String taskLogTable,
+      @JsonProperty("taskActions") String taskActions,
       @JsonProperty("taskLock") String taskLockTable,
       @JsonProperty("audit") String auditTable,
       @JsonProperty("supervisors") String supervisorTable
@@ -99,10 +99,10 @@ public class MetadataStorageTablesConfig
     this.configTable = makeTableName(configTable, "config");
 
     this.tasksTable = makeTableName(tasksTable, "tasks");
-    this.taskLogTable = makeTableName(taskLogTable, "tasklogs");
+    this.taskActionsTable = makeTableName(taskActions, "taskactions");
     this.taskLockTable = makeTableName(taskLockTable, "tasklocks");
     entryTables.put(TASK_ENTRY_TYPE, this.tasksTable);
-    logTables.put(TASK_ENTRY_TYPE, this.taskLogTable);
+    logTables.put(TASK_ENTRY_TYPE, this.taskActionsTable);
     lockTables.put(TASK_ENTRY_TYPE, this.taskLockTable);
     this.auditTable = makeTableName(auditTable, "audit");
     this.supervisorTable = makeTableName(supervisorTable, "supervisors");
@@ -185,9 +185,9 @@ public class MetadataStorageTablesConfig
     return tasksTable;
   }
 
-  public String getTaskLogTable()
+  public String getTaskActionsTable()
   {
-    return taskLogTable;
+    return taskActionsTable;
   }
 
   public String getTaskLockTable()

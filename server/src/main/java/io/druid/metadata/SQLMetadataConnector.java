@@ -53,6 +53,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
 
+  static final int MAX_PAYLOAD_PART_SIZE = 1024 * 1024; // 1 MB
   static final int DEFAULT_MAX_TRIES = 10;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
@@ -100,6 +101,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * @return String representing the SQL type and auto-increment statement
    */
   protected abstract String getSerialType();
+
+  /**
+   * Returns the name of the 32 bit integer type.
+   */
+  protected abstract String getIntegerType();
 
   /**
    * Returns the value that should be passed to statement.setFetchSize to ensure results
@@ -332,11 +338,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
-                + "  %4$s_id VARCHAR(255) DEFAULT NULL,\n"
-                + "  log_payload %3$s,\n"
+                + "  %3$s_id VARCHAR(255) DEFAULT NULL,\n"
+                + "  log_payload_id VARCHAR(255) NOT NULL,\n"
+                + "  log_payload_order %4$s NOT NULL,\n"
+                + "  log_payload_part %5$s,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getSerialType(), getPayloadType(), entryTypeName
+                tableName,
+                getSerialType(),
+                entryTypeName,
+                getIntegerType(),
+                getPayloadType()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
         )

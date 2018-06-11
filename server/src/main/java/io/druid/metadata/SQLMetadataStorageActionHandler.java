@@ -25,10 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.DateTime;
@@ -47,9 +47,13 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -421,23 +425,43 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   @Override
   public boolean addLog(final String entryId, final LogType log)
   {
-    return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
-        {
-          @Override
-          public Boolean withHandle(Handle handle) throws Exception
-          {
-            return handle.createStatement(
-                StringUtils.format(
-                    "INSERT INTO %1$s (%2$s_id, log_payload) VALUES (:entryId, :payload)",
-                    logTable, entryTypeName
-                )
-            )
-                         .bind("entryId", entryId)
-                         .bind("payload", jsonMapper.writeValueAsBytes(log))
-                         .execute() == 1;
+    return connector.retryTransaction(
+        (handle, transactionStatus) -> {
+          final byte[] payload = jsonMapper.writeValueAsBytes(log);
+          final int maxPayloadSize = SQLMetadataConnector.MAX_PAYLOAD_PART_SIZE;
+          final byte[] payloadPart = new byte[maxPayloadSize];
+          final String payloadId = DateTimes.nowUtc().toString();
+          for (int i = 0; i < payload.length; i += maxPayloadSize) {
+            System.arraycopy(
+                payload,
+                i,
+                payloadPart,
+                0,
+                i + maxPayloadSize > payload.length ? payload.length - i : maxPayloadSize
+            );
+
+            final String sqlFormat = StringUtils.format(
+                "INSERT INTO %1$s (%2$s_id, log_payload_id, log_payload_order, log_payload_part)"
+                + " VALUES (:entryId, :payload_id, :payload_order, :payload_part)",
+                logTable, entryTypeName
+            );
+
+            final int numInsertRows = handle.createStatement(sqlFormat)
+                                            .bind("entryId", entryId)
+                                            .bind("payload_id", payloadId)
+                                            .bind("payload_order", i)
+                                            .bind("payload_part", payloadPart)
+                                            .execute();
+            if (numInsertRows != 1) {
+              transactionStatus.setRollbackOnly();
+              throw new RE("Expected to insert 1 row, but [%d] rows were inserted", numInsertRows);
+            }
           }
-        }
+
+          return true;
+        },
+        3,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
 
@@ -453,42 +477,64 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             return handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT log_payload FROM %1$s WHERE %2$s_id = :entryId",
+                        "SELECT log_payload_id, log_payload_order, log_payload_part FROM %1$s WHERE %2$s_id = :entryId",
                         logTable, entryTypeName
                     )
                 )
                 .bind("entryId", entryId)
-                .map(ByteArrayMapper.FIRST)
+                .map((index, r, ctx) -> new LogPayloadPart(r.getString(1), r.getInt(2), r.getBytes(3)))
                 .fold(
-                    Lists.<LogType>newLinkedList(),
-                    new Folder3<List<LogType>, byte[]>()
-                    {
-                      @Override
-                      public List<LogType> fold(
-                          List<LogType> list, byte[] bytes, FoldController control, StatementContext ctx
-                      ) throws SQLException
-                      {
-                        try {
-                          list.add(
-                              jsonMapper.<LogType>readValue(
-                                  bytes, logType
-                              )
-                          );
-                          return list;
-                        }
-                        catch (IOException e) {
-                          log.makeAlert(e, "Failed to deserialize log")
-                             .addData("entryId", entryId)
-                             .addData("payload", StringUtils.fromUtf8(bytes))
-                             .emit();
-                          throw new SQLException(e);
-                        }
-                      }
+                    new TreeMap<>(),
+                    (Folder3<Map<String, List<LogPayloadPart>>, LogPayloadPart>)
+                        (accumulator, payloadPart, control, ctx) -> {
+                      accumulator.computeIfAbsent(payloadPart.id, k -> new ArrayList<>())
+                                 .add(payloadPart);
+                      return accumulator;
                     }
-                );
+                )
+                .values()
+                .stream()
+                .map(payloadParts -> {
+                  payloadParts.sort(Comparator.comparing(part -> part.order));
+                  final byte[] payload = new byte[payloadParts.stream().mapToInt(part -> part.part.length).sum()];
+                  int offset = 0;
+                  for (LogPayloadPart payloadPart : payloadParts) {
+                    final byte[] part = payloadPart.part;
+                    System.arraycopy(part, 0, payload, offset, part.length);
+                    offset += part.length;
+                  }
+                  try {
+                    return jsonMapper.<LogType>readValue(payload, logType);
+                  }
+                  catch (IOException e) {
+                    log.makeAlert(e, "Failed to deserialize log")
+                       .addData("entryId", entryId)
+                       .addData("payload", StringUtils.fromUtf8(payload))
+                       .emit();
+                    throw new RuntimeException(e);
+                  }
+                })
+                .collect(Collectors.toList());
           }
         }
     );
+  }
+
+  /**
+   * Represent a part of task log payload. Used in {@link #getLogs(String)}.
+   */
+  private static class LogPayloadPart
+  {
+    private final String id;
+    private final int order;
+    private final byte[] part;
+
+    LogPayloadPart(String id, int order, byte[] part)
+    {
+      this.id = id;
+      this.order = order;
+      this.part = part;
+    }
   }
 
   @Override
