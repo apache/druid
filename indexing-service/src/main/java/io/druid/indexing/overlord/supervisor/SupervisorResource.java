@@ -110,8 +110,14 @@ public class SupervisorResource
               throw new ForbiddenException(authResult.toString());
             }
 
-            manager.createOrUpdateAndStartSupervisor(spec);
-            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+            boolean success = manager.createOrUpdateAndStartSupervisor(spec);
+            if (success) {
+              return Response.ok(ImmutableMap.of("id", spec.getId())).build();
+            } else {
+              return Response.status(Response.Status.BAD_REQUEST)
+                             .entity(ImmutableMap.of("error", "please push supervisor later!"))
+                             .build();
+            }
           }
         }
     );

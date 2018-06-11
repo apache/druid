@@ -61,4 +61,6 @@ public interface Supervisor
       @Nullable DataSourceMetadata previousCheckPoint,
       @Nullable DataSourceMetadata currentCheckPoint
   );
+
+  boolean isPendingTaskGroupEmpty();
 }

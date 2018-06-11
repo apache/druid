@@ -90,6 +90,11 @@ public class NoopSupervisorSpec implements SupervisorSpec
       {
 
       }
+      @Override
+      public boolean isPendingTaskGroupEmpty()
+      {
+        return true;
+      }
     };
   }
 

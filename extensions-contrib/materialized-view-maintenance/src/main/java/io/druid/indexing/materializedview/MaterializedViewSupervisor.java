@@ -249,6 +249,12 @@ public class MaterializedViewSupervisor implements Supervisor
     // do nothing
   }
 
+  @Override
+  public boolean isPendingTaskGroupEmpty()
+  {
+    return true;
+  }
+
   /**
    * Find intervals in which derived dataSource should rebuild the segments.
    * Choose the latest intervals to create new HadoopIndexTask and submit it.
