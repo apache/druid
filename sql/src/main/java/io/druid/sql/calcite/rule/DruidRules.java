@@ -68,8 +68,8 @@ public class DruidRules
         ),
         new DruidQueryRule<>(
             Project.class,
-            PartialDruidQuery.Stage.POST_PROJECT,
-            PartialDruidQuery::withPostProject
+            PartialDruidQuery.Stage.AGGREGATE_PROJECT,
+            PartialDruidQuery::withAggregateProject
         ),
         new DruidQueryRule<>(
             Filter.class,
@@ -81,10 +81,16 @@ public class DruidRules
             PartialDruidQuery.Stage.SORT,
             PartialDruidQuery::withSort
         ),
+        new DruidQueryRule<>(
+            Project.class,
+            PartialDruidQuery.Stage.SORT_PROJECT,
+            PartialDruidQuery::withSortProject
+        ),
         DruidOuterQueryRule.AGGREGATE,
         DruidOuterQueryRule.FILTER_AGGREGATE,
         DruidOuterQueryRule.FILTER_PROJECT_AGGREGATE,
-        DruidOuterQueryRule.PROJECT_AGGREGATE
+        DruidOuterQueryRule.PROJECT_AGGREGATE,
+        DruidOuterQueryRule.AGGREGATE_SORT_PROJECT
     );
   }
 
@@ -220,6 +226,32 @@ public class DruidRules
             PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
                              .withSelectProject(project)
                              .withAggregate(aggregate)
+        );
+        if (outerQueryRel.isValidDruidQuery()) {
+          call.transformTo(outerQueryRel);
+        }
+      }
+    };
+
+    public static RelOptRule AGGREGATE_SORT_PROJECT = new DruidOuterQueryRule(
+        operand(Project.class, operand(Sort.class, operand(Aggregate.class, operand(DruidRel.class, any())))),
+        "AGGREGATE_SORT_PROJECT"
+    )
+    {
+      @Override
+      public void onMatch(RelOptRuleCall call)
+      {
+        final Project sortProject = call.rel(0);
+        final Sort sort = call.rel(1);
+        final Aggregate aggregate = call.rel(2);
+        final DruidRel druidRel = call.rel(3);
+
+        final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
+            druidRel,
+            PartialDruidQuery.create(druidRel.getPartialDruidQuery().leafRel())
+                             .withAggregate(aggregate)
+                             .withSort(sort)
+                             .withSortProject(sortProject)
         );
         if (outerQueryRel.isValidDruidQuery()) {
           call.transformTo(outerQueryRel);
