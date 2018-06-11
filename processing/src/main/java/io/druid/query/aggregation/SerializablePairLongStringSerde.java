@@ -132,8 +132,8 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
 
-        Long lhs = readOnlyBuffer.getLong();
-        Integer stringSize = readOnlyBuffer.getInt();
+        long lhs = readOnlyBuffer.getLong();
+        int stringSize = readOnlyBuffer.getInt();
 
         String lastString = null;
         if (stringSize > 0) {

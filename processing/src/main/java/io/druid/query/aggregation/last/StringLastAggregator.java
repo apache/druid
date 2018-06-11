@@ -29,7 +29,7 @@ public class StringLastAggregator implements Aggregator
 
   private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
-  private final Integer maxStringBytes;
+  private final int maxStringBytes;
 
   protected long lastTime;
   protected String lastValue;
@@ -37,7 +37,7 @@ public class StringLastAggregator implements Aggregator
   public StringLastAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      Integer maxStringBytes
+      int maxStringBytes
   )
   {
     this.valueSelector = valueSelector;

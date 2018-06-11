@@ -29,7 +29,7 @@ public class StringFirstAggregator implements Aggregator
 
   private final BaseObjectColumnValueSelector valueSelector;
   private final BaseLongColumnValueSelector timeSelector;
-  private final Integer maxStringBytes;
+  private final int maxStringBytes;
 
   protected long firstTime;
   protected String firstValue;
@@ -37,7 +37,7 @@ public class StringFirstAggregator implements Aggregator
   public StringFirstAggregator(
       BaseLongColumnValueSelector timeSelector,
       BaseObjectColumnValueSelector valueSelector,
-      Integer maxStringBytes
+      int maxStringBytes
   )
   {
     this.valueSelector = valueSelector;
