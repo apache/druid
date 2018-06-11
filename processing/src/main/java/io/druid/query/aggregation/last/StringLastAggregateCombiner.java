@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 
 public class StringLastAggregateCombiner extends ObjectAggregateCombiner<String>
 {
-  String lastString;
+  private String lastString;
 
   @Override
   public void reset(ColumnValueSelector selector)
