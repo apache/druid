@@ -71,7 +71,7 @@ public class StringLastFoldingAggregatorFactory extends StringLastAggregatorFact
       public void aggregate(ByteBuffer buf, int position)
       {
         SerializablePairLongString pair = (SerializablePairLongString) selector.getObject();
-        if (pair != null && pair.rhs != null) {
+        if (pair != null && pair.rhs != null && pair.lhs != null) {
           ByteBuffer mutationBuffer = buf.duplicate();
           mutationBuffer.position(position);
 
