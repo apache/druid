@@ -36,6 +36,7 @@ import io.druid.sql.calcite.filtration.Filtration;
 import io.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -112,7 +113,7 @@ public class Aggregation
 
   public static Aggregation create(final PostAggregator postAggregator)
   {
-    return new Aggregation(ImmutableList.of(), ImmutableList.of(), postAggregator);
+    return new Aggregation(Collections.emptyList(), Collections.emptyList(), postAggregator);
   }
 
   public static Aggregation create(
