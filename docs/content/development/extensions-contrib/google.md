@@ -15,7 +15,8 @@ Deep storage can be written to Google Cloud Storage either via this extension or
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|google||Must be set.|
-|`druid.storage.storageDirectory`||gs://bucket/example/directory|Must be set.|
+|`druid.google.bucket`||GCS bucket name.|Must be set.|
+|`druid.google.prefix`||GCS prefix.|Must be set.|
 
 
 ## Firehose
