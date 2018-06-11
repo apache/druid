@@ -112,7 +112,9 @@ public class SerializablePairLongStringSerde extends ComplexMetricSerde
             } else {
 
               // If the strings are not null, we will compare them
-              // Note: This comparation maybe doesn't make sense to first/last aggregators
+              // Note: This comparison maybe doesn't make sense to first/last aggregators,
+              // because compare both SerializablePairLongString based on String maybe doesn't matter
+              // to define each is first or last.
               comparation = o1.rhs.compareTo(o2.rhs);
             }
           }
