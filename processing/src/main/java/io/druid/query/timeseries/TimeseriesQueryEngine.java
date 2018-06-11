@@ -62,16 +62,16 @@ public class TimeseriesQueryEngine
           @Override
           public Result<TimeseriesResultValue> apply(Cursor cursor)
           {
+            if (skipEmptyBuckets && cursor.isDone()) {
+              return null;
+            }
+
             Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
             String[] aggregatorNames = new String[aggregatorSpecs.size()];
 
             for (int i = 0; i < aggregatorSpecs.size(); i++) {
-              aggregators[i] = aggregatorSpecs.get(i).factorize(cursor);
+              aggregators[i] = aggregatorSpecs.get(i).factorize(cursor.getColumnSelectorFactory());
               aggregatorNames[i] = aggregatorSpecs.get(i).getName();
-            }
-
-            if (skipEmptyBuckets && cursor.isDone()) {
-              return null;
             }
 
             try {

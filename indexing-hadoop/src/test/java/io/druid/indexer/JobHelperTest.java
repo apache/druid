@@ -25,6 +25,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -42,7 +43,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -53,14 +53,13 @@ import java.util.Map;
 public class JobHelperTest
 {
 
-  public final
   @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private HadoopDruidIndexerConfig config;
   private File tmpDir;
   private File dataFile;
-  private Interval interval = new Interval("2014-10-22T00:00:00Z/P1D");
+  private Interval interval = Intervals.of("2014-10-22T00:00:00Z/P1D");
 
   @Before
   public void setup() throws Exception
@@ -89,6 +88,7 @@ public class JobHelperTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
@@ -103,6 +103,7 @@ public class JobHelperTest
             ),
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
+                null,
                 null,
                 null,
                 null,
@@ -126,6 +127,8 @@ public class JobHelperTest
                 null,
                 false,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -133,7 +136,7 @@ public class JobHelperTest
   }
 
   @Test
-  public void testEnsurePathsAddsProperties() throws Exception
+  public void testEnsurePathsAddsProperties()
   {
     HadoopDruidIndexerConfigSpy hadoopDruidIndexerConfigSpy = new HadoopDruidIndexerConfigSpy(config);
     JobHelper.ensurePaths(hadoopDruidIndexerConfigSpy);
@@ -155,7 +158,7 @@ public class JobHelperTest
   {
     DataSegment segment = new DataSegment(
         "test1",
-        Interval.parse("2000/3000"),
+        Intervals.of("2000/3000"),
         "ver",
         ImmutableMap.<String, Object>of(
             "type", "google",
@@ -178,17 +181,15 @@ public class JobHelperTest
   private static class HadoopDruidIndexerConfigSpy extends HadoopDruidIndexerConfig
   {
 
-    private HadoopDruidIndexerConfig delegate;
     private Map<String, String> jobProperties = new HashMap<String, String>();
 
     public HadoopDruidIndexerConfigSpy(HadoopDruidIndexerConfig delegate)
     {
       super(delegate.getSchema());
-      this.delegate = delegate;
     }
 
     @Override
-    public Job addInputPaths(Job job) throws IOException
+    public Job addInputPaths(Job job)
     {
       Configuration configuration = job.getConfiguration();
       for (Map.Entry<String, String> en : configuration) {

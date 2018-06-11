@@ -33,13 +33,14 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -75,6 +76,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Extending AbstractBenchmark means only runs if explicitly called
@@ -117,7 +119,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         boolean reportParseExceptions,
         boolean concurrentEventAdd,
         boolean sortFacts,
-        int maxRowCount
+        int maxRowCount,
+        long maxBytesInMemory
     )
     {
       super(
@@ -126,7 +129,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
-          maxRowCount
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -134,20 +138,22 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         long minTimestamp,
         Granularity gran,
         AggregatorFactory[] metrics,
-        int maxRowCount
+        int maxRowCount,
+        long maxBytesInMemory
     )
     {
       super(
           new IncrementalIndexSchema.Builder()
-            .withMinTimestamp(minTimestamp)
-            .withQueryGranularity(gran)
-            .withMetrics(metrics)
-            .build(),
-        true,
-        true,
-        false,
-        true,
-        maxRowCount
+              .withMinTimestamp(minTimestamp)
+              .withQueryGranularity(gran)
+              .withMetrics(metrics)
+              .build(),
+          true,
+          true,
+          false,
+          true,
+          maxRowCount,
+          maxBytesInMemory
       );
     }
 
@@ -165,15 +171,17 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     }
 
     @Override
-    protected Integer addToFacts(
+    protected AddToFactsResult addToFacts(
         AggregatorFactory[] metrics,
         boolean deserializeComplexMetrics,
         boolean reportParseExceptions,
         InputRow row,
         AtomicInteger numEntries,
-        TimeAndDims key,
+        AtomicLong sizeInBytes,
+        IncrementalIndexRow key,
         ThreadLocal<InputRow> rowContainer,
-        Supplier<InputRow> rowSupplier
+        Supplier<InputRow> rowSupplier,
+        boolean skipMaxRowsInMemoryCheck // ignore for benchmark
     ) throws IndexSizeExceededException
     {
 
@@ -200,12 +208,14 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && getFacts().getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
-          throw new IndexSizeExceededException("Maximum number of rows reached");
+        if ((numEntries.get() >= maxRowCount || sizeInBytes.get() >= maxBytesInMemory)
+            && getFacts().getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
+          throw new IndexSizeExceededException("Maximum number of rows or max bytes reached");
         }
         final int prev = getFacts().putIfAbsent(key, rowIndex);
-        if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
+        if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
+          sizeInBytes.incrementAndGet();
         } else {
           // We lost a race
           aggs = indexedMap.get(prev);
@@ -233,8 +243,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       rowContainer.set(null);
 
-
-      return numEntries.get();
+      return new AddToFactsResult(numEntries.get(), sizeInBytes.get(), new ArrayList<>());
     }
 
     @Override
@@ -337,7 +346,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         )
     );
     final long timestamp = System.currentTimeMillis();
-    final Interval queryInterval = new Interval("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
+    final Interval queryInterval = Intervals.of("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
     final List<ListenableFuture<?>> indexFutures = new LinkedList<>();
     final List<ListenableFuture<?>> queryFutures = new LinkedList<>();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(incrementalIndex, null);
@@ -391,12 +400,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
                   Map<String, Object> context = new HashMap<String, Object>();
-                  for (Result<TimeseriesResultValue> result :
-                      Sequences.toList(
-                          runner.run(query, context),
-                          new LinkedList<Result<TimeseriesResultValue>>()
-                      )
-                      ) {
+                  List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+                  for (Result<TimeseriesResultValue> result : results) {
                     if (someoneRan.get()) {
                       Assert.assertTrue(result.getValue().getDoubleMetric("doubleSumResult0") > 0);
                     }
@@ -428,10 +433,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                                   .aggregators(queryAggregatorFactories)
                                   .build();
     Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, context),
-        new LinkedList<Result<TimeseriesResultValue>>()
-    );
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     final int expectedVal = elementsPerThread * taskCount;
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());

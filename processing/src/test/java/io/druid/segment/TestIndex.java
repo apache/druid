@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
@@ -34,6 +33,8 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogHash;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -50,12 +51,13 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.DateTime;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -117,7 +119,7 @@ public class TestIndex
   public static final String[] DOUBLE_METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   public static final String[] FLOAT_METRICS = new String[]{"indexFloat", "indexMinFloat", "indexMaxFloat"};
   private static final Logger log = new Logger(TestIndex.class);
-  private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
+  private static final Interval DATA_INTERVAL = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       Collections.<VirtualColumn>singletonList(
           new ExpressionVirtualColumn("expr", "index + 10", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
@@ -134,8 +136,9 @@ public class TestIndex
   };
   private static final IndexSpec indexSpec = new IndexSpec();
 
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+  private static final IndexMerger INDEX_MERGER =
+      TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
@@ -224,8 +227,8 @@ public class TestIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec);
-        INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec);
+        INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec, null);
+        INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec, null);
 
         mergedRealtime = INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
@@ -233,7 +236,8 @@ public class TestIndex
                 true,
                 METRIC_AGGS,
                 mergedFile,
-                indexSpec
+                indexSpec,
+                null
             )
         );
 
@@ -257,7 +261,7 @@ public class TestIndex
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
-    CharSource stream = Resources.asByteSource(resource).asCharSource(Charsets.UTF_8);
+    CharSource stream = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
     return makeRealtimeIndex(stream, rollup);
   }
 
@@ -269,7 +273,7 @@ public class TestIndex
   public static IncrementalIndex makeRealtimeIndex(final CharSource source, boolean rollup)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+        .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
         .withDimensionsSpec(DIMENSIONS_SPEC)
         .withVirtualColumns(VIRTUAL_COLUMNS)
@@ -308,8 +312,8 @@ public class TestIndex
             Arrays.asList(COLUMNS),
             false,
             0
-        )
-        , "utf8"
+        ),
+        "utf8"
     );
     return loadIncrementalIndex(retVal, source, parser);
   }
@@ -361,7 +365,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      INDEX_MERGER.persist(index, someTmpFile, indexSpec);
+      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

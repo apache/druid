@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -30,6 +32,7 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -44,37 +47,41 @@ public class TimewarpOperatorTest
   public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of();
 
   TimewarpOperator<Result<TimeseriesResultValue>> testOperator = new TimewarpOperator<>(
-      new Interval(new DateTime("2014-01-01"), new DateTime("2014-01-15")),
+      new Interval(DateTimes.of("2014-01-01"), DateTimes.of("2014-01-15")),
       new Period("P1W"),
-      new DateTime("2014-01-06") // align on Monday
+      DateTimes.of("2014-01-06") // align on Monday
   );
 
   @Test
-  public void testComputeOffset() throws Exception
+  public void testComputeOffset()
   {
     {
-      final DateTime t = new DateTime("2014-01-23");
-      final DateTime tOffset = new DateTime("2014-01-09");
+      final DateTime t = DateTimes.of("2014-01-23");
+      final DateTime tOffset = DateTimes.of("2014-01-09");
 
-      Assert.assertEquals(
-          new DateTime(tOffset),
-          t.plus(testOperator.computeOffset(t.getMillis()))
-      );
+      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
     }
 
     {
-      final DateTime t = new DateTime("2014-08-02");
-      final DateTime tOffset = new DateTime("2014-01-11");
+      final DateTime t = DateTimes.of("2014-08-02");
+      final DateTime tOffset = DateTimes.of("2014-01-11");
+
+      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
+    }
+
+    {
+      final DateTime t = DateTimes.of("2014-08-02T-07");
+      final DateTime tOffset = DateTimes.of("2014-01-11T-08");
 
       Assert.assertEquals(
-          new DateTime(tOffset),
-          t.plus(testOperator.computeOffset(t.getMillis()))
+          tOffset,
+          t.plus(testOperator.computeOffset(t.getMillis(), DateTimes.inferTzfromString("America/Los_Angeles")))
       );
     }
   }
 
   @Test
-  public void testPostProcess() throws Exception
+  public void testPostProcess()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -88,11 +95,11 @@ public class TimewarpOperatorTest
             return Sequences.simple(
                 ImmutableList.of(
                     new Result<>(
-                        new DateTime(new DateTime("2014-01-09")),
+                        DateTimes.of("2014-01-09"),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
                     ),
                     new Result<>(
-                        new DateTime(new DateTime("2014-01-11")),
+                        DateTimes.of("2014-01-11"),
                         new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
                     ),
                     new Result<>(
@@ -103,7 +110,7 @@ public class TimewarpOperatorTest
             );
           }
         },
-        new DateTime("2014-08-02").getMillis()
+        DateTimes.of("2014-08-02").getMillis()
     );
 
     final Query<Result<TimeseriesResultValue>> query =
@@ -116,26 +123,26 @@ public class TimewarpOperatorTest
     Assert.assertEquals(
         Lists.newArrayList(
             new Result<>(
-                new DateTime("2014-07-31"),
+                DateTimes.of("2014-07-31"),
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
             ),
             new Result<>(
-                new DateTime("2014-08-02"),
+                DateTimes.of("2014-08-02"),
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
             ),
             new Result<>(
-                new DateTime("2014-08-02"),
+                DateTimes.of("2014-08-02"),
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
             )
         ),
-        Sequences.toList(queryRunner.run(query, CONTEXT), Lists.<Result<TimeseriesResultValue>>newArrayList())
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
     );
 
 
     TimewarpOperator<Result<TimeBoundaryResultValue>> timeBoundaryOperator = new TimewarpOperator<>(
-        new Interval(new DateTime("2014-01-01"), new DateTime("2014-01-15")),
+        new Interval(DateTimes.of("2014-01-01"), DateTimes.of("2014-01-15")),
         new Period("P1W"),
-        new DateTime("2014-01-06") // align on Monday
+        DateTimes.of("2014-01-06") // align on Monday
     );
 
     QueryRunner<Result<TimeBoundaryResultValue>> timeBoundaryRunner = timeBoundaryOperator.postProcess(
@@ -150,11 +157,11 @@ public class TimewarpOperatorTest
             return Sequences.simple(
                 ImmutableList.of(
                     new Result<>(
-                        new DateTime("2014-01-12"),
+                        DateTimes.of("2014-01-12"),
                         new TimeBoundaryResultValue(
                             ImmutableMap.<String, Object>of(
                                 "maxTime",
-                                new DateTime("2014-01-12")
+                                DateTimes.of("2014-01-12")
                             )
                         )
                     )
@@ -162,7 +169,7 @@ public class TimewarpOperatorTest
             );
           }
         },
-        new DateTime("2014-08-02").getMillis()
+        DateTimes.of("2014-08-02").getMillis()
     );
 
     final Query<Result<TimeBoundaryResultValue>> timeBoundaryQuery =
@@ -173,20 +180,137 @@ public class TimewarpOperatorTest
     Assert.assertEquals(
         Lists.newArrayList(
             new Result<>(
-                new DateTime("2014-08-02"),
-                new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", new DateTime("2014-08-02")))
+                DateTimes.of("2014-08-02"),
+                new TimeBoundaryResultValue(ImmutableMap.<String, Object>of("maxTime", DateTimes.of("2014-08-02")))
             )
         ),
-        Sequences.toList(
-            timeBoundaryRunner.run(timeBoundaryQuery, CONTEXT),
-            Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-        )
+        timeBoundaryRunner.run(QueryPlus.wrap(timeBoundaryQuery), CONTEXT).toList()
     );
 
   }
 
   @Test
-  public void testEmptyFutureInterval() throws Exception
+  public void testPostProcessWithTimezonesAndDstShift()
+  {
+    QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
+              Map<String, Object> responseContext
+          )
+          {
+            return Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        DateTimes.of("2014-01-09T-08"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+                    ),
+                    new Result<>(
+                        DateTimes.of("2014-01-11T-08"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+                    ),
+                    new Result<>(
+                        queryPlus.getQuery().getIntervals().get(0).getEnd(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+                    )
+                )
+            );
+          }
+        },
+        DateTimes.of("2014-08-02T-07").getMillis()
+    );
+
+    final Query<Result<TimeseriesResultValue>> query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2014-07-31T-07/2014-08-05T-07")
+              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles")))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .build();
+
+    Assert.assertEquals(
+        Lists.newArrayList(
+            new Result<>(
+                DateTimes.of("2014-07-31T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+            )
+        ),
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+    );
+  }
+
+  @Test
+  public void testPostProcessWithTimezonesAndNoDstShift()
+  {
+    QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
+              Map<String, Object> responseContext
+          )
+          {
+            return Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        DateTimes.of("2014-01-09T-07"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+                    ),
+                    new Result<>(
+                        DateTimes.of("2014-01-11T-07"),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+                    ),
+                    new Result<>(
+                        queryPlus.getQuery().getIntervals().get(0).getEnd(),
+                        new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+                    )
+                )
+            );
+          }
+        },
+        DateTimes.of("2014-08-02T-07").getMillis()
+    );
+
+    final Query<Result<TimeseriesResultValue>> query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2014-07-31T-07/2014-08-05T-07")
+              .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Phoenix")))
+              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .build();
+
+    Assert.assertEquals(
+        Lists.newArrayList(
+            new Result<>(
+                DateTimes.of("2014-07-31T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
+            ),
+            new Result<>(
+                DateTimes.of("2014-08-02T-07"),
+                new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 5))
+            )
+        ),
+        queryRunner.run(QueryPlus.wrap(query), CONTEXT).toList()
+    );
+  }
+
+  @Test
+  public void testEmptyFutureInterval()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
         new QueryRunner<Result<TimeseriesResultValue>>()
@@ -212,7 +336,7 @@ public class TimewarpOperatorTest
             );
           }
         },
-        new DateTime("2014-08-02").getMillis()
+        DateTimes.of("2014-08-02").getMillis()
     );
 
     final Query<Result<TimeseriesResultValue>> query =
@@ -225,15 +349,15 @@ public class TimewarpOperatorTest
     Assert.assertEquals(
         Lists.newArrayList(
             new Result<>(
-                new DateTime("2014-08-02"),
+                DateTimes.of("2014-08-02"),
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 2))
             ),
             new Result<>(
-                new DateTime("2014-08-02"),
+                DateTimes.of("2014-08-02"),
                 new TimeseriesResultValue(ImmutableMap.<String, Object>of("metric", 3))
             )
         ),
-        Sequences.toList(queryRunner.run(query, Maps.<String, Object>newHashMap()), Lists.<Result<TimeseriesResultValue>>newArrayList())
+        queryRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap()).toList()
     );
   }
 }

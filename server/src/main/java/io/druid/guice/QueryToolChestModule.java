@@ -40,11 +40,18 @@ import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.query.scan.ScanQuery;
+import io.druid.query.scan.ScanQueryConfig;
+import io.druid.query.scan.ScanQueryQueryToolChest;
 import io.druid.query.search.SearchQueryQueryToolChest;
-import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchQueryConfig;
+import io.druid.query.search.DefaultSearchQueryMetricsFactory;
+import io.druid.query.search.SearchQuery;
+import io.druid.query.search.SearchQueryConfig;
+import io.druid.query.search.SearchQueryMetricsFactory;
+import io.druid.query.select.DefaultSelectQueryMetricsFactory;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.select.SelectQueryConfig;
+import io.druid.query.select.SelectQueryMetricsFactory;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
@@ -68,6 +75,8 @@ public class QueryToolChestModule implements Module
   public static final String GROUPBY_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.groupBy.queryMetricsFactory";
   public static final String TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.timeseries.queryMetricsFactory";
   public static final String TOPN_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.topN.queryMetricsFactory";
+  public static final String SELECT_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.select.queryMetricsFactory";
+  public static final String SEARCH_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.search.queryMetricsFactory";
 
   public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
@@ -76,6 +85,7 @@ public class QueryToolChestModule implements Module
                   .put(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
                   .put(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
                   .put(GroupByQuery.class, GroupByQueryQueryToolChest.class)
+                  .put(ScanQuery.class, ScanQueryQueryToolChest.class)
                   .put(SelectQuery.class, SelectQueryQueryToolChest.class)
                   .put(TopNQuery.class, TopNQueryQueryToolChest.class)
                   .put(DataSourceMetadataQuery.class, DataSourceQueryQueryToolChest.class)
@@ -98,6 +108,7 @@ public class QueryToolChestModule implements Module
     JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.select", SelectQueryConfig.class);
+    JsonConfigProvider.bind(binder, "druid.query.scan", ScanQueryConfig.class);
 
     PolyBind.createChoice(
         binder,
@@ -142,5 +153,27 @@ public class QueryToolChestModule implements Module
         .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
         .addBinding("default")
         .to(DefaultTopNQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
+        binder,
+        SELECT_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(SelectQueryMetricsFactory.class),
+        Key.get(DefaultSelectQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(SelectQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultSelectQueryMetricsFactory.class);
+
+    PolyBind.createChoice(
+        binder,
+        SEARCH_QUERY_METRICS_FACTORY_PROPERTY,
+        Key.get(SearchQueryMetricsFactory.class),
+        Key.get(DefaultSearchQueryMetricsFactory.class)
+    );
+    PolyBind
+        .optionBinder(binder, Key.get(SearchQueryMetricsFactory.class))
+        .addBinding("default")
+        .to(DefaultSearchQueryMetricsFactory.class);
   }
 }

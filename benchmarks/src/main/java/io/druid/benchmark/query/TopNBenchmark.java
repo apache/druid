@@ -27,17 +27,17 @@ import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.collections.StupidPool;
-import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -68,6 +68,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -132,6 +133,7 @@ public class TopNBenchmark
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -141,7 +143,7 @@ public class TopNBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   private static final Map<String, Map<String, TopNQueryBuilder>> SCHEMA_QUERY_MAP = new LinkedHashMap<>();
@@ -262,7 +264,8 @@ public class TopNBenchmark
       File indexFile = INDEX_MERGER_V9.persist(
           incIndexes.get(i),
           tmpDir,
-          new IndexSpec()
+          new IndexSpec(),
+          null
       );
 
       QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
@@ -305,14 +308,14 @@ public class TopNBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
-    return Sequences.toList(queryResult, Lists.<T>newArrayList());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    return queryResult.toList();
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole) throws Exception
+  public void querySingleIncrementalIndex(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -329,7 +332,7 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndex(Blackhole blackhole)
   {
     final QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -346,7 +349,7 @@ public class TopNBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndex(Blackhole blackhole) throws Exception
+  public void queryMultiQueryableIndex(Blackhole blackhole)
   {
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = Lists.newArrayList();
     QueryToolChest toolChest = factory.getToolchest();
@@ -367,8 +370,11 @@ public class TopNBenchmark
         )
     );
 
-    Sequence<Result<TopNResultValue>> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
-    List<Result<TopNResultValue>> results = Sequences.toList(queryResult, Lists.<Result<TopNResultValue>>newArrayList());
+    Sequence<Result<TopNResultValue>> queryResult = theRunner.run(
+        QueryPlus.wrap(query),
+        Maps.<String, Object>newHashMap()
+    );
+    List<Result<TopNResultValue>> results = queryResult.toList();
 
     for (Result<TopNResultValue> result : results) {
       blackhole.consume(result);

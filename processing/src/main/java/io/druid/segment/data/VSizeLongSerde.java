@@ -35,7 +35,7 @@ import java.nio.ByteOrder;
 public class VSizeLongSerde
 {
 
-  public static final int SUPPORTED_SIZE[] = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
+  public static final int SUPPORTED_SIZES[] = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
   public static final byte EMPTY[] = {0, 0, 0, 0};
 
   public static int getBitsForMax(long value)
@@ -45,13 +45,13 @@ public class VSizeLongSerde
     }
     byte numBits = 0;
     long maxValue = 1;
-    for (int i = 0; i < SUPPORTED_SIZE.length; i++) {
-      while (numBits < SUPPORTED_SIZE[i] && maxValue < Long.MAX_VALUE / 2) {
+    for (int supportedSize : SUPPORTED_SIZES) {
+      while (numBits < supportedSize && maxValue < Long.MAX_VALUE / 2) {
         numBits++;
         maxValue *= 2;
       }
       if (value <= maxValue || maxValue >= Long.MAX_VALUE / 2) {
-        return SUPPORTED_SIZE[i];
+        return supportedSize;
       }
     }
     return 64;
@@ -63,7 +63,9 @@ public class VSizeLongSerde
     return (bitsPerValue * numValues + 7) / 8 + 4;
   }
 
-  // block size should be power of 2 so get of indexedLong can be optimized using bit operators
+  /**
+   * Block size should be power of 2, so {@link ColumnarLongs#get(int)} can be optimized using bit operators.
+   */
   public static int getNumValuesPerBlock(int bitsPerValue, int blockSize)
   {
     int ret = 1;
@@ -191,6 +193,7 @@ public class VSizeLongSerde
     ByteBuffer buffer;
     byte curByte = 0;
     int count = 0;
+    private boolean closed = false;
 
     public Size1Ser(OutputStream output)
     {
@@ -222,6 +225,9 @@ public class VSizeLongSerde
     @Override
     public void close() throws IOException
     {
+      if (closed) {
+        return;
+      }
       buffer.put((byte) (curByte << (8 - count)));
       if (output != null) {
         output.write(buffer.array());
@@ -230,6 +236,7 @@ public class VSizeLongSerde
       } else {
         buffer.putInt(0);
       }
+      closed = true;
     }
   }
 
@@ -239,6 +246,7 @@ public class VSizeLongSerde
     ByteBuffer buffer;
     byte curByte = 0;
     int count = 0;
+    private boolean closed = false;
 
     public Size2Ser(OutputStream output)
     {
@@ -270,6 +278,9 @@ public class VSizeLongSerde
     @Override
     public void close() throws IOException
     {
+      if (closed) {
+        return;
+      }
       buffer.put((byte) (curByte << (8 - count)));
       if (output != null) {
         output.write(buffer.array());
@@ -278,6 +289,7 @@ public class VSizeLongSerde
       } else {
         buffer.putInt(0);
       }
+      closed = true;
     }
   }
 
@@ -289,6 +301,7 @@ public class VSizeLongSerde
     int numBytes;
     byte curByte = 0;
     boolean first = true;
+    private boolean closed = false;
 
     public Mult4Ser(OutputStream output, int numBytes)
     {
@@ -329,6 +342,9 @@ public class VSizeLongSerde
     @Override
     public void close() throws IOException
     {
+      if (closed) {
+        return;
+      }
       if (!first) {
         buffer.put((byte) (curByte << 4));
       }
@@ -339,6 +355,7 @@ public class VSizeLongSerde
       } else {
         buffer.putInt(0);
       }
+      closed = true;
     }
   }
 
@@ -347,6 +364,7 @@ public class VSizeLongSerde
     OutputStream output;
     ByteBuffer buffer;
     int numBytes;
+    private boolean closed = false;
 
     public Mult8Ser(OutputStream output, int numBytes)
     {
@@ -377,12 +395,16 @@ public class VSizeLongSerde
     @Override
     public void close() throws IOException
     {
+      if (closed) {
+        return;
+      }
       if (output != null) {
         output.write(EMPTY);
         output.flush();
       } else {
         buffer.putInt(0);
       }
+      closed = true;
     }
   }
 

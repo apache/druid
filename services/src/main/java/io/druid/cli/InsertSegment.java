@@ -19,7 +19,6 @@
 
 package io.druid.cli;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
@@ -33,14 +32,12 @@ import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
-import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -63,7 +60,6 @@ public class InsertSegment extends GuiceRunnable
   @Option(name = "--updateDescriptor", description = "if set to true, this tool will update loadSpec field in descriptor.json (partitionNum_descriptor.json for HDFS data storage) if the path in loadSpec is different from where desciptor.json (partitionNum_descriptor.json for HDFS data storage) was found. Default value is true", required = false)
   private String updateDescriptor;
 
-  private ObjectMapper mapper;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
 
   public InsertSegment()
@@ -87,7 +83,7 @@ public class InsertSegment extends GuiceRunnable
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, new ServerConfig())
+                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
             );
           }
         }
@@ -98,7 +94,6 @@ public class InsertSegment extends GuiceRunnable
   public void run()
   {
     final Injector injector = makeInjector();
-    mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     indexerMetadataStorageCoordinator = injector.getInstance(IndexerMetadataStorageCoordinator.class);
     final DataSegmentFinder dataSegmentFinder = injector.getInstance(DataSegmentFinder.class);
 

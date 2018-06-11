@@ -19,24 +19,20 @@
 
 package io.druid.query.aggregation.variance;
 
-import com.google.common.collect.Lists;
-
-import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.DateTimes;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.TestHelper;
-import org.joda.time.DateTime;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -44,8 +40,8 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class VarianceTimeseriesQueryTest
 {
-  @Parameterized.Parameters(name="{0}:descending={1}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  @Parameterized.Parameters(name = "{0}:descending={1}")
+  public static Iterable<Object[]> constructorFeeder()
   {
     return TimeseriesQueryRunnerTest.constructorFeeder();
   }
@@ -69,17 +65,15 @@ public class VarianceTimeseriesQueryTest
                                   .intervals(VarianceTestHelper.firstToThird)
                                   .aggregators(VarianceTestHelper.commonPlusVarAggregators)
                                   .postAggregators(
-                                      Arrays.<PostAggregator>asList(
-                                          VarianceTestHelper.addRowsIndexConstant,
-                                          VarianceTestHelper.stddevOfIndexPostAggr
-                                      )
+                                      VarianceTestHelper.addRowsIndexConstant,
+                                      VarianceTestHelper.stddevOfIndexPostAggr
                                   )
                                   .descending(descending)
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
                 VarianceTestHelper.of(
                     "rows", 13L,
@@ -92,7 +86,7 @@ public class VarianceTimeseriesQueryTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-02"),
+            DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
                 VarianceTestHelper.of(
                     "rows", 13L,
@@ -106,10 +100,7 @@ public class VarianceTimeseriesQueryTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, new HashMap<String, Object>()),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
     assertExpectedResults(expectedResults, results);
   }
 

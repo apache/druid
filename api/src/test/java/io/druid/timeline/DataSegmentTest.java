@@ -19,22 +19,25 @@
 
 package io.druid.timeline;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.InputRow;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -47,8 +50,8 @@ import java.util.Set;
  */
 public class DataSegmentTest
 {
-  private final static ObjectMapper mapper = new TestObjectMapper();
-  private final static int TEST_VERSION = 0x7;
+  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final int TEST_VERSION = 0x7;
 
   private static ShardSpec getShardSpec(final int partitionNum)
   {
@@ -79,18 +82,26 @@ public class DataSegmentTest
       }
 
       @Override
-      public Map<String, Range<String>> getDomain()
+      public Map<String, RangeSet<String>> getDomain()
       {
         return ImmutableMap.of();
       }
     };
   }
 
+  @Before
+  public void setUp()
+  {
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    mapper.setInjectableValues(injectableValues);
+  }
+
   @Test
   public void testV1Serialization() throws Exception
   {
 
-    final Interval interval = new Interval("2011-10-01/2011-10-02");
+    final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.<String, Object>of("something", "or_other");
 
     DataSegment segment = new DataSegment(
@@ -107,9 +118,7 @@ public class DataSegmentTest
 
     final Map<String, Object> objectMap = mapper.readValue(
         mapper.writeValueAsString(segment),
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
     Assert.assertEquals(10, objectMap.size());
@@ -150,8 +159,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(NoneShardSpec.instance())
                                            .build();
 
@@ -166,8 +175,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(0))
                                            .build();
 
@@ -182,8 +191,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(7))
                                            .build();
 
@@ -198,8 +207,8 @@ public class DataSegmentTest
   {
     final DataSegment segment = DataSegment.builder()
                                            .dataSource("foo")
-                                           .interval(new Interval("2012-01-01/2012-01-02"))
-                                           .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
+                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .build();
 
     final DataSegment segment2 = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
@@ -208,7 +217,7 @@ public class DataSegmentTest
   }
 
   @Test
-  public void testBucketMonthComparator() throws Exception
+  public void testBucketMonthComparator()
   {
     DataSegment[] sortedOrder = {
         makeDataSegment("test1", "2011-01-01/2011-01-02", "a"),
@@ -240,7 +249,7 @@ public class DataSegmentTest
   {
     return DataSegment.builder()
                       .dataSource(dataSource)
-                      .interval(new Interval(interval))
+                      .interval(Intervals.of(interval))
                       .version(version)
                       .size(1)
                       .build();

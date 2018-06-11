@@ -20,19 +20,23 @@
 package io.druid.data.input.impl;
 
 import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.parsers.ParseException;
-
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 public class ParseSpecTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test(expected = ParseException.class)
-  public void testDuplicateNames() throws Exception
+  public void testDuplicateNames()
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -53,8 +57,9 @@ public class ParseSpecTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testDimAndDimExcluOverlap() throws Exception
+  public void testDimAndDimExcluOverlap()
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -75,8 +80,9 @@ public class ParseSpecTest
   }
 
   @Test
-  public void testDimExclusionDuplicate() throws Exception
+  public void testDimExclusionDuplicate()
   {
+    @SuppressWarnings("unused") // expected exception
     final ParseSpec spec = new DelimitedParseSpec(
         new TimestampSpec(
             "timestamp",
@@ -88,6 +94,48 @@ public class ParseSpecTest
             Lists.newArrayList("B", "B"),
             Lists.<SpatialDimensionSchema>newArrayList()
         ),
+        ",",
+        null,
+        Arrays.asList("a", "B"),
+        false,
+        0
+    );
+  }
+
+  @Test
+  public void testDefaultTimestampSpec()
+  {
+    expectedException.expect(NullPointerException.class);
+    expectedException.expectMessage("parseSpec requires timestampSpec");
+    @SuppressWarnings("unused") // expected exception
+    final ParseSpec spec = new DelimitedParseSpec(
+        null,
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(Collections.singletonList("a")),
+            Lists.newArrayList("B", "B"),
+            Lists.<SpatialDimensionSchema>newArrayList()
+        ),
+        ",",
+        null,
+        Arrays.asList("a", "B"),
+        false,
+        0
+    );
+  }
+
+  @Test
+  public void testDimensionSpecRequired()
+  {
+    expectedException.expect(NullPointerException.class);
+    expectedException.expectMessage("parseSpec requires dimensionSpec");
+    @SuppressWarnings("unused") // expected exception
+    final ParseSpec spec = new DelimitedParseSpec(
+        new TimestampSpec(
+            "timestamp",
+            "auto",
+            null
+        ),
+        null,
         ",",
         null,
         Arrays.asList("a", "B"),

@@ -21,8 +21,8 @@ package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Lists;
 import io.druid.java.util.common.Pair;
-import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.TestFloatColumnSelector;
+import io.druid.segment.TestObjectColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -113,7 +113,7 @@ public class VarianceAggregatorCollectorTest
         for (int i = 0; i < mergeOn; i++) {
           holders1.add(new VarianceAggregatorCollector());
           holders2.add(Pair.<VarianceBufferAggregator, ByteBuffer>of(
-                           new VarianceBufferAggregator.FloatVarianceAggregator("XX", valueHandOver),
+                           new VarianceBufferAggregator.FloatVarianceAggregator(valueHandOver),
                            ByteBuffer.allocate(VarianceAggregatorCollector.getMaxIntermediateSize())
                        ));
         }
@@ -129,7 +129,8 @@ public class VarianceAggregatorCollectorTest
         }
         ObjectHandOver collectHandOver = new ObjectHandOver();
         ByteBuffer buffer = ByteBuffer.allocate(VarianceAggregatorCollector.getMaxIntermediateSize());
-        VarianceBufferAggregator.ObjectVarianceAggregator merger = new VarianceBufferAggregator.ObjectVarianceAggregator("xxx", collectHandOver);
+        VarianceBufferAggregator.ObjectVarianceAggregator merger = new VarianceBufferAggregator.ObjectVarianceAggregator(
+            collectHandOver);
         for (int i = 0; i < mergeOn; i++) {
           collectHandOver.v = holders2.get(i).lhs.get(holders2.get(i).rhs, 0);
           merger.aggregate(buffer, 0);
@@ -146,13 +147,20 @@ public class VarianceAggregatorCollectorTest
     float v;
 
     @Override
-    public float get()
+    public float getFloat()
     {
       return v;
     }
+
+    @Override
+    public boolean isNull()
+    {
+      return false;
+    }
+
   }
 
-  private static class ObjectHandOver implements ObjectColumnSelector
+  private static class ObjectHandOver extends TestObjectColumnSelector
   {
     Object v;
 
@@ -163,7 +171,7 @@ public class VarianceAggregatorCollectorTest
     }
 
     @Override
-    public Object get()
+    public Object getObject()
     {
       return v;
     }

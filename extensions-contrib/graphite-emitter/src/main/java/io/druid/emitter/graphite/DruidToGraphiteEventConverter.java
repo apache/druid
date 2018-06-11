@@ -21,13 +21,13 @@ package io.druid.emitter.graphite;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WhiteListBasedConverter.class)
-@JsonSubTypes(value= {
-    @JsonSubTypes.Type(name="all", value = SendAllGraphiteEventConverter.class),
-    @JsonSubTypes.Type(name="whiteList", value = WhiteListBasedConverter.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "all", value = SendAllGraphiteEventConverter.class),
+    @JsonSubTypes.Type(name = "whiteList", value = WhiteListBasedConverter.class)
 })
 
 public interface DruidToGraphiteEventConverter

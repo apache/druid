@@ -19,6 +19,7 @@
 
 package io.druid.math.expr;
 
+import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -48,6 +49,11 @@ public class ExprMacroTable
     return NIL;
   }
 
+  public List<ExprMacro> getMacros()
+  {
+    return ImmutableList.copyOf(macroMap.values());
+  }
+
   /**
    * Returns an expr corresponding to a function call if this table has an entry for {@code functionName}.
    * Otherwise, returns null.
@@ -72,6 +78,6 @@ public class ExprMacroTable
   {
     String name();
 
-    Expr apply(final List<Expr> args);
+    Expr apply(List<Expr> args);
   }
 }

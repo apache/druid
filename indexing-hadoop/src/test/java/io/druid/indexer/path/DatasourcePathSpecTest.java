@@ -19,7 +19,6 @@
 
 package io.druid.indexer.path;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -44,22 +43,23 @@ import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.server.DruidNode;
-import io.druid.server.initialization.ServerConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -67,27 +67,42 @@ import java.util.Map;
  */
 public class DatasourcePathSpecTest
 {
-  private DatasourceIngestionSpec ingestionSpec;
-  private List<WindowedDataSegment> segments;
+  private DatasourceIngestionSpec ingestionSpec1;
+  private DatasourceIngestionSpec ingestionSpec2;
+  private List<WindowedDataSegment> segments1;
+  private List<WindowedDataSegment> segments2;
 
   public DatasourcePathSpecTest()
   {
-    this.ingestionSpec = new DatasourceIngestionSpec(
+    this.ingestionSpec1 = new DatasourceIngestionSpec(
         "test",
-        Interval.parse("2000/3000"),
+        Intervals.of("2000/3000"),
         null,
         null,
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
-    segments = ImmutableList.of(
+    this.ingestionSpec2 = new DatasourceIngestionSpec(
+        "test2",
+        Intervals.of("2000/3000"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        null
+    );
+
+    segments1 = ImmutableList.of(
         WindowedDataSegment.of(
             new DataSegment(
-                ingestionSpec.getDataSource(),
-                Interval.parse("2000/3000"),
+                ingestionSpec1.getDataSource(),
+                Intervals.of("2000/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "local",
@@ -102,8 +117,8 @@ public class DatasourcePathSpecTest
         ),
         WindowedDataSegment.of(
             new DataSegment(
-                ingestionSpec.getDataSource(),
-                Interval.parse("2050/3000"),
+                ingestionSpec1.getDataSource(),
+                Intervals.of("2050/3000"),
                 "ver",
                 ImmutableMap.<String, Object>of(
                     "type", "hdfs",
@@ -114,6 +129,25 @@ public class DatasourcePathSpecTest
                 NoneShardSpec.instance(),
                 9,
                 12335
+            )
+        )
+    );
+
+    segments2 = ImmutableList.of(
+        WindowedDataSegment.of(
+            new DataSegment(
+                ingestionSpec2.getDataSource(),
+                Intervals.of("2000/3000"),
+                "ver",
+                ImmutableMap.<String, Object>of(
+                    "type", "local",
+                    "path", "/tmp2/index.zip"
+                ),
+                ImmutableList.of("product2"),
+                ImmutableList.of("visited_sum2", "unique_hosts2"),
+                NoneShardSpec.instance(),
+                9,
+                12334
             )
         )
     );
@@ -136,7 +170,9 @@ public class DatasourcePathSpecTest
               {
                 binder.bind(UsedSegmentLister.class).toInstance(segmentList);
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("dummy-node", null, null, null, new ServerConfig())
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("dummy-node", null, null, null, true, false)
                 );
               }
             }
@@ -148,8 +184,9 @@ public class DatasourcePathSpecTest
     DatasourcePathSpec expected = new DatasourcePathSpec(
         jsonMapper,
         null,
-        ingestionSpec,
-        Long.valueOf(10)
+        ingestionSpec1,
+        Long.valueOf(10),
+        false
     );
     PathSpec actual = jsonMapper.readValue(jsonMapper.writeValueAsString(expected), PathSpec.class);
     Assert.assertEquals(expected, actual);
@@ -157,17 +194,29 @@ public class DatasourcePathSpecTest
     expected = new DatasourcePathSpec(
         jsonMapper,
         null,
-        ingestionSpec,
-        null
+        ingestionSpec1,
+        null,
+        false
     );
     actual = jsonMapper.readValue(jsonMapper.writeValueAsString(expected), PathSpec.class);
     Assert.assertEquals(expected, actual);
 
     expected = new DatasourcePathSpec(
         jsonMapper,
-        segments,
-        ingestionSpec,
-        null
+        segments1,
+        ingestionSpec1,
+        null,
+        false
+    );
+    actual = jsonMapper.readValue(jsonMapper.writeValueAsString(expected), PathSpec.class);
+    Assert.assertEquals(expected, actual);
+
+    expected = new DatasourcePathSpec(
+        jsonMapper,
+        segments1,
+        ingestionSpec1,
+        null,
+        true
     );
     actual = jsonMapper.readValue(jsonMapper.writeValueAsString(expected), PathSpec.class);
     Assert.assertEquals(expected, actual);
@@ -178,13 +227,22 @@ public class DatasourcePathSpecTest
   {
     HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
 
-    ObjectMapper mapper = new DefaultObjectMapper();
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    DatasourcePathSpec pathSpec = new DatasourcePathSpec(
+    DatasourcePathSpec pathSpec1 = new DatasourcePathSpec(
         mapper,
-        segments,
-        ingestionSpec,
-        null
+        segments1,
+        ingestionSpec1,
+        null,
+        false
+    );
+
+    DatasourcePathSpec pathSpec2 = new DatasourcePathSpec(
+        mapper,
+        segments2,
+        ingestionSpec2,
+        null,
+        false
     );
 
     Configuration config = new Configuration();
@@ -192,25 +250,29 @@ public class DatasourcePathSpecTest
     EasyMock.expect(job.getConfiguration()).andReturn(config).anyTimes();
     EasyMock.replay(job);
 
-    pathSpec.addInputPaths(hadoopIndexerConfig, job);
-    List<WindowedDataSegment> actualSegments = mapper.readValue(
-        config.get(DatasourceInputFormat.CONF_INPUT_SEGMENTS),
-        new TypeReference<List<WindowedDataSegment>>()
-        {
-        }
-    );
+    pathSpec1.addInputPaths(hadoopIndexerConfig, job);
+    pathSpec2.addInputPaths(hadoopIndexerConfig, job);
 
-    Assert.assertEquals(segments, actualSegments);
-
-    DatasourceIngestionSpec actualIngestionSpec = mapper.readValue(
-        config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA),
-        DatasourceIngestionSpec.class
-    );
     Assert.assertEquals(
-        ingestionSpec
+        ImmutableList.of(ingestionSpec1.getDataSource(), ingestionSpec2.getDataSource()),
+        DatasourceInputFormat.getDataSources(config)
+    );
+
+    Assert.assertEquals(segments1, DatasourceInputFormat.getSegments(config, ingestionSpec1.getDataSource()));
+    Assert.assertEquals(segments2, DatasourceInputFormat.getSegments(config, ingestionSpec2.getDataSource()));
+
+    Assert.assertEquals(
+        ingestionSpec1
             .withDimensions(ImmutableList.of("product"))
             .withMetrics(ImmutableList.of("visited_sum")),
-        actualIngestionSpec
+        DatasourceInputFormat.getIngestionSpec(config, ingestionSpec1.getDataSource())
+    );
+
+    Assert.assertEquals(
+        ingestionSpec2
+            .withDimensions(ImmutableList.of("product2"))
+            .withMetrics(ImmutableList.of("visited_sum")),
+        DatasourceInputFormat.getIngestionSpec(config, ingestionSpec2.getDataSource())
     );
   }
 
@@ -224,8 +286,9 @@ public class DatasourcePathSpecTest
     DatasourcePathSpec pathSpec = new DatasourcePathSpec(
         mapper,
         null,
-        ingestionSpec,
-        null
+        ingestionSpec1,
+        null,
+        false
     );
 
     Configuration config = new Configuration();
@@ -245,21 +308,22 @@ public class DatasourcePathSpecTest
     pathSpec = new DatasourcePathSpec(
         mapper,
         null,
-        ingestionSpec.withIgnoreWhenNoSegments(true),
-        null
+        ingestionSpec1.withIgnoreWhenNoSegments(true),
+        null,
+        false
     );
     pathSpec.addInputPaths(hadoopIndexerConfig, job);
 
-    Assert.assertNull(config.get(DatasourceInputFormat.CONF_INPUT_SEGMENTS));
-    Assert.assertNull(config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA));
+    Assert.assertEquals(Collections.emptyList(), DatasourceInputFormat.getDataSources(config));
   }
 
+  @SuppressWarnings("unchecked")
   private HadoopDruidIndexerConfig makeHadoopDruidIndexerConfig()
   {
     return new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
             new DataSchema(
-                ingestionSpec.getDataSource(),
+                ingestionSpec1.getDataSource(),
                 HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
@@ -278,8 +342,9 @@ public class DatasourcePathSpecTest
                     new LongSumAggregatorFactory("visited_sum", "visited")
                 },
                 new UniformGranularitySpec(
-                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Interval.parse("2000/3000"))
+                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of("2000/3000"))
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(

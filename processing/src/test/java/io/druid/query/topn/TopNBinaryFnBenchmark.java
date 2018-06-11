@@ -23,6 +23,7 @@ import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -40,6 +41,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * TODO rewrite to use JMH and move to the benchmarks project
+ */
 public class TopNBinaryFnBenchmark extends SimpleBenchmark
 {
   @Param({"1", "5", "10", "15"})
@@ -52,13 +56,13 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
   Result<TopNResultValue> result2;
   TopNBinaryFn fn;
 
-  public static void main(String[] args) throws Exception
+  public static void main(String[] args)
   {
     Runner.main(TopNBinaryFnBenchmark.class, args);
   }
 
   @Override
-  protected void setUp() throws Exception
+  protected void setUp()
   {
 
     final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
@@ -82,7 +86,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
           )
       );
     }
-    final DateTime currTime = new DateTime();
+    final DateTime currTime = DateTimes.nowUtc();
     List<Map<String, Object>> list = new ArrayList<>();
     for (int i = 0; i < threshold; i++) {
       Map<String, Object> res = new HashMap<>();
@@ -124,6 +128,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
     );
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public void timeMerge(int nReps)
   {
     for (int i = 0; i < nReps; i++) {

@@ -45,7 +45,7 @@ public class CacheConfigTest
   static Injector injector;
   static JsonConfigurator configurator;
   JsonConfigProvider<CacheConfig> configProvider;
-  private static final String propertyPrefix = "io.druid.test.cache";
+  private static final String propertyPrefix = "io.druid.collections.test.cache";
 
   @BeforeClass
   public static void populateStatics()
@@ -66,7 +66,7 @@ public class CacheConfigTest
     @Override
     public void configure(Binder binder)
     {
-      JsonConfigProvider.bind(binder,propertyPrefix,CacheConfig.class);
+      JsonConfigProvider.bind(binder, propertyPrefix, CacheConfig.class);
     }
   }
 

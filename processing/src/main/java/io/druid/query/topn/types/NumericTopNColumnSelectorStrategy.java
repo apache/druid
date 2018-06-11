@@ -25,12 +25,11 @@ import io.druid.query.topn.BaseTopNAlgorithm;
 import io.druid.query.topn.TopNParams;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultBuilder;
-import io.druid.segment.Capabilities;
-import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.Cursor;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ValueType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -40,7 +39,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.Map;
 
 public abstract class NumericTopNColumnSelectorStrategy<
-    ValueSelectorType extends ColumnValueSelector,
+    ValueSelectorType,
     DimExtractionAggregateStoreType extends Map<?, Aggregator[]>>
     implements TopNColumnSelectorStrategy<ValueSelectorType, DimExtractionAggregateStoreType>
 {
@@ -52,7 +51,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
 
   @Override
   public Aggregator[][] getDimExtractionRowSelector(
-      TopNQuery query, TopNParams params, Capabilities capabilities
+      TopNQuery query, TopNParams params, StorageAdapter storageAdapter
   )
   {
     return null;
@@ -60,14 +59,14 @@ public abstract class NumericTopNColumnSelectorStrategy<
 
   static long floatDimExtractionScanAndAggregate(
       TopNQuery query,
-      FloatColumnSelector selector,
+      BaseFloatColumnValueSelector selector,
       Cursor cursor,
       Int2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      int key = Float.floatToIntBits(selector.get());
+      int key = Float.floatToIntBits(selector.getFloat());
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -84,14 +83,14 @@ public abstract class NumericTopNColumnSelectorStrategy<
 
   static long doubleDimExtractionScanAndAggregate(
       TopNQuery query,
-      DoubleColumnSelector selector,
+      BaseDoubleColumnValueSelector selector,
       Cursor cursor,
       Long2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      long key = Double.doubleToLongBits(selector.get());
+      long key = Double.doubleToLongBits(selector.getDouble());
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -108,14 +107,14 @@ public abstract class NumericTopNColumnSelectorStrategy<
 
   static long longDimExtractionScanAndAggregate(
       TopNQuery query,
-      LongColumnSelector selector,
+      BaseLongColumnValueSelector selector,
       Cursor cursor,
       Long2ObjectMap<Aggregator[]> aggregatesStore
   )
   {
     long processedRows = 0;
     while (!cursor.isDone()) {
-      long key = selector.get();
+      long key = selector.getLong();
       Aggregator[] theAggregators = aggregatesStore.get(key);
       if (theAggregators == null) {
         theAggregators = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
@@ -157,7 +156,8 @@ public abstract class NumericTopNColumnSelectorStrategy<
 
   abstract Comparable convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey);
 
-  static class OfFloat extends NumericTopNColumnSelectorStrategy<FloatColumnSelector, Int2ObjectMap<Aggregator[]>>
+  static class OfFloat
+      extends NumericTopNColumnSelectorStrategy<BaseFloatColumnValueSelector, Int2ObjectMap<Aggregator[]>>
   {
     @Override
     public ValueType getValueType()
@@ -180,7 +180,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
     @Override
     public long dimExtractionScanAndAggregate(
         TopNQuery query,
-        FloatColumnSelector selector,
+        BaseFloatColumnValueSelector selector,
         Cursor cursor,
         Aggregator[][] rowSelector,
         Int2ObjectMap<Aggregator[]> aggregatesStore
@@ -190,7 +190,8 @@ public abstract class NumericTopNColumnSelectorStrategy<
     }
   }
 
-  static class OfLong extends NumericTopNColumnSelectorStrategy<LongColumnSelector, Long2ObjectMap<Aggregator[]>>
+  static class OfLong
+      extends NumericTopNColumnSelectorStrategy<BaseLongColumnValueSelector, Long2ObjectMap<Aggregator[]>>
   {
     @Override
     public ValueType getValueType()
@@ -213,7 +214,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
     @Override
     public long dimExtractionScanAndAggregate(
         TopNQuery query,
-        LongColumnSelector selector,
+        BaseLongColumnValueSelector selector,
         Cursor cursor,
         Aggregator[][] rowSelector,
         Long2ObjectMap<Aggregator[]> aggregatesStore
@@ -223,7 +224,8 @@ public abstract class NumericTopNColumnSelectorStrategy<
     }
   }
 
-  static class OfDouble extends NumericTopNColumnSelectorStrategy<DoubleColumnSelector, Long2ObjectMap<Aggregator[]>>
+  static class OfDouble
+      extends NumericTopNColumnSelectorStrategy<BaseDoubleColumnValueSelector, Long2ObjectMap<Aggregator[]>>
   {
     @Override
     public ValueType getValueType()
@@ -246,7 +248,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
     @Override
     public long dimExtractionScanAndAggregate(
         TopNQuery query,
-        DoubleColumnSelector selector,
+        BaseDoubleColumnValueSelector selector,
         Cursor cursor,
         Aggregator[][] rowSelector,
         Long2ObjectMap<Aggregator[]> aggregatesStore

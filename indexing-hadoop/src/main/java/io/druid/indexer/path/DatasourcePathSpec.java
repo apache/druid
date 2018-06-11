@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.DatasourceInputFormat;
@@ -42,23 +41,36 @@ import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DatasourcePathSpec implements PathSpec
 {
   private static final Logger logger = new Logger(DatasourcePathSpec.class);
 
+  public static final String TYPE = "dataSource";
+
   private final ObjectMapper mapper;
   private final DatasourceIngestionSpec ingestionSpec;
   private final long maxSplitSize;
   private final List<WindowedDataSegment> segments;
+
+  /*
+  Note: User would set this flag when they are doing pure re-indexing and would like to have a different
+  set of aggregators than the ones used during original indexing.
+  Default behavior is to expect same aggregators as used in original data ingestion job to support delta-ingestion
+  use case.
+   */
+  private final boolean useNewAggs;
+  private static final String USE_NEW_AGGS_KEY = "useNewAggs";
 
   @JsonCreator
   public DatasourcePathSpec(
       @JacksonInject ObjectMapper mapper,
       @JsonProperty("segments") List<WindowedDataSegment> segments,
       @JsonProperty("ingestionSpec") DatasourceIngestionSpec spec,
-      @JsonProperty("maxSplitSize") Long maxSplitSize
+      @JsonProperty("maxSplitSize") Long maxSplitSize,
+      @JsonProperty(USE_NEW_AGGS_KEY) boolean useNewAggs
   )
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null mapper");
@@ -70,6 +82,14 @@ public class DatasourcePathSpec implements PathSpec
     } else {
       this.maxSplitSize = maxSplitSize.longValue();
     }
+
+    this.useNewAggs = useNewAggs;
+  }
+
+  @JsonProperty
+  public boolean isUseNewAggs()
+  {
+    return useNewAggs;
   }
 
   @JsonProperty
@@ -149,21 +169,38 @@ public class DatasourcePathSpec implements PathSpec
       Set<String> metrics = Sets.newHashSet();
       final AggregatorFactory[] cols = config.getSchema().getDataSchema().getAggregators();
       if (cols != null) {
-        for (AggregatorFactory col : cols) {
-          metrics.add(col.getName());
+        if (useNewAggs) {
+          for (AggregatorFactory col : cols) {
+            metrics.addAll(col.requiredFields());
+          }
+        } else {
+          for (AggregatorFactory col : cols) {
+            metrics.add(col.getName());
+          }
         }
+
       }
       updatedIngestionSpec = updatedIngestionSpec.withMetrics(Lists.newArrayList(metrics));
     }
 
     updatedIngestionSpec = updatedIngestionSpec.withQueryGranularity(config.getGranularitySpec().getQueryGranularity());
 
-    job.getConfiguration().set(DatasourceInputFormat.CONF_DRUID_SCHEMA, mapper.writeValueAsString(updatedIngestionSpec));
-    job.getConfiguration().set(DatasourceInputFormat.CONF_INPUT_SEGMENTS, mapper.writeValueAsString(segments));
-    job.getConfiguration().set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, String.valueOf(maxSplitSize));
-    MultipleInputs.addInputPath(job, new Path("/dummy/tobe/ignored"), DatasourceInputFormat.class);
+    // propagate in the transformSpec from the overall job config
+    updatedIngestionSpec = updatedIngestionSpec.withTransformSpec(
+        config.getSchema().getDataSchema().getTransformSpec()
+    );
 
+    DatasourceInputFormat.addDataSource(job.getConfiguration(), updatedIngestionSpec, segments, maxSplitSize);
+    MultipleInputs.addInputPath(job, new Path("/dummy/tobe/ignored"), DatasourceInputFormat.class);
     return job;
+  }
+
+  public static boolean checkIfReindexingAndIsUseAggEnabled(Map<String, Object> configuredPathSpec)
+  {
+    return TYPE.equals(configuredPathSpec.get("type")) && Boolean.parseBoolean(configuredPathSpec.getOrDefault(
+        USE_NEW_AGGS_KEY,
+        false
+    ).toString());
   }
 
   @Override

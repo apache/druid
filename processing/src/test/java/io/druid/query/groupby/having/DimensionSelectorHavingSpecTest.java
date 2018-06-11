@@ -41,16 +41,13 @@ import static org.junit.Assert.assertTrue;
 public class DimensionSelectorHavingSpecTest
 {
 
-  private static final byte CACHE_KEY = (byte) 0x8;
-  private static final byte STRING_SEPARATOR = (byte) 0xFF;
-
   private Row getTestRow(Object dimensionValue)
   {
     return new MapBasedRow(0, ImmutableMap.of("dimension", dimensionValue));
   }
 
   @Test
-  public void testDimSelectorHavingClauseSerde() throws Exception
+  public void testDimSelectorHavingClauseSerde()
   {
     HavingSpec dimHavingSpec = new DimensionSelectorHavingSpec("dim", "v", null);
 
@@ -65,7 +62,7 @@ public class DimensionSelectorHavingSpecTest
   }
 
   @Test
-  public void testEquals() throws Exception
+  public void testEquals()
   {
     ExtractionFn extractionFn1 = new RegexDimExtractionFn("^([^,]*),", false, "");
     ExtractionFn extractionFn2 = new RegexDimExtractionFn(",(.*)", false, "");

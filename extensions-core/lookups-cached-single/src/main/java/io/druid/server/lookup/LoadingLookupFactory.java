@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @JsonTypeName("loadingLookup")
 public class LoadingLookupFactory implements LookupExtractorFactory
 {
-  private final static Logger LOGGER = new Logger(LoadingLookupFactory.class);
+  private static final Logger LOGGER = new Logger(LoadingLookupFactory.class);
 
   @JsonProperty("dataFetcher")
   private final DataFetcher<String, String> dataFetcher;
@@ -46,7 +46,7 @@ public class LoadingLookupFactory implements LookupExtractorFactory
   @JsonProperty("reverseLoadingCacheSpec")
   private final LoadingCache<String, List<String>> reverseLoadingCache;
 
-  private final String id =  Integer.toHexString(System.identityHashCode(this));
+  private final String id = Integer.toHexString(System.identityHashCode(this));
   private final LoadingLookup loadingLookup;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -56,7 +56,7 @@ public class LoadingLookupFactory implements LookupExtractorFactory
       @JsonProperty("reverseLoadingCacheSpec") LoadingCache<String, List<String>> reverseLoadingCache
   )
   {
-    this(dataFetcher, loadingCache, reverseLoadingCache, new LoadingLookup(dataFetcher,loadingCache,reverseLoadingCache));
+    this(dataFetcher, loadingCache, reverseLoadingCache, new LoadingLookup(dataFetcher, loadingCache, reverseLoadingCache));
   }
 
   protected LoadingLookupFactory(

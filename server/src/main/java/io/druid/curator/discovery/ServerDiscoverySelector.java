@@ -31,21 +31,26 @@ import io.druid.java.util.common.logger.Logger;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 
 /**
+ * Use {@link io.druid.discovery.DruidNodeDiscovery} for discovery.
  */
+@Deprecated
 public class ServerDiscoverySelector implements DiscoverySelector<Server>
 {
   private static final Logger log = new Logger(ServerDiscoverySelector.class);
 
   private final ServiceProvider serviceProvider;
+  private final String name;
 
-  public ServerDiscoverySelector(ServiceProvider serviceProvider)
+  public ServerDiscoverySelector(ServiceProvider serviceProvider, String name)
   {
     this.serviceProvider = serviceProvider;
+    this.name = name;
   }
 
   private static final Function<ServiceInstance, Server> TO_SERVER = new Function<ServiceInstance, Server>()
@@ -54,11 +59,18 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
     public Server apply(final ServiceInstance instance)
     {
       Preconditions.checkState(
-          instance.getPort() >= 0  || instance.getSslPort() >= 0,
+          instance.getPort() >= 0 || (instance.getSslPort() != null && instance.getSslPort() >= 0),
           "WTH?! Both port and sslPort not set"
       );
-      final int port = instance.getSslPort() >= 0 ? instance.getSslPort() : instance.getPort();
-      final String scheme = instance.getSslPort() >= 0 ? "https" : "http";
+      final int port;
+      final String scheme;
+      if (instance.getSslPort() == null) {
+        port = instance.getPort();
+        scheme = "http";
+      } else {
+        port = instance.getSslPort() >= 0 ? instance.getSslPort() : instance.getPort();
+        scheme = instance.getSslPort() >= 0 ? "https" : "http";
+      }
       return new Server()
       {
         @Override
@@ -88,6 +100,7 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
     }
   };
 
+  @Nullable
   @Override
   public Server pick()
   {
@@ -96,12 +109,12 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
       instance = serviceProvider.getInstance();
     }
     catch (Exception e) {
-      log.info(e, "Exception getting instance");
+      log.info(e, "Exception getting instance for [%s]", name);
       return null;
     }
 
     if (instance == null) {
-      log.error("No server instance found");
+      log.error("No server instance found for [%s]", name);
       return null;
     }
 

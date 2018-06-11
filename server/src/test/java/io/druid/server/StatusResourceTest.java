@@ -19,14 +19,22 @@
 
 package io.druid.server;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import io.druid.guice.PropertiesModule;
 import io.druid.initialization.DruidModule;
 import io.druid.initialization.InitializationTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static io.druid.server.StatusResource.ModuleVersion;
 
@@ -38,7 +46,7 @@ public class StatusResourceTest
   public void testLoadedModules()
   {
 
-    Collection<DruidModule> modules = ImmutableList.of((DruidModule)new InitializationTest.TestDruidModule());
+    Collection<DruidModule> modules = ImmutableList.of((DruidModule) new InitializationTest.TestDruidModule());
     List<ModuleVersion> statusResourceModuleList = new StatusResource.Status(modules).getModules();
 
     Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());
@@ -54,6 +62,17 @@ public class StatusResourceTest
       }
       Assert.assertTrue("Status resource should contain module " + moduleName, contains);
     }
+  }
+
+  @Test
+  public void testPropertiesWithRestrictedConfigs()
+  {
+    Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
+        "status.resource.test.runtime.properties"))));
+    Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
+    Set<String> hiddenProperties = Sets.newHashSet();
+    Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
+    hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
   }
 }
 

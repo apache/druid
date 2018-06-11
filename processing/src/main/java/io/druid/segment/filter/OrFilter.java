@@ -149,7 +149,7 @@ public class OrFilter implements BooleanFilter
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     for (Filter filter : filters) {
-      if(!filter.supportsBitmapIndex(selector)) {
+      if (!filter.supportsBitmapIndex(selector)) {
         return false;
       }
     }
@@ -162,7 +162,7 @@ public class OrFilter implements BooleanFilter
   )
   {
     for (Filter filter : filters) {
-      if(!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
+      if (!filter.supportsSelectivityEstimation(columnSelector, indexSelector)) {
         return false;
       }
     }

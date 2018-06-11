@@ -13,7 +13,7 @@ layout: toc
 
 ## Data Ingestion
   * [Data Formats](/docs/VERSION/ingestion/data-formats.html)
-  * [Data Schema](/docs/VERSION/ingestion/index.html)
+  * [Ingestion Spec](/docs/VERSION/ingestion/index.html)
   * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Schema Changes](/docs/VERSION/ingestion/schema-changes.html)
   * [Batch File Ingestion](/docs/VERSION/ingestion/batch-ingestion.html)
@@ -34,6 +34,7 @@ layout: toc
   * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
   * [Search](/docs/VERSION/querying/searchquery.html)
   * [Select](/docs/VERSION/querying/select-query.html)
+  * [Scan](/docs/VERSION/querying/scan-query.html)
   * Components
     * [Datasources](/docs/VERSION/querying/datasource.html)
     * [Filters](/docs/VERSION/querying/filters.html)
@@ -89,6 +90,7 @@ layout: toc
   * [Broker](/docs/VERSION/configuration/broker.html)
   * [Realtime](/docs/VERSION/configuration/realtime.html)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
+  * [Configuring Authentication and Authorization](/docs/VERSION/configuration/auth.html)
   
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
@@ -101,7 +103,7 @@ layout: toc
   * Experimental Features
     * [Overview](/docs/VERSION/development/experimental.html)
     * [Approximate Histograms and Quantiles](/docs/VERSION/development/extensions-core/approximate-histograms.html)
-    * [Datasketches](/docs/VERSION/development/extensions-core/datasketches-aggregators.html)
+    * [Datasketches](/docs/VERSION/development/extensions-core/datasketches-extension.html)
     * [Geographic Queries](/docs/VERSION/development/geo.html)
     * [Router](/docs/VERSION/development/router.html)
     * [Kafka Indexing Service](/docs/VERSION/development/extensions-core/kafka-ingestion.html)

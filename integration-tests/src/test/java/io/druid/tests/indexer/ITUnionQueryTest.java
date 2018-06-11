@@ -22,10 +22,11 @@ package io.druid.tests.indexer;
 import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.clients.EventReceiverFirehoseTestClient;
 import io.druid.testing.guice.DruidTestModuleFactory;
@@ -61,7 +62,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   IntegrationTestingConfig config;
 
   @Test
-  public void testUnionQuery() throws Exception
+  public void testUnionQuery()
   {
     final int numTasks = 3;
 
@@ -69,7 +70,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       // Load 4 datasources with same dimensions
       String task = setShutOffTime(
           getTaskAsString(UNION_TASK_RESOURCE),
-          new DateTime(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
+          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
       List<String> taskIDs = Lists.newArrayList();
       for (int i = 0; i < numTasks; i++) {
@@ -117,7 +118,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
             new Callable<Boolean>()
             {
               @Override
-              public Boolean call() throws Exception
+              public Boolean call()
               {
                 return coordinator.areSegmentsLoaded(UNION_DATASOURCE + taskNum);
               }

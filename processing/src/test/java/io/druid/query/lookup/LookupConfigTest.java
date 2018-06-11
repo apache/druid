@@ -31,14 +31,41 @@ import java.io.IOException;
 public class LookupConfigTest
 {
 
-  ObjectMapper mapper = TestHelper.getJsonMapper();
-
+  ObjectMapper mapper = TestHelper.makeJsonMapper();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
   public void TestSerDesr() throws IOException
   {
     LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
-    Assert.assertEquals(lookupConfig, mapper.reader(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig)));
+    Assert.assertEquals(
+        lookupConfig,
+        mapper.reader(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig))
+    );
+  }
+
+  @Test
+  public void testSerdeWithNonDefaults() throws Exception
+  {
+    String json = "{\n"
+                  + "  \"enableLookupSyncOnStartup\": false,\n"
+                  + "  \"snapshotWorkingDir\": \"/tmp\",\n"
+                  + "  \"numLookupLoadingThreads\": 4,\n"
+                  + "  \"coordinatorFetchRetries\": 4,\n"
+                  + "  \"lookupStartRetries\": 4 \n"
+                  + "}\n";
+    LookupConfig config = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(json, LookupConfig.class)
+        ),
+        LookupConfig.class
+    );
+
+    Assert.assertEquals("/tmp", config.getSnapshotWorkingDir());
+    Assert.assertEquals(false, config.getEnableLookupSyncOnStartup());
+    Assert.assertEquals(4, config.getNumLookupLoadingThreads());
+    Assert.assertEquals(4, config.getCoordinatorFetchRetries());
+    Assert.assertEquals(4, config.getLookupStartRetries());
   }
 }

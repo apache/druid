@@ -30,13 +30,18 @@ import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
+import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
+import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
+import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.IndexSpec;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -47,10 +52,11 @@ import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import io.druid.server.security.AuthTestUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -64,6 +70,7 @@ import java.util.List;
 public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final IndexSpec indexSpec = new IndexSpec();
 
   @Rule
@@ -73,6 +80,7 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
@@ -103,7 +111,7 @@ public class TaskSerdeTest
     Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
-    Assert.assertEquals(75000, tuningConfig.getMaxRowsInMemory());
+    Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(null, tuningConfig.getNumShards());
     Assert.assertEquals(5000000, (int) tuningConfig.getTargetPartitionSize());
   }
@@ -172,7 +180,7 @@ public class TaskSerdeTest
     final IndexTask task = new IndexTask(
         null,
         null,
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -180,14 +188,37 @@ public class TaskSerdeTest
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
-                    ImmutableList.of(new Interval("2010-01-01/P2D"))
+                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 jsonMapper
             ),
-            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTask.IndexTuningConfig(10000, 10, null, 9999, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
+            new IndexTuningConfig(
+                10000,
+                10,
+                null,
+                null,
+                9999,
+                null,
+                indexSpec,
+                3,
+                true,
+                true,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
         ),
-        null
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        rowIngestionMetersFactory
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -234,7 +265,7 @@ public class TaskSerdeTest
     final IndexTask task = new IndexTask(
         null,
         new TaskResource("rofl", 2),
-        new IndexTask.IndexIngestionSpec(
+        new IndexIngestionSpec(
             new DataSchema(
                 "foo",
                 null,
@@ -242,14 +273,37 @@ public class TaskSerdeTest
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
-                    ImmutableList.of(new Interval("2010-01-01/P2D"))
+                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
+                null,
                 jsonMapper
             ),
-            new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
-            new IndexTask.IndexTuningConfig(10000, 10, null, null, null, indexSpec, 3, true, true, false, null, null)
+            new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
+            new IndexTuningConfig(
+                10000,
+                10,
+                null,
+                null,
+                null,
+                null,
+                indexSpec,
+                3,
+                true,
+                true,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
         ),
-        null
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        rowIngestionMetersFactory
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
@@ -280,7 +334,7 @@ public class TaskSerdeTest
     final List<DataSegment> segments = ImmutableList.<DataSegment>of(
         DataSegment.builder()
                    .dataSource("foo")
-                   .interval(new Interval("2010-01-01/P1D"))
+                   .interval(Intervals.of("2010-01-01/P1D"))
                    .version("1234")
                    .build()
     );
@@ -293,6 +347,7 @@ public class TaskSerdeTest
         true,
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -302,7 +357,7 @@ public class TaskSerdeTest
     final MergeTask task2 = (MergeTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -325,7 +380,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals("foo", task3.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task3.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task3.getInterval());
     Assert.assertEquals(segments, task3.getSegments());
     Assert.assertEquals(aggregators, task3.getAggregators());
   }
@@ -337,11 +392,12 @@ public class TaskSerdeTest
     final SameIntervalMergeTask task = new SameIntervalMergeTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D"),
+        Intervals.of("2010-01-01/P1D"),
         aggregators,
         true,
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -351,7 +407,7 @@ public class TaskSerdeTest
     final SameIntervalMergeTask task2 = (SameIntervalMergeTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -371,7 +427,7 @@ public class TaskSerdeTest
     final KillTask task = new KillTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D"),
+        Intervals.of("2010-01-01/P1D"),
         null
     );
 
@@ -381,7 +437,7 @@ public class TaskSerdeTest
     final KillTask task2 = (KillTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -392,23 +448,24 @@ public class TaskSerdeTest
         jsonMapper.writeValueAsString(
             new ClientKillQuery(
                 "foo",
-                new Interval("2010-01-01/P1D")
+                Intervals.of("2010-01-01/P1D")
             )
         ), Task.class
     );
 
     Assert.assertEquals("foo", task3.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task3.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task3.getInterval());
   }
 
   @Test
   public void testVersionConverterTaskSerde() throws Exception
   {
     final ConvertSegmentTask task = ConvertSegmentTask.create(
-        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
+        DataSegment.builder().dataSource("foo").interval(Intervals.of("2010-01-01/P1D")).version("1234").build(),
         null,
         false,
         true,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
 
@@ -418,13 +475,14 @@ public class TaskSerdeTest
     final ConvertSegmentTask task2 = (ConvertSegmentTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegment(), task.getSegment());
+    Assert.assertEquals(task.getSegment(), task2.getSegment());
+    Assert.assertEquals(task.getSegmentWriteOutMediumFactory(), task2.getSegmentWriteOutMediumFactory());
   }
 
   @Test
@@ -432,10 +490,11 @@ public class TaskSerdeTest
   {
     final ConvertSegmentTask.SubTask task = new ConvertSegmentTask.SubTask(
         "myGroupId",
-        DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build(),
+        DataSegment.builder().dataSource("foo").interval(Intervals.of("2010-01-01/P1D")).version("1234").build(),
         indexSpec,
         false,
         true,
+        null,
         null
     );
 
@@ -466,24 +525,26 @@ public class TaskSerdeTest
                 null,
                 new AggregatorFactory[0],
                 new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
+                null,
                 jsonMapper
             ),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
-            {
-              @Override
-              public Plumber findPlumber(
-                  DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-              )
-              {
-                return null;
-              }
-            },
+                {
+                  @Override
+                  public Plumber findPlumber(
+                      DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+                  )
+                  {
+                    return null;
+                  }
+                },
                 null
             ),
 
             new RealtimeTuningConfig(
                 1,
+                null,
                 new Period("PT10M"),
                 null,
                 null,
@@ -496,6 +557,8 @@ public class TaskSerdeTest
                 0,
                 0,
                 true,
+                null,
+                null,
                 null,
                 null
             )
@@ -543,12 +606,12 @@ public class TaskSerdeTest
     final List<DataSegment> segments = ImmutableList.of(
         DataSegment.builder()
                    .dataSource("foo")
-                   .interval(new Interval("2010-01-01/P1D"))
+                   .interval(Intervals.of("2010-01-01/P1D"))
                    .version("1234")
                    .build(),
         DataSegment.builder()
                    .dataSource("foo")
-                   .interval(new Interval("2010-01-02/P1D"))
+                   .interval(Intervals.of("2010-01-02/P1D"))
                    .version("5678")
                    .build()
     );
@@ -561,6 +624,7 @@ public class TaskSerdeTest
         ),
         indexSpec,
         true,
+        null,
         null
     );
 
@@ -570,7 +634,7 @@ public class TaskSerdeTest
     final AppendTask task2 = (AppendTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P2D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P2D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -588,7 +652,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals("foo", task3.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P2D"), task3.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P2D"), task3.getInterval());
     Assert.assertEquals(task3.getSegments(), segments);
     Assert.assertEquals(task.getAggregators(), task2.getAggregators());
   }
@@ -599,7 +663,7 @@ public class TaskSerdeTest
     final ArchiveTask task = new ArchiveTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D"),
+        Intervals.of("2010-01-01/P1D"),
         null
     );
 
@@ -609,7 +673,7 @@ public class TaskSerdeTest
     final ArchiveTask task2 = (ArchiveTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -623,7 +687,7 @@ public class TaskSerdeTest
     final RestoreTask task = new RestoreTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D"),
+        Intervals.of("2010-01-01/P1D"),
         null
     );
 
@@ -633,7 +697,7 @@ public class TaskSerdeTest
     final RestoreTask task2 = (RestoreTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
@@ -647,7 +711,7 @@ public class TaskSerdeTest
     final ConvertSegmentTask task = ConvertSegmentTask.create(
         new DataSegment(
             "dataSource",
-            Interval.parse("1990-01-01/1999-12-31"),
+            Intervals.of("1990-01-01/1999-12-31"),
             "version",
             ImmutableMap.<String, Object>of(),
             ImmutableList.of("dim1", "dim2"),
@@ -659,6 +723,7 @@ public class TaskSerdeTest
         indexSpec,
         false,
         true,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
     final String json = jsonMapper.writeValueAsString(task);
@@ -671,7 +736,7 @@ public class TaskSerdeTest
   {
     final DataSegment segment = new DataSegment(
         "dataSource",
-        Interval.parse("1990-01-01/1999-12-31"),
+        Intervals.of("1990-01-01/1999-12-31"),
         "version",
         ImmutableMap.<String, Object>of(),
         ImmutableList.of("dim1", "dim2"),
@@ -680,41 +745,43 @@ public class TaskSerdeTest
         0,
         12345L
     );
-    final ConvertSegmentTask convertSegmentTaskOriginal = ConvertSegmentTask.create(
+    final ConvertSegmentTask originalTask = ConvertSegmentTask.create(
         segment,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(null),
-            CompressedObjectStrategy.CompressionStrategy.LZF,
-            CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+            CompressionStrategy.LZF,
+            CompressionStrategy.UNCOMPRESSED,
             CompressionFactory.LongEncodingStrategy.LONGS
         ),
         false,
         true,
+        TmpFileSegmentWriteOutMediumFactory.instance(),
         null
     );
-    final String json = jsonMapper.writeValueAsString(convertSegmentTaskOriginal);
+    final String json = jsonMapper.writeValueAsString(originalTask);
     final Task task = jsonMapper.readValue(json, Task.class);
     Assert.assertTrue(task instanceof ConvertSegmentTask);
     final ConvertSegmentTask convertSegmentTask = (ConvertSegmentTask) task;
-    Assert.assertEquals(convertSegmentTaskOriginal.getDataSource(), convertSegmentTask.getDataSource());
-    Assert.assertEquals(convertSegmentTaskOriginal.getInterval(), convertSegmentTask.getInterval());
+    Assert.assertEquals(originalTask.getDataSource(), convertSegmentTask.getDataSource());
+    Assert.assertEquals(originalTask.getInterval(), convertSegmentTask.getInterval());
     Assert.assertEquals(
-        convertSegmentTaskOriginal.getIndexSpec().getBitmapSerdeFactory().getClass().getCanonicalName(),
+        originalTask.getIndexSpec().getBitmapSerdeFactory().getClass().getCanonicalName(),
         convertSegmentTask.getIndexSpec()
                           .getBitmapSerdeFactory()
                           .getClass()
                           .getCanonicalName()
     );
     Assert.assertEquals(
-        convertSegmentTaskOriginal.getIndexSpec().getDimensionCompression(),
+        originalTask.getIndexSpec().getDimensionCompression(),
         convertSegmentTask.getIndexSpec().getDimensionCompression()
     );
     Assert.assertEquals(
-        convertSegmentTaskOriginal.getIndexSpec().getMetricCompression(),
+        originalTask.getIndexSpec().getMetricCompression(),
         convertSegmentTask.getIndexSpec().getMetricCompression()
     );
     Assert.assertEquals(false, convertSegmentTask.isForce());
     Assert.assertEquals(segment, convertSegmentTask.getSegment());
+    Assert.assertEquals(originalTask.getSegmentWriteOutMediumFactory(), convertSegmentTask.getSegmentWriteOutMediumFactory());
   }
 
   @Test
@@ -723,7 +790,7 @@ public class TaskSerdeTest
     final MoveTask task = new MoveTask(
         null,
         "foo",
-        new Interval("2010-01-01/P1D"),
+        Intervals.of("2010-01-01/P1D"),
         ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"),
         null,
         null
@@ -735,7 +802,7 @@ public class TaskSerdeTest
     final MoveTask task2 = (MoveTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
     Assert.assertEquals(ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"), task.getTargetLoadSpec());
 
     Assert.assertEquals(task.getId(), task2.getId());
@@ -755,8 +822,9 @@ public class TaskSerdeTest
                 "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
                 Granularities.DAY,
                 null,
-                ImmutableList.of(new Interval("2010-01-01/P1D"))
+                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
             ),
+                null,
                 jsonMapper
             ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
         ),
@@ -764,6 +832,8 @@ public class TaskSerdeTest
         null,
         "blah",
         jsonMapper,
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null
     );
 

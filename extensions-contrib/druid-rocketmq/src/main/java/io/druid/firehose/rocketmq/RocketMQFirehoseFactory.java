@@ -34,18 +34,20 @@ import com.alibaba.rocketmq.remoting.exception.RemotingException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-import io.druid.data.input.ByteBufferInputRowParser;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,7 +59,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 
-public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputRowParser>
+public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<ByteBuffer>>
 {
 
   private static final Logger LOGGER = new Logger(RocketMQFirehoseFactory.class);
@@ -139,7 +141,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
 
   @Override
   public Firehose connect(
-      ByteBufferInputRowParser byteBufferInputRowParser,
+      InputRowParser<ByteBuffer> byteBufferInputRowParser,
       File temporaryDirectory
   ) throws IOException, ParseException
   {
@@ -149,7 +151,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         Sets.newHashSet("feed")
     );
 
-    final ByteBufferInputRowParser theParser = byteBufferInputRowParser.withParseSpec(
+    final InputRowParser<ByteBuffer> theParser = byteBufferInputRowParser.withParseSpec(
         byteBufferInputRowParser.getParseSpec()
                                 .withDimensionsSpec(
                                     byteBufferInputRowParser.getParseSpec()
@@ -197,10 +199,14 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
 
     return new Firehose()
     {
+      private Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
       {
+        if (nextIterator.hasNext()) {
+          return true;
+        }
         boolean hasMore = false;
         DruidPullRequest earliestPullRequest = null;
 
@@ -247,18 +253,23 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
         return hasMore;
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {
+        if (nextIterator.hasNext()) {
+          return nextIterator.next();
+        }
+
         for (Map.Entry<MessageQueue, ConcurrentSkipListSet<MessageExt>> entry : messageQueueTreeSetMap.entrySet()) {
           if (!entry.getValue().isEmpty()) {
             MessageExt message = entry.getValue().pollFirst();
-            InputRow inputRow = theParser.parse(ByteBuffer.wrap(message.getBody()));
+            nextIterator = theParser.parseBatch(ByteBuffer.wrap(message.getBody())).iterator();
 
             windows
                 .computeIfAbsent(entry.getKey(), k -> new ConcurrentSkipListSet<>())
                 .add(message.getQueueOffset());
-            return inputRow;
+            return nextIterator.next();
           }
         }
 
@@ -299,7 +310,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         defaultMQPullConsumer.shutdown();
         pullMessageService.shutdown(false);

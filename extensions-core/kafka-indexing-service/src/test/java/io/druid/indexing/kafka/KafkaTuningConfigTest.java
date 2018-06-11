@@ -56,7 +56,7 @@ public class KafkaTuningConfigTest
     );
 
     Assert.assertNotNull(config.getBasePersistDirectory());
-    Assert.assertEquals(75000, config.getMaxRowsInMemory());
+    Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
@@ -93,16 +93,17 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(100, config.getMaxPendingPersists());
+    Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
   }
 
   @Test
-  public void testCopyOf() throws Exception
+  public void testCopyOf()
   {
     KafkaTuningConfig original = new KafkaTuningConfig(
         1,
+        null,
         2,
         new Period("PT3S"),
         new File("/tmp/xxx"),
@@ -111,6 +112,11 @@ public class KafkaTuningConfigTest
         true,
         true,
         5L,
+        null,
+        null,
+        null,
+        null,
+        null,
         null
     );
     KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
@@ -119,7 +125,7 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(2, copy.getMaxRowsPerSegment());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
-    Assert.assertEquals(4, copy.getMaxPendingPersists());
+    Assert.assertEquals(0, copy.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertEquals(true, copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());

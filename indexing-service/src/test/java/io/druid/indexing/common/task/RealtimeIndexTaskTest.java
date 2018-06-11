@@ -26,26 +26,24 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-//CHECKSTYLE.OFF: Regexp
-import com.metamx.common.logger.Logger;
-//CHECKSTYLE.ON: Regexp
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.LoggingEmitter;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
-import io.druid.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.MapInputRowParser;
+import io.druid.data.input.impl.TimeAndDimsParseSpec;
+import io.druid.data.input.impl.TimestampSpec;
+import io.druid.discovery.DataNodeService;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.LookupNodeService;
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -66,17 +64,26 @@ import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.indexing.test.TestDataSegmentPusher;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.jackson.JacksonUtils;
+import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.MonitorScheduler;
+import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.EntryExistsException;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -87,11 +94,14 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
+import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -103,7 +113,11 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
+import io.druid.segment.transform.ExpressionTransform;
+import io.druid.segment.transform.TransformSpec;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
@@ -114,44 +128,44 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 public class RealtimeIndexTaskTest
 {
   private static final Logger log = new Logger(RealtimeIndexTaskTest.class);
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final ServiceEmitter emitter = new ServiceEmitter(
       "service",
       "host",
-      new LoggingEmitter(
-          log,
-          LoggingEmitter.Level.ERROR,
-          jsonMapper
-      )
+      new NoopEmitter()
   );
 
   private static final String FAIL_DIM = "__fail__";
 
   private static class TestFirehose implements Firehose
   {
-    private final List<InputRow> queue = Lists.newLinkedList();
+    private final InputRowParser<Map<String, Object>> parser;
+    private final List<Map<String, Object>> queue = new LinkedList<>();
     private boolean closed = false;
 
-    public void addRows(List<InputRow> rows)
+    public TestFirehose(final InputRowParser<Map<String, Object>> parser)
+    {
+      this.parser = parser;
+    }
+
+    public void addRows(List<Map<String, Object>> rows)
     {
       synchronized (this) {
         queue.addAll(rows);
@@ -180,8 +194,8 @@ public class RealtimeIndexTaskTest
     public InputRow nextRow()
     {
       synchronized (this) {
-        final InputRow row = queue.remove(0);
-        if (row != null && row.getDimensions().contains(FAIL_DIM)) {
+        final InputRow row = parser.parseBatch(queue.remove(0)).get(0);
+        if (row != null && row.getRaw(FAIL_DIM) != null) {
           throw new ParseException(FAIL_DIM);
         }
         return row;
@@ -191,18 +205,11 @@ public class RealtimeIndexTaskTest
     @Override
     public Runnable commit()
     {
-      return new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          // do nothing
-        }
-      };
+      return () -> {};
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       synchronized (this) {
         closed = true;
@@ -211,16 +218,17 @@ public class RealtimeIndexTaskTest
     }
   }
 
-  private static class TestFirehoseFactory implements FirehoseFactory
+  private static class TestFirehoseFactory implements FirehoseFactory<InputRowParser>
   {
     public TestFirehoseFactory()
     {
     }
 
     @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException, ParseException
+    @SuppressWarnings("unchecked")
+    public Firehose connect(InputRowParser parser, File temporaryDirectory) throws ParseException
     {
-      return new TestFirehose();
+      return new TestFirehose(parser);
     }
   }
 
@@ -240,7 +248,7 @@ public class RealtimeIndexTaskTest
     EmittingLogger.registerEmitter(emitter);
     emitter.start();
     taskExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("realtime-index-task-test-%d"));
-    now = new DateTime();
+    now = DateTimes.nowUtc();
   }
 
   @After
@@ -250,16 +258,16 @@ public class RealtimeIndexTaskTest
   }
 
   @Test
-  public void testMakeTaskId() throws Exception
+  public void testMakeTaskId()
   {
     Assert.assertEquals(
         "index_realtime_test_0_2015-01-02T00:00:00.000Z_abcdefgh",
-        RealtimeIndexTask.makeTaskId("test", 0, new DateTime("2015-01-02"), 0x76543210)
+        RealtimeIndexTask.makeTaskId("test", 0, DateTimes.of("2015-01-02"), 0x76543210)
     );
   }
 
   @Test(timeout = 60_000L)
-  public void testDefaultResource() throws Exception
+  public void testDefaultResource()
   {
     final RealtimeIndexTask task = makeRealtimeTask(null);
     Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
@@ -270,7 +278,7 @@ public class RealtimeIndexTaskTest
   public void testHandoffTimeout() throws Exception
   {
     final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
-    final RealtimeIndexTask task = makeRealtimeTask(null, true, 100L);
+    final RealtimeIndexTask task = makeRealtimeTask(null, TransformSpec.NONE, true, 100L);
     final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
 
@@ -282,12 +290,8 @@ public class RealtimeIndexTaskTest
     final TestFirehose firehose = (TestFirehose) task.getFirehose();
 
     firehose.addRows(
-        ImmutableList.<InputRow>of(
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
-            )
+        ImmutableList.of(
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1")
         )
     );
 
@@ -324,22 +328,10 @@ public class RealtimeIndexTaskTest
     final TestFirehose firehose = (TestFirehose) task.getFirehose();
 
     firehose.addRows(
-        ImmutableList.<InputRow>of(
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
-            ),
-            new MapBasedInputRow(
-                now.minus(new Period("P1D")),
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", 2.0)
-            ),
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim2"),
-                ImmutableMap.<String, Object>of("dim2", "bar", "met1", 2.0)
-            )
+        ImmutableList.of(
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1"),
+            ImmutableMap.of("t", now.minus(new Period("P1D")).getMillis(), "dim1", "foo", "met1", 2.0),
+            ImmutableMap.of("t", now.getMillis(), "dim2", "bar", "met1", 2.0)
         )
     );
 
@@ -359,8 +351,8 @@ public class RealtimeIndexTaskTest
     Assert.assertEquals(0, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(2, sumMetric(task, "rows"));
-    Assert.assertEquals(3, sumMetric(task, "met1"));
+    Assert.assertEquals(2, sumMetric(task, null, "rows"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
     // Simulate handoff.
     for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
@@ -379,7 +371,78 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testTransformSpec() throws Exception
+  {
+    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
+    final TransformSpec transformSpec = new TransformSpec(
+        new SelectorDimFilter("dim1", "foo", null),
+        ImmutableList.of(
+            new ExpressionTransform("dim1t", "concat(dim1,dim1)", ExprMacroTable.nil())
+        )
+    );
+    final RealtimeIndexTask task = makeRealtimeTask(null, transformSpec, true, 0);
+    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+    final DataSegment publishedSegment;
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    firehose.addRows(
+        ImmutableList.of(
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1"),
+            ImmutableMap.of("t", now.minus(new Period("P1D")).getMillis(), "dim1", "foo", "met1", 2.0),
+            ImmutableMap.of("t", now.getMillis(), "dim2", "bar", "met1", 2.0)
+        )
+    );
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    while (mdc.getPublished().isEmpty()) {
+      Thread.sleep(50);
+    }
+
+    publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
+
+    // Check metrics.
+    Assert.assertEquals(1, task.getMetrics().processed());
+    Assert.assertEquals(2, task.getMetrics().thrownAway());
+    Assert.assertEquals(0, task.getMetrics().unparseable());
+
+    // Do some queries.
+    Assert.assertEquals(1, sumMetric(task, null, "rows"));
+    Assert.assertEquals(1, sumMetric(task, new SelectorDimFilter("dim1t", "foofoo", null), "rows"));
+    Assert.assertEquals(0, sumMetric(task, new SelectorDimFilter("dim1t", "barbar", null), "rows"));
+    Assert.assertEquals(1, sumMetric(task, null, "met1"));
+
+    // Simulate handoff.
+    for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
+      final Pair<Executor, Runnable> executorRunnablePair = entry.getValue();
+      Assert.assertEquals(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          ),
+          entry.getKey()
+      );
+      executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
+    }
+    handOffCallbacks.clear();
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   @Test(timeout = 60_000L)
@@ -398,27 +461,11 @@ public class RealtimeIndexTaskTest
     final TestFirehose firehose = (TestFirehose) task.getFirehose();
 
     firehose.addRows(
-        ImmutableList.<InputRow>of(
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
-            ),
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "foo")
-            ),
-            new MapBasedInputRow(
-                now.minus(new Period("P1D")),
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "foo")
-            ),
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim2"),
-                ImmutableMap.<String, Object>of("dim2", "bar", "met1", 2.0)
-            )
+        ImmutableList.of(
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1"),
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "foo"),
+            ImmutableMap.of("t", now.minus(new Period("P1D")).getMillis(), "dim1", "foo", "met1", "foo"),
+            ImmutableMap.of("t", now.getMillis(), "dim2", "bar", "met1", 2.0)
         )
     );
 
@@ -430,21 +477,10 @@ public class RealtimeIndexTaskTest
     expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(ParseException.class));
     expectedException.expectCause(
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Encountered parse error for aggregator[met1]")
+            CoreMatchers.containsString("[Unable to parse value[foo] for field[met1]")
         )
     );
-    expectedException.expect(
-        ThrowableCauseMatcher.hasCause(
-            ThrowableCauseMatcher.hasCause(
-                CoreMatchers.allOf(
-                    CoreMatchers.<Throwable>instanceOf(ParseException.class),
-                    ThrowableMessageMatcher.hasMessage(
-                        CoreMatchers.containsString("Unable to parse metrics[met1], value[foo]")
-                    )
-                )
-            )
-        )
-    );
+
     statusFuture.get();
   }
 
@@ -465,39 +501,24 @@ public class RealtimeIndexTaskTest
     final TestFirehose firehose = (TestFirehose) task.getFirehose();
 
     firehose.addRows(
-        Arrays.<InputRow>asList(
+        Arrays.asList(
             // Good row- will be processed.
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
-            ),
-            // Null row- will be unparseable.
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "1"),
+
+            // Null row- will be thrown away.
             null,
+
             // Bad metric- will count as processed, but that particular metric won't update.
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "foo")
-            ),
+            ImmutableMap.of("t", now.getMillis(), "dim1", "foo", "met1", "foo"),
+
             // Bad row- will be unparseable.
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim1", FAIL_DIM),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", 2.0)
-            ),
+            ImmutableMap.of("dim1", "foo", "met1", 2.0, FAIL_DIM, "x"),
+
             // Old row- will be thrownAway.
-            new MapBasedInputRow(
-                now.minus(new Period("P1D")),
-                ImmutableList.of("dim1"),
-                ImmutableMap.<String, Object>of("dim1", "foo", "met1", 2.0)
-            ),
+            ImmutableMap.of("t", now.minus(Period.days(1)).getMillis(), "dim1", "foo", "met1", 2.0),
+
             // Good row- will be processed.
-            new MapBasedInputRow(
-                now,
-                ImmutableList.of("dim2"),
-                ImmutableMap.<String, Object>of("dim2", "bar", "met1", 2.0)
-            )
+            ImmutableMap.of("t", now.getMillis(), "dim2", "bar", "met1", 2.0)
         )
     );
 
@@ -517,8 +538,8 @@ public class RealtimeIndexTaskTest
     Assert.assertEquals(2, task.getMetrics().unparseable());
 
     // Do some queries.
-    Assert.assertEquals(3, sumMetric(task, "rows"));
-    Assert.assertEquals(3, sumMetric(task, "met1"));
+    Assert.assertEquals(3, sumMetric(task, null, "rows"));
+    Assert.assertEquals(3, sumMetric(task, null, "met1"));
 
     // Simulate handoff.
     for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
@@ -537,7 +558,7 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   @Test(timeout = 60_000L)
@@ -561,12 +582,8 @@ public class RealtimeIndexTaskTest
       final TestFirehose firehose = (TestFirehose) task1.getFirehose();
 
       firehose.addRows(
-          ImmutableList.<InputRow>of(
-              new MapBasedInputRow(
-                  now,
-                  ImmutableList.of("dim1"),
-                  ImmutableMap.<String, Object>of("dim1", "foo")
-              )
+          ImmutableList.of(
+              ImmutableMap.of("t", now.getMillis(), "dim1", "foo")
           )
       );
 
@@ -575,7 +592,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
       Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
@@ -594,17 +611,13 @@ public class RealtimeIndexTaskTest
       }
 
       // Do a query, at this point the previous data should be loaded.
-      Assert.assertEquals(1, sumMetric(task2, "rows"));
+      Assert.assertEquals(1, sumMetric(task2, null, "rows"));
 
       final TestFirehose firehose = (TestFirehose) task2.getFirehose();
 
       firehose.addRows(
-          ImmutableList.<InputRow>of(
-              new MapBasedInputRow(
-                  now,
-                  ImmutableList.of("dim2"),
-                  ImmutableMap.<String, Object>of("dim2", "bar")
-              )
+          ImmutableList.of(
+              ImmutableMap.of("t", now.getMillis(), "dim2", "bar")
           )
       );
 
@@ -619,7 +632,7 @@ public class RealtimeIndexTaskTest
       publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
 
       // Do a query.
-      Assert.assertEquals(2, sumMetric(task2, "rows"));
+      Assert.assertEquals(2, sumMetric(task2, null, "rows"));
 
       // Simulate handoff.
       for (Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry : handOffCallbacks.entrySet()) {
@@ -638,7 +651,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
     }
   }
 
@@ -664,12 +677,8 @@ public class RealtimeIndexTaskTest
       final TestFirehose firehose = (TestFirehose) task1.getFirehose();
 
       firehose.addRows(
-          ImmutableList.<InputRow>of(
-              new MapBasedInputRow(
-                  now,
-                  ImmutableList.of("dim1"),
-                  ImmutableMap.<String, Object>of("dim1", "foo")
-              )
+          ImmutableList.of(
+              ImmutableMap.of("t", now.getMillis(), "dim1", "foo")
           )
       );
 
@@ -684,7 +693,7 @@ public class RealtimeIndexTaskTest
       publishedSegment = Iterables.getOnlyElement(mdc.getPublished());
 
       // Do a query.
-      Assert.assertEquals(1, sumMetric(task1, "rows"));
+      Assert.assertEquals(1, sumMetric(task1, null, "rows"));
 
       // Trigger graceful shutdown.
       task1.stopGracefully();
@@ -737,7 +746,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
     }
   }
 
@@ -761,12 +770,8 @@ public class RealtimeIndexTaskTest
       final TestFirehose firehose = (TestFirehose) task1.getFirehose();
 
       firehose.addRows(
-          ImmutableList.<InputRow>of(
-              new MapBasedInputRow(
-                  now,
-                  ImmutableList.of("dim1"),
-                  ImmutableMap.<String, Object>of("dim1", "foo")
-              )
+          ImmutableList.of(
+              ImmutableMap.of("t", now.getMillis(), "dim1", "foo")
           )
       );
 
@@ -775,7 +780,7 @@ public class RealtimeIndexTaskTest
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
-      Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
 
       // Nothing should be published.
       Assert.assertEquals(Sets.newHashSet(), mdc.getPublished());
@@ -827,7 +832,7 @@ public class RealtimeIndexTaskTest
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
   }
 
   private ListenableFuture<TaskStatus> runTask(final Task task, final TaskToolbox toolbox)
@@ -856,22 +861,40 @@ public class RealtimeIndexTaskTest
 
   private RealtimeIndexTask makeRealtimeTask(final String taskId)
   {
-    return makeRealtimeTask(taskId, true, 0);
+    return makeRealtimeTask(taskId, TransformSpec.NONE, true, 0);
   }
 
   private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions)
   {
-    return makeRealtimeTask(taskId, reportParseExceptions, 0);
+    return makeRealtimeTask(taskId, TransformSpec.NONE, reportParseExceptions, 0);
   }
 
-  private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions, long handoffTimeout)
+  private RealtimeIndexTask makeRealtimeTask(
+      final String taskId,
+      final TransformSpec transformSpec,
+      final boolean reportParseExceptions,
+      final long handoffTimeout
+  )
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
     DataSchema dataSchema = new DataSchema(
         "test_ds",
-        null,
+        TestHelper.makeJsonMapper().convertValue(
+            new MapInputRowParser(
+                new TimeAndDimsParseSpec(
+                    new TimestampSpec("t", "auto", null),
+                    new DimensionsSpec(
+                        DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim1t")),
+                        null,
+                        null
+                    )
+                )
+            ),
+            JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+        ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows"), new LongSumAggregatorFactory("met1", "met1")},
         new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
+        transformSpec,
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -881,6 +904,7 @@ public class RealtimeIndexTaskTest
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
         1000,
+        null,
         new Period("P1Y"),
         new Period("PT10M"),
         null,
@@ -894,6 +918,8 @@ public class RealtimeIndexTaskTest
         0,
         reportParseExceptions,
         handoffTimeout,
+        null,
+        null,
         null
     );
     return new RealtimeIndexTask(
@@ -933,7 +959,7 @@ public class RealtimeIndexTaskTest
   )
   {
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, 300);
+    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }
@@ -951,22 +977,25 @@ public class RealtimeIndexTaskTest
         taskStorage,
         taskActionToolbox
     );
+    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
+        null,
+        null,
+        null
+    )
+    {
+      @Override
+      public <T> QueryRunner<T> decorate(
+          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
+      )
+      {
+        return delegate;
+      }
+    };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(
-                    new IntervalChunkingQueryRunnerDecorator(null, null, null)
-                    {
-                      @Override
-                      public <T> QueryRunner<T> decorate(
-                          QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest
-                      )
-                      {
-                        return delegate;
-                      }
-                    }
-                ),
+                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
                 new TimeseriesQueryEngine(),
                 new QueryWatcher()
                 {
@@ -979,7 +1008,7 @@ public class RealtimeIndexTaskTest
             )
         )
     );
-    handOffCallbacks = Maps.newConcurrentMap();
+    handOffCallbacks = new ConcurrentHashMap<>();
     final SegmentHandoffNotifierFactory handoffNotifierFactory = new SegmentHandoffNotifierFactory()
     {
       @Override
@@ -1008,14 +1037,18 @@ public class RealtimeIndexTaskTest
             //Noop
           }
 
-          Map<SegmentDescriptor, Pair<Executor, Runnable>> getHandOffCallbacks()
-          {
-            return handOffCallbacks;
-          }
         };
       }
     };
     final TestUtils testUtils = new TestUtils();
+    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Lists.newArrayList();
+      }
+    };
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -1031,33 +1064,29 @@ public class RealtimeIndexTaskTest
         MoreExecutors.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(
-                null,
-                new SegmentLoaderConfig()
-                {
-                  @Override
-                  public List<StorageLocationConfig> getLocations()
-                  {
-                    return Lists.newArrayList();
-                  }
-                }, testUtils.getTestObjectMapper()
-            )
+            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
         ),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
         new CacheConfig(),
-        testUtils.getTestIndexMergerV9()
+        testUtils.getTestIndexMergerV9(),
+        EasyMock.createNiceMock(DruidNodeAnnouncer.class),
+        EasyMock.createNiceMock(DruidNode.class),
+        new LookupNodeService("tier"),
+        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new NoopTestTaskFileWriter()
     );
 
     return toolboxFactory.build(task);
   }
 
-  public long sumMetric(final Task task, final String metric) throws Exception
+  public long sumMetric(final Task task, final DimFilter filter, final String metric)
   {
     // Do a query.
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test_ds")
+                                  .filters(filter)
                                   .aggregators(
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory(metric, metric)
@@ -1066,10 +1095,8 @@ public class RealtimeIndexTaskTest
                                   .intervals("2000/3000")
                                   .build();
 
-    ArrayList<Result<TimeseriesResultValue>> results = Sequences.toList(
-        task.getQueryRunner(query).run(query, ImmutableMap.<String, Object>of()),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    List<Result<TimeseriesResultValue>> results =
+        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
     return results.isEmpty() ? 0 : results.get(0).getValue().getLongMetric(metric);
   }
 }

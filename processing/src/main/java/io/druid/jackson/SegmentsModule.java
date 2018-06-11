@@ -36,10 +36,10 @@ public class SegmentsModule extends SimpleModule
     setMixInAnnotation(ShardSpec.class, ShardSpecMixin.class);
   }
 
-  @JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type")
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
   @JsonSubTypes({
-      @JsonSubTypes.Type(name="none", value=NoneShardSpec.class),
+      @JsonSubTypes.Type(name = "none", value = NoneShardSpec.class),
   })
-  public static interface ShardSpecMixin
+  public interface ShardSpecMixin
   {}
 }

@@ -59,7 +59,6 @@ import io.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +82,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
   private final BlockingPool<ByteBuffer> mergeBufferPool;
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
+  private final int mergeBufferSize;
 
   public GroupByMergingQueryRunnerV2(
       GroupByQueryConfig config,
@@ -91,6 +91,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       Iterable<QueryRunner<Row>> queryables,
       int concurrencyHint,
       BlockingPool<ByteBuffer> mergeBufferPool,
+      int mergeBufferSize,
       ObjectMapper spillMapper,
       String processingTmpDir
   )
@@ -103,6 +104,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
     this.mergeBufferPool = mergeBufferPool;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
+    this.mergeBufferSize = mergeBufferSize;
   }
 
   @Override
@@ -168,34 +170,39 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
               resources.add(temporaryStorageHolder);
 
-              final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
-              try {
-                // This will potentially block if there are no merge buffers left in the pool.
-                if (hasTimeout) {
-                  final long timeout = timeoutAt - System.currentTimeMillis();
-                  if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
-                    throw new TimeoutException();
-                  }
-                } else {
-                  mergeBufferHolder = mergeBufferPool.take();
-                }
-                resources.add(mergeBufferHolder);
-              }
-              catch (Exception e) {
-                throw new QueryInterruptedException(e);
-              }
+              // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
+              final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
 
-              Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
-                  query,
-                  false,
-                  null,
-                  config,
-                  Suppliers.ofInstance(mergeBufferHolder.get()),
-                  concurrencyHint,
-                  temporaryStorage,
-                  spillMapper,
-                  combiningAggregatorFactories
+              final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = getMergeBuffersHolder(
+                  numMergeBuffers,
+                  hasTimeout,
+                  timeoutAt
               );
+              resources.addAll(mergeBufferHolders);
+
+              final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder = mergeBufferHolders.get(0);
+              final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder = numMergeBuffers == 2 ?
+                                                                                      mergeBufferHolders.get(1) :
+                                                                                      null;
+
+              Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, Row>> pair =
+                  RowBasedGrouperHelper.createGrouperAccumulatorPair(
+                      query,
+                      false,
+                      null,
+                      config,
+                      Suppliers.ofInstance(mergeBufferHolder.get()),
+                      combineBufferHolder,
+                      concurrencyHint,
+                      temporaryStorage,
+                      spillMapper,
+                      combiningAggregatorFactories,
+                      exec,
+                      priority,
+                      hasTimeout,
+                      timeoutAt,
+                      mergeBufferSize
+                  );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
               grouper.init();
@@ -223,10 +230,13 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                   new AbstractPrioritizedCallable<AggregateResult>(priority)
                                   {
                                     @Override
-                                    public AggregateResult call() throws Exception
+                                    public AggregateResult call()
                                     {
                                       try (
+                                          // These variables are used to close releasers automatically.
+                                          @SuppressWarnings("unused")
                                           Releaser bufferReleaser = mergeBufferHolder.increment();
+                                          @SuppressWarnings("unused")
                                           Releaser grouperReleaser = grouperHolder.increment()
                                       ) {
                                         final AggregateResult retVal = input.run(queryPlusForRunners, responseContext)
@@ -275,7 +285,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                   new Closeable()
                   {
                     @Override
-                    public void close() throws IOException
+                    public void close()
                     {
                       for (Closeable closeable : Lists.reverse(resources)) {
                         CloseQuietly.close(closeable);
@@ -300,6 +310,40 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
           }
         }
     );
+  }
+
+  private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(
+      int numBuffers,
+      boolean hasTimeout,
+      long timeoutAt
+  )
+  {
+    try {
+      if (numBuffers > mergeBufferPool.maxSize()) {
+        throw new ResourceLimitExceededException(
+            "Query needs " + numBuffers + " merge buffers, but only "
+            + mergeBufferPool.maxSize() + " merge buffers were configured. "
+            + "Try raising druid.processing.numMergeBuffers."
+        );
+      }
+      final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolder;
+      // This will potentially block if there are no merge buffers left in the pool.
+      if (hasTimeout) {
+        final long timeout = timeoutAt - System.currentTimeMillis();
+        if (timeout <= 0) {
+          throw new TimeoutException();
+        }
+        if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
+          throw new TimeoutException("Cannot acquire enough merge buffers");
+        }
+      } else {
+        mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);
+      }
+      return mergeBufferHolder;
+    }
+    catch (Exception e) {
+      throw new QueryInterruptedException(e);
+    }
   }
 
   private void waitForFutureCompletion(

@@ -19,7 +19,8 @@
 
 package io.druid.server.lookup.namespace;
 
-import io.druid.common.utils.JodaUtils;
+import com.google.common.base.Strings;
+import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -68,6 +69,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final long dbQueryStart = System.currentTimeMillis();
     final DBI dbi = ensureDBI(entryId, namespace);
     final String table = namespace.getTable();
+    final String filter = namespace.getFilter();
     final String valueColumn = namespace.getValueColumn();
     final String keyColumn = namespace.getKeyColumn();
 
@@ -76,22 +78,14 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         new HandleCallback<List<Pair<String, String>>>()
         {
           @Override
-          public List<Pair<String, String>> withHandle(Handle handle) throws Exception
+          public List<Pair<String, String>> withHandle(Handle handle)
           {
-            final String query;
-            query = StringUtils.format(
-                "SELECT %s, %s FROM %s",
-                keyColumn,
-                valueColumn,
-                table
-            );
             return handle
                 .createQuery(
-                    query
+                    buildLookupQuery(table, filter, keyColumn, valueColumn)
                 ).map(
                     new ResultSetMapper<Pair<String, String>>()
                     {
-
                       @Override
                       public Pair<String, String> map(
                           final int index,
@@ -132,6 +126,28 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     }
   }
 
+  private String buildLookupQuery(String table, String filter, String keyColumn, String valueColumn)
+  {
+    if (Strings.isNullOrEmpty(filter)) {
+      return StringUtils.format(
+          "SELECT %s, %s FROM %s WHERE %s IS NOT NULL",
+          keyColumn,
+          valueColumn,
+          table,
+          valueColumn
+      );
+    }
+
+    return StringUtils.format(
+        "SELECT %s, %s FROM %s WHERE %s AND %s IS NOT NULL",
+        keyColumn,
+        valueColumn,
+        table,
+        filter,
+        valueColumn
+    );
+  }
+
   private DBI ensureDBI(CacheScheduler.EntryImpl<JdbcExtractionNamespace> id, JdbcExtractionNamespace namespace)
   {
     final CacheScheduler.EntryImpl<JdbcExtractionNamespace> key = id;
@@ -164,7 +180,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
         {
 
           @Override
-          public Timestamp withHandle(Handle handle) throws Exception
+          public Timestamp withHandle(Handle handle)
           {
             final String query = StringUtils.format(
                 "SELECT MAX(%s) FROM %s",

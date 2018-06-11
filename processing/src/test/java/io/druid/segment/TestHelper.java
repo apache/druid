@@ -27,13 +27,14 @@ import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.Result;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.timeline.DataSegment;
 import org.junit.Assert;
 
 import java.util.Iterator;
@@ -46,13 +47,18 @@ import java.util.stream.IntStream;
  */
 public class TestHelper
 {
-  private static final IndexMergerV9 INDEX_MERGER_V9;
-  private static final IndexIO INDEX_IO;
+  private static final ObjectMapper JSON_MAPPER = makeJsonMapper();
 
-  static {
-    final ObjectMapper jsonMapper = getJsonMapper();
-    INDEX_IO = new IndexIO(
-        jsonMapper,
+  public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(segmentWriteOutMediumFactory), segmentWriteOutMediumFactory);
+  }
+
+  public static IndexIO getTestIndexIO(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    return new IndexIO(
+        JSON_MAPPER,
+        segmentWriteOutMediumFactory,
         new ColumnConfig()
         {
           @Override
@@ -62,31 +68,21 @@ public class TestHelper
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(jsonMapper, INDEX_IO);
   }
 
-  public static IndexMergerV9 getTestIndexMergerV9()
-  {
-    return INDEX_MERGER_V9;
-  }
-
-  public static IndexIO getTestIndexIO()
-  {
-    return INDEX_IO;
-  }
-
-  public static ObjectMapper getJsonMapper()
+  public static ObjectMapper makeJsonMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
     );
     return mapper;
   }
 
-  public static ObjectMapper getSmileMapper()
+  public static ObjectMapper makeSmileMapper()
   {
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(
@@ -104,7 +100,7 @@ public class TestHelper
 
   public static <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Sequence<Result<T>> results)
   {
-    assertResults(expectedResults, Sequences.toList(results, Lists.<Result<T>>newArrayList()), "");
+    assertResults(expectedResults, results.toList(), "");
   }
 
   public static <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)
@@ -128,7 +124,7 @@ public class TestHelper
 
   public static <T> void assertExpectedObjects(Iterable<T> expectedResults, Sequence<T> results, String failMsg)
   {
-    assertObjects(expectedResults, Sequences.toList(results, Lists.<T>newArrayList()), failMsg);
+    assertObjects(expectedResults, results.toList(), failMsg);
   }
 
   private static <T> void assertResults(
@@ -165,7 +161,11 @@ public class TestHelper
                  && (((Result) expectedNext).getValue()) instanceof TopNResultValue) {
         // Special to allow a floating point delta to be used in result comparison due to legacy expected results
         assertTopNResultValue(failMsg, (Result) expectedNext, (Result) next);
-        assertTopNResultValue(String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg), (Result) expectedNext, (Result) next2);
+        assertTopNResultValue(
+            StringUtils.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
+            (Result) expectedNext,
+            (Result) next2
+        );
       } else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
@@ -290,7 +290,7 @@ public class TestHelper
     Assert.assertEquals("Size of list must match", listExpectedRows.size(), listActualRows.size());
 
     IntStream.range(0, listExpectedRows.size()).forEach(value -> assertRow(
-        String.format("%s, on value number [%s]", msg, value),
+        StringUtils.format("%s, on value number [%s]", msg, value),
         listExpectedRows.get(value),
         listActualRows.get(value)
     ));
@@ -302,8 +302,8 @@ public class TestHelper
     // always generate exactly the same results (different merge ordering / float vs double)
     Assert.assertEquals(
         StringUtils.format("%s: timestamp", msg),
-        expected.getTimestamp().getMillis(),
-        actual.getTimestamp().getMillis()
+        expected.getTimestamp(),
+        actual.getTimestamp()
     );
 
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
@@ -319,7 +319,7 @@ public class TestHelper
             StringUtils.format("%s: key[%s]", msg, key),
             ((Number) expectedValue).doubleValue(),
             ((Number) actualValue).doubleValue(),
-            ((Number) expectedValue).doubleValue() * 1e-6
+            Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
         );
       } else {
         Assert.assertEquals(

@@ -27,17 +27,20 @@ import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -126,7 +129,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       if (i == 0) {
         aggOffsetInBuffer[i] = 0;
       } else {
-        aggOffsetInBuffer[i] = aggOffsetInBuffer[i-1] + metrics[i-1].getMaxIntermediateSize();
+        aggOffsetInBuffer[i] = aggOffsetInBuffer[i - 1] + metrics[i - 1].getMaxIntermediateSize();
       }
     }
 
@@ -136,15 +139,17 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected Integer addToFacts(
+  protected AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
-      TimeAndDims key,
+      AtomicLong sizeInBytes, // ignored, added to make abstract class method impl happy
+      IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier
+      Supplier<InputRow> rowSupplier,
+      boolean skipMaxRowsInMemoryCheck // ignored, we always want to check this for offheap
   ) throws IndexSizeExceededException
   {
     ByteBuffer aggBuffer;
@@ -153,7 +158,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     synchronized (this) {
       final int priorIndex = facts.getPriorIndex(key);
-      if (TimeAndDims.EMPTY_ROW_INDEX != priorIndex) {
+      if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
         final int[] indexAndOffset = indexAndOffsets.get(priorIndex);
         bufferIndex = indexAndOffset[0];
         bufferOffset = indexAndOffset[1];
@@ -197,7 +202,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == TimeAndDims.EMPTY_ROW_INDEX) {
+        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == IncrementalIndexRow.EMPTY_ROW_INDEX) {
           throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
         }
 
@@ -207,7 +212,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         // concurrent readers get hold of it and might ask for newly added row
         indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
         final int prev = facts.putIfAbsent(key, rowIndex);
-        if (TimeAndDims.EMPTY_ROW_INDEX == prev) {
+        if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           numEntries.incrementAndGet();
         } else {
           throw new ISE("WTF! we are in sychronized block.");
@@ -235,7 +240,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
     rowContainer.set(null);
-    return numEntries.get();
+    return new AddToFactsResult(numEntries.get(), 0, new ArrayList<>());
   }
 
   @Override
@@ -310,6 +315,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
   }
 
+  @Override
+  public boolean isNull(int rowOffset, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
+    return agg.isNull(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+  }
+
   /**
    * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
    */
@@ -324,9 +338,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       selectors.clear();
     }
 
-    RuntimeException ex = null;
-    for (ResourceHolder<ByteBuffer> buffHolder : aggBuffers) {
-      buffHolder.close();
+    Closer c = Closer.create();
+    aggBuffers.forEach(c::register);
+    try {
+      c.close();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
     aggBuffers.clear();
   }

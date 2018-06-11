@@ -53,7 +53,7 @@ public class StreamUtilsTest
             new ByteSource()
             {
               @Override
-              public InputStream openStream() throws IOException
+              public InputStream openStream()
               {
                 return new ByteArrayInputStream(bytes);
               }
@@ -61,7 +61,7 @@ public class StreamUtilsTest
             new ByteSink()
             {
               @Override
-              public OutputStream openStream() throws IOException
+              public OutputStream openStream()
               {
                 byteArrayOutputStream.reset();
                 return new FilterOutputStream(byteArrayOutputStream)
@@ -82,7 +82,7 @@ public class StreamUtilsTest
             10
         )
     );
-    Assert.assertEquals(4, outputFlushes.get());// 2 closes and 2 manual flushes
+    Assert.assertEquals(4, outputFlushes.get()); // 2 closes and 2 manual flushes
     Assert.assertArrayEquals(bytes, byteArrayOutputStream.toByteArray());
   }
 }

@@ -21,8 +21,8 @@ package io.druid.metadata;
 
 public interface MetadataStorageActionHandlerFactory
 {
-  public <EntryType, StatusType, LogType, LockType> MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
-      final String entryType,
+  <EntryType, StatusType, LogType, LockType> MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType> create(
+      String entryType,
       MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> payloadTypes
   );
 }

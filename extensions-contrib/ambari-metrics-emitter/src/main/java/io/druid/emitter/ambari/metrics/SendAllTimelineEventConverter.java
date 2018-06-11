@@ -26,7 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 /**
@@ -71,7 +71,7 @@ public class SendAllTimelineEventConverter implements DruidToTimelineMetricConve
   public TimelineMetric druidEventToTimelineMetric(ServiceMetricEvent serviceMetricEvent)
   {
     ImmutableList.Builder metricNameBuilder = new ImmutableList.Builder<>();
-    if(!Strings.isNullOrEmpty(namespacePrefix)) {
+    if (!Strings.isNullOrEmpty(namespacePrefix)) {
       metricNameBuilder.add(namespacePrefix);
     }
     metricNameBuilder.add(AmbariMetricsEmitter.sanitize(serviceMetricEvent.getService()));

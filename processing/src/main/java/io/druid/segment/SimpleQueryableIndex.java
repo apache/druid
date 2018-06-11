@@ -19,7 +19,9 @@
 
 package io.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -28,35 +30,41 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 /**
  */
-public class SimpleQueryableIndex implements QueryableIndex
+public class SimpleQueryableIndex extends AbstractIndex implements QueryableIndex
 {
   private final Interval dataInterval;
-  private final Indexed<String> columnNames;
+  private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
   private final Map<String, Column> columns;
   private final SmooshedFileMapper fileMapper;
+  @Nullable
   private final Metadata metadata;
   private final Map<String, DimensionHandler> dimensionHandlers;
 
   public SimpleQueryableIndex(
-      Interval dataInterval,
-      Indexed<String> columnNames,
-      Indexed<String> dimNames,
+      Interval dataInterval, Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
       Map<String, Column> columns,
       SmooshedFileMapper fileMapper,
-      Metadata metadata
+      @Nullable Metadata metadata
   )
   {
     Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
-    this.dataInterval = dataInterval;
-    this.columnNames = columnNames;
+    this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
+    ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
+    for (String column : columns.keySet()) {
+      if (!Column.TIME_COLUMN_NAME.equals(column)) {
+        columnNamesBuilder.add(column);
+      }
+    }
+    this.columnNames = columnNamesBuilder.build();
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;
     this.columns = columns;
@@ -64,6 +72,28 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.metadata = metadata;
     this.dimensionHandlers = Maps.newLinkedHashMap();
     initDimensionHandlers();
+  }
+
+  @VisibleForTesting
+  public SimpleQueryableIndex(
+      Interval interval,
+      List<String> columnNames,
+      Indexed<String> availableDimensions,
+      BitmapFactory bitmapFactory,
+      Map<String, Column> columns,
+      SmooshedFileMapper fileMapper,
+      @Nullable Metadata metadata,
+      Map<String, DimensionHandler> dimensionHandlers
+  )
+  {
+    this.dataInterval = interval;
+    this.columnNames = columnNames;
+    this.availableDimensions = availableDimensions;
+    this.bitmapFactory = bitmapFactory;
+    this.columns = columns;
+    this.fileMapper = fileMapper;
+    this.metadata = metadata;
+    this.dimensionHandlers = dimensionHandlers;
   }
 
   @Override
@@ -79,9 +109,15 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
-  public Indexed<String> getColumnNames()
+  public List<String> getColumnNames()
   {
     return columnNames;
+  }
+
+  @Override
+  public StorageAdapter toStorageAdapter()
+  {
+    return new QueryableIndexStorageAdapter(this);
   }
 
   @Override
@@ -96,14 +132,27 @@ public class SimpleQueryableIndex implements QueryableIndex
     return bitmapFactory;
   }
 
+  @Nullable
   @Override
   public Column getColumn(String columnName)
   {
     return columns.get(columnName);
   }
 
+  @VisibleForTesting
+  public Map<String, Column> getColumns()
+  {
+    return columns;
+  }
+
+  @VisibleForTesting
+  public SmooshedFileMapper getFileMapper()
+  {
+    return fileMapper;
+  }
+
   @Override
-  public void close() throws IOException
+  public void close()
   {
     fileMapper.close();
   }

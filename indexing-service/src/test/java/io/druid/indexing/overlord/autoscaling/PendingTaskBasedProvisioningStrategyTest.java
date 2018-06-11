@@ -19,17 +19,12 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.common.guava.DSuppliers;
-import io.druid.concurrent.Execs;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.task.NoopTask;
@@ -39,11 +34,17 @@ import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.FillCapacityWorkerSelectStrategy;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -67,11 +68,11 @@ public class PendingTaskBasedProvisioningStrategyTest
   private PendingTaskBasedWorkerProvisioningStrategy strategy;
   private AtomicReference<WorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
-  private final static String MIN_VERSION = "2014-01-00T00:01:00Z";
-  private final static String INVALID_VERSION = "0";
+  private static final String MIN_VERSION = "2014-01-00T00:01:00Z";
+  private static final String INVALID_VERSION = "0";
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     autoScaler = EasyMock.createMock(AutoScaler.class);
 
@@ -85,8 +86,8 @@ public class PendingTaskBasedProvisioningStrategyTest
         .setMaxScalingStep(2);
 
     workerConfig = new AtomicReference<>(
-        new WorkerBehaviorConfig(
-            new FillCapacityWorkerSelectStrategy(),
+        new DefaultWorkerBehaviorConfig(
+            new FillCapacityWorkerSelectStrategy(null),
             autoScaler
         )
     );
@@ -107,7 +108,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSuccessfulInitialMinWorkersProvision() throws Exception
+  public void testSuccessfulInitialMinWorkersProvision()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -139,7 +140,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSuccessfulMinWorkersProvision() throws Exception
+  public void testSuccessfulMinWorkersProvision()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -173,7 +174,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSuccessfulMinWorkersProvisionWithOldVersionNodeRunning() throws Exception
+  public void testSuccessfulMinWorkersProvisionWithOldVersionNodeRunning()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
@@ -208,7 +209,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSomethingProvisioning() throws Exception
+  public void testSomethingProvisioning()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
@@ -322,7 +323,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testDoSuccessfulTerminate() throws Exception
+  public void testDoSuccessfulTerminate()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
@@ -336,9 +337,11 @@ public class PendingTaskBasedProvisioningStrategyTest
         Arrays.asList(
             new RemoteTaskRunnerWorkItem(
                 testTask.getId(),
+                testTask.getType(),
                 null,
-                TaskLocation.unknown()
-            ).withQueueInsertionTime(new DateTime())
+                TaskLocation.unknown(),
+                testTask.getDataSource()
+            ).withQueueInsertionTime(DateTimes.nowUtc())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -346,12 +349,8 @@ public class PendingTaskBasedProvisioningStrategyTest
             new TestZkWorker(testTask).toImmutable()
         )
     ).times(2);
-    EasyMock.expect(runner.markWorkersLazy((Predicate<ImmutableWorkerInfo>) EasyMock.anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Arrays.<Worker>asList(
-                    new TestZkWorker(testTask).getWorker()
-                )
-            );
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.singletonList(new TestZkWorker(testTask).getWorker()));
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
     EasyMock.replay(runner);
 
@@ -368,7 +367,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testSomethingTerminating() throws Exception
+  public void testSomethingTerminating()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
@@ -385,12 +384,8 @@ public class PendingTaskBasedProvisioningStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList()).times(2);
-    EasyMock.expect(runner.markWorkersLazy((Predicate<ImmutableWorkerInfo>) EasyMock.anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Arrays.asList(
-                    new TestZkWorker(testTask).toImmutable().getWorker()
-                )
-            );
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.singletonList(new TestZkWorker(testTask).toImmutable().getWorker()));
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -415,7 +410,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testNoActionNeeded() throws Exception
+  public void testNoActionNeeded()
   {
     EasyMock.reset(autoScaler);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
@@ -438,10 +433,8 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
 
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
-    EasyMock.expect(runner.markWorkersLazy((Predicate<ImmutableWorkerInfo>) EasyMock.anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Collections.<Worker>emptyList()
-            );
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.emptyList());
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -465,7 +458,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testMinCountIncrease() throws Exception
+  public void testMinCountIncrease()
   {
     // Don't terminate anything
     EasyMock.reset(autoScaler);
@@ -485,10 +478,8 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig()).times(2);
 
     EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
-    EasyMock.expect(runner.markWorkersLazy((Predicate<ImmutableWorkerInfo>) EasyMock.anyObject(), EasyMock.anyInt()))
-            .andReturn(
-                Collections.<Worker>emptyList()
-            );
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
+            .andReturn(Collections.emptyList());
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -528,7 +519,7 @@ public class PendingTaskBasedProvisioningStrategyTest
   }
 
   @Test
-  public void testNullWorkerConfig() throws Exception
+  public void testNullWorkerConfig()
   {
     workerConfig.set(null);
     EasyMock.replay(autoScaler);

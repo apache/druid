@@ -21,21 +21,18 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
-import io.druid.java.util.common.parsers.ParseException;
+import io.druid.guice.annotations.PublicApi;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  */
+@PublicApi
 public class MapBasedRow implements Row
 {
-  private static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
-
   private final DateTime timestamp;
   private final Map<String, Object> event;
 
@@ -54,7 +51,7 @@ public class MapBasedRow implements Row
       Map<String, Object> event
   )
   {
-    this(new DateTime(timestamp), event);
+    this(DateTimes.utc(timestamp), event);
   }
 
   @Override
@@ -79,16 +76,7 @@ public class MapBasedRow implements Row
   @Override
   public List<String> getDimension(String dimension)
   {
-    final Object dimValue = event.get(dimension);
-
-    if (dimValue == null) {
-      return Collections.emptyList();
-    } else if (dimValue instanceof List) {
-      // guava's toString function fails on null objects, so please do not use it
-      return Lists.transform((List) dimValue, String::valueOf);
-    } else {
-      return Collections.singletonList(String.valueOf(dimValue));
-    }
+    return Rows.objectToStrings(event.get(dimension));
   }
 
   @Override
@@ -98,73 +86,9 @@ public class MapBasedRow implements Row
   }
 
   @Override
-  public float getFloatMetric(String metric)
+  public Number getMetric(String metric)
   {
-    Object metricValue = event.get(metric);
-
-    if (metricValue == null) {
-      return 0.0f;
-    }
-
-    if (metricValue instanceof Number) {
-      return ((Number) metricValue).floatValue();
-    } else if (metricValue instanceof String) {
-      try {
-        return Float.valueOf(((String) metricValue).replace(",", ""));
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
-      }
-    } else {
-      throw new ParseException("Unknown type[%s]", metricValue.getClass());
-    }
-  }
-
-  @Override
-  public long getLongMetric(String metric)
-  {
-    Object metricValue = event.get(metric);
-
-    if (metricValue == null) {
-      return 0L;
-    }
-
-    if (metricValue instanceof Number) {
-      return ((Number) metricValue).longValue();
-    } else if (metricValue instanceof String) {
-      try {
-        String s = ((String) metricValue).replace(",", "");
-        return LONG_PAT.matcher(s).matches() ? Long.valueOf(s) : Double.valueOf(s).longValue();
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
-      }
-    } else {
-      throw new ParseException("Unknown type[%s]", metricValue.getClass());
-    }
-  }
-
-  @Override
-  public double getDoubleMetric(String metric)
-  {
-    Object metricValue = event.get(metric);
-
-    if (metricValue == null) {
-      return 0.0d;
-    }
-
-    if (metricValue instanceof Number) {
-      return ((Number) metricValue).doubleValue();
-    } else if (metricValue instanceof String) {
-      try {
-        return Double.valueOf(((String) metricValue).replace(",", ""));
-      }
-      catch (Exception e) {
-        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
-      }
-    } else {
-      throw new ParseException("Unknown type[%s]", metricValue.getClass());
-    }
+    return Rows.objectToNumber(metric, event.get(metric));
   }
 
   @Override

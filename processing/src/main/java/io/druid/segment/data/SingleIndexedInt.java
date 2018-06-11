@@ -19,17 +19,21 @@
 
 package io.druid.segment.data;
 
+import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
 
-import java.io.IOException;
-
+/**
+ * Reusable IndexedInts that represents a sequence of a solo value [X].
+ */
 public final class SingleIndexedInt implements IndexedInts
 {
-  private final int value;
+  private int value;
 
-  public SingleIndexedInt(int value)
+  public SingleIndexedInt()
+  {
+  }
+
+  public void setValue(int value)
   {
     this.value = value;
   }
@@ -44,26 +48,9 @@ public final class SingleIndexedInt implements IndexedInts
   public int get(int i)
   {
     if (i != 0) {
-      throw new IllegalArgumentException(i + " != 0");
+      throw new IAE("%d != 0", i);
     }
     return value;
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return IntIterators.singleton(value);
-  }
-
-  @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

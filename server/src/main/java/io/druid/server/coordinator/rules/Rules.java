@@ -27,13 +27,13 @@ public class Rules
 {
   public static boolean eligibleForLoad(Interval src, Interval target)
   {
-    return src.contains(target);
+    return src.overlaps(target);
   }
 
   public static boolean eligibleForLoad(Period period, Interval interval, DateTime referenceTimestamp)
   {
     final Interval currInterval = new Interval(period, referenceTimestamp);
-    return currInterval.overlaps(interval) && interval.getStartMillis() >= currInterval.getStartMillis();
+    return eligibleForLoad(currInterval, interval);
   }
 
   private Rules() {}

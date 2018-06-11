@@ -40,17 +40,18 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.SQLException;
 import java.util.List;
 
 @Path("/druid/v2/sql/")
@@ -74,16 +75,16 @@ public class SqlResource
   @POST
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response doPost(final SqlQuery sqlQuery) throws SQLException, IOException
+  public Response doPost(
+      final SqlQuery sqlQuery,
+      @Context final HttpServletRequest req
+  ) throws IOException
   {
-    // This is not integrated with the experimental authorization framework.
-    // (Non-trivial since we don't know the dataSources up-front)
-
     final PlannerResult plannerResult;
     final DateTimeZone timeZone;
 
     try (final DruidPlanner planner = plannerFactory.createPlanner(sqlQuery.getContext())) {
-      plannerResult = planner.plan(sqlQuery.getQuery());
+      plannerResult = planner.plan(sqlQuery.getQuery(), req);
       timeZone = planner.getPlannerContext().getTimeZone();
 
       // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
@@ -112,7 +113,7 @@ public class SqlResource
 
                   while (!yielder.isDone()) {
                     final Object[] row = yielder.get();
-                    jsonGenerator.writeStartObject();
+                    sqlQuery.getResultFormat().writeResultStart(jsonGenerator);
                     for (int i = 0; i < fieldList.size(); i++) {
                       final Object value;
 
@@ -128,9 +129,9 @@ public class SqlResource
                         value = row[i];
                       }
 
-                      jsonGenerator.writeObjectField(fieldList.get(i).getName(), value);
+                      sqlQuery.getResultFormat().writeResultField(jsonGenerator, fieldList.get(i).getName(), value);
                     }
-                    jsonGenerator.writeEndObject();
+                    sqlQuery.getResultFormat().writeResultEnd(jsonGenerator);
                     yielder = yielder.next(null);
                   }
 

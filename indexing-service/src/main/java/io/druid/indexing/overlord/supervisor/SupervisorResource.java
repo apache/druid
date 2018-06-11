@@ -22,10 +22,9 @@ package io.druid.indexing.overlord.supervisor;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -33,11 +32,10 @@ import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.security.Access;
-import io.druid.server.security.Action;
-import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizationInfo;
-import io.druid.server.security.Resource;
-import io.druid.server.security.ResourceType;
+import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
+import io.druid.server.security.ForbiddenException;
+import io.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -49,6 +47,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,14 +60,28 @@ import java.util.Set;
 @Path("/druid/indexer/v1/supervisor")
 public class SupervisorResource
 {
+  private static final Function<VersionedSupervisorSpec, Iterable<ResourceAction>> SPEC_DATASOURCE_READ_RA_GENERATOR =
+      supervisorSpec -> {
+        if (supervisorSpec.getSpec() == null) {
+          return null;
+        }
+        if (supervisorSpec.getSpec().getDataSources() == null) {
+          return new ArrayList<>();
+        }
+        return Iterables.transform(
+            supervisorSpec.getSpec().getDataSources(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        );
+      };
+
   private final TaskMaster taskMaster;
-  private final AuthConfig authConfig;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
-  public SupervisorResource(TaskMaster taskMaster, AuthConfig authConfig)
+  public SupervisorResource(TaskMaster taskMaster, AuthorizerMapper authorizerMapper)
   {
     this.taskMaster = taskMaster;
-    this.authConfig = authConfig;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @POST
@@ -81,18 +95,21 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            if (authConfig.isEnabled()) {
-              // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-              final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-              Preconditions.checkNotNull(
-                  authorizationInfo,
-                  "Security is enabled but no authorization info found in the request"
-              );
-              Access authResult = checkSupervisorAccess(authorizationInfo, spec);
-              if (!authResult.isAllowed()) {
-                return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
-              }
+            Preconditions.checkArgument(
+                spec.getDataSources() != null && spec.getDataSources().size() > 0,
+                "No dataSources found to perform authorization checks"
+            );
+
+            Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+                req,
+                Iterables.transform(spec.getDataSources(), AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
+                authorizerMapper
+            );
+
+            if (!authResult.isAllowed()) {
+              throw new ForbiddenException(authResult.toString());
             }
+
             boolean success = manager.createOrUpdateAndStartSupervisor(spec);
             if (success) {
               return Response.ok(ImmutableMap.of("id", spec.getId())).build();
@@ -106,25 +123,6 @@ public class SupervisorResource
     );
   }
 
-  private Access checkSupervisorAccess(final AuthorizationInfo authorizationInfo, final SupervisorSpec spec)
-  {
-    Preconditions.checkArgument(
-        spec.getDataSources() != null && spec.getDataSources().size() > 0,
-        "No dataSources found to perform authorization checks"
-    );
-    Access result = new Access(true);
-    for (String dataSource : spec.getDataSources()) {
-      result = authorizationInfo.isAuthorized(
-          new Resource(dataSource, ResourceType.DATASOURCE),
-          Action.WRITE
-      );
-      if (!result.isAllowed()) {
-        return result;
-      }
-    }
-    return result;
-  }
-
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetAll(@Context final HttpServletRequest req)
@@ -135,34 +133,12 @@ public class SupervisorResource
           @Override
           public Response apply(final SupervisorManager manager)
           {
-            final Set<String> supervisorIds;
-            if (authConfig.isEnabled()) {
-              final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-              Preconditions.checkNotNull(
-                  authorizationInfo,
-                  "Security is enabled but no authorization info found in the request"
-              );
-              supervisorIds = Sets.newHashSet(
-                  Iterables.filter(
-                      manager.getSupervisorIds(),
-                      new Predicate<String>()
-                      {
-                        @Override
-                        public boolean apply(String id)
-                        {
-                          return manager.getSupervisorSpec(id).isPresent() &&
-                                 checkSupervisorAccess(
-                                     authorizationInfo,
-                                     manager.getSupervisorSpec(id).get()
-                                 ).isAllowed();
-                        }
-                      }
-                  )
-              );
-            } else {
-              supervisorIds = manager.getSupervisorIds();
-            }
-            return Response.ok(supervisorIds).build();
+            Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+                req,
+                manager,
+                manager.getSupervisorIds()
+            );
+            return Response.ok(authorizedSupervisorIds).build();
           }
         }
     );
@@ -218,6 +194,39 @@ public class SupervisorResource
     );
   }
 
+  @GET
+  @Path("/{id}/stats")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response getAllTaskStats(
+      @PathParam("id") final String id
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        new Function<SupervisorManager, Response>()
+        {
+          @Override
+          public Response apply(SupervisorManager manager)
+          {
+            Optional<Map<String, Map<String, Object>>> stats = manager.getSupervisorStats(id);
+            if (!stats.isPresent()) {
+              return Response.status(Response.Status.NOT_FOUND)
+                             .entity(
+                                 ImmutableMap.of(
+                                     "error",
+                                     StringUtils.format("[%s] does not exist", id)
+                                 )
+                             )
+                             .build();
+            }
+
+            return Response.ok(stats.get()).build();
+          }
+        }
+    );
+  }
+
+
   @POST
   @Path("/{id}/shutdown")
   @Produces(MediaType.APPLICATION_JSON)
@@ -253,32 +262,14 @@ public class SupervisorResource
           @Override
           public Response apply(final SupervisorManager manager)
           {
-            final Map<String, List<VersionedSupervisorSpec>> supervisorHistory;
-            if (authConfig.isEnabled()) {
-              final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-              Preconditions.checkNotNull(
-                  authorizationInfo,
-                  "Security is enabled but no authorization info found in the request"
-              );
-              supervisorHistory = Maps.filterKeys(
-                  manager.getSupervisorHistory(),
-                  new Predicate<String>()
-                  {
-                    @Override
-                    public boolean apply(String id)
-                    {
-                      return manager.getSupervisorSpec(id).isPresent() &&
-                             checkSupervisorAccess(
-                                 authorizationInfo,
-                                 manager.getSupervisorSpec(id).get()
-                             ).isAllowed();
-                    }
-                  }
-              );
-            } else {
-              supervisorHistory = manager.getSupervisorHistory();
-            }
-            return Response.ok(supervisorHistory).build();
+            return Response.ok(
+                AuthorizationUtils.filterAuthorizedResources(
+                    req,
+                    manager.getSupervisorHistory(),
+                    SPEC_DATASOURCE_READ_RA_GENERATOR,
+                    authorizerMapper
+                )
+            ).build();
           }
         }
     );
@@ -287,8 +278,9 @@ public class SupervisorResource
   @GET
   @Path("/{id}/history")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(SupervisorResourceFilter.class)
-  public Response specGetHistory(@PathParam("id") final String id)
+  public Response specGetHistory(
+      @Context final HttpServletRequest req,
+      @PathParam("id") final String id)
   {
     return asLeaderWithSupervisorManager(
         new Function<SupervisorManager, Response>()
@@ -296,23 +288,32 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            Map<String, List<VersionedSupervisorSpec>> history = manager.getSupervisorHistory();
-            if (history.containsKey(id)) {
-              return Response.ok(history.get(id)).build();
-            } else {
-              return Response.status(Response.Status.NOT_FOUND)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     StringUtils.format(
-                                         "No history for [%s] (history available for %s)",
-                                         id,
-                                         history.keySet()
-                                     )
-                                 )
-                             )
-                             .build();
+            Map<String, List<VersionedSupervisorSpec>> supervisorHistory = manager.getSupervisorHistory();
+            Iterable<VersionedSupervisorSpec> historyForId = supervisorHistory.get(id);
+            if (historyForId != null) {
+              final List<VersionedSupervisorSpec> authorizedHistoryForId =
+                  Lists.newArrayList(
+                      AuthorizationUtils.filterAuthorizedResources(
+                          req,
+                          historyForId,
+                          SPEC_DATASOURCE_READ_RA_GENERATOR,
+                          authorizerMapper
+                      )
+                  );
+              if (authorizedHistoryForId.size() > 0) {
+                return Response.ok(authorizedHistoryForId).build();
+              }
             }
+
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(
+                               ImmutableMap.of(
+                                   "error",
+                                   StringUtils.format("No history for [%s].", id)
+                               )
+                           )
+                           .build();
+
           }
         }
     );
@@ -351,5 +352,33 @@ public class SupervisorResource
       // Encourage client to try again soon, when we'll likely have a redirect set up
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
+  }
+
+  private Set<String> filterAuthorizedSupervisorIds(
+      final HttpServletRequest req,
+      SupervisorManager manager,
+      Collection<String> supervisorIds
+  )
+  {
+    Function<String, Iterable<ResourceAction>> raGenerator = supervisorId -> {
+      Optional<SupervisorSpec> supervisorSpecOptional = manager.getSupervisorSpec(supervisorId);
+      if (supervisorSpecOptional.isPresent()) {
+        return Iterables.transform(
+            supervisorSpecOptional.get().getDataSources(),
+            AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR
+        );
+      } else {
+        return null;
+      }
+    };
+
+    return Sets.newHashSet(
+        AuthorizationUtils.filterAuthorizedResources(
+            req,
+            supervisorIds,
+            raGenerator,
+            authorizerMapper
+        )
+    );
   }
 }

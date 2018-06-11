@@ -54,7 +54,7 @@ public class StaticPathSpecTest
     Job job = new Job();
     StaticPathSpec pathSpec = new StaticPathSpec("/a/c,/a/b/{c,d}", null);
 
-    DataSchema schema = new DataSchema("ds", null, new AggregatorFactory[0], null, jsonMapper);
+    DataSchema schema = new DataSchema("ds", null, new AggregatorFactory[0], null, null, jsonMapper);
     HadoopIOConfig io = new HadoopIOConfig(null, null, null);
     pathSpec.addInputPaths(new HadoopDruidIndexerConfig(new HadoopIngestionSpec(schema, io, null)), job);
 
@@ -70,7 +70,7 @@ public class StaticPathSpecTest
     sb.append("{\"paths\" : \"");
     sb.append(path);
     sb.append("\",");
-    if(inputFormat != null) {
+    if (inputFormat != null) {
       sb.append("\"inputFormat\" : \"");
       sb.append(inputFormat.getName());
       sb.append("\",");

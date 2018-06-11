@@ -86,7 +86,7 @@ public class ITIndexerTest extends AbstractIndexerTest
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return coordinator.areSegmentsLoaded(INDEX_DATASOURCE);
           }
@@ -104,7 +104,7 @@ public class ITIndexerTest extends AbstractIndexerTest
         new Callable<Boolean>()
         {
           @Override
-          public Boolean call() throws Exception
+          public Boolean call()
           {
             return coordinator.areSegmentsLoaded(REINDEX_DATASOURCE);
           }

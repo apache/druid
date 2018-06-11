@@ -25,7 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.CacheStrategy;
+import io.druid.query.Druids;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -35,13 +37,16 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-import io.druid.query.spec.QuerySegmentSpecs;
+import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.segment.column.ValueType;
-import org.joda.time.Interval;
+import io.druid.timeline.LogicalSegment;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SegmentMetadataQueryQueryToolChestTest
 {
@@ -50,7 +55,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     SegmentMetadataQuery query = new SegmentMetadataQuery(
         new TableDataSource("dummy"),
-        QuerySegmentSpecs.create("2015-01-01/2015-01-02"),
+        new LegacySegmentSpec("2015-01-01/2015-01-02"),
         null,
         null,
         null,
@@ -69,9 +74,7 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     SegmentAnalysis result = new SegmentAnalysis(
         "testSegment",
-        ImmutableList.of(
-            new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")
-        ),
+        ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
@@ -91,7 +94,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         null
     );
 
-    Object preparedValue = strategy.prepareForCache().apply(result);
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result);
 
     ObjectMapper objectMapper = new DefaultObjectMapper();
     SegmentAnalysis fromCacheValue = objectMapper.readValue(
@@ -99,7 +102,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    SegmentAnalysis fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
+    SegmentAnalysis fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
   }
@@ -270,6 +273,37 @@ public class SegmentMetadataQueryQueryToolChestTest
             mergeLenient(analysis1, analysis2),
             mergeLenient(analysis1, analysis2)
         ).getAggregators()
+    );
+  }
+
+  @Test
+  public void testFilterSegments()
+  {
+    final SegmentMetadataQueryConfig config = new SegmentMetadataQueryConfig();
+    final SegmentMetadataQueryQueryToolChest toolChest = new SegmentMetadataQueryQueryToolChest(config);
+
+    final List<LogicalSegment> filteredSegments = toolChest.filterSegments(
+        Druids.newSegmentMetadataQueryBuilder().dataSource("foo").merge(true).build(),
+        ImmutableList
+            .of(
+                "2000-01-01/P1D",
+                "2000-01-04/P1D",
+                "2000-01-09/P1D",
+                "2000-01-09/P1D"
+            )
+            .stream()
+            .map(interval -> (LogicalSegment) () -> Intervals.of(interval))
+            .collect(Collectors.toList())
+    );
+
+    Assert.assertEquals(Period.weeks(1), config.getDefaultHistory());
+    Assert.assertEquals(
+        ImmutableList.of(
+            Intervals.of("2000-01-04/P1D"),
+            Intervals.of("2000-01-09/P1D"),
+            Intervals.of("2000-01-09/P1D")
+        ),
+        filteredSegments.stream().map(LogicalSegment::getInterval).collect(Collectors.toList())
     );
   }
 

@@ -22,17 +22,20 @@ package io.druid.query.aggregation.first;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class DoubleFirstBufferAggregator implements BufferAggregator
 {
-  private final LongColumnSelector timeSelector;
-  private final DoubleColumnSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
+  private final BaseDoubleColumnValueSelector valueSelector;
 
-  public DoubleFirstBufferAggregator(LongColumnSelector timeSelector, DoubleColumnSelector valueSelector)
+  public DoubleFirstBufferAggregator(
+      BaseLongColumnValueSelector timeSelector,
+      BaseDoubleColumnValueSelector valueSelector
+  )
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
@@ -48,11 +51,11 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     long firstTime = buf.getLong(position);
     if (time < firstTime) {
       buf.putLong(position, time);
-      buf.putDouble(position + Long.BYTES, valueSelector.get());
+      buf.putDouble(position + Long.BYTES, valueSelector.getDouble());
     }
   }
 

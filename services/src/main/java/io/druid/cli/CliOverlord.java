@@ -19,8 +19,10 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -32,7 +34,9 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
+import io.druid.client.indexing.IndexingService;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;
@@ -44,15 +48,20 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ListProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
+import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
+import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
+import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -70,6 +79,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelper;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
 import io.druid.indexing.overlord.helpers.TaskLogAutoCleanerConfig;
+import io.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -82,8 +92,13 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthenticationUtils;
+import io.druid.server.security.Authenticator;
+import io.druid.server.security.AuthenticatorMapper;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.server.Handler;
@@ -106,6 +121,16 @@ import java.util.List;
 public class CliOverlord extends ServerRunnable
 {
   private static Logger log = new Logger(CliOverlord.class);
+
+  protected static List<String> UNSECURED_PATHS = ImmutableList.of(
+      "/",
+      "/console.html",
+      "/old-console/*",
+      "/images/*",
+      "/js/*",
+      "/druid/indexer/v1/isLeader",
+      "/status/health"
+  );
 
   public CliOverlord()
   {
@@ -157,9 +182,23 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
             binder.bind(TaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskStorageQueryAdapter.class).in(LazySingleton.class);
+            binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             configureTaskStorage(binder);
             configureAutoscale(binder);
@@ -173,15 +212,26 @@ public class CliOverlord extends ServerRunnable
             if (standalone) {
               binder.bind(RedirectFilter.class).in(LazySingleton.class);
               binder.bind(RedirectInfo.class).to(OverlordRedirectInfo.class).in(LazySingleton.class);
-              binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
+              binder.bind(JettyServerInitializer.class)
+                    .to(OverlordJettyServerInitializer.class)
+                    .in(LazySingleton.class);
             }
 
             Jerseys.addResource(binder, OverlordResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
+            Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
 
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
             }
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(IndexingService.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, IndexingService.class));
           }
 
           private void configureTaskStorage(Binder binder)
@@ -225,6 +275,9 @@ public class CliOverlord extends ServerRunnable
             biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME).to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
+            biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME).to(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+            binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
             JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
           }
 
@@ -250,7 +303,6 @@ public class CliOverlord extends ServerRunnable
             );
             biddy.addBinding("simple").to(SimpleWorkerProvisioningStrategy.class);
             biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerProvisioningStrategy.class);
-
           }
 
           private void configureOverlordHelpers(Binder binder)
@@ -270,6 +322,16 @@ public class CliOverlord extends ServerRunnable
    */
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
+    private final AuthConfig authConfig;
+    private final ServerConfig serverConfig;
+
+    @Inject
+    OverlordJettyServerInitializer(AuthConfig authConfig, ServerConfig serverConfig)
+    {
+      this.authConfig = authConfig;
+      this.serverConfig = serverConfig;
+    }
+
     @Override
     public void initialize(Server server, Injector injector)
     {
@@ -289,10 +351,35 @@ public class CliOverlord extends ServerRunnable
               }
           )
       );
+
+      final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+      final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
+
+      List<Authenticator> authenticators = null;
+      AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
+
+      // perform no-op authorization for these resources
+      AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+      AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
+
+      authenticators = authenticatorMapper.getAuthenticatorChain();
+      AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
+      AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
+
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
-      // /status should not redirect, so add first
+
+      // Check that requests were authorized before sending responses
+      AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
+          root,
+          authenticators,
+          jsonMapper
+      );
+
+      // add some paths not to be redirected to leader.
       root.addFilter(GuiceFilter.class, "/status/*", null);
+      root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
 
       // redirect anything other than status to the current lead
       root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
@@ -300,11 +387,17 @@ public class CliOverlord extends ServerRunnable
       // Can't use /* here because of Guice and Jetty static content conflicts
       root.addFilter(GuiceFilter.class, "/druid/*", null);
 
+      root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+
       HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(
           new Handler[]{
               JettyServerInitUtils.getJettyRequestLogHandler(),
-              JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+              JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                  root,
+                  serverConfig.getInflateBufferSize(),
+                  serverConfig.getCompressionLevel()
+              )
           }
       );
 

@@ -20,10 +20,13 @@
 package io.druid.emitter.graphite;
 
 import com.google.common.collect.Maps;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.annotations.UsedByJUnitParamsRunner;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -31,20 +34,26 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
 
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedConverterTest
 {
-  final private String prefix = "druid";
-  final private WhiteListBasedConverter defaultWhiteListBasedConverter = new WhiteListBasedConverter(
+  private final String prefix = "druid";
+  private final WhiteListBasedConverter defaultWhiteListBasedConverter = new WhiteListBasedConverter(
       prefix,
+      false,
       false,
       false,
       null,
       new DefaultObjectMapper()
   );
   private ServiceMetricEvent event;
-  private DateTime createdTime = new DateTime();
+  private DateTime createdTime = DateTimes.nowUtc();
   private String hostname = "testHost.yahoo.com:8080";
   private String serviceName = "historical";
   private String defaultNamespace = prefix + "." + serviceName + "." + GraphiteEmitter.sanitize(hostname);
@@ -104,6 +113,40 @@ public class WhiteListBasedConverterTest
     Assert.assertEquals(expectedPath, path);
   }
 
+  @Test
+  public void testWhiteListedStringArrayDimension() throws IOException
+  {
+    File mapFile = File.createTempFile("testing-" + System.nanoTime(), ".json");
+    mapFile.deleteOnExit();
+
+    try (OutputStream outputStream = new FileOutputStream(mapFile)) {
+      IOUtils.copyLarge(
+          getClass().getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
+          outputStream
+      );
+    }
+
+    WhiteListBasedConverter converter = new WhiteListBasedConverter(
+        prefix,
+        false,
+        false,
+        false,
+        mapFile.getAbsolutePath(),
+        new DefaultObjectMapper()
+    );
+
+    ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+        .setDimension("gcName", new String[] {"g1"})
+        .build(createdTime, "jvm/gc/cpu", 10)
+        .build(serviceName, hostname);
+
+    GraphiteEvent graphiteEvent = converter.druidEventToGraphite(event);
+
+    Assert.assertNotNull(graphiteEvent);
+    Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", graphiteEvent.getEventPath());
+  }
+
+  @UsedByJUnitParamsRunner
   private Object[] parametersForTestGetPath()
   {
     return new Object[]{

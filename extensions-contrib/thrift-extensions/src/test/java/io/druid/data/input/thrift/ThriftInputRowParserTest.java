@@ -19,26 +19,31 @@
 
 package io.druid.data.input.thrift;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.JSONPathFieldSpec;
-import io.druid.data.input.impl.JSONPathFieldType;
-import io.druid.data.input.impl.JSONPathSpec;
+import io.druid.data.input.impl.JavaScriptParseSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldType;
+import io.druid.java.util.common.parsers.JSONPathSpec;
+import io.druid.js.JavaScriptConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
+import org.hamcrest.CoreMatchers;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.nio.ByteBuffer;
 
@@ -47,11 +52,13 @@ import static org.junit.Assert.assertTrue;
 
 public class ThriftInputRowParserTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private ParseSpec parseSpec;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     parseSpec = new JSONParseSpec(new TimestampSpec("date", "auto", null),
                                   new DimensionsSpec(Lists.<DimensionSchema>newArrayList(
@@ -111,14 +118,44 @@ public class ThriftInputRowParserTest
     serializationAndTest(parser, bytes);
   }
 
-  public void serializationAndTest(ThriftInputRowParser parser, byte[] bytes) throws TException
+  @Test
+  public void testDisableJavaScript()
+  {
+    final JavaScriptParseSpec parseSpec = new JavaScriptParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(
+                ImmutableList.of(
+                    "dim1",
+                    "dim2"
+                )
+            ),
+            null,
+            null
+        ),
+        "func",
+        new JavaScriptConfig(false)
+    );
+    ThriftInputRowParser parser = new ThriftInputRowParser(
+        parseSpec,
+        "example/book.jar",
+        "io.druid.data.input.thrift.Book"
+    );
+
+    expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
+    expectedException.expectMessage("JavaScript is disabled");
+
+    parser.parseBatch(ByteBuffer.allocate(1)).get(0);
+  }
+
+  public void serializationAndTest(ThriftInputRowParser parser, byte[] bytes)
   {
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
-    InputRow row1 = parser.parse(buffer);
+    InputRow row1 = parser.parseBatch(buffer).get(0);
     assertTrue(row1.getDimension("title").get(0).equals("title"));
 
-    InputRow row2 = parser.parse(new BytesWritable(bytes));
+    InputRow row2 = parser.parseBatch(new BytesWritable(bytes)).get(0);
     assertTrue(row2.getDimension("lastName").get(0).equals("last"));
   }
 }

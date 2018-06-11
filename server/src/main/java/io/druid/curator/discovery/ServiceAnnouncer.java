@@ -22,12 +22,15 @@ package io.druid.curator.discovery;
 import io.druid.server.DruidNode;
 
 /**
+ * This class is deprecated, Add service to {@link io.druid.discovery.DruidNodeAnnouncer} node announcement instead.
+ *
  * Announces our ability to serve a particular function. Multiple users may announce the same service, in which
  * case they are treated as interchangeable instances of that service.
  */
+@Deprecated
 public interface ServiceAnnouncer
 {
-  public void announce(DruidNode node);
+  void announce(DruidNode node);
 
-  public void unannounce(DruidNode node);
+  void unannounce(DruidNode node);
 }

@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.11.0-SNAPSHOT</version>
+    <version>0.13.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,30 +54,41 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.11.0-SNAPSHOT</tag>
+        <tag>0.13.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
-        <!-- Curator cannot be updated to 2.12.0 yet, see https://github.com/druid-io/druid/pull/4103 -->
-        <apache.curator.version>2.11.0</apache.curator.version>
-        <avatica.version>1.9.0</avatica.version>
-        <calcite.version>1.12.0</calcite.version>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <apache.curator.version>4.0.0</apache.curator.version>
+        <apache.curator.test.version>2.12.0</apache.curator.test.version>
+        <avatica.version>1.10.0</avatica.version>
+        <calcite.version>1.15.0</calcite.version>
+        <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
+        <fastutil.version>8.1.0</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
-        <jetty.version>9.3.19.v20170502</jetty.version>
+        <jetty.version>9.4.10.v20180503</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-        <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
-        <jackson.version>2.4.6</jackson.version>
+        <!-- jackson 2.7.x causes injection error and 2.8.x can't be used because avatica is using 2.6.3 -->
+        <jackson.version>2.6.7</jackson.version>
         <log4j.version>2.5</log4j.version>
-        <netty.version>4.1.11.Final</netty.version>
+        <!-- HttpClient has not yet been ported to Netty 4.x -->
+        <netty3.version>3.10.6.Final</netty3.version>
+        <!-- Update to Netty 4.1 is not possible yet, see https://github.com/druid-io/druid/issues/4390 and comments
+             in https://github.com/druid-io/druid/pull/4973 -->
+        <netty4.version>4.0.52.Final</netty4.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
-        <hadoop.compile.version>2.7.3</hadoop.compile.version>
+        <hadoop.compile.version>2.8.3</hadoop.compile.version>
         <hive.version>2.0.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
-        <!-- Cannot update to AWS SDK 1.11+ because of Jackson incompatibility.
-        Need to update Druid to use Jackson 2.6+ -->
-        <aws.sdk.version>1.10.77</aws.sdk.version>
+        <aws.sdk.bundle.version>1.11.199</aws.sdk.bundle.version>
+        <caffeine.version>2.5.5</caffeine.version>
+        <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
+        <zookeeper.version>3.4.11</zookeeper.version>
+        <repoOrgId>org-apache-id</repoOrgId>
+        <repoOrgName>org-apache-name</repoOrgName>
+        <repoOrgUrl>https://repository.apache.org/content/repositories/public/</repoOrgUrl>
     </properties>
 
     <modules>
@@ -94,12 +105,10 @@
         <module>benchmarks</module>
         <module>aws-common</module>
         <module>java-util</module>
-        <module>bytebuffer-collections</module>
         <module>extendedset</module>
         <module>hll</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
-        <module>extensions-core/caffeine-cache</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-kerberos</module>
         <module>extensions-core/hdfs-storage</module>
@@ -115,7 +124,9 @@
         <module>extensions-core/lookups-cached-single</module>
         <module>extensions-core/s3-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
+        <module>extensions-core/druid-basic-security</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/druid-rocketmq</module>
@@ -132,31 +143,27 @@
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
-        <module>extensions-contrib/scan-query</module>
         <module>extensions-contrib/sqlserver-metadata-storage</module>
         <module>extensions-contrib/kafka-emitter</module>
+        <module>extensions-contrib/redis-cache</module>
+        <module>extensions-contrib/opentsdb-emitter</module>
+        <module>extensions-contrib/materialized-view-maintenance</module>
+        <module>extensions-contrib/materialized-view-selection</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
 
+  <repositories>
+    <repository>
+        <id>${repoOrgId}</id>
+        <name>${repoOrgName}</name>
+        <url>${repoOrgUrl}</url>
+    </repository>
+  </repositories>
+
     <dependencyManagement>
         <dependencies>
             <!-- Compile Scope -->
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>emitter</artifactId>
-                <version>0.4.5</version>
-            </dependency>
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>http-client</artifactId>
-                <version>1.1.0</version>
-            </dependency>
-            <dependency>
-                <groupId>com.metamx</groupId>
-                <artifactId>server-metrics</artifactId>
-                <version>0.5.2</version>
-            </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
@@ -184,54 +191,13 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-ec2</artifactId>
-                <version>${aws.sdk.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>javax.mail</groupId>
-                        <artifactId>mail</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-annotations</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>commons-codec</groupId>
-                        <artifactId>commons-codec</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-s3</artifactId>
-                <version>${aws.sdk.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>javax.mail</groupId>
-                        <artifactId>mail</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-databind</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-annotations</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>commons-codec</groupId>
-                        <artifactId>commons-codec</artifactId>
-                    </exclusion>
-                </exclusions>
+                <artifactId>aws-java-sdk-bundle</artifactId>
+                <version>${aws.sdk.bundle.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
-                <version>1.0.3</version>
+                <version>1.0.4</version>
             </dependency>
             <dependency>
                 <groupId>io.airlift</groupId>
@@ -259,7 +225,7 @@
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
-                <version>3.4.10</version>
+                <version>${zookeeper.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
@@ -295,6 +261,12 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
                 <version>${apache.curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.zookeeper</groupId>
+                        <artifactId>zookeeper</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -342,6 +314,11 @@
                 <version>${guice.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_annotations</artifactId>
+                <version>2.2.0</version>
+            </dependency>
+            <dependency>
                 <groupId>com.ibm.icu</groupId>
                 <artifactId>icu4j</artifactId>
                 <version>54.1.1</version>
@@ -350,6 +327,16 @@
                 <groupId>org.mozilla</groupId>
                 <artifactId>rhino</artifactId>
                 <version>1.7R5</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.16</version>
+            </dependency>
+            <dependency>
+                <groupId>org.tukaani</groupId>
+                <artifactId>xz</artifactId>
+                <version>1.8</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
@@ -483,8 +470,13 @@
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+                <version>${netty3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
-                <version>${netty.version}</version>
+                <version>${netty4.version}</version>
             </dependency>
             <dependency>
                 <groupId>joda-time</groupId>
@@ -566,9 +558,9 @@
                 <version>2.0.1</version>
             </dependency>
             <dependency>
-                <groupId>net.jpountz.lz4</groupId>
-                <artifactId>lz4</artifactId>
-                <version>1.3.0</version>
+                <groupId>org.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.4.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -592,54 +584,26 @@
                 <version>0.9.0.M2</version>
             </dependency>
             <dependency>
-                <groupId>net.java.dev.jets3t</groupId>
-                <artifactId>jets3t</artifactId>
-                <version>0.9.4</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>commons-codec</groupId>
-                        <artifactId>commons-codec</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>commons-logging</groupId>
-                        <artifactId>commons-logging</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.httpcomponents</groupId>
-                        <artifactId>httpclient</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.httpcomponents</groupId>
-                        <artifactId>httpcore</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.codehaus.jackson</groupId>
-                        <artifactId>jackson-core-asl</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.codehaus.jackson</groupId>
-                        <artifactId>jackson-mapper-asl</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <!-- The htttpcomponents artifacts have non-matching release cadence -->
-            <!-- Watch out for compatibility issues between aws-java-sdk 1.10.x and httpclient > 4.5.1 and
-                 httpcore > 4.4.3; see https://github.com/druid-io/druid/issues/4456 -->
-            <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.5.1</version>
+                <version>4.5.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.3</version>
+                <version>4.4.4</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-client</artifactId>
                 <version>${hadoop.compile.version}</version>
                 <scope>provided</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.avro</groupId>
+                        <artifactId>avro</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -664,7 +628,7 @@
             <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil</artifactId>
-                <version>7.2.0</version>
+                <version>8.1.0</version>
             </dependency>
             <dependency>
                 <groupId>net.sf.opencsv</groupId>
@@ -675,6 +639,11 @@
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
                 <version>2.1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>net.thisptr</groupId>
+                <artifactId>jackson-jq</artifactId>
+                <version>0.0.7</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -696,6 +665,28 @@
                 <artifactId>asm-commons</artifactId>
                 <version>5.2</version>
             </dependency>
+            <dependency>
+                <groupId>org.asynchttpclient</groupId>
+                <artifactId>async-http-client</artifactId>
+                <version>2.0.37</version>
+            </dependency>
+            <dependency>
+                <groupId>org.gridkit.lab</groupId>
+                <artifactId>jvm-attach-api</artifactId>
+                <version>1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>4.5.1</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${dropwizard.metrics.version}</version>
+            </dependency>
+
+            <!-- Test Scope -->
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>jackson-core-asl</artifactId>
@@ -731,6 +722,11 @@
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
                 <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.easymock</groupId>
@@ -776,7 +772,7 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
-                <version>${apache.curator.version}</version>
+                <version>${apache.curator.test.version}</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.jboss.netty</groupId>
@@ -908,6 +904,51 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <bundledSignatures>
+                        <!--
+                          This will automatically choose the right
+                          signatures based on 'maven.compiler.target':
+                        -->
+                        <bundledSignature>jdk-unsafe</bundledSignature>
+                    </bundledSignatures>
+                    <signaturesFiles>
+                        <signaturesFile>${session.executionRootDirectory}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${session.executionRootDirectory}/codestyle/druid-forbidden-apis.txt</signaturesFile>
+                    </signaturesFiles>
+                    <excludes>
+                        <exclude>io/druid/java/util/common/DateTimes$UtcFormatter.class</exclude>
+                        <exclude>io/druid/java/util/common/DateTimes.class</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <bundledSignatures>
+                                <!-- Check jdk-system-out only for production code, but not in test code -->
+                                <bundledSignature>jdk-unsafe</bundledSignature>
+                                <bundledSignature>jdk-system-out</bundledSignature>
+                            </bundledSignatures>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>testValidate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>testCheck</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
                 <version>1.15</version>
@@ -975,6 +1016,8 @@
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                         <argLine>-Xmx3000m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
+                            -Ddruid.indexing.doubleStorage=double
                         </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
@@ -1093,8 +1136,8 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <source>${maven.compiler.target}</source>
+                        <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
             </plugins>
@@ -1115,8 +1158,8 @@
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
-                            <source>1.8</source>
-                            <target>1.8</target>
+                            <source>${maven.compiler.target}</source>
+                            <target>${maven.compiler.target}</target>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
                                 <arg>-XepDisableWarningsInGeneratedCode</arg>
@@ -1195,8 +1238,10 @@
                             <trimStackTrace>false</trimStackTrace>
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                            <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                                -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                            <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                              -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                              <!--@TODO After fixing https://github.com/druid-io/druid/issues/4964 remove this parameter-->
+                              -Ddruid.indexing.doubleStorage=double
                             </argLine>
                             <!-- our tests are very verbose, let's keep the volume down -->
                             <redirectTestOutputToFile>true</redirectTestOutputToFile>

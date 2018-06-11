@@ -19,21 +19,28 @@
 
 package io.druid.data.input.protobuf;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.JSONPathFieldSpec;
-import io.druid.data.input.impl.JSONPathFieldType;
-import io.druid.data.input.impl.JSONPathSpec;
+import io.druid.data.input.impl.JavaScriptParseSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldType;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.js.JavaScriptConfig;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -43,10 +50,13 @@ import static org.junit.Assert.assertEquals;
 
 public class ProtobufInputRowParserTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private ParseSpec parseSpec;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
@@ -69,42 +79,47 @@ public class ProtobufInputRowParserTest
   }
 
   @Test
-  public void testShortMessageType() throws Exception
+  public void testShortMessageType()
   {
     //configure parser with desc file, and specify which file name to use
+    @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
   }
 
 
   @Test
-  public void testLongMessageType() throws Exception
+  public void testLongMessageType()
   {
     //configure parser with desc file, and specify which file name to use
+    @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "prototest.ProtoTestEvent");
 
   }
 
 
   @Test(expected = ParseException.class)
-  public void testBadProto() throws Exception
+  public void testBadProto()
   {
     //configure parser with desc file
+    @SuppressWarnings("unused") // expected exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "BadName");
 
   }
 
   @Test(expected = ParseException.class)
-  public void testMalformedDescriptorUrl() throws Exception
+  public void testMalformedDescriptorUrl()
   {
     //configure parser with non existent desc file
+    @SuppressWarnings("unused") // expected exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "file:/nonexist.desc", "BadName");
   }
 
   @Test
-  public void testSingleDescriptorNoMessageType() throws Exception
+  public void testSingleDescriptorNoMessageType()
   {
     // For the backward compatibility, protoMessageType allows null when the desc file has only one message type.
+    @SuppressWarnings("unused") // expected to create parser without exception
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", null);
   }
 
@@ -116,7 +131,7 @@ public class ProtobufInputRowParserTest
     ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
 
     //create binary of proto test event
-    DateTime dateTime = new DateTime(2012, 07, 12, 9, 30);
+    DateTime dateTime = new DateTime(2012, 07, 12, 9, 30, ISOChronology.getInstanceUTC());
     ProtoTestEventWrapper.ProtoTestEvent event = ProtoTestEventWrapper.ProtoTestEvent.newBuilder()
                                                                                      .setDescription("description")
                                                                                      .setEventType(ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE)
@@ -141,7 +156,7 @@ public class ProtobufInputRowParserTest
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     event.writeTo(out);
 
-    InputRow row = parser.parse(ByteBuffer.wrap(out.toByteArray()));
+    InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
     System.out.println(row);
 
     assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
@@ -156,9 +171,35 @@ public class ProtobufInputRowParserTest
     assertDimensionEquals(row, "bar0", "bar0");
 
 
-    assertEquals(47.11F, row.getFloatMetric("someFloatColumn"), 0.0);
-    assertEquals(815.0F, row.getFloatMetric("someIntColumn"), 0.0);
-    assertEquals(816.0F, row.getFloatMetric("someLongColumn"), 0.0);
+    assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
+    assertEquals(815.0F, row.getMetric("someIntColumn").floatValue(), 0.0);
+    assertEquals(816.0F, row.getMetric("someLongColumn").floatValue(), 0.0);
+  }
+
+  @Test
+  public void testDisableJavaScript()
+  {
+    final JavaScriptParseSpec parseSpec = new JavaScriptParseSpec(
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(
+                ImmutableList.of(
+                    "dim1",
+                    "dim2"
+                )
+            ),
+            null,
+            null
+        ),
+        "func",
+        new JavaScriptConfig(false)
+    );
+    final ProtobufInputRowParser parser = new ProtobufInputRowParser(parseSpec, "prototest.desc", "ProtoTestEvent");
+
+    expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
+    expectedException.expectMessage("JavaScript is disabled");
+
+    parser.parseBatch(ByteBuffer.allocate(1)).get(0);
   }
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)

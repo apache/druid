@@ -55,7 +55,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
   private MemcachedCache cache;
   private MemcachedClientIF client;
 
-  public static void main(String[] args) throws Exception
+  public static void main(String[] args)
   {
     Runner.main(MemcachedCacheBenchmark.class, args);
   }
@@ -113,7 +113,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
   }
 
   @Override
-  protected void tearDown() throws Exception
+  protected void tearDown()
   {
     client.shutdown(1, TimeUnit.MINUTES);
   }

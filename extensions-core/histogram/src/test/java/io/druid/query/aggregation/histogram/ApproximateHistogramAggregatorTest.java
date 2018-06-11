@@ -35,7 +35,7 @@ public class ApproximateHistogramAggregatorTest
   }
 
   @Test
-  public void testBufferAggregate() throws Exception
+  public void testBufferAggregate()
   {
     final float[] values = {23, 19, 10, 16, 36, 2, 9, 32, 30, 45};
     final int resolution = 5;
@@ -46,12 +46,13 @@ public class ApproximateHistogramAggregatorTest
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
         "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY
     );
-    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
+    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution);
 
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
     int position = 0;
 
     agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
     for (int i = 0; i < values.length; i++) {
       aggregateBuffer(selector, agg, buf, position);
     }

@@ -21,7 +21,6 @@ package io.druid.metadata.storage.postgresql;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -92,10 +91,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   {
     if (canUpsert == null) {
       DatabaseMetaData metaData = handle.getConnection().getMetaData();
-      canUpsert = metaData.getDatabaseMajorVersion() > 9 || (
-          metaData.getDatabaseMajorVersion() == 9 &&
-          metaData.getDatabaseMinorVersion() >= 5
-      );
+      canUpsert = metaData.getDatabaseMajorVersion() > 9 ||
+                  (metaData.getDatabaseMajorVersion() == 9 && metaData.getDatabaseMinorVersion() >= 5);
     }
     return canUpsert;
   }
@@ -119,7 +116,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       final String valueColumn,
       final String key,
       final byte[] value
-  ) throws Exception
+  )
   {
     return getDBI().withHandle(
         new HandleCallback<Void>()
@@ -171,7 +168,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   @Override
   protected boolean connectorIsTransientException(Throwable e)
   {
-    if(e instanceof SQLException) {
+    if (e instanceof SQLException) {
       final String sqlState = ((SQLException) e).getSQLState();
       // limited to errors that are likely to be resolved within a few retries
       // retry on connection errors and insufficient resources

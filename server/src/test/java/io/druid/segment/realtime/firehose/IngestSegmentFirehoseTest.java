@@ -19,7 +19,6 @@
 
 package io.druid.segment.realtime.firehose;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.spatial.search.RadiusBound;
@@ -31,6 +30,8 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -45,18 +46,25 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
+import io.druid.segment.transform.TransformSpec;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IngestSegmentFirehoseTest
 {
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
@@ -87,11 +95,26 @@ public class IngestSegmentFirehoseTest
       new HyperUniquesAggregatorFactory("unique_hosts", "unique_hosts")
   );
 
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
+
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  private IndexIO indexIO = TestHelper.getTestIndexIO();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9();
+  private final IndexIO indexIO;
+  private final IndexMerger indexMerger;
+
+  public IngestSegmentFirehoseTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+  }
 
   @Test
   public void testReadFromIndexAndWriteAnotherIndex() throws Exception
@@ -117,6 +140,7 @@ public class IngestSegmentFirehoseTest
       final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
       final IngestSegmentFirehose firehose = new IngestSegmentFirehose(
           ImmutableList.of(wsa, wsa),
+          TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           null
@@ -127,7 +151,7 @@ public class IngestSegmentFirehoseTest
         final InputRow row = firehose.nextRow();
         Assert.assertNotNull(row);
         if (count == 0) {
-          Assert.assertEquals(new DateTime("2014-10-22T00Z"), row.getTimestamp());
+          Assert.assertEquals(DateTimes.of("2014-10-22T00Z"), row.getTimestamp());
           Assert.assertEquals("host1", row.getRaw("host"));
           Assert.assertEquals("0,1", row.getRaw("spatial"));
           Assert.assertEquals(10L, row.getRaw("visited_sum"));
@@ -148,14 +172,15 @@ public class IngestSegmentFirehoseTest
 
       // Do a spatial filter
       final IngestSegmentFirehose firehose2 = new IngestSegmentFirehose(
-          ImmutableList.of(new WindowedStorageAdapter(queryable, new Interval("2000/3000"))),
+          ImmutableList.of(new WindowedStorageAdapter(queryable, Intervals.of("2000/3000"))),
+          TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           new SpatialDimFilter("spatial", new RadiusBound(new float[]{1, 0}, 0.1f))
       );
       final InputRow row = firehose2.nextRow();
       Assert.assertFalse(firehose2.hasMore());
-      Assert.assertEquals(new DateTime("2014-10-22T00Z"), row.getTimestamp());
+      Assert.assertEquals(DateTimes.of("2014-10-22T00Z"), row.getTimestamp());
       Assert.assertEquals("host2", row.getRaw("host"));
       Assert.assertEquals("1,0", row.getRaw("spatial"));
       Assert.assertEquals(40L, row.getRaw("visited_sum"));
@@ -187,7 +212,7 @@ public class IngestSegmentFirehoseTest
             false,
             0
         ),
-        Charsets.UTF_8.toString()
+        StandardCharsets.UTF_8.toString()
     );
 
     try (
@@ -204,7 +229,7 @@ public class IngestSegmentFirehoseTest
       for (String line : rows) {
         index.add(parser.parse(line));
       }
-      indexMerger.persist(index, segmentDir, new IndexSpec());
+      indexMerger.persist(index, segmentDir, new IndexSpec(), null);
     }
   }
 }

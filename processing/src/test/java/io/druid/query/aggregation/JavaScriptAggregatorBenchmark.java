@@ -21,12 +21,15 @@ package io.druid.query.aggregation;
 
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.druid.segment.ObjectColumnSelector;
 
+import java.util.Collections;
 import java.util.Map;
 
+
+/**
+ * TODO rewrite to use JMH and move to benchmarks project
+ */
 public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
 {
 
@@ -48,12 +51,12 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
   final LoopingDoubleColumnSelector selector = new LoopingDoubleColumnSelector(new double[]{42.12d, 9d});
 
   @Override
-  protected void setUp() throws Exception
+  protected void setUp()
   {
     Map<String, String> script = scriptDoubleSum;
 
     jsAggregator = new JavaScriptAggregator(
-        Lists.asList(MetricSelectorUtils.wrap(selector), new ObjectColumnSelector[]{}),
+        Collections.singletonList(selector),
         JavaScriptAggregatorFactory.compileScript(
             script.get("fnAggregate"),
             script.get("fnReset"),
@@ -64,54 +67,29 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     doubleAgg = new DoubleSumAggregator(selector);
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public double timeJavaScriptDoubleSum(int reps)
   {
     double val = 0;
-    for(int i = 0; i < reps; ++i) {
+    for (int i = 0; i < reps; ++i) {
       aggregate(selector, jsAggregator);
     }
     return val;
   }
 
+  @SuppressWarnings("unused") // Supposedly called by Caliper
   public double timeNativeDoubleSum(int reps)
   {
     double val = 0;
-    for(int i = 0; i < reps; ++i) {
+    for (int i = 0; i < reps; ++i) {
       aggregate(selector, doubleAgg);
     }
     return val;
   }
 
-  public static void main(String[] args) throws Exception
+  public static void main(String[] args)
   {
     Runner.main(JavaScriptAggregatorBenchmark.class, args);
-  }
-
-  protected static class LoopingFloatColumnSelector extends TestFloatColumnSelector
-  {
-    private final float[] floats;
-    private long index = 0;
-
-    public LoopingFloatColumnSelector(float[] floats)
-    {
-      super(floats);
-      this.floats = floats;
-    }
-
-    @Override
-    public float get()
-    {
-      return floats[(int) (index % floats.length)];
-    }
-
-    @Override
-    public void increment()
-    {
-      ++index;
-      if (index < 0) {
-        index = 0;
-      }
-    }
   }
 
   protected static class LoopingDoubleColumnSelector extends TestDoubleColumnSelectorImpl
@@ -126,7 +104,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
     }
 
     @Override
-    public double get()
+    public double getDouble()
     {
       return doubles[(int) (index % doubles.length)];
     }

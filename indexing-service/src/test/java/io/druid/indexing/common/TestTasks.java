@@ -62,13 +62,13 @@ public class TestTasks
     }
 
     @Override
-    public boolean isReady(TaskActionClient taskActionClient) throws Exception
+    public boolean isReady(TaskActionClient taskActionClient)
     {
       return true;
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    public TaskStatus run(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
     }
@@ -90,7 +90,7 @@ public class TestTasks
     }
 
     @Override
-    public boolean isReady(TaskActionClient taskActionClient) throws Exception
+    public boolean isReady(TaskActionClient taskActionClient)
     {
       return true;
     }

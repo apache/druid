@@ -56,23 +56,24 @@ public class SequenceTestHelper
   {
     Iterator<Integer> numsIter = nums.iterator();
     Yielder<Integer> yielder = seq.toYielder(
-        0, new YieldingAccumulator<Integer, Integer>()
-    {
-      final Iterator<Integer> valsIter = nums.iterator();
-      int count = 0;
+        0,
+        new YieldingAccumulator<Integer, Integer>()
+        {
+          final Iterator<Integer> valsIter = nums.iterator();
+          int count = 0;
 
-      @Override
-      public Integer accumulate(Integer accumulated, Integer in)
-      {
-        if (++count >= numToTake) {
-          count = 0;
-          yield();
+          @Override
+          public Integer accumulate(Integer accumulated, Integer in)
+          {
+            if (++count >= numToTake) {
+              count = 0;
+              yield();
+            }
+
+            Assert.assertEquals(prefix, valsIter.next(), in);
+            return accumulated + in;
+          }
         }
-
-        Assert.assertEquals(prefix, valsIter.next(), in);
-        return accumulated + in;
-      }
-    }
     );
 
     int expectedSum = 0;
@@ -105,17 +106,18 @@ public class SequenceTestHelper
     }
 
     int sum = seq.accumulate(
-        0, new Accumulator<Integer, Integer>()
-    {
-      final Iterator<Integer> valsIter = nums.iterator();
+        0,
+        new Accumulator<Integer, Integer>()
+        {
+          final Iterator<Integer> valsIter = nums.iterator();
 
-      @Override
-      public Integer accumulate(Integer accumulated, Integer in)
-      {
-        Assert.assertEquals(prefix, valsIter.next(), in);
-        return accumulated + in;
-      }
-    }
+          @Override
+          public Integer accumulate(Integer accumulated, Integer in)
+          {
+            Assert.assertEquals(prefix, valsIter.next(), in);
+            return accumulated + in;
+          }
+        }
     );
 
     Assert.assertEquals(prefix, expectedSum, sum);

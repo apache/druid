@@ -23,7 +23,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,7 +76,7 @@ public class ReferenceCountingResourceHolderTest
           .fromCloseable((Closeable) new Closeable()
           {
             @Override
-            public void close() throws IOException
+            public void close()
             {
               released.set(true);
             }
@@ -116,6 +115,7 @@ public class ReferenceCountingResourceHolderTest
     // Wait until Closer runs
     for (int i = 0; i < 6000 && ReferenceCountingResourceHolder.leakedResources() == initialLeakedResources; i++) {
       System.gc();
+      @SuppressWarnings("unused")
       byte[] garbage = new byte[10_000_000];
       Thread.sleep(10);
     }

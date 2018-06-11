@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import io.druid.client.DruidServer;
+import io.druid.common.utils.UUIDUtils;
+import io.druid.java.util.common.DateTimes;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
@@ -44,6 +46,8 @@ public class CuratorTestBase
   protected Timing timing;
   protected CuratorFramework curator;
 
+  private int batchCtr = 0;
+
   protected void setupServerAndCurator() throws Exception
   {
     server = new TestingServer();
@@ -64,13 +68,11 @@ public class CuratorTestBase
     final String announcementsPath = zkPathsConfig.getAnnouncementsPath();
     final String inventoryPath = zkPathsConfig.getLiveSegmentsPath();
 
+    String zkPath = ZKPaths.makePath(announcementsPath, server.getHost());
     try {
       curator.create()
              .creatingParentsIfNeeded()
-             .forPath(
-                 ZKPaths.makePath(announcementsPath, server.getHost()),
-                 jsonMapper.writeValueAsBytes(server.getMetadata())
-             );
+             .forPath(zkPath, jsonMapper.writeValueAsBytes(server.getMetadata()));
       curator.create()
              .creatingParentsIfNeeded()
              .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
@@ -84,10 +86,7 @@ public class CuratorTestBase
        */
       try {
         curator.setData()
-               .forPath(
-                   ZKPaths.makePath(announcementsPath, server.getHost()),
-                   jsonMapper.writeValueAsBytes(server.getMetadata())
-               );
+               .forPath(zkPath, jsonMapper.writeValueAsBytes(server.getMetadata()));
         curator.setData()
                .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
       }
@@ -116,20 +115,12 @@ public class CuratorTestBase
       curator.create()
              .compressed()
              .withMode(CreateMode.EPHEMERAL)
-             .forPath(
-                 segmentAnnouncementPath,
-                 jsonMapper.writeValueAsBytes(
-                     ImmutableSet.<DataSegment>of(segment)
-                 )
-             );
+             .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
     }
     catch (KeeperException.NodeExistsException e) {
       try {
         curator.setData()
-               .forPath(
-                   segmentAnnouncementPath,
-                   jsonMapper.writeValueAsBytes(ImmutableSet.<DataSegment>of(segment))
-               );
+               .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
       }
       catch (Exception e1) {
         Throwables.propagate(e1);
@@ -138,6 +129,47 @@ public class CuratorTestBase
     catch (Exception e) {
       Throwables.propagate(e);
     }
+  }
+
+  protected String announceBatchSegmentsForServer(
+      DruidServer druidServer,
+      ImmutableSet<DataSegment> segments,
+      ZkPathsConfig zkPathsConfig,
+      ObjectMapper jsonMapper
+  )
+  {
+    final String segmentAnnouncementPath = ZKPaths.makePath(ZKPaths.makePath(
+        zkPathsConfig.getLiveSegmentsPath(),
+        druidServer.getHost()),
+        UUIDUtils.generateUuid(
+          druidServer.getHost(),
+          druidServer.getType().toString(),
+          druidServer.getTier(),
+          DateTimes.nowUtc().toString()
+        ) + String.valueOf(batchCtr++)
+    );
+
+
+    try {
+      curator.create()
+             .compressed()
+             .withMode(CreateMode.EPHEMERAL)
+             .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(segments));
+    }
+    catch (KeeperException.NodeExistsException e) {
+      try {
+        curator.setData()
+               .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(segments));
+      }
+      catch (Exception e1) {
+        Throwables.propagate(e1);
+      }
+    }
+    catch (Exception e) {
+      Throwables.propagate(e);
+    }
+
+    return segmentAnnouncementPath;
   }
 
   protected void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment, ZkPathsConfig zkPathsConfig)
@@ -149,6 +181,12 @@ public class CuratorTestBase
             segment.getIdentifier()
         )
     );
+  }
+
+  protected void unannounceSegmentFromBatchForServer(DruidServer druidServer, DataSegment segment, String batchPath, ZkPathsConfig zkPathsConfig)
+      throws Exception
+  {
+    curator.delete().guaranteed().forPath(batchPath);
   }
 
   protected void tearDownServerAndCurator()

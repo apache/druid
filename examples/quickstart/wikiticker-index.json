@@ -5,7 +5,7 @@
       "type" : "hadoop",
       "inputSpec" : {
         "type" : "static",
-        "paths" : "quickstart/wikiticker-2015-09-12-sampled.json"
+        "paths" : "quickstart/wikiticker-2015-09-12-sampled.json.gz"
       }
     },
     "dataSchema" : {

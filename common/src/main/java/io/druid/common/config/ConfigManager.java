@@ -21,21 +21,20 @@ package io.druid.common.config;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
-
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -66,7 +65,7 @@ public class ConfigManager
     this.config = config;
 
     this.exec = ScheduledExecutors.fixed(1, "config-manager-%s");
-    this.watchedConfigs = Maps.newConcurrentMap();
+    this.watchedConfigs = new ConcurrentHashMap<>();
 
     this.configTable = dbTables.get().getConfigTable();
   }
@@ -130,7 +129,7 @@ public class ConfigManager
             {
               @Override
               @SuppressWarnings("unchecked")
-              public ConfigHolder<T> call() throws Exception
+              public ConfigHolder<T> call()
               {
                 if (!started) {
                   watchedConfigs.put(key, new ConfigHolder<T>(null, serde));
@@ -168,36 +167,66 @@ public class ConfigManager
   }
 
 
-  public <T> boolean set(final String key, final ConfigSerde<T> serde, final T obj)
+  public <T> SetResult set(final String key, final ConfigSerde<T> serde, final T obj)
   {
     if (obj == null || !started) {
-      return false;
+      if (obj == null) {
+        return SetResult.fail(new IllegalAccessException("input obj is null"));
+      } else {
+        return SetResult.fail(new IllegalStateException("configManager is not started yet"));
+      }
     }
 
     final byte[] newBytes = serde.serialize(obj);
 
     try {
-      return exec.submit(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call() throws Exception
-            {
-              dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
+      exec.submit(
+          () -> {
+            dbConnector.insertOrUpdate(configTable, "name", "payload", key, newBytes);
 
-              final ConfigHolder configHolder = watchedConfigs.get(key);
-              if (configHolder != null) {
-                configHolder.swapIfNew(newBytes);
-              }
-
-              return true;
+            final ConfigHolder configHolder = watchedConfigs.get(key);
+            if (configHolder != null) {
+              configHolder.swapIfNew(newBytes);
             }
+
+            return true;
           }
       ).get();
+      return SetResult.ok();
     }
     catch (Exception e) {
       log.warn(e, "Failed to set[%s]", key);
-      return false;
+      return SetResult.fail(e);
+    }
+  }
+
+  public static class SetResult
+  {
+    private final Exception exception;
+
+    public static SetResult ok()
+    {
+      return new SetResult(null);
+    }
+
+    public static SetResult fail(Exception e)
+    {
+      return new SetResult(e);
+    }
+
+    private SetResult(@Nullable Exception exception)
+    {
+      this.exception = exception;
+    }
+
+    public boolean isOk()
+    {
+      return exception == null;
+    }
+
+    public Exception getException()
+    {
+      return exception;
     }
   }
 
@@ -243,7 +272,7 @@ public class ConfigManager
     }
 
     @Override
-    public ScheduledExecutors.Signal call() throws Exception
+    public ScheduledExecutors.Signal call()
     {
       if (stop) {
         return ScheduledExecutors.Signal.STOP;

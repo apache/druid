@@ -21,15 +21,16 @@ package io.druid.server.http;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
 import io.druid.client.indexing.IndexingService;
-import io.druid.client.selector.Server;
-import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
 import io.druid.java.util.common.ISE;
-
+import io.druid.java.util.common.StringUtils;
+import io.druid.server.security.AuthConfig;
+import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.proxy.ProxyServlet;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -38,34 +39,55 @@ import java.net.URISyntaxException;
  */
 public class OverlordProxyServlet extends ProxyServlet
 {
-  private final ServerDiscoverySelector selector;
+  private final DruidLeaderClient druidLeaderClient;
 
   @Inject
   OverlordProxyServlet(
-      @IndexingService ServerDiscoverySelector selector
+      @IndexingService DruidLeaderClient druidLeaderClient
   )
   {
-    this.selector = selector;
+    this.druidLeaderClient = druidLeaderClient;
   }
 
   @Override
   protected String rewriteTarget(HttpServletRequest request)
   {
     try {
-      final Server indexer = selector.pick();
-      if (indexer == null) {
-        throw new ISE("Can't find indexingService, did you configure druid.selectors.indexing.serviceName same as druid.service at overlord?");
+      final String overlordLeader = druidLeaderClient.findCurrentLeader();
+      if (overlordLeader == null) {
+        throw new ISE("Can't find Overlord leader.");
       }
-      return new URI(
-          request.getScheme(),
-          indexer.getHost(),
-          request.getRequestURI(),
-          request.getQueryString(),
-          null
-      ).toString();
+
+      String location = StringUtils.format("%s%s", overlordLeader, request.getRequestURI());
+
+      if (request.getQueryString() != null) {
+        location = StringUtils.format("%s?%s", location, request.getQueryString());
+      }
+
+      return new URI(location).toString();
     }
     catch (URISyntaxException e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  protected void sendProxyRequest(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Request proxyRequest
+  )
+  {
+    // Since we can't see the request object on the remote side, we can't check whether the remote side actually
+    // performed an authorization check here, so always set this to true for the proxy servlet.
+    // If the remote node failed to perform an authorization check, PreResponseAuthorizationCheckFilter
+    // will log that on the remote node.
+    clientRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+
+    super.sendProxyRequest(
+        clientRequest,
+        proxyResponse,
+        proxyRequest
+    );
   }
 }

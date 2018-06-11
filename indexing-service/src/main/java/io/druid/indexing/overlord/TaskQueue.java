@@ -33,18 +33,18 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
+import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.metadata.EntryExistsException;
-import io.druid.query.DruidMetrics;
 
 import java.util.Collection;
 import java.util.List;
@@ -449,9 +449,8 @@ public class TaskQueue
    */
   private ListenableFuture<TaskStatus> attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
   {
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension("dataSource", task.getDataSource())
-        .setDimension("taskType", task.getType());
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
     Futures.addCallback(
         statusFuture,
@@ -489,7 +488,7 @@ public class TaskQueue
 
               // Emit event and log, if the task is done
               if (status.isComplete()) {
-                metricBuilder.setDimension(DruidMetrics.TASK_STATUS, status.getStatusCode().toString());
+                IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
                 emitter.emit(metricBuilder.build("task/run/time", status.getDuration()));
 
                 log.info(
@@ -522,13 +521,13 @@ public class TaskQueue
 
     try {
       if (active) {
-        final Map<String,Task> newTasks = toTaskIDMap(taskStorage.getActiveTasks());
+        final Map<String, Task> newTasks = toTaskIDMap(taskStorage.getActiveTasks());
         final int tasksSynced = newTasks.size();
-        final Map<String,Task> oldTasks = toTaskIDMap(tasks);
+        final Map<String, Task> oldTasks = toTaskIDMap(tasks);
 
         // Calculate differences on IDs instead of Task Objects.
         Set<String> commonIds = Sets.newHashSet(Sets.intersection(newTasks.keySet(), oldTasks.keySet()));
-        for(String taskID : commonIds){
+        for (String taskID : commonIds) {
           newTasks.remove(taskID);
           oldTasks.remove(taskID);
         }
@@ -536,12 +535,12 @@ public class TaskQueue
         Collection<Task> removedTasks = oldTasks.values();
 
         // Clean up removed Tasks
-        for(Task task : removedTasks){
+        for (Task task : removedTasks) {
           removeTaskInternal(task);
         }
 
         // Add newly Added tasks to the queue
-        for(Task task : addedTasks){
+        for (Task task : addedTasks) {
           addTaskInternal(task);
         }
 
@@ -565,10 +564,10 @@ public class TaskQueue
     }
   }
 
-  private static Map<String,Task> toTaskIDMap(List<Task> taskList)
+  private static Map<String, Task> toTaskIDMap(List<Task> taskList)
   {
-    Map<String,Task> rv = Maps.newHashMap();
-    for(Task task : taskList){
+    Map<String, Task> rv = Maps.newHashMap();
+    for (Task task : taskList) {
       rv.put(task.getId(), task);
     }
     return rv;

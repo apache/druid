@@ -39,7 +39,7 @@ import java.util.Properties;
 public class SegmentMetadataQueryConfigTest
 {
   @Test
-  public void testSerdeSegmentMetadataQueryConfig() throws Exception
+  public void testSerdeSegmentMetadataQueryConfig()
   {
     Injector injector = Guice.createInjector(
         new Module()
@@ -74,7 +74,7 @@ public class SegmentMetadataQueryConfigTest
     sb.append('[');
     while (it.hasNext()) {
       SegmentMetadataQuery.AnalysisType e = it.next();
-      sb.append("\""+e+"\"");
+      sb.append("\"" + e + "\"");
       if (it.hasNext()) {
         sb.append(',').append(' ');
       }

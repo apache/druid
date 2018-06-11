@@ -51,8 +51,10 @@ import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.QueryablePeonModule;
 import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.Smile;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -60,12 +62,14 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
-import io.druid.indexing.overlord.ThreadPoolTaskRunner;
+import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -87,6 +91,7 @@ import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.http.SegmentListerResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
@@ -94,6 +99,7 @@ import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -106,12 +112,21 @@ import java.util.Set;
 @Command(
     name = "peon",
     description = "Runs a Peon, this is an individual forked \"task\" used as part of the indexing service. "
-                  + "This should rarely, if ever, be used directly."
+                  + "This should rarely, if ever, be used directly. See http://druid.io/docs/latest/design/peons.html for a description"
 )
 public class CliPeon extends GuiceRunnable
 {
-  @Arguments(description = "task.json status.json", required = true)
+  @Arguments(description = "task.json status.json report.json", required = true)
   public List<String> taskAndStatusFile;
+
+  // path to store the task's stdout log
+  private String taskLogPath;
+
+  // path to store the task's TaskStatus
+  private String taskStatusPath;
+
+  // path to store the task's TaskReport objects
+  private String taskReportPath;
 
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String nodeType = "indexer-executor";
@@ -138,9 +153,26 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
+            taskLogPath = taskAndStatusFile.get(0);
+            taskStatusPath = taskAndStatusFile.get(1);
+            taskReportPath = taskAndStatusFile.get(2);
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(-1);
+            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                 .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             PolyBind.createChoice(
                 binder,
@@ -180,13 +212,19 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, ExecutorLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskAndStatusFile.get(0)))
-                    .setStatusFile(new File(taskAndStatusFile.get(1)))
+                    .setTaskFile(new File(taskLogPath))
+                    .setStatusFile(new File(taskStatusPath))
             );
 
-            binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
+            binder.bind(TaskReportFileWriter.class).toInstance(
+                new TaskReportFileWriter(
+                    new File(taskReportPath)
+                )
+            );
+
+            binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
             binder.install(new CacheModule());
@@ -266,6 +304,21 @@ public class CliPeon extends GuiceRunnable
           {
             return task.getId();
           }
+
+          @Provides
+          public SegmentListerResource getSegmentListerResource(
+              @Json ObjectMapper jsonMapper,
+              @Smile ObjectMapper smileMapper,
+              @Nullable BatchDataSegmentAnnouncer announcer
+          )
+          {
+            return new SegmentListerResource(
+                jsonMapper,
+                smileMapper,
+                announcer,
+                null
+            );
+          }
         },
         new QueryablePeonModule(),
         new IndexingServiceFirehoseModule(),
@@ -305,7 +358,12 @@ public class CliPeon extends GuiceRunnable
 
         // Explicitly call lifecycle stop, dont rely on shutdown hook.
         lifecycle.stop();
-        Runtime.getRuntime().removeShutdownHook(hook);
+        try {
+          Runtime.getRuntime().removeShutdownHook(hook);
+        }
+        catch (IllegalStateException e) {
+          log.warn("Cannot remove shutdown hook, already shutting down");
+        }
       }
       catch (Throwable t) {
         log.error(t, "Error when starting up.  Failing.");

@@ -20,7 +20,6 @@
 package io.druid.server.http;
 
 import com.google.inject.Inject;
-
 import io.druid.java.util.common.logger.Logger;
 
 import javax.servlet.Filter;
@@ -51,7 +50,7 @@ public class RedirectFilter implements Filter
   }
 
   @Override
-  public void init(FilterConfig filterConfig) throws ServletException {}
+  public void init(FilterConfig filterConfig) {}
 
   @Override
   public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
@@ -71,7 +70,7 @@ public class RedirectFilter implements Filter
     if (redirectInfo.doLocal(request.getRequestURI())) {
       chain.doFilter(request, response);
     } else {
-      URL url = redirectInfo.getRedirectURL(request.getScheme(), request.getQueryString(), request.getRequestURI());
+      URL url = redirectInfo.getRedirectURL(request.getQueryString(), request.getRequestURI());
       log.debug("Forwarding request to [%s]", url);
 
       if (url == null) {

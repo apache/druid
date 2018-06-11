@@ -45,9 +45,11 @@ import java.util.Objects;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
+  static final String CTX_GRAND_TOTAL = "grandTotal";
+  public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
+
   private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;
-  private final Granularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
 
@@ -64,11 +66,10 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, descending, context);
+    super(dataSource, querySegmentSpec, descending, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
-    this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
         ImmutableList.of(),
@@ -107,12 +108,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return dimFilter;
   }
 
-  @JsonProperty
-  public Granularity getGranularity()
-  {
-    return granularity;
-  }
-
   @JsonProperty("aggregations")
   public List<AggregatorFactory> getAggregatorSpecs()
   {
@@ -125,9 +120,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return postAggregatorSpecs;
   }
 
+  public boolean isGrandTotal()
+  {
+    return getContextBoolean(CTX_GRAND_TOTAL, false);
+  }
+
   public boolean isSkipEmptyBuckets()
   {
-    return getContextBoolean("skipEmptyBuckets", false);
+    return getContextBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
   @Override
@@ -163,16 +163,16 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public String toString()
   {
     return "TimeseriesQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", descending=" + isDescending() +
-        ", virtualColumns=" + virtualColumns +
-        ", dimFilter=" + dimFilter +
-        ", granularity='" + granularity + '\'' +
-        ", aggregatorSpecs=" + aggregatorSpecs +
-        ", postAggregatorSpecs=" + postAggregatorSpecs +
-        ", context=" + getContext() +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", descending=" + isDescending() +
+           ", virtualColumns=" + virtualColumns +
+           ", dimFilter=" + dimFilter +
+           ", granularity='" + getGranularity() + '\'' +
+           ", aggregatorSpecs=" + aggregatorSpecs +
+           ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", context=" + getContext() +
+           '}';
   }
 
   @Override
@@ -189,15 +189,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     }
     final TimeseriesQuery that = (TimeseriesQuery) o;
     return Objects.equals(virtualColumns, that.virtualColumns) &&
-        Objects.equals(dimFilter, that.dimFilter) &&
-        Objects.equals(granularity, that.granularity) &&
-        Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
-        Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
+           Objects.equals(dimFilter, that.dimFilter) &&
+           Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
+           Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), virtualColumns, dimFilter, granularity, aggregatorSpecs, postAggregatorSpecs);
+    return Objects.hash(super.hashCode(), virtualColumns, dimFilter, aggregatorSpecs, postAggregatorSpecs);
   }
 }

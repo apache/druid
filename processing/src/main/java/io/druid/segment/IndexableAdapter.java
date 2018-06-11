@@ -20,11 +20,12 @@
 package io.druid.segment;
 
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import org.joda.time.Interval;
 
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * An adapter to an index
@@ -35,21 +36,20 @@ public interface IndexableAdapter
 
   int getNumRows();
 
-  Indexed<String> getDimensionNames();
+  List<String> getDimensionNames();
 
-  Indexed<String> getMetricNames();
+  List<String> getMetricNames();
 
-  Indexed<Comparable> getDimValueLookup(String dimension);
+  @Nullable
+  <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension);
 
-  Iterable<Rowboat> getRows();
+  TransformableRowIterator getRows();
 
-  IndexedInts getBitmapIndex(String dimension, int dictId);
+  BitmapValues getBitmapValues(String dimension, int dictId);
 
   String getMetricType(String metric);
 
   ColumnCapabilities getCapabilities(String column);
 
   Metadata getMetadata();
-
-  Map<String, DimensionHandler> getDimensionHandlers();
 }

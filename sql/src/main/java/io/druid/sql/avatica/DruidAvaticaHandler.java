@@ -31,18 +31,17 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 
 public class DruidAvaticaHandler extends AvaticaJsonHandler
 {
-  static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
+  public static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
 
   @Inject
   public DruidAvaticaHandler(
       final DruidMeta druidMeta,
       @Self final DruidNode druidNode,
       final AvaticaMonitor avaticaMonitor
-  ) throws InstantiationException, IllegalAccessException, InvocationTargetException
+  )
   {
     super(new LocalService(druidMeta), avaticaMonitor);
     setServerRpcMetadata(new Service.RpcMetadataResponse(druidNode.getHostAndPortToUse()));
@@ -56,9 +55,6 @@ public class DruidAvaticaHandler extends AvaticaJsonHandler
       final HttpServletResponse response
   ) throws IOException, ServletException
   {
-    // This is not integrated with the experimental authorization framework.
-    // (Non-trivial since we don't know the dataSources up-front)
-
     if (request.getRequestURI().equals(AVATICA_PATH)) {
       super.handle(target, baseRequest, request, response);
     }

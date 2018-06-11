@@ -81,11 +81,6 @@ public class BenchmarkColumnValueGenerator
     return schema;
   }
 
-  public long getSeed()
-  {
-    return seed;
-  }
-
   private Object generateSingleRowValue()
   {
     Object ret = null;
@@ -163,8 +158,8 @@ public class BenchmarkColumnValueGenerator
           }
         }
         // give them all equal probability, the library will normalize probabilities to sum to 1.0
-        for (int i = 0; i < enumeratedValues.size(); i++) {
-          probabilities.add(new Pair<>(enumeratedValues.get(i), 0.1));
+        for (Object enumeratedValue : enumeratedValues) {
+          probabilities.add(new Pair<>(enumeratedValue, 0.1));
         }
         distribution = new EnumeratedTreeDistribution<>(probabilities);
         break;

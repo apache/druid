@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -103,7 +102,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     }
 
     if (useCache) {
-      final Function cacheFn = strategy.pullFromCache();
+      final Function cacheFn = strategy.pullFromSegmentLevelCache();
       final byte[] cachedResult = cache.get(key);
       if (cachedResult != null) {
         final TypeReference cacheObjectClazz = strategy.getCacheObjectClazz();
@@ -117,7 +116,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
                   {
                     try {
                       if (cachedResult.length == 0) {
-                        return Iterators.emptyIterator();
+                        return Collections.emptyIterator();
                       }
 
                       return mapper.readValues(
@@ -143,7 +142,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
     final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(Lists.<ListenableFuture<?>>newLinkedList());
     if (populateCache) {
-      final Function cacheFn = strategy.prepareForCache();
+      final Function cacheFn = strategy.prepareForSegmentLevelCache();
 
       return Sequences.withEffect(
           Sequences.map(

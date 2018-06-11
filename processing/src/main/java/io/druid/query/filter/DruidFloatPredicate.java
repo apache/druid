@@ -26,8 +26,5 @@ public interface DruidFloatPredicate
 {
   DruidFloatPredicate ALWAYS_FALSE = input -> false;
 
-  DruidFloatPredicate ALWAYS_TRUE = input -> true;
-
-
   boolean applyFloat(float input);
 }

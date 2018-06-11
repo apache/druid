@@ -34,13 +34,14 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -72,14 +73,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -96,7 +95,7 @@ public class IncrementalIndexTest
 {
   interface IndexCreator
   {
-    public IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
+    IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories);
   }
 
   private final IndexCreator indexCreator;
@@ -112,7 +111,7 @@ public class IncrementalIndexTest
   }
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return Arrays.asList(
         new Object[][]{
@@ -196,11 +195,6 @@ public class IncrementalIndexTest
     );
   }
 
-  public static AggregatorFactory[] getDefaultAggregatorFactories()
-  {
-    return defaultAggregatorFactories;
-  }
-
   public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
   {
     return defaultCombiningAggregatorFactories;
@@ -281,7 +275,7 @@ public class IncrementalIndexTest
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  private static MapBasedInputRow getLongRow(long timestamp, int rowID, int dimensionCount)
+  private static MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
   {
     List<String> dimensionList = new ArrayList<String>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -386,22 +380,22 @@ public class IncrementalIndexTest
     Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
-    Assert.assertEquals(1L, row.getLongMetric("count"));
-    Assert.assertEquals(1L, row.getLongMetric("count_selector_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_bound_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_multivaldim_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_numeric_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count"));
+    Assert.assertEquals(1L, row.getMetric("count_selector_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count_bound_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(0L, row.getMetric("count_numeric_filtered"));
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
     Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
-    Assert.assertEquals(1L, row.getLongMetric("count"));
-    Assert.assertEquals(0L, row.getLongMetric("count_selector_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_bound_filtered"));
-    Assert.assertEquals(0L, row.getLongMetric("count_multivaldim_filtered"));
-    Assert.assertEquals(1L, row.getLongMetric("count_numeric_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count"));
+    Assert.assertEquals(0L, row.getMetric("count_selector_filtered"));
+    Assert.assertEquals(0L, row.getMetric("count_bound_filtered"));
+    Assert.assertEquals(0L, row.getMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(1L, row.getMetric("count_numeric_filtered"));
   }
 
   @Test
@@ -439,11 +433,11 @@ public class IncrementalIndexTest
 
     //ingesting same data twice to have some merging happening
     for (int i = 0; i < rows; i++) {
-      index.add(getLongRow(timestamp + i, i, dimensionCount));
+      index.add(getLongRow(timestamp + i, dimensionCount));
     }
 
     for (int i = 0; i < rows; i++) {
-      index.add(getLongRow(timestamp + i, i, dimensionCount));
+      index.add(getLongRow(timestamp + i, dimensionCount));
     }
 
     //run a timeseries query on the index and verify results
@@ -467,7 +461,7 @@ public class IncrementalIndexTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
                                   .granularity(Granularities.ALL)
-                                  .intervals(ImmutableList.of(new Interval("2000/2030")))
+                                  .intervals(ImmutableList.of(Intervals.of("2000/2030")))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
 
@@ -483,10 +477,7 @@ public class IncrementalIndexTest
     );
 
 
-    List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, new HashMap<String, Object>()),
-        new LinkedList<Result<TimeseriesResultValue>>()
-    );
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
     boolean isRollup = index.isRollup();
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
@@ -568,7 +559,7 @@ public class IncrementalIndexTest
         )
     );
     final long timestamp = System.currentTimeMillis();
-    final Interval queryInterval = new Interval("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
+    final Interval queryInterval = Intervals.of("1900-01-01T00:00:00Z/2900-01-01T00:00:00Z");
     final List<ListenableFuture<?>> indexFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
     final List<ListenableFuture<?>> queryFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
@@ -602,7 +593,7 @@ public class IncrementalIndexTest
                   currentlyRunning.incrementAndGet();
                   try {
                     for (int i = 0; i < elementsPerThread; i++) {
-                      index.add(getLongRow(timestamp + i, i, dimensionCount));
+                      index.add(getLongRow(timestamp + i, dimensionCount));
                       someoneRan.incrementAndGet();
                     }
                   }
@@ -642,27 +633,27 @@ public class IncrementalIndexTest
                         factory.getToolchest()
                     );
                     Map<String, Object> context = new HashMap<String, Object>();
-                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(query, context);
+                    Sequence<Result<TimeseriesResultValue>> sequence = runner.run(QueryPlus.wrap(query), context);
 
-                    for (Double result :
-                        sequence.accumulate(
-                            new Double[0], new Accumulator<Double[], Result<TimeseriesResultValue>>()
-                            {
-                              @Override
-                              public Double[] accumulate(
-                                  Double[] accumulated, Result<TimeseriesResultValue> in
-                              )
-                              {
-                                if (currentlyRunning.get() > 0) {
-                                  concurrentlyRan.incrementAndGet();
-                                }
-                                queriesAccumualted.incrementAndGet();
-                                return Lists.asList(in.getValue().getDoubleMetric("doubleSumResult0"), accumulated)
-                                            .toArray(new Double[accumulated.length + 1]);
-                              }
+                    Double[] results = sequence.accumulate(
+                        new Double[0],
+                        new Accumulator<Double[], Result<TimeseriesResultValue>>()
+                        {
+                          @Override
+                          public Double[] accumulate(
+                              Double[] accumulated, Result<TimeseriesResultValue> in
+                          )
+                          {
+                            if (currentlyRunning.get() > 0) {
+                              concurrentlyRan.incrementAndGet();
                             }
-                        )
-                        ) {
+                            queriesAccumualted.incrementAndGet();
+                            return Lists.asList(in.getValue().getDoubleMetric("doubleSumResult0"), accumulated)
+                                        .toArray(new Double[accumulated.length + 1]);
+                          }
+                        }
+                    );
+                    for (Double result : results) {
                       final Integer maxValueExpected = someoneRan.get() + concurrentThreads;
                       if (maxValueExpected > 0) {
                         // Eventually consistent, but should be somewhere in that range
@@ -700,10 +691,7 @@ public class IncrementalIndexTest
                                   .aggregators(queryAggregatorFactories)
                                   .build();
     Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, context),
-        new LinkedList<Result<TimeseriesResultValue>>()
-    );
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(
@@ -765,7 +753,7 @@ public class IncrementalIndexTest
     while (iterator.hasNext()) {
       Row row = iterator.next();
       Assert.assertEquals(timestamp + (isRollup ? curr : curr / threadCount), row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(isRollup ? threadCount : 1), (Float) row.getFloatMetric("count"));
+      Assert.assertEquals(isRollup ? threadCount : 1, row.getMetric("count").intValue());
       curr++;
     }
     Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), curr);

@@ -203,7 +203,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
       public void close() throws IOException
       {
         Closer closer = Closer.create();
-        while(!pQueue.isEmpty()) {
+        while (!pQueue.isEmpty()) {
           closer.register(pQueue.remove());
         }
         closer.close();

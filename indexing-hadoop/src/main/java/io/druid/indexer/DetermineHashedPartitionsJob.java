@@ -31,6 +31,7 @@ import com.google.common.io.Closeables;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 import io.druid.hll.HyperLogLogCollector;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularity;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -54,6 +56,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -68,6 +71,8 @@ public class DetermineHashedPartitionsJob implements Jobby
 {
   private static final Logger log = new Logger(DetermineHashedPartitionsJob.class);
   private final HadoopDruidIndexerConfig config;
+  private String failureCause;
+  private Job groupByJob;
 
   public DetermineHashedPartitionsJob(
       HadoopDruidIndexerConfig config
@@ -85,7 +90,7 @@ public class DetermineHashedPartitionsJob implements Jobby
        * in the final segment.
        */
       final long startTime = System.currentTimeMillis();
-      final Job groupByJob = Job.getInstance(
+      groupByJob = Job.getInstance(
           new Configuration(),
           StringUtils.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
       );
@@ -120,6 +125,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       if (!groupByJob.waitForCompletion(true)) {
         log.error("Job failed: %s", groupByJob.getJobID());
+        failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
         return false;
       }
 
@@ -136,9 +142,8 @@ public class DetermineHashedPartitionsJob implements Jobby
           throw new ISE("Path[%s] didn't exist!?", intervalInfoPath);
         }
         List<Interval> intervals = config.JSON_MAPPER.readValue(
-            Utils.openInputStream(groupByJob, intervalInfoPath), new TypeReference<List<Interval>>()
-        {
-        }
+            Utils.openInputStream(groupByJob, intervalInfoPath),
+            new TypeReference<List<Interval>>() {}
         );
         config.setGranularitySpec(
             new UniformGranularitySpec(
@@ -161,9 +166,8 @@ public class DetermineHashedPartitionsJob implements Jobby
         }
         if (Utils.exists(groupByJob, fileSystem, partitionInfoPath)) {
           final Long numRows = config.JSON_MAPPER.readValue(
-              Utils.openInputStream(groupByJob, partitionInfoPath), new TypeReference<Long>()
-          {
-          }
+              Utils.openInputStream(groupByJob, partitionInfoPath),
+              new TypeReference<Long>() {}
           );
 
           log.info("Found approximately [%,d] rows in data.", numRows);
@@ -198,6 +202,7 @@ public class DetermineHashedPartitionsJob implements Jobby
           log.info("Path[%s] didn't exist!?", partitionInfoPath);
         }
       }
+
       config.setShardSpecs(shardSpecs);
       log.info(
           "DetermineHashedPartitionsJob took %d millis",
@@ -209,6 +214,42 @@ public class DetermineHashedPartitionsJob implements Jobby
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  public Map<String, Object> getStats()
+  {
+    if (groupByJob == null) {
+      return null;
+    }
+
+    try {
+      Counters jobCounters = groupByJob.getCounters();
+
+      Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
+      );
+
+      return metrics;
+    }
+    catch (IllegalStateException ise) {
+      log.debug("Couldn't get counters due to job state");
+      return null;
+    }
+    catch (Exception e) {
+      log.debug(e, "Encountered exception in getStats().");
+      return null;
+    }
+  }
+
+  @Nullable
+  @Override
+  public String getErrorMessage()
+  {
+    return failureCause;
   }
 
   public static class DetermineCardinalityMapper extends HadoopDruidIndexerMapper<LongWritable, BytesWritable>
@@ -243,10 +284,9 @@ public class DetermineHashedPartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        Object value,
         Context context,
         boolean reportParseExceptions
-    ) throws IOException, InterruptedException
+    ) throws IOException
     {
 
       final List<Object> groupKey = Rows.toGroupKey(
@@ -257,25 +297,26 @@ public class DetermineHashedPartitionsJob implements Jobby
       if (determineIntervals) {
         interval = config.getGranularitySpec()
                          .getSegmentGranularity()
-                         .bucket(new DateTime(inputRow.getTimestampFromEpoch()));
+                         .bucket(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
         if (!hyperLogLogs.containsKey(interval)) {
           hyperLogLogs.put(interval, HyperLogLogCollector.makeLatestCollector());
         }
       } else {
         final Optional<Interval> maybeInterval = config.getGranularitySpec()
-                                                       .bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()));
+                                                       .bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()));
 
         if (!maybeInterval.isPresent()) {
           throw new ISE("WTF?! No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
         }
         interval = maybeInterval.get();
       }
-      hyperLogLogs.get(interval)
-                  .add(
-                      hashFunction.hashBytes(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey))
-                                  .asBytes()
-                  );
+
+      hyperLogLogs
+          .get(interval)
+          .add(hashFunction.hashBytes(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey)).asBytes());
+
+      context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).increment(1);
     }
 
     @Override
@@ -303,12 +344,13 @@ public class DetermineHashedPartitionsJob implements Jobby
   {
     private final List<Interval> intervals = Lists.newArrayList();
     protected HadoopDruidIndexerConfig config = null;
+    private boolean determineIntervals;
 
     @Override
     protected void setup(Context context)
-        throws IOException, InterruptedException
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
+      determineIntervals = !config.getSegmentGranularIntervals().isPresent();
     }
 
     @Override
@@ -316,7 +358,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         LongWritable key,
         Iterable<BytesWritable> values,
         Context context
-    ) throws IOException, InterruptedException
+    ) throws IOException
     {
       HyperLogLogCollector aggregate = HyperLogLogCollector.makeLatestCollector();
       for (BytesWritable value : values) {
@@ -324,12 +366,20 @@ public class DetermineHashedPartitionsJob implements Jobby
             HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
         );
       }
-      Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(new DateTime(key.get()));
 
-      if (!intervalOptional.isPresent()) {
-        throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+      Interval interval;
+
+      if (determineIntervals) {
+        interval = config.getGranularitySpec().getSegmentGranularity().bucket(DateTimes.utc(key.get()));
+      } else {
+        Optional<Interval> intervalOptional = config.getGranularitySpec().bucketInterval(DateTimes.utc(key.get()));
+
+        if (!intervalOptional.isPresent()) {
+          throw new ISE("WTF?! No bucket found for timestamp: %s", key.get());
+        }
+        interval = intervalOptional.get();
       }
-      Interval interval = intervalOptional.get();
+
       intervals.add(interval);
       final Path outPath = config.makeSegmentPartitionInfoPath(interval);
       final OutputStream out = Utils.makePathAndOutputStream(
@@ -343,7 +393,7 @@ public class DetermineHashedPartitionsJob implements Jobby
             }
         ).writeValue(
             out,
-            new Double(aggregate.estimateCardinality()).longValue()
+            aggregate.estimateCardinalityRound()
         );
       }
       finally {
@@ -356,7 +406,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         throws IOException, InterruptedException
     {
       super.run(context);
-      if (!config.getSegmentGranularIntervals().isPresent()) {
+      if (determineIntervals) {
         final Path outPath = config.makeIntervalInfoPath();
         final OutputStream out = Utils.makePathAndOutputStream(
             context, outPath, config.isOverwriteFiles()
@@ -390,7 +440,7 @@ public class DetermineHashedPartitionsJob implements Jobby
     public int getPartition(LongWritable interval, BytesWritable text, int numPartitions)
     {
 
-      if (config.get("mapred.job.tracker").equals("local") || determineIntervals) {
+      if ("local".equals(JobHelper.getJobTrackerAddress(config)) || determineIntervals) {
         return 0;
       } else {
         return reducerLookup.get(interval);

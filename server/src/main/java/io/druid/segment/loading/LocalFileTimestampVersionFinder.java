@@ -20,7 +20,6 @@
 package io.druid.segment.loading;
 
 import com.google.common.base.Throwables;
-
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.java.util.common.RetryUtils;
 
@@ -28,10 +27,8 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
 /**
@@ -42,7 +39,7 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
     implements SearchableVersionedDataFinder<URI>
 {
   public static final String URI_SCHEME = "file";
-  private URI mostRecentInDir(final Path dir, final Pattern pattern) throws IOException
+  private URI mostRecentInDir(final Path dir, final Pattern pattern)
   {
     long latestModified = Long.MIN_VALUE;
     URI latest = null;
@@ -81,17 +78,10 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
     final File file = new File(uri);
     try {
       return RetryUtils.retry(
-          new Callable<URI>()
-          {
-            @Override
-            public URI call() throws Exception
-            {
-              return mostRecentInDir(
-                  file.isDirectory() ? file.toPath() : file.getParentFile().toPath(),
-                  pattern
-              );
-            }
-          },
+          () -> mostRecentInDir(
+              file.isDirectory() ? file.toPath() : file.getParentFile().toPath(),
+              pattern
+          ),
           shouldRetryPredicate(),
           DEFAULT_RETRY_COUNT
       );
@@ -104,9 +94,4 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
     }
   }
 
-  @Override
-  public Class<URI> getDataDescriptorClass()
-  {
-    return URI.class;
-  }
 }

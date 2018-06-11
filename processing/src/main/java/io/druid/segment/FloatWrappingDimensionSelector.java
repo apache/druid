@@ -23,12 +23,14 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.virtual.BaseSingleValueDimensionSelector;
 
+import javax.annotation.Nullable;
+
 public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
-  private final FloatColumnSelector selector;
+  private final BaseFloatColumnValueSelector selector;
   private final ExtractionFn extractionFn;
 
-  public FloatWrappingDimensionSelector(FloatColumnSelector selector, ExtractionFn extractionFn)
+  public FloatWrappingDimensionSelector(BaseFloatColumnValueSelector selector, ExtractionFn extractionFn)
   {
     this.selector = selector;
     this.extractionFn = extractionFn;
@@ -38,10 +40,23 @@ public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSele
   protected String getValue()
   {
     if (extractionFn == null) {
-      return String.valueOf(selector.get());
+      return String.valueOf(selector.getFloat());
     } else {
-      return extractionFn.apply(selector.get());
+      return extractionFn.apply(selector.getFloat());
     }
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return getValue();
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return String.class;
   }
 
   @Override

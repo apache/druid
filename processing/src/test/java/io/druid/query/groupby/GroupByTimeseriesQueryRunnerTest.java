@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
@@ -48,8 +49,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -58,8 +57,8 @@ import java.util.Map;
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
   @SuppressWarnings("unchecked")
-  @Parameterized.Parameters(name="{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
   {
     GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
@@ -90,20 +89,20 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                         toolChest
                     );
 
+                    GroupByQuery newQuery = GroupByQuery
+                        .builder()
+                        .setDataSource(tsQuery.getDataSource())
+                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
+                        .setGranularity(tsQuery.getGranularity())
+                        .setDimFilter(tsQuery.getDimensionsFilter())
+                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
+                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
+                        .setVirtualColumns(tsQuery.getVirtualColumns())
+                        .setContext(tsQuery.getContext())
+                        .build();
+
                     return Sequences.map(
-                        newRunner.run(
-                            GroupByQuery.builder()
-                                        .setDataSource(tsQuery.getDataSource())
-                                        .setQuerySegmentSpec(tsQuery.getQuerySegmentSpec())
-                                        .setGranularity(tsQuery.getGranularity())
-                                        .setDimFilter(tsQuery.getDimensionsFilter())
-                                        .setAggregatorSpecs(tsQuery.getAggregatorSpecs())
-                                        .setPostAggregatorSpecs(tsQuery.getPostAggregatorSpecs())
-                                        .setVirtualColumns(tsQuery.getVirtualColumns())
-                                        .setContext(tsQuery.getContext())
-                                        .build(),
-                            responseContext
-                        ),
+                        newRunner.run(queryPlus.withQuery(newQuery), responseContext),
                         new Function<Row, Result<TimeseriesResultValue>>()
                         {
                           @Override
@@ -146,21 +145,16 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                   .granularity(Granularities.ALL)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Arrays.asList(
-                                          new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                                          new DoubleMinAggregatorFactory("minIndex", "index")
-                                      )
+                                      new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                                      new DoubleMinAggregatorFactory("minIndex", "index")
                                   )
                                   .descending(descending)
                                   .build();
 
-    DateTime expectedEarliest = new DateTime("1970-01-01");
-    DateTime expectedLast = new DateTime("2011-04-15");
+    DateTime expectedEarliest = DateTimes.of("1970-01-01");
+    DateTime expectedLast = DateTimes.of("2011-04-15");
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(query, CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     Result<TimeseriesResultValue> result = results.iterator().next();
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());
@@ -171,8 +165,8 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
     final TimeseriesResultValue value = result.getValue();
 
-    Assert.assertEquals(result.toString(), 1870.061029, value.getDoubleMetric("maxIndex"), 0.0);
-    Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 0.0);
+    Assert.assertEquals(result.toString(), 1870.061029, value.getDoubleMetric("maxIndex"), 1870.061029 * 1e-6);
+    Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 59.021022 * 1e-6);
   }
 
 

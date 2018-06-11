@@ -33,7 +33,7 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
   )
   {
     ValueType type = capabilities.getType();
-    switch(type) {
+    switch (type) {
       case STRING:
         return new StringTopNColumnSelectorStrategy();
       case LONG:

@@ -31,13 +31,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
+public class SingleScanTimeDimSelector implements DimensionSelector
 {
   private final ExtractionFn extractionFn;
-  private final LongColumnSelector selector;
+  private final BaseLongColumnValueSelector selector;
   private final boolean descending;
 
   private final List<String> timeValues = new ArrayList<>();
+  private final SingleIndexedInt row = new SingleIndexedInt();
   private String currentValue = null;
   private long currentTimestamp = Long.MIN_VALUE;
   private int index = -1;
@@ -47,7 +48,7 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
   // - it assumes time values are scanned once and values are grouped together
   //   (i.e. we never revisit a timestamp we have seen before, unless it is the same as the last accessed one)
   // - it also applies and caches extraction function values at the DimSelector level to speed things up
-  public SingleScanTimeDimSelector(LongColumnSelector selector, ExtractionFn extractionFn, boolean descending)
+  public SingleScanTimeDimSelector(BaseLongColumnValueSelector selector, ExtractionFn extractionFn, boolean descending)
   {
     if (extractionFn == null) {
       throw new UnsupportedOperationException("time dimension must provide an extraction function");
@@ -61,13 +62,8 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
   @Override
   public IndexedInts getRow()
   {
-    return new SingleIndexedInt(getDimensionValueIndex());
-  }
-
-  @Override
-  public int getRowValue()
-  {
-    return getDimensionValueIndex();
+    row.setValue(getDimensionValueIndex());
+    return row;
   }
 
   @Override
@@ -112,7 +108,7 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
   private int getDimensionValueIndex()
   {
     // if this the first timestamp, apply and cache extraction function result
-    final long timestamp = selector.get();
+    final long timestamp = selector.getLong();
     if (index < 0) {
       currentTimestamp = timestamp;
       currentValue = extractionFn.apply(timestamp);
@@ -174,6 +170,19 @@ public class SingleScanTimeDimSelector implements SingleValueDimensionSelector
   public IdLookup idLookup()
   {
     return null;
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return currentValue;
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return String.class;
   }
 
   @Override

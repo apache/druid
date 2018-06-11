@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.Cacheable;
 
 import java.util.Comparator;
@@ -28,6 +29,7 @@ import java.util.Set;
 /**
  * Functionally similar to an Aggregator. See the Aggregator interface for more comments.
  */
+@ExtensionPoint
 public interface PostAggregator extends Cacheable
 {
   Set<String> getDependentFields();

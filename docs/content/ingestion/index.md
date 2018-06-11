@@ -131,6 +131,10 @@ Use this with the String Parser to load JSON.
 
 #### JSON Lowercase ParseSpec
 
+<div class="note caution">
+The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+</div>
+
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
 
 | Field | Type | Description | Required |
@@ -194,7 +198,13 @@ handle all formatting decisions on their own, without using the ParseSpec.
 #### Dimension Schema
 A dimension schema specifies the type and name of a dimension to be ingested.
 
-For example, the following `dimensionsSpec` section from a `dataSchema` ingests one column as Long (`countryNum`), two columns as Float (`userLatitude`, `userLongitude`), and the other columns as Strings:
+For string columns, the dimension schema can also be used to enable or disable bitmap indexing by setting the
+`createBitmapIndex` boolean. By default, bitmap indexes are enabled for all string columns. Only string columns can have
+bitmap indexes; they are not supported for numeric columns.
+
+For example, the following `dimensionsSpec` section from a `dataSchema` ingests one column as Long (`countryNum`), two
+columns as Float (`userLatitude`, `userLongitude`), and the other columns as Strings, with bitmap indexes disabled
+for the `comment` column.
 
 ```json
 "dimensionsSpec" : {
@@ -211,6 +221,11 @@ For example, the following `dimensionsSpec` section from a `dataSchema` ingests 
     "country",
     "region",
     "city",
+    {
+      "type": "string",
+      "name": "comment",
+      "createBitmapIndex": false
+    },
     {
       "type": "long",
       "name": "countryNum"
@@ -229,7 +244,6 @@ For example, the following `dimensionsSpec` section from a `dataSchema` ingests 
 }
 ```
 
-
 ## GranularitySpec
 
 The default granularity spec is `uniform`, and can be changed by setting the `type` field.
@@ -244,7 +258,7 @@ This spec is used to generated segments with uniform intervals.
 | segmentGranularity | string | The granularity to create segments at. | no (default == 'DAY') |
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. | no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
-| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for batch, no for real-time |
+| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, batch ingestion tasks may skip determining partitions phase which results in faster ingestion. |
 
 ### Arbitrary Granularity Spec
 
@@ -254,7 +268,7 @@ This spec is used to generate segments with arbitrary intervals (it tries to cre
 |-------|------|-------------|----------|
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. | no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
-| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | yes for batch, no for real-time |
+| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, batch ingestion tasks may skip determining partitions phase which results in faster ingestion. |
 
 # IO Config
 

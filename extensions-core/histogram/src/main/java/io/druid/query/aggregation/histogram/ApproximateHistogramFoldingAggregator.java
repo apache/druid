@@ -21,30 +21,24 @@ package io.druid.query.aggregation.histogram;
 
 
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 public class ApproximateHistogramFoldingAggregator implements Aggregator
 {
-  private final ObjectColumnSelector<ApproximateHistogram> selector;
-  private final int resolution;
-  private final float lowerLimit;
-  private final float upperLimit;
+  private final BaseObjectColumnValueSelector<ApproximateHistogram> selector;
 
   private ApproximateHistogram histogram;
   private float[] tmpBufferP;
   private long[] tmpBufferB;
 
   public ApproximateHistogramFoldingAggregator(
-      ObjectColumnSelector<ApproximateHistogram> selector,
+      BaseObjectColumnValueSelector<ApproximateHistogram> selector,
       int resolution,
       float lowerLimit,
       float upperLimit
   )
   {
     this.selector = selector;
-    this.resolution = resolution;
-    this.lowerLimit = lowerLimit;
-    this.upperLimit = upperLimit;
     this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
 
     tmpBufferP = new float[resolution];
@@ -54,7 +48,7 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    ApproximateHistogram h = selector.get();
+    ApproximateHistogram h = selector.getObject();
     if (h == null) {
       return;
     }
@@ -64,12 +58,6 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
     } else {
       histogram.foldFast(h);
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
   }
 
   @Override

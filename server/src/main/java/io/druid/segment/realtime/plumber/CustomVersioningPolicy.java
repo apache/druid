@@ -21,7 +21,7 @@ package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.DateTime;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.Interval;
 
 /**
@@ -35,11 +35,17 @@ public class CustomVersioningPolicy implements VersioningPolicy
       @JsonProperty("version") String version
   )
   {
-    this.version = version == null ? new DateTime().toString() : version;
+    this.version = version == null ? DateTimes.nowUtc().toString() : version;
   }
 
   @Override
   public String getVersion(Interval interval)
+  {
+    return version;
+  }
+
+  @JsonProperty("version")
+  public String getVersion()
   {
     return version;
   }

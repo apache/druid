@@ -19,12 +19,72 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-
-public interface ObjectColumnSelector<T> extends ColumnValueSelector
+/**
+ * This interface is convenient for implementation of "object-sourcing" {@link ColumnValueSelector}s, it provides
+ * default implementations for all {@link ColumnValueSelector}'s methods except {@link #getObject()} and {@link
+ * #classOfObject()}.
+ *
+ * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseObjectColumnValueSelector} must be used instead.
+ */
+public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
-  public Class<T> classOfObject();
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  public float getFloat()
+  {
+    T value = getObject();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).floatValue();
+  }
 
-  @CalledFromHotLoop
-  public T get();
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  public double getDouble()
+  {
+    T value = getObject();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).doubleValue();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  public long getLong()
+  {
+    T value = getObject();
+    if (value == null) {
+      return 0;
+    }
+    return ((Number) value).longValue();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector since it always returns false.
+   * There is no need to call this method.
+   */
+  @Deprecated
+  @Override
+  public final boolean isNull()
+  {
+    return false;
+  }
 }

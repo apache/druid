@@ -22,16 +22,16 @@ package io.druid.query.aggregation.last;
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class LongLastBufferAggregator implements BufferAggregator
 {
-  private final LongColumnSelector timeSelector;
-  private final LongColumnSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
+  private final BaseLongColumnValueSelector valueSelector;
 
-  public LongLastBufferAggregator(LongColumnSelector timeSelector, LongColumnSelector valueSelector)
+  public LongLastBufferAggregator(BaseLongColumnValueSelector timeSelector, BaseLongColumnValueSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
@@ -47,11 +47,11 @@ public class LongLastBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     long lastTime = buf.getLong(position);
     if (time >= lastTime) {
       buf.putLong(position, time);
-      buf.putLong(position + Long.BYTES, valueSelector.get());
+      buf.putLong(position + Long.BYTES, valueSelector.getLong());
     }
   }
 

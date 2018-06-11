@@ -20,11 +20,10 @@
 package io.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.Result;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchSortSpec;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,7 +38,7 @@ import java.util.List;
  */
 public class SearchBinaryFnTest
 {
-  private final DateTime currTime = new DateTime();
+  private final DateTime currTime = DateTimes.nowUtc();
 
   private void assertSearchMergeResult(SearchResultValue o1, SearchResultValue o2)
   {

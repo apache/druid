@@ -22,13 +22,14 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
+import com.google.common.base.Preconditions;
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
 
-/**
- */
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "format", defaultImpl = DelimitedParseSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "json", value = JSONParseSpec.class),
@@ -47,8 +48,8 @@ public abstract class ParseSpec
 
   protected ParseSpec(TimestampSpec timestampSpec, DimensionsSpec dimensionsSpec)
   {
-    this.timestampSpec = timestampSpec;
-    this.dimensionsSpec = dimensionsSpec;
+    this.timestampSpec = Preconditions.checkNotNull(timestampSpec, "parseSpec requires timestampSpec");
+    this.dimensionsSpec = Preconditions.checkNotNull(dimensionsSpec, "parseSpec requires dimensionSpec");
   }
 
   @JsonProperty
@@ -63,6 +64,7 @@ public abstract class ParseSpec
     return dimensionsSpec;
   }
 
+  @PublicApi
   public void verify(List<String> usedCols)
   {
     // do nothing
@@ -73,6 +75,7 @@ public abstract class ParseSpec
     return null;
   }
 
+  @PublicApi
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
     throw new UnsupportedOperationException();

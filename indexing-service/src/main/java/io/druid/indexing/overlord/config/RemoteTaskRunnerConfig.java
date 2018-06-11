@@ -31,6 +31,8 @@ import javax.validation.constraints.NotNull;
  */
 public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 {
+  // This default value is kept to take MM restart into consideration just in case it was
+  // restarted right after task assignment.
   @JsonProperty
   @NotNull
   private Period taskAssignmentTimeout = new Period("PT5M");
@@ -65,7 +67,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
   @JsonProperty
   @Max(100)
   @Min(0)
-  private double maxPercentageBlacklistWorkers = 20;
+  private int maxPercentageBlacklistWorkers = 20;
 
   public Period getTaskAssignmentTimeout()
   {
@@ -98,19 +100,9 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return maxRetriesBeforeBlacklist;
   }
 
-  public void setMaxRetriesBeforeBlacklist(int maxRetriesBeforeBlacklist)
-  {
-    this.maxRetriesBeforeBlacklist = maxRetriesBeforeBlacklist;
-  }
-
   public Period getWorkerBlackListBackoffTime()
   {
     return workerBlackListBackoffTime;
-  }
-
-  public void setWorkerBlackListBackoffTime(Period taskBlackListBackoffTime)
-  {
-    this.workerBlackListBackoffTime = taskBlackListBackoffTime;
   }
 
   public Period getWorkerBlackListCleanupPeriod()
@@ -118,12 +110,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return workerBlackListCleanupPeriod;
   }
 
-  public void setWorkerBlackListCleanupPeriod(Period workerBlackListCleanupPeriod)
-  {
-    this.workerBlackListCleanupPeriod = workerBlackListCleanupPeriod;
-  }
-
-  public double getMaxPercentageBlacklistWorkers()
+  public int getMaxPercentageBlacklistWorkers()
   {
     return maxPercentageBlacklistWorkers;
   }
@@ -188,7 +175,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     result = 31 * result + maxRetriesBeforeBlacklist;
     result = 31 * result + workerBlackListBackoffTime.hashCode();
     result = 31 * result + workerBlackListCleanupPeriod.hashCode();
-    result = 31 * result + (int)maxPercentageBlacklistWorkers;
+    result = 31 * result + maxPercentageBlacklistWorkers;
     return result;
   }
 

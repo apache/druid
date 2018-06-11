@@ -24,10 +24,10 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
@@ -49,10 +49,10 @@ public class UniformGranularityTest
         Granularities.DAY,
         null,
         Lists.newArrayList(
-            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
         )
     );
 
@@ -60,45 +60,45 @@ public class UniformGranularityTest
 
     Assert.assertEquals(
         Lists.newArrayList(
-            new Interval("2012-01-01T00Z/P1D"),
-            new Interval("2012-01-02T00Z/P1D"),
-            new Interval("2012-01-03T00Z/P1D"),
-            new Interval("2012-01-07T00Z/P1D"),
-            new Interval("2012-01-08T00Z/P1D"),
-            new Interval("2012-01-09T00Z/P1D"),
-            new Interval("2012-01-10T00Z/P1D")
+            Intervals.of("2012-01-01T00Z/P1D"),
+            Intervals.of("2012-01-02T00Z/P1D"),
+            Intervals.of("2012-01-03T00Z/P1D"),
+            Intervals.of("2012-01-07T00Z/P1D"),
+            Intervals.of("2012-01-08T00Z/P1D"),
+            Intervals.of("2012-01-09T00Z/P1D"),
+            Intervals.of("2012-01-10T00Z/P1D")
         ),
         Lists.newArrayList(spec.bucketIntervals().get())
     );
 
     Assert.assertEquals(
         "2012-01-03T00Z",
-        Optional.of(new Interval("2012-01-03T00Z/2012-01-04T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-03T00Z"))
+        Optional.of(Intervals.of("2012-01-03T00Z/2012-01-04T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-03T00Z"))
     );
 
     Assert.assertEquals(
         "2012-01-03T01Z",
-        Optional.of(new Interval("2012-01-03T00Z/2012-01-04T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-03T01Z"))
+        Optional.of(Intervals.of("2012-01-03T00Z/2012-01-04T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-03T01Z"))
     );
 
     Assert.assertEquals(
         "2012-01-04T01Z",
         Optional.<Interval>absent(),
-        spec.bucketInterval(new DateTime("2012-01-04T01Z"))
+        spec.bucketInterval(DateTimes.of("2012-01-04T01Z"))
     );
 
     Assert.assertEquals(
         "2012-01-07T23:59:59.999Z",
-        Optional.of(new Interval("2012-01-07T00Z/2012-01-08T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-07T23:59:59.999Z"))
+        Optional.of(Intervals.of("2012-01-07T00Z/2012-01-08T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-07T23:59:59.999Z"))
     );
 
     Assert.assertEquals(
         "2012-01-08T01Z",
-        Optional.of(new Interval("2012-01-08T00Z/2012-01-09T00Z")),
-        spec.bucketInterval(new DateTime("2012-01-08T01Z"))
+        Optional.of(Intervals.of("2012-01-08T00Z/2012-01-09T00Z")),
+        spec.bucketInterval(DateTimes.of("2012-01-08T01Z"))
     );
   }
 
@@ -106,10 +106,10 @@ public class UniformGranularityTest
   public void testRollupSetting()
   {
     List<Interval> intervals = Lists.newArrayList(
-        new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-        new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-        new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-        new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
     );
     final GranularitySpec spec = new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, false, intervals);
 
@@ -123,10 +123,10 @@ public class UniformGranularityTest
         Granularities.DAY,
         null,
         Lists.newArrayList(
-            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
         )
     );
 
@@ -156,10 +156,10 @@ public class UniformGranularityTest
         Granularities.DAY,
         null,
         Lists.newArrayList(
-            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
         )
     );
 
@@ -168,10 +168,10 @@ public class UniformGranularityTest
             Granularities.DAY,
             null,
             Lists.newArrayList(
-                new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+                Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+                Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+                Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+                Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
             )
         )
     );
@@ -190,10 +190,10 @@ public class UniformGranularityTest
         Granularities.DAY,
         null,
         Lists.newArrayList(
-            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
         )
     );
 
@@ -202,10 +202,10 @@ public class UniformGranularityTest
             Granularities.YEAR,
             null,
             Lists.newArrayList(
-                new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+                Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+                Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+                Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+                Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
             )
         )
     );
@@ -214,10 +214,10 @@ public class UniformGranularityTest
             Granularities.DAY,
             null,
             Lists.newArrayList(
-                new Interval("2012-01-08T00Z/2012-01-12T00Z"),
-                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+                Intervals.of("2012-01-08T00Z/2012-01-12T00Z"),
+                Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+                Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+                Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
             )
         )
     );
@@ -226,10 +226,10 @@ public class UniformGranularityTest
             Granularities.DAY,
             Granularities.ALL,
             Lists.newArrayList(
-                new Interval("2012-01-08T00Z/2012-01-11T00Z"),
-                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
-                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
-                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+                Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
+                Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
+                Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
+                Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
             )
         )
     );
@@ -239,14 +239,14 @@ public class UniformGranularityTest
   public void testPeriodSegmentGranularity()
   {
     final GranularitySpec spec = new UniformGranularitySpec(
-            new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles")),
+            new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles")),
             null,
             Lists.newArrayList(
-                    new Interval("2012-01-08T00-08:00/2012-01-11T00-08:00"),
-                    new Interval("2012-01-07T00-08:00/2012-01-08T00-08:00"),
-                    new Interval("2012-01-03T00-08:00/2012-01-04T00-08:00"),
-                    new Interval("2012-01-01T00-08:00/2012-01-03T00-08:00"),
-                    new Interval("2012-09-01T00-07:00/2012-09-03T00-07:00")
+                    Intervals.of("2012-01-08T00-08:00/2012-01-11T00-08:00"),
+                    Intervals.of("2012-01-07T00-08:00/2012-01-08T00-08:00"),
+                    Intervals.of("2012-01-03T00-08:00/2012-01-04T00-08:00"),
+                    Intervals.of("2012-01-01T00-08:00/2012-01-03T00-08:00"),
+                    Intervals.of("2012-09-01T00-07:00/2012-09-03T00-07:00")
             )
     );
 
@@ -255,11 +255,11 @@ public class UniformGranularityTest
     final Optional<SortedSet<Interval>> sortedSetOptional = spec.bucketIntervals();
     final SortedSet<Interval> intervals = sortedSetOptional.get();
     ArrayList<Long> actualIntervals = new ArrayList<>();
-    for (Interval interval: intervals) {
+    for (Interval interval : intervals) {
       actualIntervals.add(interval.toDurationMillis());
     }
 
-    final ISOChronology chrono = ISOChronology.getInstance(DateTimeZone.forID("America/Los_Angeles"));
+    final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzfromString("America/Los_Angeles"));
 
     final ArrayList<Long> expectedIntervals = Lists.newArrayList(
             new Interval("2012-01-01/2012-01-02", chrono).toDurationMillis(),

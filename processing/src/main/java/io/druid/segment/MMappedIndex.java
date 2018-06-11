@@ -22,28 +22,25 @@ package io.druid.segment;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedColumnarLongsSupplier;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.VSizeIndexed;
+import io.druid.segment.data.VSizeColumnarMultiInts;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
  */
 public class MMappedIndex
 {
-  private static final Logger log = new Logger(MMappedIndex.class);
 
   final GenericIndexed<String> availableDimensions;
   final GenericIndexed<String> availableMetrics;
   final Interval dataInterval;
-  final CompressedLongsIndexedSupplier timestamps;
+  final CompressedColumnarLongsSupplier timestamps;
   final Map<String, MetricHolder> metrics;
   final Map<String, GenericIndexed<String>> dimValueLookups;
-  final Map<String, VSizeIndexed> dimColumns;
+  final Map<String, VSizeColumnarMultiInts> dimColumns;
   final Map<String, GenericIndexed<ImmutableBitmap>> invertedIndexes;
   final Map<String, ImmutableRTree> spatialIndexes;
   final SmooshedFileMapper fileMapper;
@@ -52,10 +49,10 @@ public class MMappedIndex
       GenericIndexed<String> availableDimensions,
       GenericIndexed<String> availableMetrics,
       Interval dataInterval,
-      CompressedLongsIndexedSupplier timestamps,
+      CompressedColumnarLongsSupplier timestamps,
       Map<String, MetricHolder> metrics,
       Map<String, GenericIndexed<String>> dimValueLookups,
-      Map<String, VSizeIndexed> dimColumns,
+      Map<String, VSizeColumnarMultiInts> dimColumns,
       Map<String, GenericIndexed<ImmutableBitmap>> invertedIndexes,
       Map<String, ImmutableRTree> spatialIndexes,
       SmooshedFileMapper fileMapper
@@ -73,11 +70,6 @@ public class MMappedIndex
     this.fileMapper = fileMapper;
   }
 
-  public CompressedLongsIndexedSupplier getTimestamps()
-  {
-    return timestamps;
-  }
-
   public GenericIndexed<String> getAvailableDimensions()
   {
     return availableDimensions;
@@ -86,11 +78,6 @@ public class MMappedIndex
   public GenericIndexed<String> getAvailableMetrics()
   {
     return availableMetrics;
-  }
-
-  public Map<String, MetricHolder> getMetrics()
-  {
-    return metrics;
   }
 
   public Interval getDataInterval()
@@ -114,7 +101,7 @@ public class MMappedIndex
     return dimValueLookups.get(dimension);
   }
 
-  public VSizeIndexed getDimColumn(String dimension)
+  public VSizeColumnarMultiInts getDimColumn(String dimension)
   {
     return dimColumns.get(dimension);
   }
@@ -134,10 +121,4 @@ public class MMappedIndex
     return fileMapper;
   }
 
-  public void close() throws IOException
-  {
-    if (fileMapper != null) {
-      fileMapper.close();
-    }
-  }
 }

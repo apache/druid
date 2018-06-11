@@ -24,6 +24,7 @@ import com.google.common.primitives.UnsignedBytes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -68,7 +69,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   private static final int bitsPerBucket = 4;
   private static final int range = (int) Math.pow(2, bitsPerBucket) - 1;
 
-  private final static double[][] minNumRegisterLookup = new double[64][256];
+  private static final double[][] minNumRegisterLookup = new double[64][256];
 
   static {
     for (int registerOffset = 0; registerOffset < 64; ++registerOffset) {
@@ -81,7 +82,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   }
 
   // we have to keep track of the number of zeroes in each of the two halves of the byte register (0, 1, or 2)
-  private final static int[] numZeroLookup = new int[256];
+  private static final int[] numZeroLookup = new int[256];
 
   static {
     for (int i = 0; i < numZeroLookup.length; ++i) {
@@ -358,7 +359,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     }
   }
 
-  public HyperLogLogCollector fold(HyperLogLogCollector other)
+  public HyperLogLogCollector fold(@Nullable HyperLogLogCollector other)
   {
     if (other == null || other.storageBuffer.remaining() == 0) {
       return this;
@@ -499,6 +500,11 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     buffer.get(theBytes);
 
     return theBytes;
+  }
+
+  public long estimateCardinalityRound()
+  {
+    return Math.round(estimateCardinality());
   }
 
   public double estimateCardinality()

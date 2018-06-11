@@ -110,9 +110,9 @@ class WikipediaIrcDecoder implements IrcDecoder
       return openDefaultGeoIpDb(geoDb);
     }
     catch (RuntimeException e) {
-      log.warn(e.getMessage()+" Attempting to re-download.", e);
+      log.warn(e.getMessage() + " Attempting to re-download.", e);
       if (geoDb.exists() && !geoDb.delete()) {
-        throw new RuntimeException("Could not delete geo db file ["+ geoDb.getAbsolutePath() +"].");
+        throw new RuntimeException("Could not delete geo db file [" + geoDb.getAbsolutePath() + "].");
       }
       // local download may be corrupt, will retry once.
       return openDefaultGeoIpDb(geoDb);
@@ -133,7 +133,7 @@ class WikipediaIrcDecoder implements IrcDecoder
       return reader;
     }
     catch (IOException e) {
-      throw new RuntimeException("Could not open geo db at ["+ geoDb.getAbsolutePath() +"].", e);
+      throw new RuntimeException("Could not open geo db at [" + geoDb.getAbsolutePath() + "].", e);
     }
   }
 
@@ -149,14 +149,14 @@ class WikipediaIrcDecoder implements IrcDecoder
       File tmpFile = File.createTempFile("druid", "geo");
 
       FileUtils.copyInputStreamToFile(
-        new GZIPInputStream(
-          new URL("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz").openStream()
-        ),
-        tmpFile
+          new GZIPInputStream(
+              new URL("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz").openStream()
+          ),
+          tmpFile
       );
 
       if (!tmpFile.renameTo(geoDb)) {
-        throw new RuntimeException("Unable to move geo file to ["+geoDb.getAbsolutePath()+"]!");
+        throw new RuntimeException("Unable to move geo file to [" + geoDb.getAbsolutePath() + "]!");
       }
     }
     catch (IOException e) {
@@ -283,23 +283,10 @@ class WikipediaIrcDecoder implements IrcDecoder
         return dimensions.get(dimension);
       }
 
-
       @Override
-      public double getDoubleMetric(String metric)
-      {
-        return new Double(metrics.get(metric)).doubleValue();
-      }
-
-      @Override
-      public float getFloatMetric(String metric)
+      public Number getMetric(String metric)
       {
         return metrics.get(metric);
-      }
-
-      @Override
-      public long getLongMetric(String metric)
-      {
-        return new Float(metrics.get(metric)).longValue();
       }
 
       @Override

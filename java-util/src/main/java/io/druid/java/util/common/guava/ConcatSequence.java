@@ -31,25 +31,16 @@ public class ConcatSequence<T> implements Sequence<T>
   private final Sequence<Sequence<T>> baseSequences;
 
   public ConcatSequence(
-      Sequence<Sequence<T>> baseSequences
+      Sequence<? extends Sequence<? extends T>> baseSequences
   )
   {
-    this.baseSequences = baseSequences;
+    this.baseSequences = (Sequence<Sequence<T>>) baseSequences;
   }
 
   @Override
   public <OutType> OutType accumulate(OutType initValue, final Accumulator<OutType, T> accumulator)
   {
-    return baseSequences.accumulate(
-        initValue, new Accumulator<OutType, Sequence<T>>()
-    {
-      @Override
-      public OutType accumulate(OutType accumulated, Sequence<T> in)
-      {
-        return in.accumulate(accumulated, accumulator);
-      }
-    }
-    );
+    return baseSequences.accumulate(initValue, (accumulated, in) -> in.accumulate(accumulated, accumulator));
   }
 
   @Override

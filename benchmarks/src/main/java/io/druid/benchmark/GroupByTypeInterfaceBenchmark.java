@@ -35,7 +35,6 @@ import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
-import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.hll.HyperLogLogHash;
@@ -43,12 +42,12 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -75,6 +74,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -99,11 +99,11 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-// Benchmark for determining the interface overhead of GroupBy with multiple type implementations
-
+/**
+ * Benchmark for determining the interface overhead of GroupBy with multiple type implementations
+ */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 15)
@@ -146,12 +146,11 @@ public class GroupByTypeInterfaceBenchmark
   private GroupByQuery floatQuery;
   private GroupByQuery longQuery;
 
-  private ExecutorService executorService;
-
   static {
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -161,7 +160,7 @@ public class GroupByTypeInterfaceBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   private static final Map<String, Map<String, GroupByQuery>> SCHEMA_QUERY_MAP = new LinkedHashMap<>();
@@ -287,7 +286,6 @@ public class GroupByTypeInterfaceBenchmark
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
       ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
-    executorService = Execs.multiThreaded(numProcessingThreads, "GroupByThreadPool[%d]");
 
     setupQueries();
 
@@ -338,7 +336,8 @@ public class GroupByTypeInterfaceBenchmark
       final File file = INDEX_MERGER_V9.persist(
           index,
           new File(tmpDir, String.valueOf(i)),
-          new IndexSpec()
+          new IndexSpec(),
+          null
       );
 
       queryableIndexes.add(INDEX_IO.loadIndex(file));
@@ -472,14 +471,14 @@ public class GroupByTypeInterfaceBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
-    return Sequences.toList(queryResult, Lists.<T>newArrayList());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    return queryResult.toList();
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringOnly(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringOnly(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -497,7 +496,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongOnly(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongOnly(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -515,7 +514,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatOnly(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatOnly(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -533,7 +532,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexNumericOnly(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexNumericOnly(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -551,7 +550,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexNumericThenString(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexNumericThenString(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -582,7 +581,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongThenString(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongThenString(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -612,7 +611,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongThenFloat(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongThenFloat(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -642,7 +641,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringThenNumeric(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringThenNumeric(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -672,7 +671,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringThenLong(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringThenLong(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -702,7 +701,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringTwice(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringTwice(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -732,7 +731,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongTwice(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongTwice(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -763,7 +762,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatTwice(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatTwice(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -793,7 +792,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatThenLong(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatThenLong(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -823,7 +822,7 @@ public class GroupByTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatThenString(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatThenString(Blackhole blackhole)
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,

@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import io.druid.data.input.MapBasedRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -69,7 +71,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
   @Override
   public QueryRunner<T> postProcess(QueryRunner<T> baseQueryRunner)
   {
-    return postProcess(baseQueryRunner, DateTime.now().getMillis());
+    return postProcess(baseQueryRunner, DateTimes.nowUtc().getMillis());
   }
 
   public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner, final long now)
@@ -79,12 +81,14 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
       {
-        final long offset = computeOffset(now);
+        final DateTimeZone tz = queryPlus.getQuery().getTimezone();
+        final long offset = computeOffset(now, tz);
 
         final Interval interval = queryPlus.getQuery().getIntervals().get(0);
         final Interval modifiedInterval = new Interval(
             Math.min(interval.getStartMillis() + offset, now + offset),
-            Math.min(interval.getEndMillis() + offset, now + offset)
+            Math.min(interval.getEndMillis() + offset, now + offset),
+            interval.getChronology()
         );
         return Sequences.map(
             baseRunner.run(
@@ -113,9 +117,9 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                     final DateTime maxTime = boundary.getMaxTime();
 
                     return (T) ((TimeBoundaryQuery) queryPlus.getQuery()).buildResult(
-                        new DateTime(Math.min(res.getTimestamp().getMillis() - offset, now)),
+                        DateTimes.utc(Math.min(res.getTimestamp().getMillis() - offset, now)),
                         minTime != null ? minTime.minus(offset) : null,
-                        maxTime != null ? new DateTime(Math.min(maxTime.getMillis() - offset, now)) : null
+                        maxTime != null ? DateTimes.utc(Math.min(maxTime.getMillis() - offset, now)) : null
                     ).iterator().next();
                   }
                   return (T) new Result(res.getTimestamp().minus(offset), value);
@@ -140,7 +144,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
    *
    * @return the offset between the mapped time and time t
    */
-  protected long computeOffset(final long t)
+  protected long computeOffset(final long t, final DateTimeZone tz)
   {
     // start is the beginning of the last period ending within dataInterval
     long start = dataInterval.getEndMillis() - periodMillis;
@@ -148,7 +152,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     if (startOffset < 0) {
       startOffset += periodMillis;
     }
-    ;
+
     start -= startOffset;
 
     // tOffset is the offset time t within the last period
@@ -157,6 +161,6 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
       tOffset += periodMillis;
     }
     tOffset += start;
-    return tOffset - t;
+    return tOffset - t - (tz.getOffset(tOffset) - tz.getOffset(t));
   }
 }

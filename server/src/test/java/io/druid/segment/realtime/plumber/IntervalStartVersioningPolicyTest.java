@@ -19,7 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
-import org.joda.time.Interval;
+import io.druid.java.util.common.Intervals;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,10 +28,10 @@ import org.junit.Test;
 public class IntervalStartVersioningPolicyTest
 {
   @Test
-  public void testGetVersion() throws Exception
+  public void testGetVersion()
   {
     IntervalStartVersioningPolicy policy = new IntervalStartVersioningPolicy();
-    String version = policy.getVersion(new Interval("2013-01-01/2013-01-02"));
+    String version = policy.getVersion(Intervals.of("2013-01-01/2013-01-02"));
     Assert.assertEquals("2013-01-01T00:00:00.000Z", version);
   }
 }

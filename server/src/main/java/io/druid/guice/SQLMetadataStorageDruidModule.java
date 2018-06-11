@@ -44,7 +44,6 @@ import io.druid.metadata.SQLMetadataSegmentManager;
 import io.druid.metadata.SQLMetadataSegmentManagerProvider;
 import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.metadata.SQLMetadataSegmentPublisherProvider;
-import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.SQLMetadataSupervisorManager;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.audit.SQLAuditManager;
@@ -119,11 +118,6 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.optionBinder(binder, Key.get(MetadataSegmentPublisherProvider.class))
             .addBinding(type)
             .to(SQLMetadataSegmentPublisherProvider.class)
-            .in(LazySingleton.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
-            .addBinding(type)
-            .to(SQLMetadataStorageActionHandlerFactory.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))

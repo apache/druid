@@ -25,16 +25,16 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
-import io.druid.concurrent.Execs;
-import io.druid.guice.annotations.Client;
+import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.query.DataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChestWarehouse;
@@ -45,7 +45,6 @@ import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -82,7 +81,7 @@ public class BrokerServerView implements TimelineServerView
       QueryToolChestWarehouse warehouse,
       QueryWatcher queryWatcher,
       @Smile ObjectMapper smileMapper,
-      @Client HttpClient httpClient,
+      @EscalatedClient HttpClient httpClient,
       FilteredServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
       ServiceEmitter emitter,
@@ -96,7 +95,7 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-    this.clients = Maps.newConcurrentMap();
+    this.clients = new ConcurrentHashMap<>();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
 
@@ -150,9 +149,9 @@ public class BrokerServerView implements TimelineServerView
         segmentFilter
     );
 
-    baseView.registerServerCallback(
+    baseView.registerServerRemovedCallback(
         exec,
-        new ServerView.ServerCallback()
+        new ServerRemovedCallback()
         {
           @Override
           public ServerView.CallbackAction serverRemoved(DruidServer server)
@@ -167,28 +166,6 @@ public class BrokerServerView implements TimelineServerView
   public boolean isInitialized()
   {
     return initialized;
-  }
-
-  public void clear()
-  {
-    synchronized (lock) {
-      final Iterator<String> clientsIter = clients.keySet().iterator();
-      while (clientsIter.hasNext()) {
-        clientsIter.remove();
-      }
-
-      timelines.clear();
-
-      final Iterator<ServerSelector> selectorsIter = selectors.values().iterator();
-      while (selectorsIter.hasNext()) {
-        final ServerSelector selector = selectorsIter.next();
-        selectorsIter.remove();
-        while (!selector.isEmpty()) {
-          final QueryableDruidServer pick = selector.pick();
-          selector.removeServer(pick);
-        }
-      }
-    }
   }
 
   private QueryableDruidServer addServer(DruidServer server)
@@ -322,9 +299,9 @@ public class BrokerServerView implements TimelineServerView
   }
 
   @Override
-  public void registerServerCallback(Executor exec, ServerCallback callback)
+  public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
   {
-    baseView.registerServerCallback(exec, callback);
+    baseView.registerServerRemovedCallback(exec, callback);
   }
 
   @Override

@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.primitives.Doubles;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -42,7 +41,7 @@ public class DoubleMinAggregationTest
   public DoubleMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"doubleMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    doubleMinAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, DoubleMinAggregatorFactory.class);
+    doubleMinAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, DoubleMinAggregatorFactory.class);
   }
 
   @Before
@@ -50,7 +49,7 @@ public class DoubleMinAggregationTest
   {
     selector = new TestDoubleColumnSelectorImpl(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeDoubleColumnSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
     EasyMock.replay(colSelectorFactory);
   }
 
@@ -65,11 +64,8 @@ public class DoubleMinAggregationTest
     aggregate(selector, agg);
 
     Assert.assertEquals(values[2], ((Double) agg.get()).doubleValue(), 0.0001);
-    Assert.assertEquals((long)values[2], agg.getLong());
+    Assert.assertEquals((long) values[2], agg.getLong());
     Assert.assertEquals(values[2], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(Double.POSITIVE_INFINITY, (Double) agg.get(), 0.0001);
   }
 
   @Test
@@ -77,7 +73,7 @@ public class DoubleMinAggregationTest
   {
     DoubleMinBufferAggregator agg = (DoubleMinBufferAggregator) doubleMinAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Doubles.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -97,7 +93,7 @@ public class DoubleMinAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     DoubleMinAggregatorFactory one = new DoubleMinAggregatorFactory("name1", "fieldName1");
     DoubleMinAggregatorFactory oneMore = new DoubleMinAggregatorFactory("name1", "fieldName1");

@@ -33,9 +33,7 @@ public class IndexedIterable<T> implements Iterable<T>
     return new IndexedIterable<T>(indexed);
   }
 
-  public IndexedIterable(
-    Indexed<T> indexed
-  )
+  public IndexedIterable(Indexed<T> indexed)
   {
     this.indexed = indexed;
   }
@@ -56,7 +54,7 @@ public class IndexedIterable<T> implements Iterable<T>
       @Override
       public T next()
       {
-        if (! hasNext()) {
+        if (!hasNext()) {
           throw new NoSuchElementException();
         }
         return indexed.get(currIndex++);

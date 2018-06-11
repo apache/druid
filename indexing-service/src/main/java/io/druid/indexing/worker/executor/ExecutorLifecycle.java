@@ -26,18 +26,18 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
-
-import org.joda.time.DateTime;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -118,7 +118,7 @@ public class ExecutorLifecycle
 
           log.info("Attempting to lock file[%s].", taskLockFile);
           final long startLocking = System.currentTimeMillis();
-          final long timeout = new DateTime(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
+          final long timeout = DateTimes.utc(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
           while (taskLockFileLock == null && System.currentTimeMillis() < timeout) {
             taskLockFileLock = taskLockChannel.tryLock();
             if (taskLockFileLock == null) {
@@ -140,29 +140,31 @@ public class ExecutorLifecycle
       throw Throwables.propagate(e);
     }
 
-    // Spawn monitor thread to keep a watch on parent's stdin
-    // If stdin reaches eof, the parent is gone, and we should shut down
-    parentMonitorExec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
+    if (taskExecutorConfig.isParentStreamDefined()) {
+      // Spawn monitor thread to keep a watch on parent's stdin
+      // If stdin reaches eof, the parent is gone, and we should shut down
+      parentMonitorExec.submit(
+          new Runnable()
           {
-            try {
-              while (parentStream.read() != -1) {
-                // Toss the byte
+            @Override
+            public void run()
+            {
+              try {
+                while (parentStream.read() != -1) {
+                  // Toss the byte
+                }
               }
-            }
-            catch (Exception e) {
-              log.error(e, "Failed to read from stdin");
-            }
+              catch (Exception e) {
+                log.error(e, "Failed to read from stdin");
+              }
 
-            // Kind of gross, but best way to kill the JVM as far as I know
-            log.info("Triggering JVM shutdown.");
-            System.exit(2);
+              // Kind of gross, but best way to kill the JVM as far as I know
+              log.info("Triggering JVM shutdown.");
+              System.exit(2);
+            }
           }
-        }
-    );
+      );
+    }
 
     // Won't hurt in remote mode, and is required for setting up locks in local mode:
     try {
@@ -189,7 +191,7 @@ public class ExecutorLifecycle
 
               final File statusFileParent = statusFile.getParentFile();
               if (statusFileParent != null) {
-                statusFileParent.mkdirs();
+                FileUtils.forceMkdir(statusFileParent);
               }
               jsonMapper.writeValue(statusFile, taskStatus);
 

@@ -19,7 +19,6 @@
 
 package io.druid.query;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.List;
@@ -28,19 +27,19 @@ import java.util.List;
  */
 public class DruidMetrics
 {
-  public final static String DATASOURCE = "dataSource";
-  public final static String TYPE = "type";
-  public final static String INTERVAL = "interval";
-  public final static String ID = "id";
-  public final static String TASK_ID = "taskId";
-  public final static String STATUS = "status";
+  public static final String DATASOURCE = "dataSource";
+  public static final String TYPE = "type";
+  public static final String INTERVAL = "interval";
+  public static final String ID = "id";
+  public static final String TASK_ID = "taskId";
+  public static final String STATUS = "status";
 
   // task metrics
-  public final static String TASK_TYPE = "taskType";
-  public final static String TASK_STATUS = "taskStatus";
+  public static final String TASK_TYPE = "taskType";
+  public static final String TASK_STATUS = "taskStatus";
 
-  public final static String SERVER = "server";
-  public final static String TIER = "tier";
+  public static final String SERVER = "server";
+  public static final String TIER = "tier";
 
   public static int findNumComplexAggs(List<AggregatorFactory> aggs)
   {
@@ -59,7 +58,7 @@ public class DruidMetrics
       final QueryToolChest<T, Query<T>> toolChest,
       final Query<T> query,
       final String remoteAddr
-  ) throws JsonProcessingException
+  )
   {
     QueryMetrics<? super Query<T>> queryMetrics;
     if (toolChest != null) {

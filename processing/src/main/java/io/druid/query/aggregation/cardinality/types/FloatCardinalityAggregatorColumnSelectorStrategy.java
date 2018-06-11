@@ -22,20 +22,20 @@ package io.druid.query.aggregation.cardinality.types;
 import com.google.common.hash.Hasher;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 public class FloatCardinalityAggregatorColumnSelectorStrategy
-    implements CardinalityAggregatorColumnSelectorStrategy<FloatColumnSelector>
+    implements CardinalityAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>
 {
   @Override
-  public void hashRow(FloatColumnSelector dimSelector, Hasher hasher)
+  public void hashRow(BaseFloatColumnValueSelector selector, Hasher hasher)
   {
-    hasher.putFloat(dimSelector.get());
+    hasher.putFloat(selector.getFloat());
   }
 
   @Override
-  public void hashValues(FloatColumnSelector dimSelector, HyperLogLogCollector collector)
+  public void hashValues(BaseFloatColumnValueSelector selector, HyperLogLogCollector collector)
   {
-    collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(dimSelector.get())).asBytes());
+    collector.add(CardinalityAggregator.hashFn.hashInt(Float.floatToIntBits(selector.getFloat())).asBytes());
   }
 }

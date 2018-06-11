@@ -19,7 +19,6 @@
 
 package io.druid.benchmark.indexing;
 
-import com.google.common.collect.Lists;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
@@ -27,7 +26,6 @@ import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -40,7 +38,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.VirtualColumns;
@@ -137,17 +135,17 @@ public class IncrementalIndexReadBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void read(Blackhole blackhole) throws Exception
+  public void read(Blackhole blackhole)
   {
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
     Sequence<Cursor> cursors = makeCursors(sa, null);
-    Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
+    Cursor cursor = cursors.limit(1).toList().get(0);
 
     List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimZipf", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimUniform", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequentialHalfNull", null)));
+    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
     cursor.reset();
     while (!cursor.isDone()) {
@@ -162,7 +160,7 @@ public class IncrementalIndexReadBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void readWithFilters(Blackhole blackhole) throws Exception
+  public void readWithFilters(Blackhole blackhole)
   {
     DimFilter filter = new OrDimFilter(
         Arrays.asList(
@@ -176,13 +174,13 @@ public class IncrementalIndexReadBenchmark
 
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
     Sequence<Cursor> cursors = makeCursors(sa, filter);
-    Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
+    Cursor cursor = cursors.limit(1).toList().get(0);
 
     List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequential", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimZipf", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimUniform", null)));
-    selectors.add(cursor.makeDimensionSelector(new DefaultDimensionSpec("dimSequentialHalfNull", null)));
+    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
     cursor.reset();
     while (!cursor.isDone()) {
@@ -204,5 +202,10 @@ public class IncrementalIndexReadBenchmark
         false,
         null
     );
+  }
+
+  private static DimensionSelector makeDimensionSelector(Cursor cursor, String name)
+  {
+    return cursor.getColumnSelectorFactory().makeDimensionSelector(new DefaultDimensionSpec(name, null));
   }
 }

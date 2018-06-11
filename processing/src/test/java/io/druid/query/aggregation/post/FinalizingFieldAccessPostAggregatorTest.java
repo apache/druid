@@ -27,7 +27,6 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -114,7 +113,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void testComparatorsWithFinalizing() throws Exception
+  public void testComparatorsWithFinalizing()
   {
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
@@ -140,10 +139,10 @@ public class FinalizingFieldAccessPostAggregatorTest
     );
 
     List<Object> computedValues = Lists.newArrayList();
-    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val1")));
-    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val2")));
-    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val3")));
-    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, (Object)"test_val4")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val1")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val2")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val3")));
+    computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val4")));
 
     Collections.sort(computedValues, postAgg.getComparator());
     Assert.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[]{}));
@@ -151,7 +150,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void testComparatorsWithFinalizingAndComparatorNull() throws Exception
+  public void testComparatorsWithFinalizingAndComparatorNull()
   {
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
@@ -165,11 +164,11 @@ public class FinalizingFieldAccessPostAggregatorTest
 
     List<Object> computedValues = Lists.newArrayList();
     Map<String, Object> forNull = Maps.newHashMap();
-    forNull.put("joe", (Object)null); // guava does not allow the value to be null.
-    computedValues.add(postAgg.compute(ImmutableMap.of("joe", (Object)"test_val1")));
-    computedValues.add(postAgg.compute(ImmutableMap.of("joe", (Object)"test_val2")));
+    forNull.put("joe", null); // guava does not allow the value to be null.
+    computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val1")));
+    computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val2")));
     computedValues.add(postAgg.compute(forNull));
-    computedValues.add(postAgg.compute(ImmutableMap.of("joe", (Object)"test_val4")));
+    computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val4")));
     Collections.sort(computedValues, postAgg.getComparator());
 
     Assert.assertArrayEquals(new Object[]{null, "test_val1", "test_val2", "test_val4"}, computedValues.toArray(new Object[]{}));
@@ -234,9 +233,9 @@ public class FinalizingFieldAccessPostAggregatorTest
         query
     );
 
-    MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
-    Assert.assertEquals(3.0, row.getFloatMetric("hll_market"), 0.1);
-    Assert.assertEquals(9.0, row.getFloatMetric("hll_quality"), 0.1);
-    Assert.assertEquals(12.0, row.getFloatMetric("uniq_add"), 0.1);
+    MapBasedRow row = (MapBasedRow) seq.toList().get(0);
+    Assert.assertEquals(3.0, row.getMetric("hll_market").floatValue(), 0.1);
+    Assert.assertEquals(9.0, row.getMetric("hll_quality").floatValue(), 0.1);
+    Assert.assertEquals(12.0, row.getMetric("uniq_add").floatValue(), 0.1);
   }
 }

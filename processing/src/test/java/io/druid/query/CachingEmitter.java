@@ -19,10 +19,8 @@
 
 package io.druid.query;
 
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.Event;
-
-import java.io.IOException;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
 
 public class CachingEmitter implements Emitter
 {
@@ -45,12 +43,12 @@ public class CachingEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
   }
 }

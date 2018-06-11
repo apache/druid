@@ -109,7 +109,7 @@ public class TestDerbyConnector extends DerbyConnector
     }
 
     @Override
-    protected void before() throws Throwable
+    protected void before()
     {
       connector = new TestDerbyConnector(Suppliers.ofInstance(connectorConfig), dbTables);
       connector.getDBI().open().close(); // create db

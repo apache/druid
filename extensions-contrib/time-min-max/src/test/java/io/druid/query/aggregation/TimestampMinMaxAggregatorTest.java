@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.primitives.Longs;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -66,7 +65,7 @@ public class TimestampMinMaxAggregatorTest
       Timestamp.valueOf("2014-01-02 02:00:00")
   };
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
@@ -102,7 +101,7 @@ public class TimestampMinMaxAggregatorTest
   @Before
   public void setup() throws Exception
   {
-    injector =  Initialization.makeInjectorWithModules(
+    injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
             new Module()
@@ -123,9 +122,9 @@ public class TimestampMinMaxAggregatorTest
     String json = "{\"type\":\"" + aggType + "\",\"name\":\"" + aggType + "\",\"fieldName\":\"test\"}";
 
     aggregatorFactory = mapper.readValue(json, aggClass);
-    selector = new TestObjectColumnSelector(values);
+    selector = new TestObjectColumnSelector<>(values);
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(selectorFactory.makeObjectColumnSelector("test")).andReturn(selector);
+    EasyMock.expect(selectorFactory.makeColumnValueSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);
   }
 
@@ -134,15 +133,13 @@ public class TimestampMinMaxAggregatorTest
   {
     TimestampAggregator aggregator = (TimestampAggregator) aggregatorFactory.factorize(selectorFactory);
 
-    for (Timestamp value: values) {
+    Assert.assertEquals(initValue, aggregator.get());
+
+    for (Timestamp value : values) {
       aggregate(selector, aggregator);
     }
 
     Assert.assertEquals(expected, new Timestamp(aggregator.getLong()));
-
-    aggregator.reset();
-
-    Assert.assertEquals(initValue, aggregator.get());
   }
 
   @Test
@@ -150,10 +147,10 @@ public class TimestampMinMaxAggregatorTest
   {
     TimestampBufferAggregator aggregator = (TimestampBufferAggregator) aggregatorFactory.factorizeBuffered(selectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Longs.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES]);
     aggregator.init(buffer, 0);
 
-    for (Timestamp value: values) {
+    for (Timestamp value : values) {
       aggregate(selector, aggregator, buffer, 0);
     }
 

@@ -26,16 +26,16 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "none", value= NoneColumnIncluderator.class),
-    @JsonSubTypes.Type(name = "all", value= AllColumnIncluderator.class),
-    @JsonSubTypes.Type(name = "list", value= ListColumnIncluderator.class)
+    @JsonSubTypes.Type(name = "none", value = NoneColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "all", value = AllColumnIncluderator.class),
+    @JsonSubTypes.Type(name = "list", value = ListColumnIncluderator.class)
 })
 public interface ColumnIncluderator
 {
-  public static final byte[] NONE_CACHE_PREFIX = new byte[]{0x0};
-  public static final byte[] ALL_CACHE_PREFIX = new byte[]{0x1};
-  public static final byte[] LIST_CACHE_PREFIX = new byte[]{0x2};
+  byte[] NONE_CACHE_PREFIX = new byte[]{0x0};
+  byte[] ALL_CACHE_PREFIX = new byte[]{0x1};
+  byte[] LIST_CACHE_PREFIX = new byte[]{0x2};
 
-  public boolean include(String columnName);
-  public byte[] getCacheKey();
+  boolean include(String columnName);
+  byte[] getCacheKey();
 }

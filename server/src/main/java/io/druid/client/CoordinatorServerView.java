@@ -23,8 +23,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-
-import io.druid.concurrent.Execs;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.DataSource;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -32,6 +31,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -48,8 +48,6 @@ public class CoordinatorServerView implements InventoryView
   private final Map<String, VersionedIntervalTimeline<String, SegmentLoadInfo>> timelines;
 
   private final ServerInventoryView baseView;
-
-  private volatile boolean initialized = false;
 
   @Inject
   public CoordinatorServerView(
@@ -82,15 +80,14 @@ public class CoordinatorServerView implements InventoryView
           @Override
           public ServerView.CallbackAction segmentViewInitialized()
           {
-            initialized = true;
             return ServerView.CallbackAction.CONTINUE;
           }
         }
     );
 
-    baseView.registerServerCallback(
+    baseView.registerServerRemovedCallback(
         exec,
-        new ServerView.ServerCallback()
+        new ServerView.ServerRemovedCallback()
         {
           @Override
           public ServerView.CallbackAction serverRemoved(DruidServer server)
@@ -100,19 +97,6 @@ public class CoordinatorServerView implements InventoryView
           }
         }
     );
-  }
-
-  public boolean isInitialized()
-  {
-    return initialized;
-  }
-
-  public void clear()
-  {
-    synchronized (lock) {
-      timelines.clear();
-      segmentLoadInfos.clear();
-    }
   }
 
   private void removeServer(DruidServer server)
@@ -203,7 +187,7 @@ public class CoordinatorServerView implements InventoryView
   }
 
   @Override
-  public Iterable<DruidServer> getInventory()
+  public Collection<DruidServer> getInventory()
   {
     return baseView.getInventory();
   }

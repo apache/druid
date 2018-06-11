@@ -21,6 +21,9 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+
+import java.util.Objects;
 
 /**
  */
@@ -45,7 +48,7 @@ public class DruidServerMetadata
       @JsonProperty("priority") int priority
   )
   {
-    this.name = name;
+    this.name = Preconditions.checkNotNull(name);
     this.hostAndPort = hostAndPort;
     this.hostAndTlsPort = hostAndTlsPort;
     this.maxSize = maxSize;
@@ -118,38 +121,31 @@ public class DruidServerMetadata
 
     DruidServerMetadata that = (DruidServerMetadata) o;
 
+    if (!name.equals(that.name)) {
+      return false;
+    }
+    if (!Objects.equals(hostAndPort, that.hostAndPort)) {
+      return false;
+    }
+    if (!Objects.equals(hostAndTlsPort, that.hostAndTlsPort)) {
+      return false;
+    }
     if (maxSize != that.maxSize) {
       return false;
     }
-    if (priority != that.priority) {
+    if (!Objects.equals(tier, that.tier)) {
       return false;
     }
-    if (name != null ? !name.equals(that.name) : that.name != null) {
+    if (type != that.type) {
       return false;
     }
-    if (hostAndPort != null ? !hostAndPort.equals(that.hostAndPort) : that.hostAndPort != null) {
-      return false;
-    }
-    if (hostAndTlsPort != null ? !hostAndTlsPort.equals(that.hostAndTlsPort) : that.hostAndTlsPort != null) {
-      return false;
-    }
-    if (tier != null ? !tier.equals(that.tier) : that.tier != null) {
-      return false;
-    }
-    return type == that.type;
+    return priority == that.priority;
   }
 
   @Override
   public int hashCode()
   {
-    int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + (hostAndPort != null ? hostAndPort.hashCode() : 0);
-    result = 31 * result + (hostAndTlsPort != null ? hostAndTlsPort.hashCode() : 0);
-    result = 31 * result + (int) (maxSize ^ (maxSize >>> 32));
-    result = 31 * result + (tier != null ? tier.hashCode() : 0);
-    result = 31 * result + (type != null ? type.hashCode() : 0);
-    result = 31 * result + priority;
-    return result;
+    return Objects.hash(name, hostAndPort, hostAndTlsPort, maxSize, tier, type, priority);
   }
 
   @Override

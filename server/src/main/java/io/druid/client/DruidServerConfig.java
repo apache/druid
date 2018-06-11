@@ -20,8 +20,11 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Sets;
 
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 /**
  */
@@ -37,6 +40,10 @@ public class DruidServerConfig
   @JsonProperty
   private int priority = DruidServer.DEFAULT_PRIORITY;
 
+  @JsonProperty
+  @NotNull
+  private Set<String> hiddenProperties = Sets.newHashSet("druid.s3.accessKey", "druid.s3.secretKey", "druid.metadata.storage.connector.password");
+
   public long getMaxSize()
   {
     return maxSize;
@@ -50,5 +57,10 @@ public class DruidServerConfig
   public int getPriority()
   {
     return priority;
+  }
+
+  public Set<String> getHiddenProperties()
+  {
+    return hiddenProperties;
   }
 }

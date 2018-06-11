@@ -34,6 +34,7 @@ import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -109,21 +110,23 @@ public class ColumnComparisonFilter implements Filter
     };
   }
 
-  // overlap returns true when: a and b have one or more elements in common,
-  // a and b are both null, or a and b are both empty.
-  public static boolean overlap(String[] a, String[] b)
+  /**
+   * overlap returns true when: as and bs have one or more elements in common,
+   * as and bs are both null, or as and bs are both empty.
+   */
+  public static boolean overlap(@Nullable String[] as, @Nullable String[] bs)
   {
-    if (a == null || b == null) {
+    if (as == null || bs == null) {
       // They only have overlap if both are null.
-      return a == null && b == null;
+      return as == null && bs == null;
     }
-    if (a.length == 0 && b.length == 0) {
+    if (as.length == 0 && bs.length == 0) {
       return true;
     }
 
-    for (int i = 0; i < a.length; i++) {
-      for (int j = 0; j < b.length; j++) {
-        if (Objects.equals(a[i], b[j])) {
+    for (String a : as) {
+      for (String b : bs) {
+        if (Objects.equals(a, b)) {
           return true;
         }
       }

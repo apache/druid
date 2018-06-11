@@ -20,20 +20,24 @@
 package io.druid.query.aggregation;
 
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.BaseObjectColumnValueSelector;
 
 import java.util.Comparator;
 
 public class TimestampAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = LongMaxAggregator.COMPARATOR;
+  static final Comparator COMPARATOR = Comparator.comparingLong(n -> ((Number) n).longValue());
 
-  static long combineValues(Object lhs, Object rhs)
+  static Object combineValues(Comparator<Long> comparator, Object lhs, Object rhs)
   {
-    return Math.max(((Number)lhs).longValue(), ((Number)rhs).longValue());
+    if (comparator.compare(((Number) lhs).longValue(), ((Number) rhs).longValue()) > 0) {
+      return lhs;
+    } else {
+      return rhs;
+    }
   }
 
-  private final ObjectColumnSelector selector;
+  private final BaseObjectColumnValueSelector selector;
   private final String name;
   private final TimestampSpec timestampSpec;
   private final Comparator<Long> comparator;
@@ -43,7 +47,7 @@ public class TimestampAggregator implements Aggregator
 
   public TimestampAggregator(
       String name,
-      ObjectColumnSelector selector,
+      BaseObjectColumnValueSelector selector,
       TimestampSpec timestampSpec,
       Comparator<Long> comparator,
       Long initValue
@@ -55,23 +59,17 @@ public class TimestampAggregator implements Aggregator
     this.comparator = comparator;
     this.initValue = initValue;
 
-    reset();
+    most = this.initValue;
   }
 
   @Override
   public void aggregate()
   {
-    Long value = TimestampAggregatorFactory.convertLong(timestampSpec, selector.get());
+    Long value = TimestampAggregatorFactory.convertLong(timestampSpec, selector.getObject());
 
     if (value != null) {
       most = comparator.compare(most, value) > 0 ? most : value;
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    most = initValue;
   }
 
   @Override

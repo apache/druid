@@ -21,8 +21,10 @@ package io.druid.indexing.overlord.autoscaling;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -32,18 +34,26 @@ import java.util.List;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "ec2", value = EC2AutoScaler.class)
 })
+@ExtensionPoint
 public interface AutoScaler<T>
 {
   int getMinNumWorkers();
 
   int getMaxNumWorkers();
 
+  /**
+   * This method is unused, but AutoScaler is an {@link ExtensionPoint}, so we cannot remove it.
+   */
+  @SuppressWarnings("unused")
   T getEnvConfig();
 
+  @Nullable
   AutoScalingData provision();
 
+  @Nullable
   AutoScalingData terminate(List<String> ips);
 
+  @Nullable
   AutoScalingData terminateWithIds(List<String> ids);
 
   /**
@@ -56,11 +66,13 @@ public interface AutoScaler<T>
   List<String> ipToIdLookup(List<String> ips);
 
   /**
-   * Provides a lookup of node ids to ip addresses
+   * Provides a lookup of node ids to ip addresses.
+   *
+   * This method is unused, but AutoScaler is an {@link ExtensionPoint}, so we cannot remove it.
    *
    * @param nodeIds - nodes ids
-   *
    * @return IPs associated with the node
    */
+  @SuppressWarnings("unused")
   List<String> idToIpLookup(List<String> nodeIds);
 }

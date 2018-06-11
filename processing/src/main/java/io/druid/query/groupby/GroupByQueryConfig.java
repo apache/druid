@@ -28,6 +28,7 @@ public class GroupByQueryConfig
 {
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
+  public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
@@ -36,6 +37,9 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
+  private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
+  private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
+  private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -69,6 +73,15 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
+
+  @JsonProperty
+  private boolean forceHashAggregation = false;
+
+  @JsonProperty
+  private int intermediateCombineDegree = 8;
+
+  @JsonProperty
+  private int numParallelCombineThreads = 1;
 
   public String getDefaultStrategy()
   {
@@ -134,7 +147,22 @@ public class GroupByQueryConfig
   {
     return forcePushDownLimit;
   }
-  
+
+  public boolean isForceHashAggregation()
+  {
+    return forceHashAggregation;
+  }
+
+  public int getIntermediateCombineDegree()
+  {
+    return intermediateCombineDegree;
+  }
+
+  public int getNumParallelCombineThreads()
+  {
+    return numParallelCombineThreads;
+  }
+
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -169,6 +197,15 @@ public class GroupByQueryConfig
         getMaxMergingDictionarySize()
     );
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
+    newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
+    newConfig.intermediateCombineDegree = query.getContextValue(
+        CTX_KEY_INTERMEDIATE_COMBINE_DEGREE,
+        getIntermediateCombineDegree()
+    );
+    newConfig.numParallelCombineThreads = query.getContextValue(
+        CTX_KEY_NUM_PARALLEL_COMBINE_THREADS,
+        getNumParallelCombineThreads()
+    );
     return newConfig;
   }
 
@@ -185,6 +222,10 @@ public class GroupByQueryConfig
            ", bufferGrouperInitialBuckets=" + bufferGrouperInitialBuckets +
            ", maxMergingDictionarySize=" + maxMergingDictionarySize +
            ", maxOnDiskStorage=" + maxOnDiskStorage +
+           ", forcePushDownLimit=" + forcePushDownLimit +
+           ", forceHashAggregation=" + forceHashAggregation +
+           ", intermediateCombineDegree=" + intermediateCombineDegree +
+           ", numParallelCombineThreads=" + numParallelCombineThreads +
            '}';
   }
 }

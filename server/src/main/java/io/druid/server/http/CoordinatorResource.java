@@ -27,6 +27,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.LoadQueuePeon;
+import io.druid.server.coordinator.helper.CompactionSegmentIterator;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.timeline.DataSegment;
 
@@ -36,12 +37,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import java.util.Map;
 
 /**
  */
 @Path("/druid/coordinator/v1")
-@ResourceFilters(StateResourceFilter.class)
 public class CoordinatorResource
 {
   private final DruidCoordinator coordinator;
@@ -56,12 +57,16 @@ public class CoordinatorResource
 
   @GET
   @Path("/leader")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLeader()
   {
     return Response.ok(coordinator.getCurrentLeader()).build();
   }
 
+  /**
+   * This is an unsecured endpoint, defined as such in UNSECURED_PATHS in CoordinatorJettyServerInitializer
+   */
   @GET
   @Path("/isLeader")
   @Produces(MediaType.APPLICATION_JSON)
@@ -78,6 +83,7 @@ public class CoordinatorResource
 
   @GET
   @Path("/loadstatus")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus(
       @QueryParam("simple") String simple,
@@ -96,6 +102,7 @@ public class CoordinatorResource
 
   @GET
   @Path("/loadqueue")
+  @ResourceFilters(StateResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadQueue(
       @QueryParam("simple") String simple,
@@ -178,5 +185,20 @@ public class CoordinatorResource
             }
         )
     ).build();
+  }
+
+  @GET
+  @Path("/remainingSegmentSizeForCompaction")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response remainingSegmentSizeForCompaction(
+      @QueryParam("dataSource") String dataSource
+  )
+  {
+    final long notCompactedSegmentSizeBytes = coordinator.remainingSegmentSizeBytesForCompaction(dataSource);
+    if (notCompactedSegmentSizeBytes == CompactionSegmentIterator.UNKNOWN_REMAINING_SEGMENT_SIZE) {
+      return Response.status(Status.BAD_REQUEST).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+    } else {
+      return Response.ok(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes)).build();
+    }
   }
 }

@@ -27,22 +27,23 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -62,12 +63,6 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
 
   private static final Logger log = new Logger(ConvertSegmentTask.class);
 
-  @JsonIgnore
-  private final DataSegment segment;
-  private final IndexSpec indexSpec;
-  private final boolean force;
-  private final boolean validate;
-
   /**
    * Create a segment converter task to convert a segment to the most recent version including the specified indexSpec
    *
@@ -85,11 +80,22 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       IndexSpec indexSpec,
       boolean force,
       boolean validate,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Map<String, Object> context
   )
   {
     final String id = makeId(dataSource, interval);
-    return new ConvertSegmentTask(id, dataSource, interval, null, indexSpec, force, validate, context);
+    return new ConvertSegmentTask(
+        id,
+        dataSource,
+        interval,
+        null,
+        indexSpec,
+        force,
+        validate,
+        segmentWriteOutMediumFactory,
+        context
+    );
   }
 
   /**
@@ -107,20 +113,31 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       IndexSpec indexSpec,
       boolean force,
       boolean validate,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Map<String, Object> context
   )
   {
     final Interval interval = segment.getInterval();
     final String dataSource = segment.getDataSource();
     final String id = makeId(dataSource, interval);
-    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, force, validate, context);
+    return new ConvertSegmentTask(
+        id,
+        dataSource,
+        interval,
+        segment,
+        indexSpec,
+        force,
+        validate,
+        segmentWriteOutMediumFactory,
+        context
+    );
   }
 
   protected static String makeId(String dataSource, Interval interval)
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
     Preconditions.checkNotNull(interval, "interval");
-    return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), new DateTime());
+    return joinId(TYPE, dataSource, interval.getStart(), interval.getEnd(), DateTimes.nowUtc());
   }
 
   @JsonCreator
@@ -132,22 +149,41 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("force") Boolean force,
       @JsonProperty("validate") Boolean validate,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
     final boolean isForce = force == null ? false : force;
     final boolean isValidate = validate == null ? true : validate;
     if (id == null) {
       if (segment == null) {
-        return create(dataSource, interval, indexSpec, isForce, isValidate, context);
+        return create(dataSource, interval, indexSpec, isForce, isValidate, segmentWriteOutMediumFactory, context);
       } else {
-        return create(segment, indexSpec, isForce, isValidate, context);
+        return create(segment, indexSpec, isForce, isValidate, segmentWriteOutMediumFactory, context);
       }
     }
-    return new ConvertSegmentTask(id, dataSource, interval, segment, indexSpec, isForce, isValidate, context);
+    return new ConvertSegmentTask(
+        id,
+        dataSource,
+        interval,
+        segment,
+        indexSpec,
+        isForce,
+        isValidate,
+        segmentWriteOutMediumFactory,
+        context
+    );
   }
 
-  protected ConvertSegmentTask(
+  @JsonIgnore
+  private final DataSegment segment;
+  private final IndexSpec indexSpec;
+  private final boolean force;
+  private final boolean validate;
+  @Nullable
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+
+  ConvertSegmentTask(
       String id,
       String dataSource,
       Interval interval,
@@ -155,6 +191,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       IndexSpec indexSpec,
       boolean force,
       boolean validate,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       Map<String, Object> context
   )
   {
@@ -163,6 +200,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
     this.force = force;
     this.validate = validate;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @JsonProperty
@@ -193,6 +231,13 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   public DataSegment getSegment()
   {
     return segment;
+  }
+
+  @JsonProperty
+  @Nullable
+  public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
+  {
+    return segmentWriteOutMediumFactory;
   }
 
   @Override
@@ -262,7 +307,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
           @Override
           public Task apply(DataSegment input)
           {
-            return new SubTask(groupId, input, indexSpec, force, validate, context);
+            return new SubTask(groupId, input, indexSpec, force, validate, segmentWriteOutMediumFactory, context);
           }
         }
     );
@@ -294,6 +339,8 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     private final IndexSpec indexSpec;
     private final boolean force;
     private final boolean validate;
+    @Nullable
+    private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
     @JsonCreator
     public SubTask(
@@ -302,6 +349,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
         @JsonProperty("indexSpec") IndexSpec indexSpec,
         @JsonProperty("force") Boolean force,
         @JsonProperty("validate") Boolean validate,
+        @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
         @JsonProperty("context") Map<String, Object> context
     )
     {
@@ -322,6 +370,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
       this.force = force == null ? false : force;
       this.validate = validate == null ? true : validate;
+      this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     }
 
     @JsonProperty
@@ -353,7 +402,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     {
       log.info("Subs are good!  Italian BMT and Meatball are probably my favorite.");
       try {
-        convertSegment(toolbox, segment, indexSpec, force, validate);
+        convertSegment(toolbox);
       }
       catch (Exception e) {
         log.error(e, "Conversion failed.");
@@ -361,48 +410,43 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       }
       return success();
     }
-  }
 
-  private static void convertSegment(
-      TaskToolbox toolbox,
-      final DataSegment segment,
-      IndexSpec indexSpec,
-      boolean force,
-      boolean validate
-  )
-      throws SegmentLoadingException, IOException
-  {
-    log.info("Converting segment[%s]", segment);
-    final TaskActionClient actionClient = toolbox.getTaskActionClient();
-    final List<DataSegment> currentSegments = actionClient.submit(
-        new SegmentListUsedAction(segment.getDataSource(), segment.getInterval(), null)
-    );
+    private void convertSegment(TaskToolbox toolbox) throws SegmentLoadingException, IOException
+    {
+      log.info("Converting segment[%s]", segment);
+      final TaskActionClient actionClient = toolbox.getTaskActionClient();
+      final List<DataSegment> currentSegments = actionClient.submit(
+          new SegmentListUsedAction(segment.getDataSource(), segment.getInterval(), null)
+      );
 
-    for (DataSegment currentSegment : currentSegments) {
-      final String version = currentSegment.getVersion();
-      final Integer binaryVersion = currentSegment.getBinaryVersion();
+      for (DataSegment currentSegment : currentSegments) {
+        final String version = currentSegment.getVersion();
+        final Integer binaryVersion = currentSegment.getBinaryVersion();
 
-      if (!force && (version.startsWith(segment.getVersion()) && CURR_VERSION_INTEGER.equals(binaryVersion))) {
-        log.info("Skipping already updated segment[%s].", segment);
-        return;
+        if (!force && (version.startsWith(segment.getVersion()) && CURR_VERSION_INTEGER.equals(binaryVersion))) {
+          log.info("Skipping already updated segment[%s].", segment);
+          return;
+        }
       }
-    }
 
-    final Map<DataSegment, File> localSegments = toolbox.fetchSegments(Collections.singletonList(segment));
+      final Map<DataSegment, File> localSegments = toolbox.fetchSegments(Collections.singletonList(segment));
 
-    final File location = localSegments.get(segment);
-    final File outLocation = new File(location, "v9_out");
-    if (toolbox.getIndexIO().convertSegment(location, outLocation, indexSpec, force, validate)) {
-      final int outVersion = IndexIO.getVersionFromDir(outLocation);
+      final File location = localSegments.get(segment);
+      final File outLocation = new File(location, "v9_out");
+      IndexIO indexIO = toolbox.getIndexIO();
+      if (indexIO.convertSegment(location, outLocation, indexSpec, force, validate, segmentWriteOutMediumFactory)) {
+        final int outVersion = IndexIO.getVersionFromDir(outLocation);
 
-      // Appending to the version makes a new version that inherits most comparability parameters of the original
-      // version, but is "newer" than said original version.
-      DataSegment updatedSegment = segment.withVersion(StringUtils.format("%s_v%s", segment.getVersion(), outVersion));
-      updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
+        // Appending to the version makes a new version that inherits most comparability parameters of the original
+        // version, but is "newer" than said original version.
+        DataSegment updatedSegment = segment.withVersion(StringUtils.format("%s_v%s", segment.getVersion(), outVersion));
 
-      actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
-    } else {
-      log.info("Conversion failed.");
+        updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment, false);
+
+        actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
+      } else {
+        log.info("Conversion failed.");
+      }
     }
   }
 }

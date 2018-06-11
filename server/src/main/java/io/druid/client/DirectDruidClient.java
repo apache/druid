@@ -22,36 +22,33 @@ package io.druid.client;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.HttpResponseHandler;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.ClientResponse;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
@@ -65,7 +62,6 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
-import io.druid.server.initialization.ServerConfig;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -80,11 +76,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -104,7 +102,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private static final Logger log = new Logger(DirectDruidClient.class);
 
-  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = Maps.newConcurrentMap();
+  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
@@ -117,33 +115,17 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final AtomicInteger openConnections;
   private final boolean isSmile;
 
-  public static <T, QueryType extends Query<T>> QueryType withDefaultTimeoutAndMaxScatterGatherBytes(final QueryType query, ServerConfig serverConfig)
-  {
-    return (QueryType) QueryContexts.withMaxScatterGatherBytes(
-        QueryContexts.withDefaultTimeout(
-            (Query) query,
-            serverConfig.getDefaultQueryTimeout()
-        ),
-        serverConfig.getMaxScatterGatherBytes()
-    );
-  }
-
   /**
-   * Removes the magical fields added by {@link #makeResponseContextForQuery(Query, long)}.
+   * Removes the magical fields added by {@link #makeResponseContextForQuery()}.
    */
   public static void removeMagicResponseContextFields(Map<String, Object> responseContext)
   {
-    responseContext.remove(DirectDruidClient.QUERY_FAIL_TIME);
     responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
   }
 
-  public static Map<String, Object> makeResponseContextForQuery(Query query, long startTimeMillis)
+  public static Map<String, Object> makeResponseContextForQuery()
   {
-    final Map<String, Object> responseContext = new MapMaker().makeMap();
-    responseContext.put(
-        DirectDruidClient.QUERY_FAIL_TIME,
-        startTimeMillis + QueryContexts.getTimeout(query)
-    );
+    final Map<String, Object> responseContext = new ConcurrentHashMap<>();
     responseContext.put(
         DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED,
         new AtomicLong()
@@ -212,7 +194,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       final long requestStartTimeNs = System.nanoTime();
 
-      long timeoutAt = ((Long) context.get(QUERY_FAIL_TIME)).longValue();
+      long timeoutAt = query.getContextValue(QUERY_FAIL_TIME);
       long maxScatterGatherBytes = QueryContexts.getMaxScatterGatherBytes(query);
       AtomicLong totalBytesGathered = (AtomicLong) context.get(QUERY_TOTAL_BYTES_GATHERED);
 
@@ -251,9 +233,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.putAll(
                   objectMapper.<Map<String, Object>>readValue(
-                      responseContext, new TypeReference<Map<String, Object>>()
-                      {
-                      }
+                      responseContext, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
                   )
               );
             }
@@ -352,7 +332,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         public ClientResponse<InputStream> done(ClientResponse<InputStream> clientResponse)
         {
           long stopTimeNs = System.nanoTime();
-          long nodeTimeNs = stopTimeNs - responseStartTimeNs;
+          long nodeTimeNs = stopTimeNs - requestStartTimeNs;
           final long nodeTimeMs = TimeUnit.NANOSECONDS.toMillis(nodeTimeNs);
           log.debug(
               "Completed queryId[%s] request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
@@ -495,7 +475,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                            ? SmileMediaTypes.APPLICATION_JACKSON_SMILE
                            : MediaType.APPLICATION_JSON
                        ),
-                      new StatusResponseHandler(Charsets.UTF_8),
+                      new StatusResponseHandler(StandardCharsets.UTF_8),
                       Duration.standardSeconds(1)
                   ).get(1, TimeUnit.SECONDS);
 

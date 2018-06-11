@@ -30,8 +30,8 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.logger.Logger;
 import twitter4j.ConnectionLifeCycleListener;
 import twitter4j.GeoLocation;
 import twitter4j.HashtagEntity;
@@ -45,7 +45,6 @@ import twitter4j.User;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -115,7 +114,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
   }
 
   @Override
-  public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+  public Firehose connect(InputRowParser parser, File temporaryDirectory)
   {
     final ConnectionLifeCycleListener connectionLifeCycleListener = new ConnectionLifeCycleListener()
     {
@@ -250,6 +249,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         }
       }
 
+      @Nullable
       @Override
       public InputRow nextRow()
       {
@@ -352,7 +352,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
         theMap.put("location", hasUser ? user.getLocation() : "");
         theMap.put("verified", hasUser ? user.isVerified() : "");
 
-        theMap.put("ts",status.getCreatedAt().getTime());
+        theMap.put("ts", status.getCreatedAt().getTime());
 
         List<String> dimensions = Lists.newArrayList(theMap.keySet());
 
@@ -367,7 +367,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         log.info("CLOSE twitterstream");
         twitterStream.shutdown(); // invokes twitterStream.cleanUp()

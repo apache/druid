@@ -29,12 +29,13 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.NonBlockingPool;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
@@ -117,10 +118,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final String timestampStringFromContext = query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
 
     if (!timestampStringFromContext.isEmpty()) {
-      return new DateTime(Long.parseLong(timestampStringFromContext));
+      return DateTimes.utc(Long.parseLong(timestampStringFromContext));
     } else if (Granularities.ALL.equals(gran)) {
-      final long timeStart = query.getIntervals().get(0).getStartMillis();
-      return gran.getIterable(new Interval(timeStart, timeStart + 1)).iterator().next().getStart();
+      final DateTime timeStart = query.getIntervals().get(0).getStart();
+      return gran.getIterable(new Interval(timeStart, timeStart.plus(1))).iterator().next().getStart();
     } else {
       return null;
     }
@@ -135,18 +136,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
       if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
         throw new ResourceLimitExceededException(
             "Query needs " + requiredMergeBufferNum + " merge buffers, but only "
-            + mergeBufferPool.maxSize() + " merge buffers are configured"
+            + mergeBufferPool.maxSize() + " merge buffers were configured"
         );
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+        final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
         if (QueryContexts.hasTimeout(query)) {
           mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
         } else {
           mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
         }
-        if (mergeBufferHolders == null) {
+        if (mergeBufferHolders.isEmpty()) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {
           return new GroupByQueryResource(mergeBufferHolders);
@@ -246,7 +247,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
             "finalize", false,
             GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
             CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
-            CTX_KEY_OUTERMOST, false
+            CTX_KEY_OUTERMOST, false,
+            // the having spec shouldn't be passed down, so we need to convey the existing limit push down status
+            GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown()
         )
     );
 
@@ -287,7 +290,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         }
     );
 
-    // Don't apply limit here for inner results, that will be pushed down to the BufferGrouper
+    // Don't apply limit here for inner results, that will be pushed down to the BufferHashGrouper
     if (query.getContextBoolean(CTX_KEY_OUTERMOST, true)) {
       return query.postProcess(rowSequence);
     } else {
@@ -310,7 +313,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         configSupplier.get(),
         resource,
         spillMapper,
-        processingConfig.getTmpDir()
+        processingConfig.getTmpDir(),
+        processingConfig.intermediateComputeSizeBytes()
     );
     return mergeResults(new QueryRunner<Row>()
     {
@@ -335,6 +339,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryRunners,
         processingConfig.getNumThreads(),
         mergeBufferPool,
+        processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
         processingConfig.getTmpDir()
     );
@@ -346,6 +351,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
       StorageAdapter storageAdapter
   )
   {
-    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get());
+    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get().withOverrides(query));
   }
 }

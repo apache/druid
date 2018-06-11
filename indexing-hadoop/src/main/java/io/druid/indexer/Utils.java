@@ -19,16 +19,20 @@
 
 package io.druid.indexer;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.ISE;
 
+import io.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -41,6 +45,7 @@ import java.util.Map;
  */
 public class Utils
 {
+  private static final Logger log = new Logger(Utils.class);
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   public static OutputStream makePathAndOutputStream(JobContext job, Path outputPath, boolean deleteExisting)
@@ -110,9 +115,7 @@ public class Utils
 
     return jsonMapper.readValue(
         fs.open(statsPath),
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
   }
 
@@ -124,5 +127,26 @@ public class Utils
         makePathAndOutputStream(job, path, true),
         stats
     );
+  }
+
+  public static String getFailureMessage(Job failedJob, ObjectMapper jsonMapper)
+  {
+    try {
+      Map<String, String> taskDiagsMap = Maps.newHashMap();
+      TaskCompletionEvent[] completionEvents = failedJob.getTaskCompletionEvents(0, 100);
+      for (TaskCompletionEvent tce : completionEvents) {
+        String[] taskDiags = failedJob.getTaskDiagnostics(tce.getTaskAttemptId());
+        String combinedTaskDiags = "";
+        for (String taskDiag : taskDiags) {
+          combinedTaskDiags += taskDiag;
+        }
+        taskDiagsMap.put(tce.getTaskAttemptId().toString(), combinedTaskDiags);
+      }
+      return jsonMapper.writeValueAsString(taskDiagsMap);
+    }
+    catch (IOException | InterruptedException ie) {
+      log.error(ie, "couldn't get failure cause for job [%s]", failedJob.getJobName());
+      return null;
+    }
   }
 }

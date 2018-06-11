@@ -23,24 +23,34 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-
+import io.druid.client.coordinator.Coordinator;
+import io.druid.client.indexing.IndexingService;
+import io.druid.discovery.DruidLeaderSelector;
+import io.druid.discovery.DruidNodeAnnouncer;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.KeyHolder;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.PolyBind;
+import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.CuratorDiscoveryConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.CloseableExecutorService;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.curator.x.discovery.DownInstancePolicy;
 import org.apache.curator.x.discovery.InstanceFilter;
 import org.apache.curator.x.discovery.ProviderStrategy;
@@ -53,7 +63,6 @@ import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.curator.x.discovery.ServiceProviderBuilder;
 import org.apache.curator.x.discovery.details.ServiceCacheListener;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.Collections;
@@ -62,6 +71,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Function;
 
 /**
  * The DiscoveryModule allows for the registration of Keys of DruidNode objects, which it intends to be
@@ -73,6 +83,9 @@ import java.util.concurrent.ThreadFactory;
 public class DiscoveryModule implements Module
 {
   private static final String NAME = "DiscoveryModule:internal";
+
+  private static final String INTERNAL_DISCOVERY_PROP = "druid.discovery.type";
+  private static final String CURATOR_KEY = "curator";
 
   /**
    * Requests that the un-annotated DruidNode instance be injected and published as part of the lifecycle.
@@ -146,6 +159,47 @@ public class DiscoveryModule implements Module
     binder.bind(ServiceAnnouncer.class)
           .to(Key.get(CuratorServiceAnnouncer.class, Names.named(NAME)))
           .in(LazySingleton.class);
+
+    // internal discovery bindings.
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeAnnouncer.class), CURATOR_KEY
+    );
+
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeDiscoveryProvider.class), CURATOR_KEY
+    );
+
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidLeaderSelector.class, () -> Coordinator.class), CURATOR_KEY
+    );
+
+    PolyBind.createChoiceWithDefault(
+        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidLeaderSelector.class, () -> IndexingService.class), CURATOR_KEY
+    );
+
+    PolyBind.optionBinder(binder, Key.get(DruidNodeDiscoveryProvider.class))
+            .addBinding(CURATOR_KEY)
+            .to(CuratorDruidNodeDiscoveryProvider.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(DruidNodeAnnouncer.class))
+            .addBinding(CURATOR_KEY)
+            .to(CuratorDruidNodeAnnouncer.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, Coordinator.class))
+            .addBinding(CURATOR_KEY)
+            .toProvider(new DruidLeaderSelectorProvider(
+                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getCoordinatorPath(), "_COORDINATOR"))
+            )
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, IndexingService.class))
+            .addBinding(CURATOR_KEY)
+            .toProvider(new DruidLeaderSelectorProvider(
+                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getOverlordPath(), "_OVERLORD"))
+            )
+            .in(LazySingleton.class);
   }
 
   @Provides
@@ -164,7 +218,7 @@ public class DiscoveryModule implements Module
           private volatile List<DruidNode> nodes = null;
 
           @Override
-          public void start() throws Exception
+          public void start()
           {
             if (nodes == null) {
               nodes = Lists.newArrayList();
@@ -249,25 +303,25 @@ public class DiscoveryModule implements Module
   private static class NoopServiceDiscovery<T> implements ServiceDiscovery<T>
   {
     @Override
-    public void start() throws Exception
+    public void start()
     {
 
     }
 
     @Override
-    public void registerService(ServiceInstance<T> service) throws Exception
+    public void registerService(ServiceInstance<T> service)
     {
 
     }
 
     @Override
-    public void updateService(ServiceInstance<T> service) throws Exception
+    public void updateService(ServiceInstance<T> service)
     {
 
     }
 
     @Override
-    public void unregisterService(ServiceInstance<T> service) throws Exception
+    public void unregisterService(ServiceInstance<T> service)
     {
 
     }
@@ -279,19 +333,19 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public Collection<String> queryForNames() throws Exception
+    public Collection<String> queryForNames()
     {
       return ImmutableList.of();
     }
 
     @Override
-    public Collection<ServiceInstance<T>> queryForInstances(String name) throws Exception
+    public Collection<ServiceInstance<T>> queryForInstances(String name)
     {
       return ImmutableList.of();
     }
 
     @Override
-    public ServiceInstance<T> queryForInstance(String name, String id) throws Exception
+    public ServiceInstance<T> queryForInstance(String name, String id)
     {
       return null;
     }
@@ -303,7 +357,7 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
 
     }
@@ -350,13 +404,13 @@ public class DiscoveryModule implements Module
       }
 
       @Override
-      public void start() throws Exception
+      public void start()
       {
         // nothing
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         // nothing
       }
@@ -423,19 +477,19 @@ public class DiscoveryModule implements Module
   private static class NoopServiceProvider<T> implements ServiceProvider<T>
   {
     @Override
-    public void start() throws Exception
+    public void start()
     {
       // nothing
     }
 
     @Override
-    public ServiceInstance<T> getInstance() throws Exception
+    public ServiceInstance<T> getInstance()
     {
       return null;
     }
 
     @Override
-    public Collection<ServiceInstance<T>> getAllInstances() throws Exception
+    public Collection<ServiceInstance<T>> getAllInstances()
     {
       return Collections.emptyList();
     }
@@ -447,9 +501,39 @@ public class DiscoveryModule implements Module
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       // nothing
+    }
+  }
+
+  private static class DruidLeaderSelectorProvider implements Provider<DruidLeaderSelector>
+  {
+    @Inject
+    private CuratorFramework curatorFramework;
+
+    @Inject
+    @Self
+    private DruidNode druidNode;
+
+    @Inject
+    private ZkPathsConfig zkPathsConfig;
+
+    private final Function<ZkPathsConfig, String> latchPathFn;
+
+    DruidLeaderSelectorProvider(Function<ZkPathsConfig, String> latchPathFn)
+    {
+      this.latchPathFn = latchPathFn;
+    }
+
+    @Override
+    public DruidLeaderSelector get()
+    {
+      return new CuratorDruidLeaderSelector(
+          curatorFramework,
+          druidNode,
+          latchPathFn.apply(zkPathsConfig)
+      );
     }
   }
 }

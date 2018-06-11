@@ -47,7 +47,7 @@ public class QueryBenchmarkUtil
             segmentId, adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
-        (QueryToolChest<T, Query<T>>)factory.getToolchest()
+        (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }
 

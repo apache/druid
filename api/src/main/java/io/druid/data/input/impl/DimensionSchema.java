@@ -25,11 +25,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+
+import java.util.Objects;
 
 /**
  */
+@PublicApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringDimensionSchema.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = DimensionSchema.STRING_TYPE_NAME, value = StringDimensionSchema.class),
@@ -45,16 +50,23 @@ public abstract class DimensionSchema
   public static final String FLOAT_TYPE_NAME = "float";
   public static final String SPATIAL_TYPE_NAME = "spatial";
   public static final String DOUBLE_TYPE_NAME = "double";
+  private static final EmittingLogger log = new EmittingLogger(DimensionSchema.class);
 
 
   // main druid and druid-api should really use the same ValueType enum.
   // merge them when druid-api is merged back into the main repo
+
+  /**
+   * Should be the same as {@code io.druid.segment.column.ValueType}.
+   * TODO merge them when druid-api is merged back into the main repo
+   */
   public enum ValueType
   {
     FLOAT,
     LONG,
     STRING,
     DOUBLE,
+    @SuppressWarnings("unused") // used in io.druid.segment.column.ValueType
     COMPLEX;
 
     @JsonValue
@@ -71,7 +83,7 @@ public abstract class DimensionSchema
     }
   }
 
-  public static enum MultiValueHandling
+  public enum MultiValueHandling
   {
     SORTED_ARRAY,
     SORTED_SET,
@@ -110,11 +122,16 @@ public abstract class DimensionSchema
 
   private final String name;
   private final MultiValueHandling multiValueHandling;
+  private final boolean createBitmapIndex;
 
-  protected DimensionSchema(String name, MultiValueHandling multiValueHandling)
+  protected DimensionSchema(String name, MultiValueHandling multiValueHandling, boolean createBitmapIndex)
   {
-    this.name = Preconditions.checkNotNull(name, "Dimension name cannot be null.");
-    this.multiValueHandling = multiValueHandling;
+    if (Strings.isNullOrEmpty(name)) {
+      log.warn("Null or Empty Dimension found");
+    }
+    this.name = name;
+    this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
+    this.createBitmapIndex = createBitmapIndex;
   }
 
   @JsonProperty
@@ -129,6 +146,12 @@ public abstract class DimensionSchema
     return multiValueHandling;
   }
 
+  @JsonProperty("createBitmapIndex")
+  public boolean hasBitmapIndex()
+  {
+    return createBitmapIndex;
+  }
+
   @JsonIgnore
   public abstract String getTypeName();
 
@@ -136,7 +159,7 @@ public abstract class DimensionSchema
   public abstract ValueType getValueType();
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -144,16 +167,29 @@ public abstract class DimensionSchema
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    DimensionSchema that = (DimensionSchema) o;
-
-    return name.equals(that.name);
-
+    final DimensionSchema that = (DimensionSchema) o;
+    return createBitmapIndex == that.createBitmapIndex &&
+           Objects.equals(name, that.name) &&
+           Objects.equals(getTypeName(), that.getTypeName()) &&
+           Objects.equals(getValueType(), that.getValueType()) &&
+           multiValueHandling == that.multiValueHandling;
   }
 
   @Override
   public int hashCode()
   {
-    return name.hashCode();
+    return Objects.hash(name, multiValueHandling, createBitmapIndex, getTypeName(), getValueType());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DimensionSchema{" +
+           "name='" + name + '\'' +
+           ", valueType=" + getValueType() +
+           ", typeName=" + getTypeName() +
+           ", multiValueHandling=" + multiValueHandling +
+           ", createBitmapIndex=" + createBitmapIndex +
+           '}';
   }
 }

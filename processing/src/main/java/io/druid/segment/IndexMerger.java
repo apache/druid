@@ -19,28 +19,26 @@
 
 package io.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import com.google.inject.ImplementedBy;
+import io.druid.common.config.NullHandling;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.guava.Comparators;
-import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -49,11 +47,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -155,7 +153,12 @@ public interface IndexMerger
     return Lists.newArrayList(retVal);
   }
 
-  File persist(IncrementalIndex index, File outDir, IndexSpec indexSpec) throws IOException;
+  File persist(
+      IncrementalIndex index,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
 
   /**
    * This is *not* thread-safe and havok will ensue if this is called and writes are still occurring
@@ -169,22 +172,21 @@ public interface IndexMerger
    *
    * @throws IOException if an IO error occurs persisting the index
    */
-  File persist(IncrementalIndex index, Interval dataInterval, File outDir, IndexSpec indexSpec) throws IOException;
+  File persist(
+      IncrementalIndex index,
+      Interval dataInterval,
+      File outDir,
+      IndexSpec indexSpec,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
 
   File persist(
       IncrementalIndex index,
       Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
-      ProgressIndicator progress
-  ) throws IOException;
-
-  File mergeQueryableIndex(
-      List<QueryableIndex> indexes,
-      boolean rollup,
-      AggregatorFactory[] metricAggs,
-      File outDir,
-      IndexSpec indexSpec
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   File mergeQueryableIndex(
@@ -193,41 +195,45 @@ public interface IndexMerger
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
-      ProgressIndicator progress
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
+  File mergeQueryableIndex(
+      List<QueryableIndex> indexes,
+      boolean rollup,
+      AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
+
+  @VisibleForTesting
   File merge(
       List<IndexableAdapter> indexes,
       boolean rollup,
       AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec
-  ) throws IOException;
-
-  File merge(
-      List<IndexableAdapter> indexes,
-      boolean rollup,
-      AggregatorFactory[] metricAggs,
-      File outDir,
-      IndexSpec indexSpec,
-      ProgressIndicator progress
   ) throws IOException;
 
   // Faster than IndexMaker
   File convert(File inDir, File outDir, IndexSpec indexSpec) throws IOException;
 
-  File convert(File inDir, File outDir, IndexSpec indexSpec, ProgressIndicator progress)
-      throws IOException;
-
-  File append(List<IndexableAdapter> indexes, AggregatorFactory[] aggregators, File outDir, IndexSpec indexSpec)
-      throws IOException;
+  File convert(
+      File inDir,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException;
 
   File append(
       List<IndexableAdapter> indexes,
       AggregatorFactory[] aggregators,
       File outDir,
       IndexSpec indexSpec,
-      ProgressIndicator progress
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException;
 
   interface IndexSeeker
@@ -294,150 +300,102 @@ public interface IndexMerger
     }
   }
 
-  class MMappedIndexRowIterable implements Iterable<Rowboat>
+  /**
+   * This method applies {@link DimensionMerger#convertSortedSegmentRowValuesToMergedRowValues(int, ColumnValueSelector)} to
+   * all dimension column selectors of the given sourceRowIterator, using the given index number.
+   */
+  static TransformableRowIterator toMergedIndexRowIterator(
+      TransformableRowIterator sourceRowIterator,
+      int indexNumber,
+      final List<DimensionMerger> mergers
+  )
   {
-    private final Iterable<Rowboat> index;
-    private final List<String> convertedDims;
-    private final int indexNumber;
-    private final List<ColumnCapabilitiesImpl> dimCapabilities;
-    private final List<DimensionMerger> mergers;
+    RowPointer sourceRowPointer = sourceRowIterator.getPointer();
+    TimeAndDimsPointer markedSourceRowPointer = sourceRowIterator.getMarkedPointer();
+    boolean anySelectorChanged = false;
+    ColumnValueSelector[] convertedDimensionSelectors = new ColumnValueSelector[mergers.size()];
+    ColumnValueSelector[] convertedMarkedDimensionSelectors = new ColumnValueSelector[mergers.size()];
+    for (int i = 0; i < mergers.size(); i++) {
+      ColumnValueSelector sourceDimensionSelector = sourceRowPointer.getDimensionSelector(i);
+      ColumnValueSelector convertedDimensionSelector =
+          mergers.get(i).convertSortedSegmentRowValuesToMergedRowValues(indexNumber, sourceDimensionSelector);
+      convertedDimensionSelectors[i] = convertedDimensionSelector;
+      // convertedDimensionSelector could be just the same object as sourceDimensionSelector, it means that this
+      // type of column doesn't have any kind of special per-index encoding that needs to be converted to the "global"
+      // encoding. E. g. it's always true for subclasses of NumericDimensionMergerV9.
+      //noinspection ObjectEquality
+      anySelectorChanged |= convertedDimensionSelector != sourceDimensionSelector;
 
-
-    MMappedIndexRowIterable(
-        Iterable<Rowboat> index,
-        List<String> convertedDims,
-        int indexNumber,
-        final List<ColumnCapabilitiesImpl> dimCapabilities,
-        final List<DimensionMerger> mergers
-    )
-    {
-      this.index = index;
-      this.convertedDims = convertedDims;
-      this.indexNumber = indexNumber;
-      this.dimCapabilities = dimCapabilities;
-      this.mergers = mergers;
-    }
-
-    public Iterable<Rowboat> getIndex()
-    {
-      return index;
-    }
-
-    @Override
-    public Iterator<Rowboat> iterator()
-    {
-      return Iterators.transform(
-          index.iterator(),
-          new Function<Rowboat, Rowboat>()
-          {
-            @Override
-            public Rowboat apply(@Nullable Rowboat input)
-            {
-              Object[] dims = input.getDims();
-              Object[] newDims = new Object[convertedDims.size()];
-              for (int i = 0; i < convertedDims.size(); ++i) {
-                if (i >= dims.length) {
-                  continue;
-                }
-                newDims[i] = mergers.get(i).convertSegmentRowValuesToMergedRowValues(dims[i], indexNumber);
-              }
-
-              final Rowboat retVal = new Rowboat(
-                  input.getTimestamp(),
-                  newDims,
-                  input.getMetrics(),
-                  input.getRowNum(),
-                  input.getHandlers()
-              );
-
-              retVal.addRow(indexNumber, input.getRowNum());
-
-              return retVal;
-            }
-          }
+      convertedMarkedDimensionSelectors[i] = mergers.get(i).convertSortedSegmentRowValuesToMergedRowValues(
+          indexNumber,
+          markedSourceRowPointer.getDimensionSelector(i)
       );
     }
+    // If none dimensions are actually converted, don't need to transform the sourceRowIterator, adding extra
+    // indirection layer. It could be just returned back from this method.
+    if (!anySelectorChanged) {
+      return sourceRowIterator;
+    }
+    return makeRowIteratorWithConvertedDimensionColumns(
+        sourceRowIterator,
+        convertedDimensionSelectors,
+        convertedMarkedDimensionSelectors
+    );
   }
 
-  class RowboatMergeFunction implements BinaryFn<Rowboat, Rowboat, Rowboat>
+  static TransformableRowIterator makeRowIteratorWithConvertedDimensionColumns(
+      TransformableRowIterator sourceRowIterator,
+      ColumnValueSelector[] convertedDimensionSelectors,
+      ColumnValueSelector[] convertedMarkedDimensionSelectors
+  )
   {
-    private final AggregatorFactory[] metricAggs;
-
-    public RowboatMergeFunction(AggregatorFactory[] metricAggs)
+    RowPointer convertedRowPointer = sourceRowIterator.getPointer().withDimensionSelectors(convertedDimensionSelectors);
+    TimeAndDimsPointer convertedMarkedRowPointer =
+        sourceRowIterator.getMarkedPointer().withDimensionSelectors(convertedMarkedDimensionSelectors);
+    return new ForwardingRowIterator(sourceRowIterator)
     {
-      this.metricAggs = metricAggs;
-    }
-
-    @Override
-    public Rowboat apply(Rowboat lhs, Rowboat rhs)
-    {
-      if (lhs == null) {
-        return rhs;
-      }
-      if (rhs == null) {
-        return lhs;
+      @Override
+      public RowPointer getPointer()
+      {
+        return convertedRowPointer;
       }
 
-      Object[] metrics = new Object[metricAggs.length];
-      Object[] lhsMetrics = lhs.getMetrics();
-      Object[] rhsMetrics = rhs.getMetrics();
-
-      for (int i = 0; i < metrics.length; ++i) {
-        Object lhsMetric = lhsMetrics[i];
-        Object rhsMetric = rhsMetrics[i];
-        if (lhsMetric == null) {
-          metrics[i] = rhsMetric;
-        } else if (rhsMetric == null) {
-          metrics[i] = lhsMetric;
-        } else {
-          metrics[i] = metricAggs[i].combine(lhsMetric, rhsMetric);
-        }
+      @Override
+      public TimeAndDimsPointer getMarkedPointer()
+      {
+        return convertedMarkedRowPointer;
       }
-
-      final Rowboat retVal = new Rowboat(
-          lhs.getTimestamp(),
-          lhs.getDims(),
-          metrics,
-          lhs.getRowNum(),
-          lhs.getHandlers()
-      );
-
-      for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {
-        Iterator<Int2ObjectMap.Entry<IntSortedSet>> entryIterator =
-            rowboat.getComprisedRows().int2ObjectEntrySet().fastIterator();
-        while (entryIterator.hasNext()) {
-          Int2ObjectMap.Entry<IntSortedSet> entry = entryIterator.next();
-
-          for (IntIterator setIterator = entry.getValue().iterator(); setIterator.hasNext(); /* NOP */) {
-            retVal.addRow(entry.getIntKey(), setIterator.nextInt());
-          }
-        }
-      }
-
-      return retVal;
-    }
+    };
   }
 
-  class DictionaryMergeIterator implements Iterator<String>
+  class DictionaryMergeIterator implements CloseableIterator<String>
   {
+    /**
+     * Don't replace this lambda with {@link Comparator#comparing} or {@link Comparators#naturalNullsFirst()} because
+     * this comparator is hot, so we want to avoid extra indirection layers.
+     */
+    static final Comparator<Pair<Integer, PeekingIterator<String>>> NULLS_FIRST_PEEKING_COMPARATOR = (lhs, rhs) -> {
+      String left = lhs.rhs.peek();
+      String right = rhs.rhs.peek();
+      if (left == null) {
+        //noinspection VariableNotUsedInsideIf
+        return right == null ? 0 : -1;
+      } else if (right == null) {
+        return 1;
+      } else {
+        return left.compareTo(right);
+      }
+    };
+
     protected final IntBuffer[] conversions;
+    protected final List<Pair<ByteBuffer, Integer>> directBufferAllocations = Lists.newArrayList();
     protected final PriorityQueue<Pair<Integer, PeekingIterator<String>>> pQueue;
 
     protected int counter;
 
     DictionaryMergeIterator(Indexed<String>[] dimValueLookups, boolean useDirect)
     {
-      pQueue = new PriorityQueue<>(
-          dimValueLookups.length,
-          new Comparator<Pair<Integer, PeekingIterator<String>>>()
-          {
-            @Override
-            public int compare(Pair<Integer, PeekingIterator<String>> lhs, Pair<Integer, PeekingIterator<String>> rhs)
-            {
-              return lhs.rhs.peek().compareTo(rhs.rhs.peek());
-            }
-          }
-      );
+      pQueue = new PriorityQueue<>(dimValueLookups.length, NULLS_FIRST_PEEKING_COMPARATOR);
       conversions = new IntBuffer[dimValueLookups.length];
       for (int i = 0; i < conversions.length; i++) {
         if (dimValueLookups[i] == null) {
@@ -445,7 +403,11 @@ public interface IndexMerger
         }
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
-          conversions[i] = ByteBuffer.allocateDirect(indexed.size() * Ints.BYTES).asIntBuffer();
+          int allocationSize = indexed.size() * Integer.BYTES;
+          log.info("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
+          final ByteBuffer conversionDirectBuffer = ByteBuffer.allocateDirect(allocationSize);
+          conversions[i] = conversionDirectBuffer.asIntBuffer();
+          directBufferAllocations.add(new Pair<>(conversionDirectBuffer, allocationSize));
         } else {
           conversions[i] = IntBuffer.allocate(indexed.size());
         }
@@ -453,14 +415,7 @@ public interface IndexMerger
         final PeekingIterator<String> iter = Iterators.peekingIterator(
             Iterators.transform(
                 indexed.iterator(),
-                new Function<String, String>()
-                {
-                  @Override
-                  public String apply(@Nullable String input)
-                  {
-                    return Strings.nullToEmpty(input);
-                  }
-                }
+                NullHandling::nullToEmptyIfNeeded
             )
         );
         if (iter.hasNext()) {
@@ -484,7 +439,7 @@ public interface IndexMerger
       }
       final String value = writeTranslate(smallest, counter);
 
-      while (!pQueue.isEmpty() && value.equals(pQueue.peek().rhs.peek())) {
+      while (!pQueue.isEmpty() && Objects.equals(value, pQueue.peek().rhs.peek())) {
         writeTranslate(pQueue.remove(), counter);
       }
       counter++;
@@ -522,6 +477,15 @@ public interface IndexMerger
     public void remove()
     {
       throw new UnsupportedOperationException("remove");
+    }
+    
+    @Override
+    public void close()
+    {
+      for (Pair<ByteBuffer, Integer> bufferAllocation : directBufferAllocations) {
+        log.info("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
+        ByteBufferUtils.free(bufferAllocation.lhs);
+      }
     }
   }
 }

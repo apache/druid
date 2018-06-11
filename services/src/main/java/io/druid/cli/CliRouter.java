@@ -21,6 +21,7 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
@@ -29,6 +30,8 @@ import io.airlift.airline.Command;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.discovery.DruidLeaderClient;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -37,15 +40,19 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.RouterProcessingModule;
+import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.http.RouterResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.QueryCountStatsProvider;
+import io.druid.server.router.AvaticaConnectionBalancer;
 import io.druid.server.router.CoordinatorRuleManager;
+import io.druid.server.router.ManagementProxyConfig;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
 import io.druid.server.router.TieredBrokerConfig;
@@ -60,7 +67,7 @@ import java.util.List;
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers"
+    description = "Experimental! Understands tiers and routes things to different brokers, see http://druid.io/docs/latest/development/router.html for a description"
 )
 public class CliRouter extends ServerRunnable
 {
@@ -79,6 +86,7 @@ public class CliRouter extends ServerRunnable
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new JettyHttpClientModule("druid.router.http", Router.class),
+        JettyHttpClientModule.global(),
         new Module()
         {
           @Override
@@ -89,6 +97,8 @@ public class CliRouter extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9088);
 
             JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.router.avatica.balancer", AvaticaConnectionBalancer.class);
+            JsonConfigProvider.bind(binder, "druid.router.managementProxy", ManagementProxyConfig.class);
 
             binder.bind(CoordinatorRuleManager.class);
             LifecycleModule.register(binder, CoordinatorRuleManager.class);
@@ -109,6 +119,14 @@ public class CliRouter extends ServerRunnable
             LifecycleModule.register(binder, RouterResource.class);
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER,
+                    ImmutableList.of()
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
 
           @Provides
@@ -120,6 +138,23 @@ public class CliRouter extends ServerRunnable
           )
           {
             return factory.createSelector(config.getCoordinatorServiceName());
+          }
+
+          @Provides
+          @ManageLifecycle
+          public DruidLeaderClient getLeaderHttpClient(
+              @EscalatedGlobal HttpClient httpClient,
+              DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+              ServerDiscoverySelector serverDiscoverySelector
+          )
+          {
+            return new DruidLeaderClient(
+                httpClient,
+                druidNodeDiscoveryProvider,
+                DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+                "/druid/coordinator/v1/leader",
+                serverDiscoverySelector
+            );
           }
         },
         new LookupModule()

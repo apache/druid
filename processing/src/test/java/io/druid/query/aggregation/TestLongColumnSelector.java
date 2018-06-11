@@ -33,9 +33,15 @@ public class TestLongColumnSelector extends io.druid.segment.TestLongColumnSelec
   }
 
   @Override
-  public long get()
+  public long getLong()
   {
     return longs[index];
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return false;
   }
 
   public void increment()

@@ -19,19 +19,16 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.java.util.common.RetryUtils;
-
 import io.druid.java.util.common.StringUtils;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
 
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.util.concurrent.Callable;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 /**
@@ -40,8 +37,10 @@ import java.util.regex.Pattern;
  */
 public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
+  private static final int MAX_LISTING_KEYS = 1000;
+
   @Inject
-  public S3TimestampVersionedDataFinder(RestS3Service s3Client)
+  public S3TimestampVersionedDataFinder(ServerSideEncryptingAmazonS3 s3Client)
   {
     super(s3Client);
   }
@@ -64,35 +63,34 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
   {
     try {
       return RetryUtils.retry(
-          new Callable<URI>()
-          {
-            @Override
-            public URI call() throws Exception
-            {
-              final S3Coords coords = new S3Coords(checkURI(uri));
-              long mostRecent = Long.MIN_VALUE;
-              URI latest = null;
-              S3Object[] objects = s3Client.listObjects(coords.bucket, coords.path, null);
-              if (objects == null) {
-                return null;
+          () -> {
+            final S3Coords coords = new S3Coords(checkURI(uri));
+            long mostRecent = Long.MIN_VALUE;
+            URI latest = null;
+            final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
+                s3Client,
+                coords.bucket,
+                coords.path,
+                MAX_LISTING_KEYS
+            );
+            while (objectSummaryIterator.hasNext()) {
+              final S3ObjectSummary objectSummary = objectSummaryIterator.next();
+              String keyString = objectSummary.getKey().substring(coords.path.length());
+              if (keyString.startsWith("/")) {
+                keyString = keyString.substring(1);
               }
-              for (S3Object storageObject : objects) {
-                storageObject.closeDataInputStream();
-                String keyString = storageObject.getKey().substring(coords.path.length());
-                if (keyString.startsWith("/")) {
-                  keyString = keyString.substring(1);
-                }
-                if (pattern != null && !pattern.matcher(keyString).matches()) {
-                  continue;
-                }
-                final long latestModified = storageObject.getLastModifiedDate().getTime();
-                if (latestModified >= mostRecent) {
-                  mostRecent = latestModified;
-                  latest = new URI(StringUtils.format("s3://%s/%s", storageObject.getBucketName(), storageObject.getKey()));
-                }
+              if (pattern != null && !pattern.matcher(keyString).matches()) {
+                continue;
               }
-              return latest;
+              final long latestModified = objectSummary.getLastModified().getTime();
+              if (latestModified >= mostRecent) {
+                mostRecent = latestModified;
+                latest = new URI(
+                    StringUtils.format("s3://%s/%s", objectSummary.getBucketName(), objectSummary.getKey())
+                );
+              }
             }
+            return latest;
           },
           shouldRetryPredicate(),
           DEFAULT_RETRY_COUNT
@@ -103,9 +101,4 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
     }
   }
 
-  @Override
-  public Class<URI> getDataDescriptorClass()
-  {
-    return URI.class;
-  }
 }

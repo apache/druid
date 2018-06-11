@@ -19,12 +19,66 @@
 
 package io.druid.segment;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.query.monomorphicprocessing.HotLoopCallee;
+import javax.annotation.Nullable;
 
-
-public interface DoubleColumnSelector extends ColumnValueSelector, HotLoopCallee
+/**
+ * This interface is convenient for implementation of "double-sourcing" {@link ColumnValueSelector}s, it provides
+ * default implementations for all {@link ColumnValueSelector}'s methods except {@link #getDouble()}.
+ *
+ * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * {@link BaseDoubleColumnValueSelector} must be used instead.
+ */
+public interface DoubleColumnSelector extends ColumnValueSelector<Double>
 {
-  @CalledFromHotLoop
-  double get();
+  /**
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default float getFloat()
+  {
+    return (float) getDouble();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default long getLong()
+  {
+    return (long) getDouble();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  @Nullable
+  default Double getObject()
+  {
+    if (isNull()) {
+      return null;
+    }
+    return getDouble();
+  }
+
+  /**
+   * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
+   * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
+   * objects.
+   */
+  @Deprecated
+  @Override
+  default Class<Double> classOfObject()
+  {
+    return Double.class;
+  }
 }

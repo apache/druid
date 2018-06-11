@@ -22,11 +22,10 @@ package io.druid.query.aggregation.distinctcount;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -79,7 +78,7 @@ public class DistinctCountTopNQueryTest
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";
-    DateTime time = new DateTime("2016-03-04T00:00:00.000Z");
+    DateTime time = DateTimes.of("2016-03-04T00:00:00.000Z");
     long timestamp = time.getMillis();
     index.add(
         new MapBasedInputRow(
@@ -117,10 +116,8 @@ public class DistinctCountTopNQueryTest
                           )
                           .build();
 
-    final Iterable<Result<TopNResultValue>> results = Sequences.toList(
-        engine.query(query, new IncrementalIndexStorageAdapter(index), null),
-        Lists.<Result<TopNResultValue>>newLinkedList()
-    );
+    final Iterable<Result<TopNResultValue>> results =
+        engine.query(query, new IncrementalIndexStorageAdapter(index), null).toList();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(

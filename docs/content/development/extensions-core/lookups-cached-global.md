@@ -56,7 +56,8 @@ Globally cached lookups can be specified as part of the [cluster wide config for
        },
        "table": "lookupTable",
        "keyColumn": "mykeyColumn",
-       "valueColumn": "MyValueColumn",
+       "valueColumn": "myValueColumn",
+       "filter" : "myFilterSQL (Where clause statement  e.g LOOKUPTYPE=1)",
        "tsColumn": "timeColumn"
     },
     "firstCacheTimeout": 120000,
@@ -70,7 +71,7 @@ The parameters are as follows
 |--------|-----------|--------|-------|
 |`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
 |`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`0` (do not wait)|
-|`injective`|If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
+|`injective`|If the underlying map is [injective](../../querying/lookups.html#query-execution) (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
 If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the lookup nodes should be monitored for repeated failures.
 
@@ -85,22 +86,26 @@ In a simple case where only one [tier](../../querying/lookups.html#dynamic-confi
 {
   "realtime_customer2": {
     "country_code": {
-      "type": "cachedNamespace",
-      "extractionNamespace": {
-         "type": "jdbc",
-         "connectorConfig": {
-           "createTables": true,
-           "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
-           "user": "druid",
-           "password": "diurd"
-         },
-         "table": "lookupTable",
-         "keyColumn": "country_id",
-         "valueColumn": "country_name",
-         "tsColumn": "timeColumn"
-      },
-      "firstCacheTimeout": 120000,
-      "injective":true
+      "version": "v0",
+      "lookupExtractorFactory": {
+        "type": "cachedNamespace",
+        "extractionNamespace": {
+          "type": "jdbc",
+          "connectorConfig": {
+            "createTables": true,
+            "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+            "user": "druid",
+            "password": "diurd"
+          },
+          "table": "lookupValues",
+          "keyColumn": "value_id",
+          "valueColumn": "value_text",
+          "filter": "value_type='country'",
+          "tsColumn": "timeColumn"
+        },
+        "firstCacheTimeout": 120000,
+        "injective": true
+      }
     }
   }
 }
@@ -110,22 +115,26 @@ Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2
 
 ```json
 {
-  "type": "cachedNamespace",
-  "extractionNamespace": {
-    "type": "jdbc",
-    "connectorConfig": {
-      "createTables": true,
-      "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
-      "user": "druid",
-      "password": "diurd"
+  "version": "v0",
+  "lookupExtractorFactory": {
+    "type": "cachedNamespace",
+    "extractionNamespace": {
+      "type": "jdbc",
+      "connectorConfig": {
+        "createTables": true,
+        "connectURI": "jdbc:mysql://localhost:3306/druid",
+        "user": "druid",
+        "password": "diurd"
+      },
+      "table": "lookupValues",
+      "keyColumn": "value_id",
+      "valueColumn": "value_text",
+      "filter": "value_type='country'",
+      "tsColumn": "timeColumn"
     },
-    "table": "lookupTable",
-    "keyColumn": "country_id",
-    "valueColumn": "country_name",
-    "tsColumn": "timeColumn"
-  },
-  "firstCacheTimeout": 120000,
-  "injective":true
+    "firstCacheTimeout": 120000,
+    "injective": true
+  }
 }
 ```
 
@@ -137,13 +146,17 @@ setting namespaces (broker, peon, historical)
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.lookup.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`]. `offHeap` uses a temporary file for off-heap storage of the namespace (memory mapped files). `onHeap` stores all cache on the heap in standard java map types.|`onHeap`|
+|`druid.lookup.namespace.numExtractionThreads`|The number of threads in the thread pool dedicated for lookup extraction and updates. This number may need to be scaled up, if you have a lot of lookups and they take long time to extract, to avoid timeouts.|2|
+|`druid.lookup.namespace.numBufferedEntries`|If using offHeap caching, the number of records to be stored on an on-heap buffer.|100,000|
 
 The cache is populated in different ways depending on the settings below. In general, most namespaces employ 
 a `pollPeriod` at the end of which time they poll the remote resource of interest for updates.
 
 `onHeap` uses `ConcurrentMap`s in the java heap, and thus affects garbage collection and heap sizing.
-`offHeap` uses a 10MB on-heap buffer and MapDB using memory-mapped files in the java temporary directory.
-So if total `cachedNamespace` lookup size is in excess of 10MB, the extra will be kept in memory as page cache, and paged in and out by general OS tunings.
+`offHeap` uses an on-heap buffer and MapDB using memory-mapped files in the java temporary directory.
+So if total number of entries in the `cachedNamespace` is in excess of the buffer's configured capacity, the extra will be kept in memory as page cache, and paged in and out by general OS tunings.
+It's highly recommended that `druid.lookup.namespace.numBufferedEntries` is set when using `offHeap`, the value should be chosen from the range between 10% and 50% of the number of entries in the lookup.
+
 
 # Supported Lookups
 
@@ -319,6 +332,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`table`|The table which contains the key value pairs|Yes||
 |`keyColumn`|The column in `table` which contains the keys|Yes||
 |`valueColumn`|The column in `table` which contains the values|Yes||
+|`filter`|The filter to use when selecting lookups, this is used to create a where clause on lookup population|No|No Filter|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
 

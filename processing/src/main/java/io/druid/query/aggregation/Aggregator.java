@@ -19,6 +19,9 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.guice.annotations.ExtensionPoint;
+
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -27,17 +30,15 @@ import java.io.Closeable;
  * it can use to get at the next bit of data.
  *
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
- * to aggregate().  This is currently (as of this documentation) implemented through the use of Offset and
- * FloatColumnSelector objects.  The Aggregator has a handle on a FloatColumnSelector object which has a handle on an Offset.
- * QueryableIndex has both the Aggregators and the Offset object and iterates through the Offset calling the aggregate()
- * method on the Aggregators for each applicable row.
- *
- * This interface is old and going away.  It is being replaced by BufferAggregator
+ * to aggregate(). This is currently (as of this documentation) implemented through the use of {@link
+ * io.druid.segment.ColumnValueSelector} objects.
  */
+@ExtensionPoint
 public interface Aggregator extends Closeable
 {
   void aggregate();
-  void reset();
+
+  @Nullable
   Object get();
   float getFloat();
   long getLong();
@@ -50,6 +51,19 @@ public interface Aggregator extends Closeable
   default double getDouble()
   {
     return (double) getFloat();
+  }
+
+  /**
+   * returns true if aggregator's output type is primitive long/double/float and aggregated value is null,
+   * but when aggregated output type is Object, this method always returns false,
+   * and users are advised to check nullability for the object returned by {@link #get()}
+   * method.
+   * The default implementation always return false to enable smooth backward compatibility,
+   * re-implement if your aggregator is nullable.
+   */
+  default boolean isNull()
+  {
+    return false;
   }
 
   @Override

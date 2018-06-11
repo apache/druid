@@ -28,12 +28,12 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,18 +50,18 @@ public class NotFilterTest extends BaseFilterTest
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", new DateTime("2000")),
+          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
           new DimensionsSpec(null, null, null)
       )
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5"))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5")).get(0)
   );
 
   public NotFilterTest(

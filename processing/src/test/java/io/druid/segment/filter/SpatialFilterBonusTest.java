@@ -28,10 +28,14 @@ import io.druid.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -55,7 +59,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,6 +66,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -76,14 +80,12 @@ import java.util.Set;
 public class SpatialFilterBonusTest
 {
   public static final int NUM_POINTS = 5000;
-  private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
+  private static Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
       new LongSumAggregatorFactory("val", "val")
   };
   private static List<String> DIMS = Lists.newArrayList("dim", "dim.geo");
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   private final Segment segment;
 
@@ -95,23 +97,19 @@ public class SpatialFilterBonusTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IndexSpec indexSpec = new IndexSpec();
-    final IncrementalIndex rtIndex = makeIncrementalIndex();
-    final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec);
-    final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec);
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IncrementalIndexSegment(rtIndex, null)
-            },
-            {
-                new QueryableIndexSegment(null, mMappedTestIndex)
-            },
-            {
-                new QueryableIndexSegment(null, mergedRealtimeIndex)
-            }
-        }
-    );
+    List<Object[]> argumentArrays = new ArrayList<>();
+    for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
+      IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+      IndexIO indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+      final IndexSpec indexSpec = new IndexSpec();
+      final IncrementalIndex rtIndex = makeIncrementalIndex();
+      final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMerger, indexIO);
+      final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMerger, indexIO);
+      argumentArrays.add(new Object[] {new IncrementalIndexSegment(rtIndex, null)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mMappedTestIndex)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedRealtimeIndex)});
+    }
+    return argumentArrays;
   }
 
   private static IncrementalIndex makeIncrementalIndex() throws IOException
@@ -141,10 +139,10 @@ public class SpatialFilterBonusTest
 
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-01").getMillis(),
+            DateTimes.of("2013-01-01").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-01").toString(),
+                "timestamp", DateTimes.of("2013-01-01").toString(),
                 "dim", "foo",
                 "dim.geo", "0.0,0.0",
                 "val", 17L
@@ -153,10 +151,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-02").getMillis(),
+            DateTimes.of("2013-01-02").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-02").toString(),
+                "timestamp", DateTimes.of("2013-01-02").toString(),
                 "dim", "foo",
                 "dim.geo", "1.0,3.0",
                 "val", 29L
@@ -165,10 +163,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-03").getMillis(),
+            DateTimes.of("2013-01-03").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-03").toString(),
+                "timestamp", DateTimes.of("2013-01-03").toString(),
                 "dim", "foo",
                 "dim.geo", "4.0,2.0",
                 "val", 13L
@@ -177,10 +175,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-04").getMillis(),
+            DateTimes.of("2013-01-04").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-04").toString(),
+                "timestamp", DateTimes.of("2013-01-04").toString(),
                 "dim", "foo",
                 "dim.geo", "7.0,3.0",
                 "val", 91L
@@ -189,10 +187,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "8.0,6.0",
                 "val", 47L
@@ -201,10 +199,10 @@ public class SpatialFilterBonusTest
     );
     theIndex.add(
         new MapBasedInputRow(
-            new DateTime("2013-01-05").getMillis(),
+            DateTimes.of("2013-01-05").getMillis(),
             DIMS,
             ImmutableMap.<String, Object>of(
-                "timestamp", new DateTime("2013-01-05").toString(),
+                "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
                 "val", 501L
@@ -229,10 +227,10 @@ public class SpatialFilterBonusTest
       }
       theIndex.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-01").getMillis(),
+              DateTimes.of("2013-01-01").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-01").toString(),
+                  "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "boo",
                   "dim.geo", coord,
                   "val", i
@@ -244,7 +242,8 @@ public class SpatialFilterBonusTest
     return theIndex;
   }
 
-  private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec) throws IOException
+  private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec, IndexMerger indexMerger, IndexIO indexIO)
+      throws IOException
   {
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
@@ -252,11 +251,15 @@ public class SpatialFilterBonusTest
     tmpFile.mkdirs();
     tmpFile.deleteOnExit();
 
-    INDEX_MERGER.persist(theIndex, tmpFile, indexSpec);
-    return INDEX_IO.loadIndex(tmpFile);
+    indexMerger.persist(theIndex, tmpFile, indexSpec, null);
+    return indexIO.loadIndex(tmpFile);
   }
 
-  private static QueryableIndex makeMergedQueryableIndex(final IndexSpec indexSpec)
+  private static QueryableIndex makeMergedQueryableIndex(
+      final IndexSpec indexSpec,
+      final IndexMerger indexMerger,
+      final IndexIO indexIO
+  )
   {
     try {
       IncrementalIndex first = new IncrementalIndex.Builder()
@@ -332,10 +335,10 @@ public class SpatialFilterBonusTest
 
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-01").getMillis(),
+              DateTimes.of("2013-01-01").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-01").toString(),
+                  "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "foo",
                   "dim.geo", "0.0,0.0",
                   "val", 17L
@@ -344,10 +347,10 @@ public class SpatialFilterBonusTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-02").getMillis(),
+              DateTimes.of("2013-01-02").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-02").toString(),
+                  "timestamp", DateTimes.of("2013-01-02").toString(),
                   "dim", "foo",
                   "dim.geo", "1.0,3.0",
                   "val", 29L
@@ -356,10 +359,10 @@ public class SpatialFilterBonusTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-03").getMillis(),
+              DateTimes.of("2013-01-03").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-03").toString(),
+                  "timestamp", DateTimes.of("2013-01-03").toString(),
                   "dim", "foo",
                   "dim.geo", "4.0,2.0",
                   "val", 13L
@@ -368,10 +371,10 @@ public class SpatialFilterBonusTest
       );
       first.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
                   "val", 501L
@@ -380,10 +383,10 @@ public class SpatialFilterBonusTest
       );
       second.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-04").getMillis(),
+              DateTimes.of("2013-01-04").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-04").toString(),
+                  "timestamp", DateTimes.of("2013-01-04").toString(),
                   "dim", "foo",
                   "dim.geo", "7.0,3.0",
                   "val", 91L
@@ -392,10 +395,10 @@ public class SpatialFilterBonusTest
       );
       second.add(
           new MapBasedInputRow(
-              new DateTime("2013-01-05").getMillis(),
+              DateTimes.of("2013-01-05").getMillis(),
               DIMS,
               ImmutableMap.<String, Object>of(
-                  "timestamp", new DateTime("2013-01-05").toString(),
+                  "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "8.0,6.0",
                   "val", 47L
@@ -408,10 +411,10 @@ public class SpatialFilterBonusTest
       for (int i = 6; i < NUM_POINTS; i++) {
         third.add(
             new MapBasedInputRow(
-                new DateTime("2013-01-01").getMillis(),
+                DateTimes.of("2013-01-01").getMillis(),
                 DIMS,
                 ImmutableMap.<String, Object>of(
-                    "timestamp", new DateTime("2013-01-01").toString(),
+                    "timestamp", DateTimes.of("2013-01-01").toString(),
                     "dim", "boo",
                     "dim.geo", StringUtils.format(
                         "%s,%s",
@@ -442,21 +445,22 @@ public class SpatialFilterBonusTest
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, indexSpec);
-      INDEX_MERGER.persist(second, DATA_INTERVAL, secondFile, indexSpec);
-      INDEX_MERGER.persist(third, DATA_INTERVAL, thirdFile, indexSpec);
+      indexMerger.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
+      indexMerger.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
+      indexMerger.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
 
-      QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
-          INDEX_MERGER.mergeQueryableIndex(
+      QueryableIndex mergedRealtime = indexIO.loadIndex(
+          indexMerger.mergeQueryableIndex(
               Arrays.asList(
-                  INDEX_IO.loadIndex(firstFile),
-                  INDEX_IO.loadIndex(secondFile),
-                  INDEX_IO.loadIndex(thirdFile)
+                  indexIO.loadIndex(firstFile),
+                  indexIO.loadIndex(secondFile),
+                  indexIO.loadIndex(thirdFile)
               ),
               true,
               METRIC_AGGS,
               mergedFile,
-              indexSpec
+              indexSpec,
+              null
           )
       );
 
@@ -473,7 +477,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -490,7 +494,7 @@ public class SpatialFilterBonusTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 3L)
@@ -512,7 +516,7 @@ public class SpatialFilterBonusTest
           factory.getToolchest()
       );
       HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -525,7 +529,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -542,7 +546,7 @@ public class SpatialFilterBonusTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -551,7 +555,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-02T00:00:00.000Z"),
+            DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -560,7 +564,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-03T00:00:00.000Z"),
+            DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -569,7 +573,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-04T00:00:00.000Z"),
+            DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -578,7 +582,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<TimeseriesResultValue>(
-            new DateTime("2013-01-05T00:00:00.000Z"),
+            DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -600,7 +604,7 @@ public class SpatialFilterBonusTest
           factory.getToolchest()
       );
       HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -613,7 +617,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
                                   .aggregators(
                                       Arrays.asList(
                                           new CountAggregatorFactory("rows"),
@@ -631,7 +635,7 @@ public class SpatialFilterBonusTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2013-01-01T00:00:00.000Z"),
+            DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 4995L)
@@ -641,7 +645,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-02T00:00:00.000Z"),
+            DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -651,7 +655,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-03T00:00:00.000Z"),
+            DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -661,7 +665,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-04T00:00:00.000Z"),
+            DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 1L)
@@ -671,7 +675,7 @@ public class SpatialFilterBonusTest
             )
         ),
         new Result<>(
-            new DateTime("2013-01-05T00:00:00.000Z"),
+            DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
                     .put("rows", 2L)
@@ -694,7 +698,7 @@ public class SpatialFilterBonusTest
           factory.getToolchest()
       );
       HashMap<String, Object> context = new HashMap<String, Object>();
-      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), context));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

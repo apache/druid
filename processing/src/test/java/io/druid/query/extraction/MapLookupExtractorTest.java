@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class MapLookupExtractorTest
 {
-  private final Map lookupMap = ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "","empty_string");
+  private final Map lookupMap = ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "", "empty_string");
   private final MapLookupExtractor fn = new MapLookupExtractor(lookupMap, false);
 
   @Test
@@ -47,20 +47,20 @@ public class MapLookupExtractorTest
   }
 
   @Test
-  public void testGetMap() throws Exception
+  public void testGetMap()
   {
     Assert.assertEquals(lookupMap, fn.getMap());
   }
 
   @Test
-  public void testApply() throws Exception
+  public void testApply()
   {
 
     Assert.assertEquals("bar", fn.apply("foo"));
   }
 
   @Test
-  public void testGetCacheKey() throws Exception
+  public void testGetCacheKey()
   {
     final MapLookupExtractor fn2 = new MapLookupExtractor(ImmutableMap.copyOf(lookupMap), false);
     Assert.assertArrayEquals(fn.getCacheKey(), fn2.getCacheKey());
@@ -71,7 +71,7 @@ public class MapLookupExtractorTest
   }
 
   @Test
-  public void testEquals() throws Exception
+  public void testEquals()
   {
     final MapLookupExtractor fn2 = new MapLookupExtractor(ImmutableMap.copyOf(lookupMap), false);
     Assert.assertEquals(fn, fn2);
@@ -82,7 +82,7 @@ public class MapLookupExtractorTest
   }
 
   @Test
-  public void testHashCode() throws Exception
+  public void testHashCode()
   {
     final MapLookupExtractor fn2 = new MapLookupExtractor(ImmutableMap.copyOf(lookupMap), false);
     Assert.assertEquals(fn.hashCode(), fn2.hashCode());

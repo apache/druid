@@ -25,15 +25,18 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.client.HttpServerInventoryView;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
-import io.druid.server.coordination.SegmentChangeRequestHistory;
-import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
+import io.druid.server.coordination.ChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
+import io.druid.server.coordination.DataSegmentChangeRequest;
+import io.druid.server.coordination.SegmentLoadDropHandler;
+import io.druid.server.coordinator.HttpLoadQueuePeon;
 import io.druid.server.http.security.StateResourceFilter;
-import io.druid.server.security.AuthConfig;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -43,14 +46,17 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.util.List;
 
 /**
+ * Endpoints exposed here are to be used only for druid internal management of segments by Coordinators, Brokers etc.
  */
 @Path("/druid-internal/v1/segments/")
 @ResourceFilters(StateResourceFilter.class)
@@ -60,21 +66,21 @@ public class SegmentListerResource
 
   protected final ObjectMapper jsonMapper;
   protected final ObjectMapper smileMapper;
-  protected final AuthConfig authConfig;
   private final BatchDataSegmentAnnouncer announcer;
+  private final SegmentLoadDropHandler loadDropRequestHandler;
 
   @Inject
   public SegmentListerResource(
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      AuthConfig authConfig,
-      @Nullable BatchDataSegmentAnnouncer announcer
+      @Nullable BatchDataSegmentAnnouncer announcer,
+      @Nullable SegmentLoadDropHandler loadDropRequestHandler
   )
   {
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
-    this.authConfig = authConfig;
     this.announcer = announcer;
+    this.loadDropRequestHandler = loadDropRequestHandler;
   }
 
   /**
@@ -125,8 +131,8 @@ public class SegmentListerResource
     }
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
-    final ListenableFuture<SegmentChangeRequestsSnapshot> future = announcer.getSegmentChangesSince(
-        new SegmentChangeRequestHistory.Counter(
+    final ListenableFuture<ChangeRequestsSnapshot<DataSegmentChangeRequest>> future = announcer.getSegmentChangesSince(
+        new ChangeRequestHistory.Counter(
             counter,
             hash
         )
@@ -138,12 +144,12 @@ public class SegmentListerResource
         new AsyncListener()
         {
           @Override
-          public void onComplete(AsyncEvent event) throws IOException
+          public void onComplete(AsyncEvent event)
           {
           }
 
           @Override
-          public void onTimeout(AsyncEvent event) throws IOException
+          public void onTimeout(AsyncEvent event)
           {
 
             // HTTP 204 NO_CONTENT is sent to the client.
@@ -152,12 +158,12 @@ public class SegmentListerResource
           }
 
           @Override
-          public void onError(AsyncEvent event) throws IOException
+          public void onError(AsyncEvent event)
           {
           }
 
           @Override
-          public void onStartAsync(AsyncEvent event) throws IOException
+          public void onStartAsync(AsyncEvent event)
           {
           }
         }
@@ -165,15 +171,127 @@ public class SegmentListerResource
 
     Futures.addCallback(
         future,
-        new FutureCallback<SegmentChangeRequestsSnapshot>()
+        new FutureCallback<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
         {
           @Override
-          public void onSuccess(SegmentChangeRequestsSnapshot result)
+          public void onSuccess(ChangeRequestsSnapshot<DataSegmentChangeRequest> result)
           {
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
               response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writeValue(asyncContext.getResponse().getOutputStream(), result);
+              context.inputMapper.writerWithType(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF)
+                                 .writeValue(asyncContext.getResponse().getOutputStream(), result);
+              asyncContext.complete();
+            }
+            catch (Exception ex) {
+              log.debug(ex, "Request timed out or closed already.");
+            }
+          }
+
+          @Override
+          public void onFailure(Throwable th)
+          {
+            try {
+              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+              if (th instanceof IllegalArgumentException) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
+              } else {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
+              }
+              asyncContext.complete();
+            }
+            catch (Exception ex) {
+              log.debug(ex, "Request timed out or closed already.");
+            }
+          }
+        }
+    );
+
+    asyncContext.setTimeout(timeout);
+  }
+
+  /**
+   * This endpoint is used by HttpLoadQueuePeon to assign segment load/drop requests batch. This endpoint makes the
+   * client wait till one of the following events occur. Note that this is implemented using async IO so no jetty
+   * threads are held while in wait.
+   *
+   * (1) Given timeout elapses.
+   * (2) Some load/drop request completed.
+   *
+   * It returns a map of "load/drop request -> SUCCESS/FAILED/PENDING status" for each request in the batch.
+   */
+  @POST
+  @Path("/changeRequests")
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  public void applyDataSegmentChangeRequests(
+      @QueryParam("timeout") long timeout,
+      List<DataSegmentChangeRequest> changeRequestList,
+      @Context final HttpServletRequest req
+  ) throws IOException
+  {
+    if (loadDropRequestHandler == null) {
+      sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "load/drop handler is not available.");
+      return;
+    }
+
+    if (timeout <= 0) {
+      sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "timeout must be positive.");
+      return;
+    }
+
+    if (changeRequestList == null || changeRequestList.isEmpty()) {
+      sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "No change requests provided.");
+      return;
+    }
+
+    final ResponseContext context = createContext(req.getHeader("Accept"));
+    final ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future = loadDropRequestHandler
+        .processBatch(changeRequestList);
+
+    final AsyncContext asyncContext = req.startAsync();
+
+    asyncContext.addListener(
+        new AsyncListener()
+        {
+          @Override
+          public void onComplete(AsyncEvent event)
+          {
+          }
+
+          @Override
+          public void onTimeout(AsyncEvent event)
+          {
+
+            // HTTP 204 NO_CONTENT is sent to the client.
+            future.cancel(true);
+            event.getAsyncContext().complete();
+          }
+
+          @Override
+          public void onError(AsyncEvent event)
+          {
+          }
+
+          @Override
+          public void onStartAsync(AsyncEvent event)
+          {
+          }
+        }
+    );
+
+    Futures.addCallback(
+        future,
+        new FutureCallback<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>>()
+        {
+          @Override
+          public void onSuccess(List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> result)
+          {
+            try {
+              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+              response.setStatus(HttpServletResponse.SC_OK);
+              context.inputMapper.writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+                                 .writeValue(asyncContext.getResponse().getOutputStream(), result);
               asyncContext.complete();
             }
             catch (Exception ex) {

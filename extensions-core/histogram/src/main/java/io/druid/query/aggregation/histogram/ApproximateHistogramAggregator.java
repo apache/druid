@@ -21,7 +21,7 @@ package io.druid.query.aggregation.histogram;
 
 import com.google.common.primitives.Longs;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.BaseFloatColumnValueSelector;
 
 import java.util.Comparator;
 
@@ -36,42 +36,30 @@ public class ApproximateHistogramAggregator implements Aggregator
     }
   };
 
-  static Object combineHistograms(Object lhs, Object rhs)
+  static ApproximateHistogram combineHistograms(Object lhs, Object rhs)
   {
     return ((ApproximateHistogram) lhs).foldFast((ApproximateHistogram) rhs);
   }
 
-  private final FloatColumnSelector selector;
-  private final int resolution;
-  private final float lowerLimit;
-  private final float upperLimit;
+  private final BaseFloatColumnValueSelector selector;
 
   private ApproximateHistogram histogram;
 
   public ApproximateHistogramAggregator(
-      FloatColumnSelector selector,
+      BaseFloatColumnValueSelector selector,
       int resolution,
       float lowerLimit,
       float upperLimit
   )
   {
     this.selector = selector;
-    this.resolution = resolution;
-    this.lowerLimit = lowerLimit;
-    this.upperLimit = upperLimit;
     this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
   }
 
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.get());
-  }
-
-  @Override
-  public void reset()
-  {
-    this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
+    histogram.offer(selector.getFloat());
   }
 
   @Override

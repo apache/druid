@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.search.search.FragmentSearchQuerySpec;
-import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.search.FragmentSearchQuerySpec;
+import io.druid.query.search.SearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.primitives.Longs;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -42,7 +41,7 @@ public class LongMaxAggregationTest
   public LongMaxAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"longMax\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    longMaxAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, LongMaxAggregatorFactory.class);
+    longMaxAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, LongMaxAggregatorFactory.class);
   }
 
   @Before
@@ -50,14 +49,14 @@ public class LongMaxAggregationTest
   {
     selector = new TestLongColumnSelector(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeLongColumnSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
     EasyMock.replay(colSelectorFactory);
   }
 
   @Test
   public void testLongMaxAggregator()
   {
-    LongMaxAggregator agg = (LongMaxAggregator)longMaxAggFactory.factorize(colSelectorFactory);
+    LongMaxAggregator agg = (LongMaxAggregator) longMaxAggFactory.factorize(colSelectorFactory);
 
     aggregate(selector, agg);
     aggregate(selector, agg);
@@ -67,17 +66,14 @@ public class LongMaxAggregationTest
     Assert.assertEquals(values[2], ((Long) agg.get()).longValue());
     Assert.assertEquals(values[2], agg.getLong());
     Assert.assertEquals((float) values[2], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(Long.MIN_VALUE, agg.getLong());
   }
 
   @Test
   public void testLongMaxBufferAggregator()
   {
-    LongMaxBufferAggregator agg = (LongMaxBufferAggregator)longMaxAggFactory.factorizeBuffered(colSelectorFactory);
+    LongMaxBufferAggregator agg = (LongMaxBufferAggregator) longMaxAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Longs.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -87,7 +83,7 @@ public class LongMaxAggregationTest
 
     Assert.assertEquals(values[2], ((Long) agg.get(buffer, 0)).longValue());
     Assert.assertEquals(values[2], agg.getLong(buffer, 0));
-    Assert.assertEquals((float)values[2], agg.getFloat(buffer, 0), 0.0001);
+    Assert.assertEquals((float) values[2], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -97,7 +93,7 @@ public class LongMaxAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     LongMaxAggregatorFactory one = new LongMaxAggregatorFactory("name1", "fieldName1");
     LongMaxAggregatorFactory oneMore = new LongMaxAggregatorFactory("name1", "fieldName1");

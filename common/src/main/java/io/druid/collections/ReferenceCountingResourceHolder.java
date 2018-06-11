@@ -45,10 +45,14 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
   private final Closeable closer;
   private final AtomicInteger refCount = new AtomicInteger(1);
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  /**
+   * The point of Cleaner is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
+   * to be used directly.
+   */
   @SuppressWarnings("unused")
   private final Cleaner cleaner;
 
-  ReferenceCountingResourceHolder(final T object, final Closeable closer)
+  public ReferenceCountingResourceHolder(final T object, final Closeable closer)
   {
     this.object = object;
     this.closer = closer;
@@ -60,6 +64,10 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     return new ReferenceCountingResourceHolder<>(object, object);
   }
 
+  /**
+   * Returns the resource with an initial reference count of 1. More references can be added by
+   * calling {@link #increment()}.
+   */
   @Override
   public T get()
   {
@@ -69,6 +77,13 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     return object;
   }
 
+  /**
+   * Increments the reference count by 1 and returns a {@link Releaser}. The returned {@link Releaser} is used to
+   * decrement the reference count when the caller no longer needs the resource.
+   *
+   * {@link Releaser}s are not thread-safe. If multiple threads need references to the same holder, they should
+   * each acquire their own {@link Releaser}.
+   */
   public Releaser increment()
   {
     while (true) {
@@ -99,6 +114,9 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     };
   }
 
+  /**
+   * Decrements the reference count by 1. If it reaches to 0, then closes {@link #closer}.
+   */
   @Override
   public void close()
   {

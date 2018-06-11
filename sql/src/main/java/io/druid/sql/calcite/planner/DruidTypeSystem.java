@@ -93,10 +93,41 @@ public class DruidTypeSystem implements RelDataTypeSystem
     // Widen all sums to 64-bits regardless of the size of the inputs.
 
     if (SqlTypeName.INT_TYPES.contains(argumentType.getSqlTypeName())) {
-      return typeFactory.createSqlType(SqlTypeName.BIGINT);
+      return Calcites.createSqlType(typeFactory, SqlTypeName.BIGINT);
     } else {
-      return typeFactory.createSqlType(SqlTypeName.DOUBLE);
+      return Calcites.createSqlType(typeFactory, SqlTypeName.DOUBLE);
     }
+  }
+
+  @Override
+  public RelDataType deriveAvgAggType(
+      final RelDataTypeFactory typeFactory,
+      final RelDataType argumentType
+  )
+  {
+    return RelDataTypeSystem.DEFAULT.deriveAvgAggType(typeFactory, argumentType);
+  }
+
+  @Override
+  public RelDataType deriveCovarType(
+      final RelDataTypeFactory typeFactory,
+      final RelDataType arg0Type,
+      final RelDataType arg1Type
+  )
+  {
+    return RelDataTypeSystem.DEFAULT.deriveCovarType(typeFactory, arg0Type, arg1Type);
+  }
+
+  @Override
+  public RelDataType deriveFractionalRankType(final RelDataTypeFactory typeFactory)
+  {
+    return RelDataTypeSystem.DEFAULT.deriveFractionalRankType(typeFactory);
+  }
+
+  @Override
+  public RelDataType deriveRankType(final RelDataTypeFactory typeFactory)
+  {
+    return RelDataTypeSystem.DEFAULT.deriveRankType(typeFactory);
   }
 
   @Override

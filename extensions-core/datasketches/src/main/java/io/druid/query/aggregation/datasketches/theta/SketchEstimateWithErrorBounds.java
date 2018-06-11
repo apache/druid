@@ -27,10 +27,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class SketchEstimateWithErrorBounds
 {
-  final private double estimate;
-  final private double highBound;
-  final private double lowBound;
-  final private int numStdDev;
+  private final double estimate;
+  private final double highBound;
+  private final double lowBound;
+  private final int numStdDev;
   
   @JsonCreator
   public SketchEstimateWithErrorBounds(
@@ -76,7 +76,7 @@ public class SketchEstimateWithErrorBounds
     return "SketchEstimateWithErrorBounds{" +
         "estimate=" + Double.toString(estimate) +
         ", highBound=" + Double.toString(highBound) +
-        ", lowBound="+ Double.toString(lowBound) +
+        ", lowBound=" + Double.toString(lowBound) +
         ", numStdDev=" + Integer.toString(numStdDev) +
         "}";
   }

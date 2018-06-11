@@ -20,8 +20,8 @@
 package io.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.guava.CloseQuietly;
@@ -31,12 +31,14 @@ import io.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.MutableDateTime;
+import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -66,15 +68,15 @@ public class FileRequestLogger implements RequestLogger
     try {
       baseDir.mkdirs();
 
-      MutableDateTime mutableDateTime = new DateTime().toMutableDateTime();
+      MutableDateTime mutableDateTime = DateTimes.nowUtc().toMutableDateTime(ISOChronology.getInstanceUTC());
       mutableDateTime.setMillisOfDay(0);
       synchronized (lock) {
-        currentDay = mutableDateTime.toDateTime();
+        currentDay = mutableDateTime.toDateTime(ISOChronology.getInstanceUTC());
 
         fileWriter = getFileWriter();
       }
       long nextDay = currentDay.plusDays(1).getMillis();
-      Duration initialDelay = new Duration(nextDay - new DateTime().getMillis());
+      Duration initialDelay = new Duration(nextDay - System.currentTimeMillis());
 
       ScheduledExecutors.scheduleWithFixedDelay(
           exec,
@@ -110,7 +112,7 @@ public class FileRequestLogger implements RequestLogger
   {
     return new OutputStreamWriter(
         new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
-        Charsets.UTF_8
+        StandardCharsets.UTF_8
     );
   }
 
@@ -131,5 +133,13 @@ public class FileRequestLogger implements RequestLogger
       );
       fileWriter.flush();
     }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FileRequestLogger{" +
+           "baseDir=" + baseDir +
+           '}';
   }
 }

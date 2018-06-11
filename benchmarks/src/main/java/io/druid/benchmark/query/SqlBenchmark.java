@@ -19,18 +19,17 @@
 
 package io.druid.benchmark.query;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.datagen.SegmentGenerator;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -38,6 +37,8 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.segment.QueryableIndex;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.server.security.NoopEscalator;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerFactory;
@@ -47,7 +48,6 @@ import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.commons.io.FileUtils;
-import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -64,8 +64,8 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -81,7 +81,6 @@ public class SqlBenchmark
   private int rowsPerSegment;
 
   private static final Logger log = new Logger(SqlBenchmark.class);
-  private static final int RNG_SEED = 9999;
 
   private File tmpDir;
   private SegmentGenerator segmentGenerator;
@@ -91,7 +90,7 @@ public class SqlBenchmark
   private String sqlQuery;
 
   @Setup(Level.Trial)
-  public void setup() throws Exception
+  public void setup()
   {
     tmpDir = Files.createTempDir();
     log.info("Starting benchmark setup using tmpDir[%s], rows[%,d].", tmpDir, rowsPerSegment);
@@ -107,23 +106,24 @@ public class SqlBenchmark
 
     this.segmentGenerator = new SegmentGenerator();
 
-    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, rowsPerSegment);
+    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
     final QueryRunnerFactoryConglomerate conglomerate = CalciteTests.queryRunnerFactoryConglomerate();
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
-
     plannerFactory = new PlannerFactory(
         CalciteTests.createMockSchema(walker, plannerConfig),
         CalciteTests.createMockQueryLifecycleFactory(walker),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
-        plannerConfig
+        plannerConfig,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
     );
     groupByQuery = GroupByQuery
         .builder()
         .setDataSource("foo")
-        .setInterval(new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT))
+        .setInterval(Intervals.ETERNITY)
         .setDimensions(
             Arrays.<DimensionSpec>asList(
                 new DefaultDimensionSpec("dimZipf", "d0"),
@@ -163,10 +163,10 @@ public class SqlBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void queryNative(Blackhole blackhole) throws Exception
+  public void queryNative(Blackhole blackhole)
   {
-    final Sequence<Row> resultSequence = groupByQuery.run(walker, Maps.<String, Object>newHashMap());
-    final ArrayList<Row> resultList = Sequences.toList(resultSequence, Lists.<Row>newArrayList());
+    final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, Maps.newHashMap());
+    final List<Row> resultList = resultSequence.toList();
 
     for (Row row : resultList) {
       blackhole.consume(row);
@@ -179,8 +179,11 @@ public class SqlBenchmark
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
     try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
-      final PlannerResult plannerResult = planner.plan(sqlQuery);
-      final ArrayList<Object[]> results = Sequences.toList(plannerResult.run(), Lists.<Object[]>newArrayList());
+      final PlannerResult plannerResult = planner.plan(
+          sqlQuery,
+          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+      );
+      final List<Object[]> results = plannerResult.run().toList();
       blackhole.consume(results);
     }
   }

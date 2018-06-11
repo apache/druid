@@ -30,14 +30,14 @@ import java.util.List;
 
 /**
  */
-@JsonTypeInfo(use= JsonTypeInfo.Id.NAME, property="type", defaultImpl = LegacySegmentSpec.class)
-@JsonSubTypes(value={
-    @JsonSubTypes.Type(name="intervals", value=MultipleIntervalSegmentSpec.class),
-    @JsonSubTypes.Type(name="segments", value=MultipleSpecificSegmentSpec.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LegacySegmentSpec.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "intervals", value = MultipleIntervalSegmentSpec.class),
+    @JsonSubTypes.Type(name = "segments", value = MultipleSpecificSegmentSpec.class)
 })
 public interface QuerySegmentSpec
 {
-  public List<Interval> getIntervals();
+  List<Interval> getIntervals();
 
-  public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker);
+  <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker);
 }

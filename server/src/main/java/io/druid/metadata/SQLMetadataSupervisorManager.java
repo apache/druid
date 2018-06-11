@@ -27,16 +27,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 import io.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
-
-import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -95,7 +93,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                 )
             )
                   .bind("spec_id", id)
-                  .bind("created_date", new DateTime().toString())
+                  .bind("created_date", DateTimes.nowUtc().toString())
                   .bind("payload", jsonMapper.writeValueAsBytes(spec))
                   .execute();
 
@@ -113,7 +111,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
             new HandleCallback<Map<String, List<VersionedSupervisorSpec>>>()
             {
               @Override
-              public Map<String, List<VersionedSupervisorSpec>> withHandle(Handle handle) throws Exception
+              public Map<String, List<VersionedSupervisorSpec>> withHandle(Handle handle)
               {
                 return handle.createQuery(
                     StringUtils.format(
@@ -154,7 +152,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           Pair<String, VersionedSupervisorSpec> pair,
                           FoldController foldController,
                           StatementContext statementContext
-                      ) throws SQLException
+                      )
                       {
                         try {
                           String specId = pair.lhs;
@@ -185,7 +183,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
             new HandleCallback<Map<String, SupervisorSpec>>()
             {
               @Override
-              public Map<String, SupervisorSpec> withHandle(Handle handle) throws Exception
+              public Map<String, SupervisorSpec> withHandle(Handle handle)
               {
                 return handle.createQuery(
                     StringUtils.format(
@@ -227,7 +225,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           Pair<String, SupervisorSpec> stringObjectMap,
                           FoldController foldController,
                           StatementContext statementContext
-                      ) throws SQLException
+                      )
                       {
                         try {
                           retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);

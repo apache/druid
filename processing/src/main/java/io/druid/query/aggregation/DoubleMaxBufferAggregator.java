@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.DoubleColumnSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 public class DoubleMaxBufferAggregator extends SimpleDoubleBufferAggregator
 {
 
-  DoubleMaxBufferAggregator(DoubleColumnSelector selector)
+  DoubleMaxBufferAggregator(BaseDoubleColumnValueSelector selector)
   {
     super(selector);
   }

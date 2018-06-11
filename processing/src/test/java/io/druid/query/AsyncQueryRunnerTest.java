@@ -40,7 +40,7 @@ import java.util.concurrent.TimeoutException;
 public class AsyncQueryRunnerTest
 {
 
-  private final static long TEST_TIMEOUT = 60000;
+  private static final long TEST_TIMEOUT = 60000;
   
   private final ExecutorService executor;
   private final Query query;
@@ -56,7 +56,7 @@ public class AsyncQueryRunnerTest
   }
   
   @Test(timeout = TEST_TIMEOUT)
-  public void testAsyncNature() throws Exception
+  public void testAsyncNature()
   {
     final CountDownLatch latch = new CountDownLatch(1);
     QueryRunner baseRunner = new QueryRunner()
@@ -79,10 +79,10 @@ public class AsyncQueryRunnerTest
         executor,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    
-    Sequence lazy = asyncRunner.run(query, Collections.EMPTY_MAP);
+
+    Sequence lazy = asyncRunner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
     latch.countDown();
-    Assert.assertEquals(Lists.newArrayList(1), Sequences.toList(lazy, Lists.newArrayList()));
+    Assert.assertEquals(Lists.newArrayList(1), lazy.toList());
   }
   
   @Test(timeout = TEST_TIMEOUT)
@@ -110,12 +110,12 @@ public class AsyncQueryRunnerTest
     );
 
     Sequence lazy = asyncRunner.run(
-        query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1)),
+        QueryPlus.wrap(query.withOverriddenContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))),
         Collections.EMPTY_MAP
     );
 
     try {
-      Sequences.toList(lazy, Lists.newArrayList());
+      lazy.toList();
     }
     catch (RuntimeException ex) {
       Assert.assertTrue(ex.getCause() instanceof TimeoutException);
@@ -127,22 +127,15 @@ public class AsyncQueryRunnerTest
   @Test
   public void testQueryRegistration()
   {
-    QueryRunner baseRunner = new QueryRunner()
-    {
-      @Override
-      public Sequence run(QueryPlus queryPlus, Map responseContext)
-      {
-        return null;
-      }
-    };
+    QueryRunner baseRunner = (queryPlus, responseContext) -> null;
 
     QueryWatcher mock = EasyMock.createMock(QueryWatcher.class);
     mock.registerQuery(EasyMock.eq(query), EasyMock.anyObject(ListenableFuture.class));
     EasyMock.replay(mock);
 
     AsyncQueryRunner asyncRunner = new AsyncQueryRunner<>(baseRunner, executor, mock);
-    
-    asyncRunner.run(query, Collections.EMPTY_MAP);
+
+    asyncRunner.run(QueryPlus.wrap(query), Collections.EMPTY_MAP);
     EasyMock.verify(mock);
   }
 }

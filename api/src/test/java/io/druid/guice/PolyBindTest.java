@@ -42,7 +42,7 @@ public class PolyBindTest
   private Properties props;
   private Injector injector;
 
-  public void setUp(Module... modules) throws Exception
+  public void setUp(Module... modules)
   {
     props = new Properties();
     injector = Guice.createInjector(
@@ -66,7 +66,7 @@ public class PolyBindTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     setUp(
         new Module()
@@ -82,11 +82,10 @@ public class PolyBindTest
             gogoSallyBinder.addBinding("a").to(GoA.class);
             gogoSallyBinder.addBinding("b").to(GoB.class);
 
-            PolyBind.createChoice(
-                binder, "billy", Key.get(Gogo.class, Names.named("reverse")), Key.get(GoB.class)
-            );
-            final MapBinder<String,Gogo> annotatedGogoBinder = PolyBind.optionBinder(
-                binder, Key.get(Gogo.class, Names.named("reverse"))
+            PolyBind.createChoice(binder, "billy", Key.get(Gogo.class, Names.named("reverse")), Key.get(GoB.class));
+            final MapBinder<String, Gogo> annotatedGogoBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(Gogo.class, Names.named("reverse"))
             );
             annotatedGogoBinder.addBinding("a").to(GoB.class);
             annotatedGogoBinder.addBinding("b").to(GoA.class);
@@ -141,14 +140,14 @@ public class PolyBindTest
     }
   }
 
-  public static interface Gogo
+  public interface Gogo
   {
-    public String go();
+    String go();
   }
 
-  public static interface GogoSally
+  public interface GogoSally
   {
-    public String go();
+    String go();
   }
 
   public static class GoA implements Gogo, GogoSally

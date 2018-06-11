@@ -26,7 +26,6 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
-import io.druid.query.search.search.SearchQuery;
 import io.druid.segment.Segment;
 
 import java.util.concurrent.ExecutorService;

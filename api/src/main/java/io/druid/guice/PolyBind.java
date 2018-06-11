@@ -30,6 +30,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.binder.ScopedBindingBuilder;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.util.Types;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -45,6 +46,7 @@ import java.util.Properties;
  * returned by the optionBinder() method.  Multiple different modules can call optionBinder and all options will be
  * reflected at injection time as long as equivalent interface Key objects are passed into the various methods.
  */
+@PublicApi
 public class PolyBind
 {
   /**

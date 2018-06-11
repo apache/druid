@@ -22,7 +22,6 @@ package io.druid.query;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -31,10 +30,10 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -50,7 +49,6 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -73,7 +71,7 @@ public class SchemaEvolutionTest
 
   public static List<Result<TimeseriesResultValue>> timeseriesResult(final Map<String, ?> map)
   {
-    return ImmutableList.of(new Result<>(new DateTime("2000"), new TimeseriesResultValue((Map<String, Object>) map)));
+    return ImmutableList.of(new Result<>(DateTimes.of("2000"), new TimeseriesResultValue((Map<String, Object>) map)));
   }
 
   public static List<InputRow> inputRowsWithDimensions(final List<String> dimensions)
@@ -89,12 +87,12 @@ public class SchemaEvolutionTest
         )
     );
     return ImmutableList.of(
-        parser.parse(ImmutableMap.<String, Object>of("t", "2000-01-01", "c1", "9", "c2", ImmutableList.of("a"))),
-        parser.parse(ImmutableMap.<String, Object>of("t", "2000-01-02", "c1", "10.1", "c2", ImmutableList.of())),
-        parser.parse(ImmutableMap.<String, Object>of("t", "2000-01-03", "c1", "2", "c2", ImmutableList.of(""))),
-        parser.parse(ImmutableMap.<String, Object>of("t", "2001-01-01", "c1", "1", "c2", ImmutableList.of("a", "c"))),
-        parser.parse(ImmutableMap.<String, Object>of("t", "2001-01-02", "c1", "4", "c2", ImmutableList.of("abc"))),
-        parser.parse(ImmutableMap.<String, Object>of("t", "2001-01-03", "c1", "5"))
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-01", "c1", "9", "c2", ImmutableList.of("a"))).get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-02", "c1", "10.1", "c2", ImmutableList.of())).get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2000-01-03", "c1", "2", "c2", ImmutableList.of(""))).get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-01", "c1", "1", "c2", ImmutableList.of("a", "c"))).get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-02", "c1", "4", "c2", ImmutableList.of("abc"))).get(0),
+        parser.parseBatch(ImmutableMap.<String, Object>of("t", "2001-01-03", "c1", "5")).get(0)
     );
   }
 
@@ -123,8 +121,8 @@ public class SchemaEvolutionTest
             )
         ),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
-    ).run(query, Maps.<String, Object>newHashMap());
-    return Sequences.toList(results, Lists.<T>newArrayList());
+    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    return results.toList();
   }
 
   @Rule

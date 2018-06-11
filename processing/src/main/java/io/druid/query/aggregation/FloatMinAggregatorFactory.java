@@ -29,7 +29,6 @@ import io.druid.segment.ColumnSelectorFactory;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 /**
  */
@@ -54,19 +53,25 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMinAggregator(getFloatColumnSelector(metricFactory, Float.POSITIVE_INFINITY));
+    return new FloatMinAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.POSITIVE_INFINITY));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMinBufferAggregator(getFloatColumnSelector(metricFactory, Float.POSITIVE_INFINITY));
+    return new FloatMinBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.POSITIVE_INFINITY));
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
     return FloatMinAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new DoubleMinAggregateCombiner();
   }
 
   @Override
@@ -130,30 +135,4 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
            ", name='" + name + '\'' +
            '}';
   }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    FloatMinAggregatorFactory that = (FloatMinAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(expression, that.expression)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-
-    return true;
-  }
-
 }

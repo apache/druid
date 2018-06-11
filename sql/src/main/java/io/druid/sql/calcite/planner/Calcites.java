@@ -21,39 +21,59 @@ package io.druid.sql.calcite.planner;
 
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.ValueType;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.sql.calcite.schema.DruidSchema;
 import io.druid.sql.calcite.schema.InformationSchema;
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.Schema;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.ConversionUtil;
+import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.TimestampString;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.nio.charset.Charset;
-import java.util.Calendar;
-import java.util.Locale;
 import java.util.NavigableSet;
-import java.util.TimeZone;
-import java.util.TreeSet;
 
 /**
  * Utility functions for Calcite.
  */
 public class Calcites
 {
-  private static final TimeZone GMT_TIME_ZONE = TimeZone.getTimeZone("GMT");
+  private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
+  private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
+      new DateTimeFormatterBuilder()
+          .append(ISODateTimeFormat.dateParser())
+          .appendLiteral(' ')
+          .append(ISODateTimeFormat.timeParser())
+          .toFormatter()
+  );
+
+  private static final DateTimeFormatter CALCITE_TIME_PRINTER = DateTimeFormat.forPattern("HH:mm:ss.S");
+  private static final DateTimeFormatter CALCITE_DATE_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter CALCITE_TIMESTAMP_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.S");
+
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
 
   private Calcites()
@@ -77,11 +97,11 @@ public class Calcites
     return DEFAULT_CHARSET;
   }
 
-  public static SchemaPlus createRootSchema(final Schema druidSchema)
+  public static SchemaPlus createRootSchema(final Schema druidSchema, final AuthorizerMapper authorizerMapper)
   {
     final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     rootSchema.add(DruidSchema.NAME, druidSchema);
-    rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema));
+    rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema, authorizerMapper));
     return rootSchema;
   }
 
@@ -132,6 +152,11 @@ public class Calcites
   public static StringComparator getStringComparatorForSqlTypeName(SqlTypeName sqlTypeName)
   {
     final ValueType valueType = getValueTypeForSqlTypeName(sqlTypeName);
+    return getStringComparatorForValueType(valueType);
+  }
+
+  public static StringComparator getStringComparatorForValueType(ValueType valueType)
+  {
     if (ValueType.isNumeric(valueType)) {
       return StringComparators.NUMERIC;
     } else if (ValueType.STRING == valueType) {
@@ -139,6 +164,46 @@ public class Calcites
     } else {
       throw new ISE("Unrecognized valueType[%s]", valueType);
     }
+  }
+
+  /**
+   * Like RelDataTypeFactory.createSqlType, but creates types that align best with how Druid represents them.
+   */
+  public static RelDataType createSqlType(final RelDataTypeFactory typeFactory, final SqlTypeName typeName)
+  {
+    return createSqlTypeWithNullability(typeFactory, typeName, false);
+  }
+
+  /**
+   * Like RelDataTypeFactory.createSqlTypeWithNullability, but creates types that align best with how Druid
+   * represents them.
+   */
+  public static RelDataType createSqlTypeWithNullability(
+      final RelDataTypeFactory typeFactory,
+      final SqlTypeName typeName,
+      final boolean nullable
+  )
+  {
+    final RelDataType dataType;
+
+    switch (typeName) {
+      case TIMESTAMP:
+        // Our timestamps are down to the millisecond (precision = 3).
+        dataType = typeFactory.createSqlType(typeName, 3);
+        break;
+      case CHAR:
+      case VARCHAR:
+        dataType = typeFactory.createTypeWithCharsetAndCollation(
+            typeFactory.createSqlType(typeName),
+            Calcites.defaultCharset(),
+            SqlCollation.IMPLICIT
+        );
+        break;
+      default:
+        dataType = typeFactory.createSqlType(typeName);
+    }
+
+    return typeFactory.createTypeWithNullability(dataType, nullable);
   }
 
   /**
@@ -165,24 +230,48 @@ public class Calcites
   public static int jodaToCalciteDate(final DateTime dateTime, final DateTimeZone timeZone)
   {
     final DateTime date = dateTime.withZone(timeZone).dayOfMonth().roundFloorCopy();
-    return Days.daysBetween(new DateTime(0L, DateTimeZone.UTC), date.withZoneRetainFields(DateTimeZone.UTC)).getDays();
+    return Days.daysBetween(DateTimes.EPOCH, date.withZoneRetainFields(DateTimeZone.UTC)).getDays();
   }
 
   /**
-   * Calcite expects TIMESTAMP and DATE literals to be represented by Calendars that would have the expected
-   * local time fields if printed as UTC.
+   * Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the local time zone.
    *
    * @param dateTime joda timestamp
    * @param timeZone session time zone
    *
    * @return Calcite style Calendar, appropriate for literals
    */
-  public static Calendar jodaToCalciteCalendarLiteral(final DateTime dateTime, final DateTimeZone timeZone)
+  public static TimestampString jodaToCalciteTimestampString(final DateTime dateTime, final DateTimeZone timeZone)
   {
-    final Calendar calendar = Calendar.getInstance(Locale.ENGLISH);
-    calendar.setTimeZone(GMT_TIME_ZONE);
-    calendar.setTimeInMillis(Calcites.jodaToCalciteTimestamp(dateTime, timeZone));
-    return calendar;
+    // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
+    return new TimestampString(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+  }
+
+  /**
+   * Calcite expects TIME literals to be represented by TimeStrings in the local time zone.
+   *
+   * @param dateTime joda timestamp
+   * @param timeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static TimeString jodaToCalciteTimeString(final DateTime dateTime, final DateTimeZone timeZone)
+  {
+    // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
+    return new TimeString(CALCITE_TIME_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+  }
+
+  /**
+   * Calcite expects DATE literals to be represented by DateStrings in the local time zone.
+   *
+   * @param dateTime joda timestamp
+   * @param timeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static DateString jodaToCalciteDateString(final DateTime dateTime, final DateTimeZone timeZone)
+  {
+    return new DateString(CALCITE_DATE_PRINTER.print(dateTime.withZone(timeZone)));
   }
 
   /**
@@ -198,11 +287,18 @@ public class Calcites
   {
     final SqlTypeName typeName = literal.getType().getSqlTypeName();
     if (literal.getKind() != SqlKind.LITERAL || (typeName != SqlTypeName.TIMESTAMP && typeName != SqlTypeName.DATE)) {
-      throw new IAE("Expected TIMESTAMP or DATE literal but got[%s:%s]", literal.getKind(), typeName);
+      throw new IAE("Expected literal but got[%s]", literal.getKind());
     }
 
-    final Calendar calendar = (Calendar) RexLiteral.value(literal);
-    return calciteTimestampToJoda(calendar.getTimeInMillis(), timeZone);
+    if (typeName == SqlTypeName.TIMESTAMP) {
+      final TimestampString timestampString = (TimestampString) RexLiteral.value(literal);
+      return CALCITE_TIMESTAMP_PARSER.parse(timestampString.toString()).withZoneRetainFields(timeZone);
+    } else if (typeName == SqlTypeName.DATE) {
+      final DateString dateString = (DateString) RexLiteral.value(literal);
+      return CALCITE_DATE_PARSER.parse(dateString.toString()).withZoneRetainFields(timeZone);
+    } else {
+      throw new IAE("Expected TIMESTAMP or DATE but got[%s]", typeName);
+    }
   }
 
   /**
@@ -228,7 +324,7 @@ public class Calcites
    */
   public static DateTime calciteDateToJoda(final int date, final DateTimeZone timeZone)
   {
-    return new DateTime(0L, DateTimeZone.UTC).plusDays(date).withZoneRetainFields(timeZone);
+    return DateTimes.EPOCH.plusDays(date).withZoneRetainFields(timeZone);
   }
 
   /**
@@ -244,9 +340,21 @@ public class Calcites
     return rexNode instanceof RexLiteral && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName());
   }
 
-  public static boolean anyStartsWith(final TreeSet<String> set, final String prefix)
+  public static String findOutputNamePrefix(final String basePrefix, final NavigableSet<String> strings)
   {
-    final NavigableSet<String> headSet = set.headSet(prefix, true);
-    return !headSet.isEmpty() && headSet.first().startsWith(prefix);
+    String prefix = basePrefix;
+
+    while (!isUsablePrefix(strings, prefix)) {
+      prefix = "_" + prefix;
+    }
+
+    return prefix;
+  }
+
+  private static boolean isUsablePrefix(final NavigableSet<String> strings, final String prefix)
+  {
+    // ":" is one character after "9"
+    final NavigableSet<String> subSet = strings.subSet(prefix + "0", true, prefix + ":", false);
+    return subSet.isEmpty();
   }
 }

@@ -25,26 +25,27 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.DoubleDimensionSchema;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.granularity.Granularities;
+import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.CloserRule;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -62,6 +63,9 @@ public class IncrementalIndexTest
   }
 
   @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Rule
   public final CloserRule closer = new CloserRule(false);
 
   private final IndexCreator indexCreator;
@@ -72,13 +76,13 @@ public class IncrementalIndexTest
   }
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     DimensionsSpec dimensions = new DimensionsSpec(
         Arrays.<DimensionSchema>asList(
             new StringDimensionSchema("string"),
-            new StringDimensionSchema("float"),
-            new StringDimensionSchema("long"),
+            new FloatDimensionSchema("float"),
+            new LongDimensionSchema("long"),
             new DoubleDimensionSchema("double")
         ), null, null
     );
@@ -152,14 +156,14 @@ public class IncrementalIndexTest
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
@@ -172,7 +176,7 @@ public class IncrementalIndexTest
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
@@ -185,21 +189,21 @@ public class IncrementalIndexTest
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "C", "joe", "B")
         )
     );
     index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            System.currentTimeMillis() - 1,
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
@@ -207,35 +211,71 @@ public class IncrementalIndexTest
   }
 
   @Test
-  public void testNullDimensionTransform() throws IndexSizeExceededException
+  public void testUnparseableNumerics() throws IndexSizeExceededException
   {
     IncrementalIndex<?> index = closer.closeLater(indexCreator.createIndex());
-    index.add(
+
+    IncrementalIndexAddResult result;
+    result = index.add(
         new MapBasedInputRow(
-            new DateTime().minus(1).getMillis(),
+            0,
             Lists.newArrayList("string", "float", "long", "double"),
             ImmutableMap.<String, Object>of(
-                "string", Arrays.asList("A", null, ""),
-                "float", Arrays.asList(Float.POSITIVE_INFINITY, null, ""),
-                "long", Arrays.asList(Long.MIN_VALUE, null, ""),
+                "string", "A",
+                "float", "19.0",
+                "long", "asdj",
+                "double", 21.0d
+            )
+        )
+    );
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=asdj, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [asdj] to long,]",
+        result.getParseException().getMessage()
+    );
+
+    result = index.add(
+        new MapBasedInputRow(
+            0,
+            Lists.newArrayList("string", "float", "long", "double"),
+            ImmutableMap.<String, Object>of(
+                "string", "A",
+                "float", "aaa",
+                "long", 20,
+                "double", 21.0d
+            )
+        )
+    );
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=aaa, long=20, double=21.0}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [aaa] to float,]",
+        result.getParseException().getMessage()
+    );
+
+    result = index.add(
+        new MapBasedInputRow(
+            0,
+            Lists.newArrayList("string", "float", "long", "double"),
+            ImmutableMap.<String, Object>of(
+                "string", "A",
+                "float", 19.0,
+                "long", 20,
                 "double", ""
             )
         )
     );
-
-    Row row = index.iterator().next();
-
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Float.POSITIVE_INFINITY)}), row.getRaw("float"));
-    Assert.assertEquals(Arrays.asList(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}), row.getRaw("long"));
-    Assert.assertEquals(0.0, row.getRaw("double"));
+    Assert.assertEquals(ParseException.class, result.getParseException().getClass());
+    Assert.assertEquals(
+        "Found unparseable columns in row: [MapBasedInputRow{timestamp=1970-01-01T00:00:00.000Z, event={string=A, float=19.0, long=20, double=}, dimensions=[string, float, long, double]}], exceptions: [could not convert value [] to double,]",
+        result.getParseException().getMessage()
+    );
   }
 
   @Test
   public void sameRow() throws IndexSizeExceededException
   {
     MapBasedInputRow row = new MapBasedInputRow(
-        new DateTime().minus(1).getMillis(),
+        System.currentTimeMillis() - 1,
         Lists.newArrayList("billy", "joe"),
         ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
     );

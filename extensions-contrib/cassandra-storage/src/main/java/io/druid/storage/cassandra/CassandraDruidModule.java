@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
@@ -42,11 +41,6 @@ public class CassandraDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    Binders.dataSegmentPullerBinder(binder)
-           .addBinding(SCHEME)
-           .to(CassandraDataSegmentPuller.class)
-           .in(LazySingleton.class);
-
     PolyBind.optionBinder(binder, Key.get(DataSegmentPusher.class))
             .addBinding(SCHEME)
             .to(CassandraDataSegmentPusher.class)

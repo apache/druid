@@ -28,6 +28,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
@@ -35,7 +36,6 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,7 +52,7 @@ public class RegexFilterTest extends BaseFilterTest
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", new DateTime("2000")),
+          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
               null,
@@ -62,12 +62,12 @@ public class RegexFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "abdef", "dim2", ImmutableList.of("c"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc"))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "abdef", "dim2", ImmutableList.of("c"))).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc")).get(0)
   );
 
   public RegexFilterTest(
@@ -145,13 +145,13 @@ public class RegexFilterTest extends BaseFilterTest
     assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of("0"));
     assertFilterMatches(new RegexDimFilter("dim1", "ab.*", changeNullFn), ImmutableList.<String>of("4", "5"));
 
-    assertFilterMatches(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn),  ImmutableList.of("1", "2", "5"));
-    assertFilterMatches(new RegexDimFilter("dim2", "a.*", changeNullFn),  ImmutableList.of("0", "3"));
+    assertFilterMatches(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn), ImmutableList.of("1", "2", "5"));
+    assertFilterMatches(new RegexDimFilter("dim2", "a.*", changeNullFn), ImmutableList.of("0", "3"));
 
-    assertFilterMatches(new RegexDimFilter("dim3", ".*ANYMORE", changeNullFn),  ImmutableList.of("0", "1", "2", "3", "4", "5"));
-    assertFilterMatches(new RegexDimFilter("dim3", "a.*", changeNullFn),  ImmutableList.<String>of());
+    assertFilterMatches(new RegexDimFilter("dim3", ".*ANYMORE", changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new RegexDimFilter("dim3", "a.*", changeNullFn), ImmutableList.<String>of());
 
-    assertFilterMatches(new RegexDimFilter("dim4", ".*ANYMORE", changeNullFn),  ImmutableList.of("0", "1", "2", "3", "4", "5"));
-    assertFilterMatches(new RegexDimFilter("dim4", "a.*", changeNullFn),  ImmutableList.<String>of());
+    assertFilterMatches(new RegexDimFilter("dim4", ".*ANYMORE", changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new RegexDimFilter("dim4", "a.*", changeNullFn), ImmutableList.<String>of());
   }
 }

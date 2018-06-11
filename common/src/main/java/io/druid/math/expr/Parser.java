@@ -35,6 +35,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import javax.annotation.Nullable;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
@@ -115,9 +116,9 @@ public class Parser
       List<Expr> args = functionExpr.args;
       boolean flattened = false;
       List<Expr> flattening = Lists.newArrayListWithCapacity(args.size());
-      for (int i = 0; i < args.size(); i++) {
-        Expr flatten = flatten(args.get(i));
-        flattened |= flatten != args.get(i);
+      for (Expr arg : args) {
+        Expr flatten = flatten(arg);
+        flattened |= flatten != arg;
         flattening.add(flatten);
       }
       if (Evals.isAllConstants(flattening)) {
@@ -145,6 +146,16 @@ public class Parser
         }
     );
     return Lists.newArrayList(found);
+  }
+
+  @Nullable
+  public static String getIdentifierIfIdentifier(Expr expr)
+  {
+    if (expr instanceof IdentifierExpr) {
+      return expr.toString();
+    } else {
+      return null;
+    }
   }
 
   public static Expr.ObjectBinding withMap(final Map<String, ?> bindings)

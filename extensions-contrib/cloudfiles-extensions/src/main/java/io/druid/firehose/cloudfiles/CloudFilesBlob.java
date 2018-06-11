@@ -19,9 +19,11 @@
 
 package io.druid.firehose.cloudfiles;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 public class CloudFilesBlob
 {
@@ -37,11 +39,12 @@ public class CloudFilesBlob
   @NotNull
   private String region = null;
 
-  public CloudFilesBlob()
-  {
-  }
-
-  public CloudFilesBlob(String container, String path, String region)
+  @JsonCreator
+  public CloudFilesBlob(
+      @JsonProperty("container") String container,
+      @JsonProperty("path") String path,
+      @JsonProperty("region") String region
+  )
   {
     this.container = container;
     this.path = path;
@@ -71,5 +74,28 @@ public class CloudFilesBlob
         + ",path=" + path
         + ",region=" + region
         + "}";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final CloudFilesBlob that = (CloudFilesBlob) o;
+    return Objects.equals(container, that.container) &&
+           Objects.equals(path, that.path) &&
+           Objects.equals(region, that.region);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(container, path, region);
   }
 }

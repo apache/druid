@@ -51,7 +51,6 @@ import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +65,8 @@ public class GroupByRowProcessor
       final GroupByQueryConfig config,
       final GroupByQueryResource resource,
       final ObjectMapper spillMapper,
-      final String processingTmpDir
+      final String processingTmpDir,
+      final int mergeBufferSize
   )
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
@@ -155,10 +155,10 @@ public class GroupByRowProcessor
                       return mergeBufferHolder.get();
                     }
                   },
-                  -1,
                   temporaryStorage,
                   spillMapper,
-                  aggregatorFactories
+                  aggregatorFactories,
+                  mergeBufferSize
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, Row> accumulator = pair.rhs;
@@ -175,7 +175,7 @@ public class GroupByRowProcessor
                   new Closeable()
                   {
                     @Override
-                    public void close() throws IOException
+                    public void close()
                     {
                       for (Closeable closeable : Lists.reverse(closeOnExit)) {
                         CloseQuietly.close(closeable);

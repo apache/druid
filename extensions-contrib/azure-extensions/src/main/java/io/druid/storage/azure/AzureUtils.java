@@ -21,12 +21,11 @@ package io.druid.storage.azure;
 
 import com.google.common.base.Predicate;
 import com.microsoft.azure.storage.StorageException;
-
 import io.druid.java.util.common.RetryUtils;
+import io.druid.java.util.common.RetryUtils.Task;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.concurrent.Callable;
 
 public class AzureUtils
 {
@@ -53,7 +52,7 @@ public class AzureUtils
     }
   };
 
-  public static <T> T retryAzureOperation(Callable<T> f, int maxTries) throws Exception
+  public static <T> T retryAzureOperation(Task<T> f, int maxTries) throws Exception
   {
     return RetryUtils.retry(f, AZURE_RETRY, maxTries);
   }

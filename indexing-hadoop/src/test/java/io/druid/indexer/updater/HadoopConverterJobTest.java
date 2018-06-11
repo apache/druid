@@ -27,7 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
-import io.druid.client.DruidDataSource;
+import io.druid.client.ImmutableDruidDataSource;
 import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -42,6 +42,7 @@ import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import io.druid.java.util.common.FileUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -55,8 +56,8 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.TestIndex;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -103,7 +104,7 @@ public class HadoopConverterJobTest
   private Supplier<MetadataStorageTablesConfig> metadataStorageTablesConfigSupplier;
   private DerbyConnector connector;
 
-  private final Interval interval = Interval.parse("2011-01-01T00:00:00.000Z/2011-05-01T00:00:00.000Z");
+  private final Interval interval = Intervals.of("2011-01-01T00:00:00.000Z/2011-05-01T00:00:00.000Z");
 
   @After
   public void tearDown()
@@ -181,6 +182,7 @@ public class HadoopConverterJobTest
                     Granularities.DAY,
                     ImmutableList.<Interval>of(interval)
                 ),
+                null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
@@ -198,6 +200,7 @@ public class HadoopConverterJobTest
                 null,
                 null,
                 null,
+                null,
                 false,
                 false,
                 false,
@@ -210,6 +213,8 @@ public class HadoopConverterJobTest
                 null,
                 false,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -222,7 +227,7 @@ public class HadoopConverterJobTest
           new HandleCallback<Void>()
           {
             @Override
-            public Void withHandle(Handle handle) throws Exception
+            public Void withHandle(Handle handle)
             {
               handle.execute("DROP TABLE druid_segments");
               return null;
@@ -249,7 +254,7 @@ public class HadoopConverterJobTest
             new SQLMetadataStorageUpdaterJobHandler(connector)
         )
     );
-    JobHelper.runJobs(jobs, hadoopDruidIndexerConfig);
+    Assert.assertTrue(JobHelper.runJobs(jobs, hadoopDruidIndexerConfig));
   }
 
   private List<DataSegment> getDataSegments(
@@ -261,7 +266,7 @@ public class HadoopConverterJobTest
       Thread.sleep(10);
     }
     manager.poll();
-    final DruidDataSource druidDataSource = manager.getInventoryValue(DATASOURCE);
+    final ImmutableDruidDataSource druidDataSource = manager.getInventoryValue(DATASOURCE);
     manager.stop();
     return Lists.newArrayList(druidDataSource.getSegments());
   }
@@ -291,8 +296,8 @@ public class HadoopConverterJobTest
             DATASOURCE,
             interval,
             new IndexSpec(new RoaringBitmapSerdeFactory(null),
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
                           CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
@@ -397,8 +402,8 @@ public class HadoopConverterJobTest
             DATASOURCE,
             interval,
             new IndexSpec(new RoaringBitmapSerdeFactory(null),
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
-                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
+                          CompressionStrategy.UNCOMPRESSED,
                           CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,

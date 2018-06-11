@@ -22,11 +22,11 @@ package io.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 
-public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageActionHandlerFactory
+public abstract class SQLMetadataStorageActionHandlerFactory implements MetadataStorageActionHandlerFactory
 {
-  private final SQLMetadataConnector connector;
-  private final MetadataStorageTablesConfig config;
-  private final ObjectMapper jsonMapper;
+  protected final SQLMetadataConnector connector;
+  protected final MetadataStorageTablesConfig config;
+  protected final ObjectMapper jsonMapper;
 
   @Inject
   public SQLMetadataStorageActionHandlerFactory(
@@ -38,22 +38,5 @@ public class SQLMetadataStorageActionHandlerFactory implements MetadataStorageAc
     this.connector = connector;
     this.config = config;
     this.jsonMapper = jsonMapper;
-  }
-
-  @Override
-  public <A,B,C,D> MetadataStorageActionHandler<A,B,C,D> create(
-      final String entryType,
-      MetadataStorageActionHandlerTypes<A,B,C,D> payloadTypes
-  )
-  {
-    return new SQLMetadataStorageActionHandler<>(
-        connector,
-        jsonMapper,
-        payloadTypes,
-        entryType,
-        config.getEntryTable(entryType),
-        config.getLogTable(entryType),
-        config.getLockTable(entryType)
-    );
   }
 }

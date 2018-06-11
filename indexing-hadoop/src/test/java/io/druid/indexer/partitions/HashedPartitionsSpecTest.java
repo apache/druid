@@ -33,7 +33,7 @@ public class HashedPartitionsSpecTest
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
-  public void testHashedPartitionsSpec() throws Exception
+  public void testHashedPartitionsSpec()
   {
     {
       final PartitionsSpec partitionsSpec;
@@ -80,7 +80,7 @@ public class HashedPartitionsSpecTest
   }
 
   @Test
-  public void testHashedPartitionsSpecShardCount() throws Exception
+  public void testHashedPartitionsSpecShardCount()
   {
     final PartitionsSpec partitionsSpec;
 

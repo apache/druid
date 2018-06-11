@@ -21,6 +21,6 @@ package io.druid.segment.data;
 
 /**
  * Implementing CacheableObjectStrategy instead of ObjectSrategy indicates
- * that a column scan may cache the results of fromByteBuffer
+ * that a column scan may cache the results of {@link #fromByteBuffer}.
  */
 public interface CacheableObjectStrategy<T> extends ObjectStrategy<T> {}

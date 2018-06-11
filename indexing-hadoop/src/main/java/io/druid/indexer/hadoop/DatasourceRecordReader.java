@@ -19,26 +19,22 @@
 
 package io.druid.indexer.hadoop;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import io.druid.data.input.InputRow;
-import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -57,18 +53,25 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   private IngestSegmentFirehose firehose;
 
   private int rowNum;
-  private MapBasedRow currRow;
+  private Row currRow;
 
   private List<QueryableIndex> indexes = Lists.newArrayList();
   private List<File> tmpSegmentDirs = Lists.newArrayList();
   private int numRows;
 
   @Override
-  public void initialize(InputSplit split, final TaskAttemptContext context) throws IOException, InterruptedException
+  public void initialize(InputSplit split, final TaskAttemptContext context) throws IOException
   {
-    spec = readAndVerifyDatasourceIngestionSpec(context.getConfiguration(), HadoopDruidIndexerConfig.JSON_MAPPER);
-
     List<WindowedDataSegment> segments = ((DatasourceInputSplit) split).getSegments();
+    String dataSource = Iterators.getOnlyElement(
+        segments.stream()
+                .map(s -> s.getSegment().getDataSource())
+                .distinct()
+                .iterator()
+    );
+
+    spec = DatasourceInputFormat.getIngestionSpec(context.getConfiguration(), dataSource);
+    logger.info("load schema [%s]", spec);
 
     List<WindowedStorageAdapter> adapters = Lists.transform(
         segments,
@@ -108,18 +111,18 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
 
     firehose = new IngestSegmentFirehose(
         adapters,
+        spec.getTransformSpec(),
         spec.getDimensions(),
         spec.getMetrics(),
         spec.getFilter()
     );
-
   }
 
   @Override
-  public boolean nextKeyValue() throws IOException, InterruptedException
+  public boolean nextKeyValue()
   {
     if (firehose.hasMore()) {
-      currRow = (MapBasedRow) firehose.nextRow();
+      currRow = firehose.nextRow();
       rowNum++;
       return true;
     } else {
@@ -128,25 +131,19 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   }
 
   @Override
-  public NullWritable getCurrentKey() throws IOException, InterruptedException
+  public NullWritable getCurrentKey()
   {
     return NullWritable.get();
   }
 
   @Override
-  public InputRow getCurrentValue() throws IOException, InterruptedException
+  public InputRow getCurrentValue()
   {
-    return new SegmentInputRow(
-        new MapBasedInputRow(
-            currRow.getTimestamp(),
-            spec.getDimensions(),
-            currRow.getEvent()
-        )
-    );
+    return currRow == null ? null : new SegmentInputRow(currRow, spec.getDimensions());
   }
 
   @Override
-  public float getProgress() throws IOException, InterruptedException
+  public float getProgress()
   {
     if (numRows > 0) {
       return (rowNum * 1.0f) / numRows;
@@ -165,29 +162,6 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
 
     for (File dir : tmpSegmentDirs) {
       FileUtils.deleteDirectory(dir);
-    }
-  }
-
-  private DatasourceIngestionSpec readAndVerifyDatasourceIngestionSpec(Configuration config, ObjectMapper jsonMapper)
-  {
-    try {
-      String schema = Preconditions.checkNotNull(config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA), "null schema");
-      logger.info("load schema [%s]", schema);
-
-      DatasourceIngestionSpec spec = jsonMapper.readValue(schema, DatasourceIngestionSpec.class);
-
-      if (spec.getDimensions() == null || spec.getDimensions().size() == 0) {
-        throw new ISE("load schema does not have dimensions");
-      }
-
-      if (spec.getMetrics() == null || spec.getMetrics().size() == 0) {
-        throw new ISE("load schema does not have metrics");
-      }
-
-      return spec;
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("couldn't load segment load spec", ex);
     }
   }
 }

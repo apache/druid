@@ -33,6 +33,8 @@ import java.util.Map;
  */
 public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
 {
+  int GROUP_BY_MISSING_VALUE = -1;
+
   /**
    * Return the size, in bytes, of this dimension's values in the grouping key.
    *
@@ -65,7 +67,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   );
 
   /**
-   * Retrieve a row object from the ColumnSelectorPlus and put it in valuess at columnIndex.
+   * Retrieve a row object from the {@link ColumnValueSelector} and put it in valuess at columnIndex.
    *
    * @param selector Value selector for a column.
    * @param columnIndex Index of the column within the row values array
@@ -74,18 +76,25 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   void initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess);
 
   /**
-   * Read the first value within a row values object (IndexedInts, IndexedLongs, etc.) and write that value
-   * to the keyBuffer at keyBufferPosition. If rowSize is 0, write GROUP_BY_MISSING_VALUE instead.
+   * Read the first value within a row values object (e. g. {@link io.druid.segment.data.IndexedInts}, as the value in
+   * a dictionary-encoded string column) and write that value to the keyBuffer at keyBufferPosition. If the row size is
+   * 0 (e. g. {@link io.druid.segment.data.IndexedInts#size}), write {@link #GROUP_BY_MISSING_VALUE} instead.
    *
    * If the size of the row is > 0, write 1 to stack[] at columnIndex, otherwise write 0.
    *
    * @param keyBufferPosition Starting offset for this column's value within the grouping key.
    * @param columnIndex Index of the column within the row values array
-   * @param rowObj Row value object for this column (e.g., IndexedInts)
+   * @param rowObj Row value object for this column
    * @param keyBuffer grouping key
    * @param stack array containing the current within-row value index for each column
    */
-  void initGroupingKeyColumnValue(int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack);
+  void initGroupingKeyColumnValue(
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
+  );
 
   /**
    * If rowValIdx is less than the size of rowObj (haven't handled all of the row values):
@@ -101,4 +110,22 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @return true if rowValIdx < size of rowObj, false otherwise
    */
   boolean checkRowIndexAndAddValueToGroupingKey(int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer);
+
+  /**
+   * Retrieve a single object using the {@link ColumnValueSelector}.  The reading column must have a single value.
+   *
+   * @param selector Value selector for a column
+   *
+   * @return an object retrieved from the column
+   */
+  Object getOnlyValue(ColumnValueSelector selector);
+
+  /**
+   * Write a given object to the keyBuffer at keyBufferPosition.
+   *
+   * @param keyBufferPosition starting offset for this column's value within the grouping key
+   * @param obj               row value object retrieved from {@link #getOnlyValue(ColumnValueSelector)}
+   * @param keyBuffer         grouping key
+   */
+  void writeToKeyBuffer(int keyBufferPosition, Object obj, ByteBuffer keyBuffer);
 }

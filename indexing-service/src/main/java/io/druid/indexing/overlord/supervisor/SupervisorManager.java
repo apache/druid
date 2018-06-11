@@ -23,11 +23,11 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.metadata.MetadataSupervisorManager;
 
 import javax.annotation.Nullable;
@@ -71,6 +71,7 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
     Preconditions.checkNotNull(spec.getId(), "spec.getId()");
+    Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
@@ -145,7 +146,13 @@ public class SupervisorManager
   public Optional<SupervisorReport> getSupervisorStatus(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    return supervisor == null ? Optional.<SupervisorReport>absent() : Optional.fromNullable(supervisor.lhs.getStatus());
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStatus());
+  }
+
+  public Optional<Map<String, Map<String, Object>>> getSupervisorStats(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
   }
 
   public boolean resetSupervisor(String id, @Nullable DataSourceMetadata dataSourceMetadata)
@@ -163,6 +170,31 @@ public class SupervisorManager
     return true;
   }
 
+  public boolean checkPointDataSourceMetadata(
+      String supervisorId,
+      @Nullable String sequenceName,
+      @Nullable DataSourceMetadata previousDataSourceMetadata,
+      @Nullable DataSourceMetadata currentDataSourceMetadata
+  )
+  {
+    try {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      Preconditions.checkNotNull(supervisorId, "supervisorId cannot be null");
+
+      Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+
+      Preconditions.checkNotNull(supervisor, "supervisor could not be found");
+
+      supervisor.lhs.checkpoint(sequenceName, previousDataSourceMetadata, currentDataSourceMetadata);
+      return true;
+    }
+    catch (Exception e) {
+      log.error(e, "Checkpoint request failed");
+    }
+    return false;
+  }
+
+
   /**
    * Stops a supervisor with a given id and then removes it from the list.
    * <p/>
@@ -179,7 +211,7 @@ public class SupervisorManager
     }
 
     if (writeTombstone) {
-      metadataSupervisorManager.insert(id, new NoopSupervisorSpec()); // where NoopSupervisorSpec is a tombstone
+      metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, pair.rhs.getDataSources())); // where NoopSupervisorSpec is a tombstone
     }
     pair.lhs.stop(true);
     supervisors.remove(id);
@@ -214,9 +246,9 @@ public class SupervisorManager
     catch (Exception e) {
       // Supervisor creation or start failed write tombstone only when trying to start a new supervisor
       if (persistSpec) {
-        metadataSupervisorManager.insert(id, new NoopSupervisorSpec());
+        metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
       }
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
 
     supervisors.put(id, Pair.of(supervisor, spec));

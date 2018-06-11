@@ -30,18 +30,16 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
-import io.druid.query.DefaultGenericQueryMetricsFactory;
-import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
-import io.druid.query.QueryMetrics;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -51,10 +49,6 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchQueryConfig;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -76,7 +70,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
   private final SearchQueryConfig config;
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
-  private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final SearchQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
   public SearchQueryQueryToolChest(
@@ -84,14 +78,14 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator
   )
   {
-    this(config, intervalChunkingQueryRunnerDecorator, DefaultGenericQueryMetricsFactory.instance());
+    this(config, intervalChunkingQueryRunnerDecorator, DefaultSearchQueryMetricsFactory.instance());
   }
 
   @Inject
   public SearchQueryQueryToolChest(
       SearchQueryConfig config,
       IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      GenericQueryMetricsFactory queryMetricsFactory
+      SearchQueryMetricsFactory queryMetricsFactory
   )
   {
     this.config = config;
@@ -127,9 +121,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public QueryMetrics<Query<?>> makeMetrics(SearchQuery query)
+  public SearchQueryMetrics makeMetrics(SearchQuery query)
   {
-    return queryMetricsFactory.makeMetrics(query);
+    SearchQueryMetrics metrics = queryMetricsFactory.makeMetrics(query);
+    metrics.query(query);
+    return metrics;
   }
 
   @Override
@@ -194,8 +190,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             .put(granularityBytes)
             .put(filterBytes)
             .put(querySpecBytes)
-            .put(sortSpecBytes)
-            ;
+            .put(sortSpecBytes);
 
         for (byte[] bytes : dimensionsBytes) {
           queryCacheKey.put(bytes);
@@ -211,7 +206,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       }
 
       @Override
-      public Function<Result<SearchResultValue>, Object> prepareForCache()
+      public Function<Result<SearchResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<SearchResultValue>, Object>()
         {
@@ -226,7 +221,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       }
 
       @Override
-      public Function<Object, Result<SearchResultValue>> pullFromCache()
+      public Function<Object, Result<SearchResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<SearchResultValue>>()
         {
@@ -254,7 +249,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
             return !needsRename
                 ? new Result<>(
-                    new DateTime(((Number) result.get(0)).longValue()),
+                    DateTimes.utc(((Number) result.get(0)).longValue()),
                     new SearchResultValue(
                         Lists.transform(
                             (List) result.get(1),
@@ -280,7 +275,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                     )
                 )
                 : new Result<>(
-                    new DateTime(((Number) result.get(0)).longValue()),
+                    DateTimes.utc(((Number) result.get(0)).longValue()),
                     new SearchResultValue(
                         Lists.transform(
                             (List) result.get(1),
@@ -293,11 +288,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                                 String val = null;
                                 Integer cnt = null;
                                 if (input instanceof Map) {
-                                  dim = outputNameMap.get((String)((Map) input).get("dimension"));
+                                  dim = outputNameMap.get((String) ((Map) input).get("dimension"));
                                   val = (String) ((Map) input).get("value");
                                   cnt = (Integer) ((Map) input).get("count");
                                 } else if (input instanceof SearchHit) {
-                                  SearchHit cached = (SearchHit)input;
+                                  SearchHit cached = (SearchHit) input;
                                   dim = outputNameMap.get(cached.getDimension());
                                   val = cached.getValue();
                                   cnt = cached.getCount();
@@ -309,8 +304,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                             }
                         )
                     )
-                )
-                ;
+                );
           }
         };
       }
@@ -349,7 +343,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                 }
                 return runner.run(queryPlus, responseContext);
               }
-            } , this),
+            },
+            this
+        ),
         config
     );
   }

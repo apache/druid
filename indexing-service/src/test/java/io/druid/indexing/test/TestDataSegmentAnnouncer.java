@@ -19,12 +19,10 @@
 
 package io.druid.indexing.test;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 
-import java.io.IOException;
 import java.util.Set;
 
 public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
@@ -32,19 +30,19 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
   public Set<DataSegment> announcedSegments = Sets.newConcurrentHashSet();
 
   @Override
-  public void announceSegment(DataSegment segment) throws IOException
+  public void announceSegment(DataSegment segment)
   {
     announcedSegments.add(segment);
   }
 
   @Override
-  public void unannounceSegment(DataSegment segment) throws IOException
+  public void unannounceSegment(DataSegment segment)
   {
     announcedSegments.remove(segment);
   }
 
   @Override
-  public void announceSegments(Iterable<DataSegment> segments) throws IOException
+  public void announceSegments(Iterable<DataSegment> segments)
   {
     for (DataSegment segment : segments) {
       announcedSegments.add(segment);
@@ -52,15 +50,11 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+  public void unannounceSegments(Iterable<DataSegment> segments)
   {
     for (DataSegment segment : segments) {
       announcedSegments.remove(segment);
     }
   }
 
-  public Set<DataSegment> getAnnouncedSegments()
-  {
-    return ImmutableSet.copyOf(announcedSegments);
-  }
 }

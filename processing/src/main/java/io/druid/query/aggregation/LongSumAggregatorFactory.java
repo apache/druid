@@ -23,12 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -83,9 +82,15 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     return new LongSumBufferAggregator(getLongColumnSelector(metricFactory));
   }
 
-  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, macroTable, fieldName, expression, 0L);
+    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+        metricFactory,
+        macroTable,
+        fieldName,
+        expression,
+        0L
+    );
   }
 
   @Override
@@ -98,6 +103,12 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return LongSumAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new LongSumAggregateCombiner();
   }
 
   @Override
@@ -184,7 +195,7 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES;
+    return Long.BYTES;
   }
 
   @Override

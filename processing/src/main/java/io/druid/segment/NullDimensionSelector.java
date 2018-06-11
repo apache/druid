@@ -20,7 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.IndexedInts;
@@ -48,12 +48,6 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   public IndexedInts getRow()
   {
     return ZeroIndexedInts.instance();
-  }
-
-  @Override
-  public int getRowValue()
-  {
-    return 0;
   }
 
   @Override
@@ -87,6 +81,7 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   }
 
   @Override
+  @Nullable
   public String lookupName(int id)
   {
     assert id == 0 : "id = " + id;
@@ -109,7 +104,20 @@ public class NullDimensionSelector implements SingleValueHistoricalDimensionSele
   @Override
   public int lookupId(String name)
   {
-    return Strings.isNullOrEmpty(name) ? 0 : -1;
+    return NullHandling.isNullOrEquivalent(name) ? 0 : -1;
+  }
+
+  @Nullable
+  @Override
+  public Object getObject()
+  {
+    return null;
+  }
+
+  @Override
+  public Class classOfObject()
+  {
+    return Object.class;
   }
 
   @Override

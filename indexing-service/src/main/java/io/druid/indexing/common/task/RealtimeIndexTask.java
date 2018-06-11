@@ -22,24 +22,29 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Ints;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
+import io.druid.discovery.DiscoveryDruidNode;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskLockType;
+import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.query.DruidMetrics;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -78,15 +83,17 @@ import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
 {
+  public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
+
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
-  private final static Random random = new Random();
+  private static final Random random = new Random();
 
   private static String makeTaskId(FireDepartment fireDepartment)
   {
     return makeTaskId(
         fireDepartment.getDataSchema().getDataSource(),
         fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(),
-        new DateTime(),
+        DateTimes.nowUtc(),
         random.nextInt()
     );
   }
@@ -94,7 +101,7 @@ public class RealtimeIndexTask extends AbstractTask
   static String makeTaskId(String dataSource, int partitionNumber, DateTime timestamp, int randomBits)
   {
     final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Ints.BYTES * 2; ++i) {
+    for (int i = 0; i < Integer.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
     }
     return StringUtils.format(
@@ -154,6 +161,12 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
+  public int getPriority()
+  {
+    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
+  }
+
+  @Override
   public String getType()
   {
     return "index_realtime";
@@ -179,7 +192,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
   }
@@ -200,20 +213,29 @@ public class RealtimeIndexTask extends AbstractTask
     // It would be nice to get the PlumberSchool in the constructor.  Although that will need jackson injectables for
     // stuff like the ServerView, which seems kind of odd?  Perhaps revisit this when Guice has been introduced.
 
-    final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(this, toolbox);
+    final SegmentPublisher segmentPublisher = new TaskActionSegmentPublisher(toolbox);
 
     // NOTE: We talk to the coordinator in various places in the plumber and we could be more robust to issues
     // with the coordinator.  Right now, we'll block/throw in whatever thread triggered the coordinator behavior,
     // which will typically be either the main data processing loop or the persist thread.
 
     // Wrap default DataSegmentAnnouncer such that we unlock intervals as we unannounce segments
+    final long lockTimeoutMs = getContextValue(Tasks.LOCK_TIMEOUT_KEY, Tasks.DEFAULT_LOCK_TIMEOUT);
+    // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, http timeout error can occur while waiting for a
+    // lock to be acquired.
     final DataSegmentAnnouncer lockingSegmentAnnouncer = new DataSegmentAnnouncer()
     {
       @Override
       public void announceSegment(final DataSegment segment) throws IOException
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
-        toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
+        Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(
+                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+            ),
+            "Cannot acquire a lock for interval[%s]",
+            segment.getInterval()
+        );
         toolbox.getSegmentAnnouncer().announceSegment(segment);
       }
 
@@ -233,7 +255,13 @@ public class RealtimeIndexTask extends AbstractTask
       {
         // Side effect: Calling announceSegments causes locks to be acquired
         for (DataSegment segment : segments) {
-          toolbox.getTaskActionClient().submit(new LockAcquireAction(segment.getInterval()));
+          Preconditions.checkNotNull(
+              toolbox.getTaskActionClient().submit(
+                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+              ),
+              "Cannot acquire a lock for interval[%s]",
+              segment.getInterval()
+          );
         }
         toolbox.getSegmentAnnouncer().announceSegments(segments);
       }
@@ -265,10 +293,14 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          final TaskLock myLock = toolbox.getTaskActionClient()
-                                         .submit(new LockAcquireAction(interval));
+          final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+          final TaskLock lock = Preconditions.checkNotNull(
+              toolbox.getTaskActionClient().submit(action),
+              "Cannot acquire a lock for interval[%s]",
+              interval
+          );
 
-          return myLock.getVersion();
+          return lock.getVersion();
         }
         catch (IOException e) {
           throw Throwables.propagate(e);
@@ -288,12 +320,8 @@ public class RealtimeIndexTask extends AbstractTask
         tuningConfig
     );
     this.metrics = fireDepartment.getMetrics();
-    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
-        ImmutableList.of(fireDepartment),
-        ImmutableMap.of(
-            DruidMetrics.TASK_ID, new String[]{getId()}
-        )
-    );
+    final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartment);
+
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
@@ -321,8 +349,22 @@ public class RealtimeIndexTask extends AbstractTask
     Supplier<Committer> committerSupplier = null;
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
 
+    LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
+                                          toolbox.getLookupNodeService() :
+                                          new LookupNodeService((String) getContextValue(CTX_KEY_LOOKUP_TIER));
+    DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
+        toolbox.getDruidNode(),
+        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        ImmutableMap.of(
+            toolbox.getDataNodeService().getName(), toolbox.getDataNodeService(),
+            lookupNodeService.getName(), lookupNodeService
+        )
+    );
+
     try {
       toolbox.getDataSegmentServerAnnouncer().announce();
+      toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
+
 
       plumber.startJob();
 
@@ -428,6 +470,7 @@ public class RealtimeIndexTask extends AbstractTask
       }
 
       toolbox.getDataSegmentServerAnnouncer().unannounce();
+      toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
     }
 
     log.info("Job done!");
@@ -510,12 +553,10 @@ public class RealtimeIndexTask extends AbstractTask
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher
   {
-    final Task task;
     final TaskToolbox taskToolbox;
 
-    public TaskActionSegmentPublisher(Task task, TaskToolbox taskToolbox)
+    public TaskActionSegmentPublisher(TaskToolbox taskToolbox)
     {
-      this.task = task;
       this.taskToolbox = taskToolbox;
     }
 

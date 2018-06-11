@@ -19,20 +19,17 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Result;
 import io.druid.query.select.SelectResultValue;
 import io.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -43,6 +40,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.zip.ZipFile;
@@ -60,13 +58,13 @@ public class TimestampAggregationSelectTest
 
   private Timestamp[] values = new Timestamp[10];
 
-  @Parameterized.Parameters(name="{index}: Test for {0}")
+  @Parameterized.Parameters(name = "{index}: Test for {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
         ImmutableList.of(
-            ImmutableList.of("timeMin", "tmin", TimestampMinAggregatorFactory.class, DateTime.parse("2011-01-12T01:00:00.000Z").getMillis()),
-            ImmutableList.of("timeMax", "tmax", TimestampMaxAggregatorFactory.class, DateTime.parse("2011-01-31T01:00:00.000Z").getMillis())
+            ImmutableList.of("timeMin", "tmin", DateTimes.of("2011-01-12T01:00:00.000Z").getMillis()),
+            ImmutableList.of("timeMax", "tmax", DateTimes.of("2011-01-31T01:00:00.000Z").getMillis())
         ),
         new Function<List<?>, Object[]>()
         {
@@ -82,28 +80,26 @@ public class TimestampAggregationSelectTest
 
   private String aggType;
   private String aggField;
-  private Class<? extends TimestampAggregatorFactory> aggClass;
   private Long expected;
 
-  public TimestampAggregationSelectTest(String aggType, String aggField, Class<? extends TimestampAggregatorFactory> aggClass, Long expected)
+  public TimestampAggregationSelectTest(String aggType, String aggField, Long expected)
   {
     this.aggType = aggType;
     this.aggField = aggField;
-    this.aggClass = aggClass;
     this.expected = expected;
   }
 
   @Before
-  public void setup() throws Exception
+  public void setup()
   {
     helper = AggregationTestHelper.createSelectQueryAggregationTestHelper(
         new TimestampMinMaxModule().getJacksonModules(),
         temporaryFolder
     );
 
-    selector = new TestObjectColumnSelector(values);
+    selector = new TestObjectColumnSelector<>(values);
     selectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(selectorFactory.makeObjectColumnSelector("test")).andReturn(selector);
+    EasyMock.expect(selectorFactory.makeColumnValueSelector("test")).andReturn(selector);
     EasyMock.replay(selectorFactory);
 
   }
@@ -144,17 +140,17 @@ public class TimestampAggregationSelectTest
         "  }\n" +
         "]";
     ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<?> seq = helper.createIndexAndRunQueryOnSegment(
         zip.getInputStream(zip.getEntry("druid.sample.tsv")),
         recordParser,
         aggregator,
         0,
         Granularities.MONTH,
         100,
-        Resources.toString(Resources.getResource("select.json"), Charsets.UTF_8)
+        Resources.toString(Resources.getResource("select.json"), StandardCharsets.UTF_8)
     );
 
-    Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(Sequences.toList(seq, Lists.newArrayList()));
+    Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(seq.toList());
     Assert.assertEquals(36, result.getValue().getEvents().size());
     Assert.assertEquals(expected, result.getValue().getEvents().get(0).getEvent().get(aggField));
   }

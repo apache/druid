@@ -21,17 +21,26 @@ package io.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
 import io.druid.query.extraction.RegexDimExtractionFn;
-import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.segment.column.ValueType;
+import io.druid.server.security.AuthTestUtils;
+import io.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
+import io.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
@@ -40,8 +49,10 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTime;
@@ -53,14 +64,15 @@ import org.junit.Test;
 import java.math.BigDecimal;
 import java.util.Map;
 
-public class ExpressionsTest
+public class ExpressionsTest extends CalciteTestBase
 {
-  private static final DateTimeZone LOS_ANGELES = DateTimeZone.forID("America/Los_Angeles");
+  private static final DateTimeZone LOS_ANGELES = DateTimes.inferTzfromString("America/Los_Angeles");
 
   private final PlannerContext plannerContext = PlannerContext.create(
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
+      AuthTestUtils.TEST_AUTHORIZER_MAPPER,
       ImmutableMap.of()
   );
   private final RowSignature rowSignature = RowSignature
@@ -70,17 +82,21 @@ public class ExpressionsTest
       .add("b", ValueType.LONG)
       .add("x", ValueType.FLOAT)
       .add("y", ValueType.LONG)
+      .add("z", ValueType.FLOAT)
       .add("s", ValueType.STRING)
+      .add("spacey", ValueType.STRING)
       .add("tstr", ValueType.STRING)
       .add("dstr", ValueType.STRING)
       .build();
   private final Map<String, Object> bindings = ImmutableMap.<String, Object>builder()
-      .put("t", new DateTime("2000-02-03T04:05:06").getMillis())
+      .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
       .put("a", 10)
-      .put("b", 20)
-      .put("x", 2.5)
+      .put("b", 25)
+      .put("x", 2.25)
       .put("y", 3.0)
+      .put("z", -2.25)
       .put("s", "foo")
+      .put("spacey", "  hey there  ")
       .put("tstr", "2000-02-03 04:05:06")
       .put("dstr", "2000-02-03")
       .build();
@@ -150,16 +166,231 @@ public class ExpressionsTest
   }
 
   @Test
+  public void testStrpos()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new StrposOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            rexBuilder.makeLiteral("oo")
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo') + 1)"),
+        2L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StrposOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            rexBuilder.makeLiteral("ax")
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'ax') + 1)"),
+        0L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StrposOperatorConversion().calciteOperator(),
+            rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
+            rexBuilder.makeLiteral("ax")
+        ),
+        DruidExpression.fromExpression("(strpos('','ax') + 1)"),
+        0L
+    );
+  }
+
+  @Test
+  public void testPower()
+  {
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.POWER, inputRef("a"), integerLiteral(2)),
+        DruidExpression.fromExpression("pow(\"a\",2)"),
+        100.0
+    );
+  }
+
+  @Test
+  public void testFloor()
+  {
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("a")),
+        DruidExpression.fromExpression("floor(\"a\")"),
+        10.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("x")),
+        DruidExpression.fromExpression("floor(\"x\")"),
+        2.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("y")),
+        DruidExpression.fromExpression("floor(\"y\")"),
+        3.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("z")),
+        DruidExpression.fromExpression("floor(\"z\")"),
+        -3.0
+    );
+  }
+
+  @Test
+  public void testCeil()
+  {
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("a")),
+        DruidExpression.fromExpression("ceil(\"a\")"),
+        10.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("x")),
+        DruidExpression.fromExpression("ceil(\"x\")"),
+        3.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("y")),
+        DruidExpression.fromExpression("ceil(\"y\")"),
+        3.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("z")),
+        DruidExpression.fromExpression("ceil(\"z\")"),
+        -2.0
+    );
+  }
+
+  @Test
+  public void testTruncate()
+  {
+    final SqlFunction truncateFunction = new TruncateOperatorConversion().calciteOperator();
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("a")),
+        DruidExpression.fromExpression("(cast(cast(\"a\" * 1,'long'),'double') / 1)"),
+        10.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("x")),
+        DruidExpression.fromExpression("(cast(cast(\"x\" * 1,'long'),'double') / 1)"),
+        2.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("y")),
+        DruidExpression.fromExpression("(cast(cast(\"y\" * 1,'long'),'double') / 1)"),
+        3.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("z")),
+        DruidExpression.fromExpression("(cast(cast(\"z\" * 1,'long'),'double') / 1)"),
+        -2.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("x"), integerLiteral(1)),
+        DruidExpression.fromExpression("(cast(cast(\"x\" * 10.0,'long'),'double') / 10.0)"),
+        2.2
+    );
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("z"), integerLiteral(1)),
+        DruidExpression.fromExpression("(cast(cast(\"z\" * 10.0,'long'),'double') / 10.0)"),
+        -2.2
+    );
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("b"), integerLiteral(-1)),
+        DruidExpression.fromExpression("(cast(cast(\"b\" * 0.1,'long'),'double') / 0.1)"),
+        20.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(truncateFunction, inputRef("z"), integerLiteral(-1)),
+        DruidExpression.fromExpression("(cast(cast(\"z\" * 0.1,'long'),'double') / 0.1)"),
+        0.0
+    );
+  }
+
+  @Test
+  public void testDateTrunc()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new DateTruncOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("hour"),
+            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
+        ),
+        DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H','','UTC')"),
+        DateTimes.of("2000-02-03T04:00:00").getMillis()
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new DateTruncOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("DAY"),
+            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
+        ),
+        DruidExpression.fromExpression("timestamp_floor(949550706000,'P1D','','UTC')"),
+        DateTimes.of("2000-02-03T00:00:00").getMillis()
+    );
+  }
+
+  @Test
+  public void testTrim()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.TRIM,
+            rexBuilder.makeFlag(SqlTrimFunction.Flag.BOTH),
+            rexBuilder.makeLiteral(" "),
+            inputRef("spacey")
+        ),
+        DruidExpression.fromExpression("trim(\"spacey\",' ')"),
+        "hey there"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.TRIM,
+            rexBuilder.makeFlag(SqlTrimFunction.Flag.LEADING),
+            rexBuilder.makeLiteral(" h"),
+            inputRef("spacey")
+        ),
+        DruidExpression.fromExpression("ltrim(\"spacey\",' h')"),
+        "ey there  "
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.TRIM,
+            rexBuilder.makeFlag(SqlTrimFunction.Flag.TRAILING),
+            rexBuilder.makeLiteral(" e"),
+            inputRef("spacey")
+        ),
+        DruidExpression.fromExpression("rtrim(\"spacey\",' e')"),
+        "  hey ther"
+    );
+  }
+
+  @Test
   public void testTimeFloor()
   {
     testExpression(
         rexBuilder.makeCall(
             new TimeFloorOperatorConversion().calciteOperator(),
-            timestampLiteral(new DateTime("2000-02-03T04:05:06Z")),
+            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
             rexBuilder.makeLiteral("PT1H")
         ),
         DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H','','UTC')"),
-        new DateTime("2000-02-03T04:00:00").getMillis()
+        DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
     testExpression(
@@ -170,20 +401,8 @@ public class ExpressionsTest
             rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.TIMESTAMP)),
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn(
-                    null,
-                    null,
-                    null,
-                    new PeriodGranularity(Period.days(1), null, LOS_ANGELES),
-                    true
-                )
-            ),
-            "timestamp_floor(\"t\",'P1D','','America/Los_Angeles')"
-        ),
-        new DateTime("2000-02-02T08:00:00").getMillis()
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D','','America/Los_Angeles')"),
+        DateTimes.of("2000-02-02T08:00:00").getMillis()
     );
   }
 
@@ -198,14 +417,8 @@ public class ExpressionsTest
             inputRef("t"),
             rexBuilder.makeFlag(TimeUnitRange.YEAR)
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn(null, null, null, Granularities.YEAR, true)
-            ),
-            "timestamp_floor(\"t\",'P1Y','','UTC')"
-        ),
-        new DateTime("2000").getMillis()
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1Y','','UTC')"),
+        DateTimes.of("2000").getMillis()
     );
   }
 
@@ -221,7 +434,7 @@ public class ExpressionsTest
             rexBuilder.makeFlag(TimeUnitRange.YEAR)
         ),
         DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y','','UTC')"),
-        new DateTime("2001").getMillis()
+        DateTimes.of("2001").getMillis()
     );
   }
 
@@ -236,7 +449,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral(-3, typeFactory.createSqlType(SqlTypeName.INTEGER), true)
         ),
         DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3)"),
-        new DateTime("2000-02-02T22:05:06").getMillis()
+        DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
   }
 
@@ -249,10 +462,7 @@ public class ExpressionsTest
             inputRef("t"),
             rexBuilder.makeLiteral("QUARTER")
         ),
-        DruidExpression.of(
-            null,
-            "timestamp_extract(\"t\",'QUARTER','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
@@ -263,13 +473,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("DAY"),
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn("d", LOS_ANGELES, null, Granularities.NONE, true)
-            ),
-            "timestamp_extract(\"t\",'DAY','America/Los_Angeles')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
         2L
     );
   }
@@ -292,7 +496,7 @@ public class ExpressionsTest
             null,
             "(\"t\" + 90060000)"
         ),
-        new DateTime("2000-02-03T04:05:06").plus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
 
@@ -314,7 +518,7 @@ public class ExpressionsTest
             null,
             "timestamp_shift(\"t\",concat('P', 13, 'M'),1)"
         ),
-        new DateTime("2000-02-03T04:05:06").plus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
   }
 
@@ -339,7 +543,7 @@ public class ExpressionsTest
             null,
             "(\"t\" - 90060000)"
         ),
-        new DateTime("2000-02-03T04:05:06").minus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
   }
 
@@ -364,7 +568,7 @@ public class ExpressionsTest
             null,
             "timestamp_shift(\"t\",concat('P', 13, 'M'),-1)"
         ),
-        new DateTime("2000-02-03T04:05:06").minus(period).getMillis()
+        DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
   }
 
@@ -378,7 +582,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
         DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss')"),
-        new DateTime("2000-02-03T04:05:06").getMillis()
+        DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
 
     testExpression(
@@ -389,7 +593,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
         DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
-        new DateTime("2000-02-03T04:05:06-08:00").getMillis()
+        DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
     );
   }
 
@@ -402,13 +606,7 @@ public class ExpressionsTest
             inputRef("t"),
             rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn("yyyy-MM-dd HH:mm:ss", DateTimeZone.UTC, null, Granularities.NONE, true)
-            ),
-            "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         "2000-02-03 04:05:06"
     );
 
@@ -419,19 +617,7 @@ public class ExpressionsTest
             rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss"),
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn(
-                    "yyyy-MM-dd HH:mm:ss",
-                    LOS_ANGELES,
-                    null,
-                    Granularities.NONE,
-                    true
-                )
-            ),
-            "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"
-        ),
+        DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
         "2000-02-02 20:05:06"
     );
   }
@@ -445,10 +631,7 @@ public class ExpressionsTest
             rexBuilder.makeFlag(TimeUnitRange.QUARTER),
             inputRef("t")
         ),
-        DruidExpression.of(
-            null,
-            "timestamp_extract(\"t\",'QUARTER','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
@@ -458,13 +641,7 @@ public class ExpressionsTest
             rexBuilder.makeFlag(TimeUnitRange.DAY),
             inputRef("t")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn("d", DateTimeZone.UTC, null, Granularities.NONE, true)
-            ),
-            "timestamp_extract(\"t\",'DAY','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','UTC')"),
         3L
     );
   }
@@ -481,7 +658,7 @@ public class ExpressionsTest
             SimpleExtraction.of("t", null),
             "\"t\""
         ),
-        new DateTime("2000-02-03T04:05:06Z").getMillis()
+        DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
 
     testExpression(
@@ -491,9 +668,9 @@ public class ExpressionsTest
         ),
         DruidExpression.of(
             null,
-            "timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss')"
+            "timestamp_parse(\"tstr\",'','UTC')"
         ),
-        new DateTime("2000-02-03T04:05:06Z").getMillis()
+        DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
   }
 
@@ -509,7 +686,7 @@ public class ExpressionsTest
             )
         ),
         DruidExpression.fromExpression(
-            "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss')"
+            "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"
         ),
         "2000-02-03 04:05:06"
     );
@@ -526,7 +703,7 @@ public class ExpressionsTest
             SimpleExtraction.of("t", null),
             "\"t\""
         ),
-        new DateTime("2000-02-03T04:05:06").getMillis()
+        DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
   }
 
@@ -538,11 +715,8 @@ public class ExpressionsTest
             typeFactory.createSqlType(SqlTypeName.DATE),
             inputRef("t")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
-            "timestamp_floor(\"t\",'P1D','','UTC')"
-        ),
-        new DateTime("2000-02-03").getMillis()
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D','','UTC')"),
+        DateTimes.of("2000-02-03").getMillis()
     );
 
     testExpression(
@@ -551,9 +725,9 @@ public class ExpressionsTest
             inputRef("dstr")
         ),
         DruidExpression.fromExpression(
-            "timestamp_floor(timestamp_parse(\"dstr\",'yyyy-MM-dd'),'P1D','','UTC')"
+            "timestamp_floor(timestamp_parse(\"dstr\",'','UTC'),'P1D','','UTC')"
         ),
-        new DateTime("2000-02-03").getMillis()
+        DateTimes.of("2000-02-03").getMillis()
     );
   }
 
@@ -569,7 +743,7 @@ public class ExpressionsTest
             )
         ),
         DruidExpression.fromExpression(
-            "timestamp_format(timestamp_floor(\"t\",'P1D','','UTC'),'yyyy-MM-dd')"
+            "timestamp_format(timestamp_floor(\"t\",'P1D','','UTC'),'yyyy-MM-dd','UTC')"
         ),
         "2000-02-03"
     );
@@ -582,11 +756,8 @@ public class ExpressionsTest
                 inputRef("t")
             )
         ),
-        DruidExpression.of(
-            SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
-            "timestamp_floor(\"t\",'P1D','','UTC')"
-        ),
-        new DateTime("2000-02-03").getMillis()
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D','','UTC')"),
+        DateTimes.of("2000-02-03").getMillis()
     );
   }
 
@@ -598,7 +769,7 @@ public class ExpressionsTest
 
   private RexNode timestampLiteral(final DateTime timestamp)
   {
-    return rexBuilder.makeTimestampLiteral(Calcites.jodaToCalciteCalendarLiteral(timestamp, DateTimeZone.UTC), 0);
+    return rexBuilder.makeTimestampLiteral(Calcites.jodaToCalciteTimestampString(timestamp, DateTimeZone.UTC), 0);
   }
 
   private RexNode integerLiteral(final int integer)

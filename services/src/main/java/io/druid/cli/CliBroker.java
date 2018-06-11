@@ -21,18 +21,22 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.druid.client.BrokerSegmentWatcherConfig;
 import io.druid.client.BrokerServerView;
 import io.druid.client.CachingClusteredClient;
+import io.druid.client.HttpServerInventoryViewResource;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
 import io.druid.client.selector.CustomTierSelectorStrategyConfig;
 import io.druid.client.selector.ServerSelectorStrategy;
 import io.druid.client.selector.TierSelectorStrategy;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.LookupNodeService;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.Jerseys;
@@ -55,6 +59,7 @@ import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.router.TieredBrokerConfig;
 import io.druid.sql.guice.SqlModule;
+import io.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -91,6 +96,7 @@ public class CliBroker extends ServerRunnable
             );
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
+            binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
 
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);
@@ -109,16 +115,28 @@ public class CliBroker extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
 
+            binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, BrokerQueryResource.class);
             binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
             Jerseys.addResource(binder, BrokerResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
+
             LifecycleModule.register(binder, BrokerQueryResource.class);
             LifecycleModule.register(binder, DruidBroker.class);
+
+            Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
             MetricsModule.register(binder, CacheMonitor.class);
 
             LifecycleModule.register(binder, Server.class);
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+                    ImmutableList.of(LookupNodeService.class)
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
         },
         new LookupModule(),

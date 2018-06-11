@@ -23,11 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
+import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,15 +52,26 @@ public class LocalDataSegmentPusherTest
   LocalDataSegmentPusherConfig config;
   File dataSegmentFiles;
   DataSegment dataSegment = new DataSegment(
-    "ds",
-    new Interval(0, 1),
-    "v1",
-    null,
-    null,
-    null,
-    NoneShardSpec.instance(),
-    null,
-    -1
+      "ds",
+      Intervals.utc(0, 1),
+      "v1",
+      null,
+      ImmutableList.of("dim1"),
+      null,
+      NoneShardSpec.instance(),
+      null,
+      -1
+  );
+  DataSegment dataSegment2 = new DataSegment(
+      "ds",
+      Intervals.utc(0, 1),
+      "v1",
+      null,
+      ImmutableList.of("dim2"),
+      null,
+      NoneShardSpec.instance(),
+      null,
+      -1
   );
 
   @Before
@@ -66,7 +79,7 @@ public class LocalDataSegmentPusherTest
   {
     config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusher = new LocalDataSegmentPusher(config, new DefaultObjectMapper());
+    localDataSegmentPusher = new LocalDataSegmentPusher(config, TestHelper.makeJsonMapper());
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));
   }
@@ -79,8 +92,8 @@ public class LocalDataSegmentPusherTest
       */
     final DataSegment dataSegment2 = dataSegment.withVersion("v2");
 
-    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
-    DataSegment returnSegment2 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment2);
+    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false);
+    DataSegment returnSegment2 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment2, false);
 
     Assert.assertNotNull(returnSegment1);
     Assert.assertEquals(dataSegment, returnSegment1);
@@ -89,14 +102,14 @@ public class LocalDataSegmentPusherTest
     Assert.assertEquals(dataSegment2, returnSegment2);
 
     Assert.assertNotEquals(
-        localDataSegmentPusher.getStorageDir(dataSegment),
-        localDataSegmentPusher.getStorageDir(dataSegment2)
+        localDataSegmentPusher.getStorageDir(dataSegment, false),
+        localDataSegmentPusher.getStorageDir(dataSegment2, false)
     );
 
     for (DataSegment returnSegment : ImmutableList.of(returnSegment1, returnSegment2)) {
       File outDir = new File(
           config.getStorageDirectory(),
-          localDataSegmentPusher.getStorageDir(returnSegment)
+          localDataSegmentPusher.getStorageDir(returnSegment, false)
       );
       File versionFile = new File(outDir, "index.zip");
       File descriptorJson = new File(outDir, "descriptor.json");
@@ -106,14 +119,35 @@ public class LocalDataSegmentPusherTest
   }
 
   @Test
-  public void testFirstPushWinsForConcurrentPushes() throws IOException
+  public void testPushUseUniquePath() throws IOException
+  {
+    DataSegment segment = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
+
+    String path = segment.getLoadSpec().get("path").toString();
+    String matcher = ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index\\.zip";
+    Assert.assertTrue(path, path.matches(matcher));
+    Assert.assertTrue(new File(path).exists());
+  }
+
+  @Test
+  public void testLastPushWinsForConcurrentPushes() throws IOException
   {
     File replicatedDataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(replicatedDataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x8));
-    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
-    DataSegment returnSegment2 = localDataSegmentPusher.push(replicatedDataSegmentFiles, dataSegment);
+    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false);
+    DataSegment returnSegment2 = localDataSegmentPusher.push(replicatedDataSegmentFiles, dataSegment2, false);
 
-    Assert.assertEquals(returnSegment1, returnSegment2);
+    Assert.assertEquals(dataSegment.getDimensions(), returnSegment1.getDimensions());
+    Assert.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
+
+    File unzipDir = new File(config.storageDirectory, "unzip");
+    FileUtils.forceMkdir(unzipDir);
+    CompressionUtils.unzip(
+        new File(config.storageDirectory, "/ds/1970-01-01T00:00:00.000Z_1970-01-01T00:00:00.001Z/v1/0/index.zip"),
+        unzipDir
+    );
+
+    Assert.assertEquals(0x8, Ints.fromByteArray(Files.toByteArray(new File(unzipDir, "version.bin"))));
   }
 
   @Test
@@ -124,7 +158,7 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File(config.storageDirectory, "xxx");
     Assert.assertTrue(config.storageDirectory.mkdir());
     config.storageDirectory.setWritable(false);
-    localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
+    localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false);
   }
 
   @Test

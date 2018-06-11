@@ -22,20 +22,20 @@ package io.druid.client.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import io.druid.client.ImmutableSegmentLoadInfo;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import junit.framework.Assert;
-import org.joda.time.Interval;
 import org.junit.Test;
 
 import java.io.IOException;
 
 public class ImmutableSegmentLoadInfoTest
 {
-  private final ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws IOException
@@ -43,9 +43,7 @@ public class ImmutableSegmentLoadInfoTest
     ImmutableSegmentLoadInfo segmentLoadInfo = new ImmutableSegmentLoadInfo(
         new DataSegment(
             "test_ds",
-            new Interval(
-                "2011-04-01/2011-04-02"
-            ),
+            Intervals.of("2011-04-01/2011-04-02"),
             "v1",
             null,
             null,

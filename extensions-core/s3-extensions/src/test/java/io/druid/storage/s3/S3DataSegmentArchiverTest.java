@@ -19,6 +19,7 @@
 
 package io.druid.storage.s3;
 
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -27,11 +28,9 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -66,14 +65,17 @@ public class S3DataSegmentArchiverTest
     }
   };
   private static final S3DataSegmentPusherConfig PUSHER_CONFIG = new S3DataSegmentPusherConfig();
-  private static final RestS3Service S3_SERVICE = EasyMock.createStrictMock(RestS3Service.class);
+  private static final ServerSideEncryptingAmazonS3 S3_SERVICE = new ServerSideEncryptingAmazonS3(
+      EasyMock.createStrictMock(AmazonS3Client.class),
+      new NoopServerSideEncryption()
+  );
   private static final S3DataSegmentPuller PULLER = new S3DataSegmentPuller(S3_SERVICE);
   private static final DataSegment SOURCE_SEGMENT = DataSegment
       .builder()
       .binaryVersion(1)
       .dataSource("dataSource")
       .dimensions(ImmutableList.<String>of())
-      .interval(Interval.parse("2015/2016"))
+      .interval(Intervals.of("2015/2016"))
       .version("version")
       .loadSpec(ImmutableMap.<String, Object>of(
           "type",
@@ -107,7 +109,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return archivedSegment;
       }
@@ -121,7 +123,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return SOURCE_SEGMENT;
       }
@@ -144,7 +146,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return archivedSegment;
       }
@@ -158,7 +160,7 @@ public class S3DataSegmentArchiverTest
     final S3DataSegmentArchiver archiver = new S3DataSegmentArchiver(MAPPER, S3_SERVICE, ARCHIVER_CONFIG, PUSHER_CONFIG)
     {
       @Override
-      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec) throws SegmentLoadingException
+      public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
       {
         return SOURCE_SEGMENT;
       }

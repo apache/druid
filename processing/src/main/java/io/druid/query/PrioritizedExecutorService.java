@@ -63,7 +63,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         new Lifecycle.Handler()
         {
           @Override
-          public void start() throws Exception
+          public void start()
           {
           }
 
@@ -226,28 +226,6 @@ class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
         }
       }
   );
-
-  public static <V> PrioritizedListenableFutureTask<V> create(
-      PrioritizedRunnable task,
-      @Nullable V result,
-      long position
-  )
-  {
-    return new PrioritizedListenableFutureTask<>(
-        ListenableFutureTask.create(task, result),
-        task.getPriority(),
-        position
-    );
-  }
-
-  public static <V> PrioritizedListenableFutureTask<?> create(PrioritizedCallable<V> callable, long position)
-  {
-    return new PrioritizedListenableFutureTask<>(
-        ListenableFutureTask.create(callable),
-        callable.getPriority(),
-        position
-    );
-  }
 
   public static <V> PrioritizedListenableFutureTask<V> create(ListenableFutureTask<V> task, int priority, long position)
   {

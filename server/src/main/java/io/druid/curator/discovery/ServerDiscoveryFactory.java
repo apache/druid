@@ -24,11 +24,12 @@ import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 
-import java.io.IOException;
 import java.util.Collection;
 
 /**
+ * Use {@link io.druid.discovery.DruidNodeDiscovery} for discovery.
  */
+@Deprecated
 public class ServerDiscoveryFactory
 {
   private final ServiceDiscovery<Void> serviceDiscovery;
@@ -44,32 +45,32 @@ public class ServerDiscoveryFactory
   public ServerDiscoverySelector createSelector(String serviceName)
   {
     if (serviceName == null) {
-      return new ServerDiscoverySelector(new NoopServiceProvider());
+      return new ServerDiscoverySelector(new NoopServiceProvider(), serviceName);
     }
 
     final ServiceProvider serviceProvider = serviceDiscovery
         .serviceProviderBuilder()
         .serviceName(CuratorServiceUtils.makeCanonicalServiceName(serviceName))
         .build();
-    return new ServerDiscoverySelector(serviceProvider);
+    return new ServerDiscoverySelector(serviceProvider, serviceName);
   }
 
   private static class NoopServiceProvider<T> implements ServiceProvider<T>
   {
     @Override
-    public void start() throws Exception
+    public void start()
     {
       // do nothing
     }
 
     @Override
-    public ServiceInstance<T> getInstance() throws Exception
+    public ServiceInstance<T> getInstance()
     {
       return null;
     }
 
     @Override
-    public Collection<ServiceInstance<T>> getAllInstances() throws Exception
+    public Collection<ServiceInstance<T>> getAllInstances()
     {
       return null;
     }
@@ -81,7 +82,7 @@ public class ServerDiscoveryFactory
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       // do nothing
     }

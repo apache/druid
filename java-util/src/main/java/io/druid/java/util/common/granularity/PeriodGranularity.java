@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.google.common.base.Preconditions;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import org.joda.time.Chronology;
@@ -37,6 +38,7 @@ import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -84,9 +86,10 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   }
 
   @JsonProperty("origin")
+  @Nullable
   public DateTime getOrigin()
   {
-    return hasOrigin ? new DateTime(origin) : null;
+    return hasOrigin ? DateTimes.utc(origin) : null;
   }
 
   // Used only for Segments. Not for Queries
@@ -110,12 +113,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   public DateTime increment(DateTime time)
   {
     return new DateTime(increment(time.getMillis()), getTimeZone());
-  }
-
-  @Override
-  public DateTime decrement(DateTime time)
-  {
-    return new DateTime(decrement(time.getMillis()), getTimeZone());
   }
 
   @Override
@@ -222,11 +219,6 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     return chronology.add(period, t, 1);
   }
 
-  private long decrement(long t)
-  {
-    return chronology.add(period, t, -1);
-  }
-
   private long truncate(long t)
   {
     if (isCompound) {
@@ -323,8 +315,11 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
         h -= h % hours;
         long tt = chronology.hours().add(origin, h);
         // always round down to the previous period (for timestamps prior to origin)
-        if (t < tt) {
+        if (t < tt && origin > 0) {
           t = chronology.hours().add(tt, -hours);
+        } else if (t > tt && origin < 0) {
+          t = chronology.minuteOfHour().roundFloor(tt);
+          t = chronology.minuteOfHour().set(t, 0);
         } else {
           t = tt;
         }

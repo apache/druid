@@ -19,9 +19,11 @@
 
 package io.druid.timeline;
 
+import io.druid.guice.annotations.PublicApi;
 import org.joda.time.Interval;
 
+@PublicApi
 public interface LogicalSegment
 {
-  public Interval getInterval();
+  Interval getInterval();
 }

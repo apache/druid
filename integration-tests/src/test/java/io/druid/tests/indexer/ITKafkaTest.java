@@ -21,6 +21,7 @@ package io.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -48,6 +49,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
@@ -64,6 +66,8 @@ public class ITKafkaTest extends AbstractIndexerTest
   private static final String DATASOURCE = "kafka_test";
   private static final String TOPIC_NAME = "kafkaTopic";
   private static final int MINUTES_TO_SEND = 2;
+  public static final String testPropertyPrefix = "kafka.test.property.";
+
 
   // We'll fill in the current time and numbers for added, deleted and changed
   // before sending the event.
@@ -117,10 +121,20 @@ public class ITKafkaTest extends AbstractIndexerTest
           ZKStringSerializer$.MODULE$
       );
       zkUtils = new ZkUtils(zkClient, new ZkConnection(zkHosts, sessionTimeoutMs), false);
-      int numPartitions = 1;
-      int replicationFactor = 1;
-      Properties topicConfig = new Properties();
-      AdminUtils.createTopic(zkUtils, TOPIC_NAME, numPartitions, replicationFactor, topicConfig, RackAwareMode.Disabled$.MODULE$);
+      if (config.manageKafkaTopic()) {
+        int numPartitions = 1;
+        int replicationFactor = 1;
+        Properties topicConfig = new Properties();
+        // addFilteredProperties(topicConfig);
+        AdminUtils.createTopic(
+            zkUtils,
+            TOPIC_NAME,
+            numPartitions,
+            replicationFactor,
+            topicConfig,
+            RackAwareMode.Disabled$.MODULE$
+        );
+      }
     }
     catch (Exception e) {
       throw new ISE(e, "could not create kafka topic");
@@ -128,6 +142,7 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // set up kafka producer
     Properties properties = new Properties();
+    addFilteredProperties(properties);
     properties.put("bootstrap.servers", config.getKafkaHost());
     LOG.info("Kafka bootstrap.servers: [%s]", config.getKafkaHost());
     properties.put("acks", "all");
@@ -139,7 +154,7 @@ public class ITKafkaTest extends AbstractIndexerTest
         new StringSerializer()
     );
 
-    DateTimeZone zone = DateTimeZone.forID("UTC");
+    DateTimeZone zone = DateTimes.inferTzfromString("UTC");
     // format for putting into events
     DateTimeFormatter event_fmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
@@ -179,12 +194,25 @@ public class ITKafkaTest extends AbstractIndexerTest
     // replace temp strings in indexer file
     try {
       LOG.info("indexerFile name: [%s]", INDEXER_FILE);
+
+      Properties consumerProperties = new Properties();
+      consumerProperties.put("zookeeper.connect", config.getZookeeperInternalHosts());
+      consumerProperties.put("zookeeper.connection.timeout.ms", "15000");
+      consumerProperties.put("zookeeper.sync.time.ms", "5000");
+      consumerProperties.put("group.id", Long.toString(System.currentTimeMillis()));
+      consumerProperties.put("zookeeper.sync.time.ms", "5000");
+      consumerProperties.put("fetch.message.max.bytes", "1048586");
+      consumerProperties.put("auto.offset.reset", "smallest");
+      consumerProperties.put("auto.commit.enable", "false");
+
+      addFilteredProperties(consumerProperties);
+
       indexerSpec = getTaskAsString(INDEXER_FILE)
           .replaceAll("%%DATASOURCE%%", DATASOURCE)
           .replaceAll("%%TOPIC%%", TOPIC_NAME)
-          .replaceAll("%%ZOOKEEPER_SERVER%%", config.getZookeeperHosts())
-          .replaceAll("%%GROUP_ID%%", Long.toString(System.currentTimeMillis()))
-          .replaceAll("%%COUNT%%", Integer.toString(num_events));
+          .replaceAll("%%COUNT%%", Integer.toString(num_events))
+          .replaceAll("%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
+
       LOG.info("indexerFile: [%s]\n", indexerSpec);
     }
     catch (Exception e) {
@@ -206,7 +234,7 @@ public class ITKafkaTest extends AbstractIndexerTest
           new Callable<Boolean>()
           {
             @Override
-            public Boolean call() throws Exception
+            public Boolean call()
             {
               return coordinator.areSegmentsLoaded(DATASOURCE);
             }
@@ -239,11 +267,11 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     String queryStr = query_response_template
         .replaceAll("%%DATASOURCE%%", DATASOURCE)
-            // time boundary
+        // time boundary
         .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
         .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
         .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-            // time series
+        // time series
         .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
         .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtFirst.plusMinutes(MINUTES_TO_SEND + 2)))
         .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
@@ -260,16 +288,26 @@ public class ITKafkaTest extends AbstractIndexerTest
   }
 
   @AfterClass
-  public void afterClass() throws Exception
+  public void afterClass()
   {
     LOG.info("teardown");
-
-    // delete kafka topic
-    AdminUtils.deleteTopic(zkUtils, TOPIC_NAME);
+    if (config.manageKafkaTopic()) {
+      // delete kafka topic
+      AdminUtils.deleteTopic(zkUtils, TOPIC_NAME);
+    }
 
     // remove segments
     if (segmentsExist) {
       unloadAndKillData(DATASOURCE);
+    }
+  }
+
+  public void addFilteredProperties(Properties properties)
+  {
+    for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {
+      if (entry.getKey().startsWith(testPropertyPrefix)) {
+        properties.put(entry.getKey().substring(testPropertyPrefix.length()), entry.getValue());
+      }
     }
   }
 }

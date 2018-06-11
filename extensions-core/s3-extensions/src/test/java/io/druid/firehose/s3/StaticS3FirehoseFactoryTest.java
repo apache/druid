@@ -19,12 +19,23 @@
 
 package io.druid.firehose.s3;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.jackson.DefaultObjectMapper;
-import org.easymock.EasyMock;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.module.guice.ObjectMapperModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Provides;
+import io.druid.initialization.DruidModule;
+import io.druid.storage.s3.ServerSideEncryptingAmazonS3;
+import io.druid.storage.s3.NoopServerSideEncryption;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,38 +47,91 @@ import java.util.List;
  */
 public class StaticS3FirehoseFactoryTest
 {
+  private static final ServerSideEncryptingAmazonS3 SERVICE = new ServerSideEncryptingAmazonS3(
+      new AmazonS3Client(),
+      new NoopServerSideEncryption()
+  );
+
   @Test
   public void testSerde() throws Exception
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
+    final ObjectMapper mapper = createObjectMapper(new TestS3Module());
 
     final List<URI> uris = Arrays.asList(
         new URI("s3://foo/bar/file.gz"),
         new URI("s3://bar/foo/file2.gz")
     );
 
-    TestStaticS3FirehoseFactory factory = new TestStaticS3FirehoseFactory(
-        uris
+    final StaticS3FirehoseFactory factory = new StaticS3FirehoseFactory(
+        SERVICE,
+        uris,
+        null,
+        2048L,
+        1024L,
+        512L,
+        100L,
+        5
     );
 
-    TestStaticS3FirehoseFactory outputFact = mapper.readValue(
+    final StaticS3FirehoseFactory outputFact = mapper.readValue(
         mapper.writeValueAsString(factory),
-        TestStaticS3FirehoseFactory.class
+        StaticS3FirehoseFactory.class
     );
 
     Assert.assertEquals(factory, outputFact);
-    Assert.assertEquals(uris, outputFact.getUris());
   }
 
-  // This class is a workaround for the injectable value that StaticS3FirehoseFactory requires
-  private static class TestStaticS3FirehoseFactory extends StaticS3FirehoseFactory
+  private static ObjectMapper createObjectMapper(DruidModule baseModule)
   {
-    @JsonCreator
-    public TestStaticS3FirehoseFactory(
-        @JsonProperty("uris") List<URI> uris
-    )
+    final Injector injector = Guice.createInjector(
+        new ObjectMapperModule(),
+        baseModule
+    );
+    final ObjectMapper baseMapper = injector.getInstance(ObjectMapper.class);
+
+    baseModule.getJacksonModules().forEach(baseMapper::registerModule);
+    return baseMapper;
+  }
+
+  private static class TestS3Module implements DruidModule
+  {
+    @Override
+    public List<? extends Module> getJacksonModules()
     {
-      super(EasyMock.niceMock(RestS3Service.class), uris, null, null, null, null, null, null);
+      // Deserializer is need for AmazonS3Client even though it is injected.
+      // See https://github.com/FasterXML/jackson-databind/issues/962.
+      return ImmutableList.of(new SimpleModule().addDeserializer(AmazonS3.class, new ItemDeserializer()));
+    }
+
+    @Override
+    public void configure(Binder binder)
+    {
+
+    }
+
+    @Provides
+    public ServerSideEncryptingAmazonS3 getAmazonS3Client()
+    {
+      return SERVICE;
+    }
+  }
+
+  public static class ItemDeserializer extends StdDeserializer<AmazonS3>
+  {
+    public ItemDeserializer()
+    {
+      this(null);
+    }
+
+    public ItemDeserializer(Class<?> vc)
+    {
+      super(vc);
+    }
+
+    @Override
+    public AmazonS3 deserialize(JsonParser jp, DeserializationContext ctxt)
+    {
+      throw new UnsupportedOperationException();
     }
   }
 }

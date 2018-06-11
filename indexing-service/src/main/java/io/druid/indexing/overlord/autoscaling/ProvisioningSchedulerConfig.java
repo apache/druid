@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.autoscaling;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
@@ -37,7 +38,7 @@ public class ProvisioningSchedulerConfig
   private Period terminatePeriod = new Period("PT5M");
 
   @JsonProperty
-  private DateTime originTime = new DateTime("2012-01-01T00:55:00.000Z");
+  private DateTime originTime = DateTimes.of("2012-01-01T00:55:00.000Z");
 
   public boolean isDoAutoscale()
   {

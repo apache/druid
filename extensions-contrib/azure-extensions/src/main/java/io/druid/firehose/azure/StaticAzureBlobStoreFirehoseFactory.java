@@ -22,15 +22,19 @@ package io.druid.firehose.azure;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.data.input.impl.PrefetchableTextFilesFirehoseFactory;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.storage.azure.AzureByteSource;
 import io.druid.storage.azure.AzureStorage;
+import io.druid.storage.azure.AzureUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This class is heavily inspired by the StaticS3FirehoseFactory class in the io.druid.firehose.s3 package
@@ -75,9 +79,19 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
   }
 
   @Override
+  protected InputStream openObjectStream(AzureBlob object, long start) throws IOException
+  {
+    // BlobInputStream.skip() moves the next read offset instead of skipping first 'start' bytes.
+    final InputStream in = openObjectStream(object);
+    final long skip = in.skip(start);
+    Preconditions.checkState(skip == start, "start offset was [%s] but [%s] bytes were skipped", start, skip);
+    return in;
+  }
+
+  @Override
   protected InputStream wrapObjectStream(AzureBlob object, InputStream stream) throws IOException
   {
-    return object.getPath().endsWith(".gz") ? CompressionUtils.gzipInputStream(stream) : stream;
+    return CompressionUtils.decompress(stream, object.getPath());
   }
 
   private static AzureByteSource makeByteSource(AzureStorage azureStorage, AzureBlob object)
@@ -88,5 +102,45 @@ public class StaticAzureBlobStoreFirehoseFactory extends PrefetchableTextFilesFi
                         : object.getPath();
 
     return new AzureByteSource(azureStorage, container, path);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final StaticAzureBlobStoreFirehoseFactory that = (StaticAzureBlobStoreFirehoseFactory) o;
+
+    return Objects.equals(blobs, that.blobs) &&
+           getMaxCacheCapacityBytes() == that.getMaxCacheCapacityBytes() &&
+           getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
+           getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
+           getFetchTimeout() == that.getFetchTimeout() &&
+           getMaxFetchRetry() == that.getMaxFetchRetry();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        blobs,
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        getMaxFetchRetry()
+    );
+  }
+
+  @Override
+  protected Predicate<Throwable> getRetryCondition()
+  {
+    return AzureUtils.AZURE_RETRY;
   }
 }

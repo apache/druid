@@ -21,6 +21,9 @@ package io.druid.java.util.common.guava;
 
 import com.google.common.collect.Ordering;
 
+import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -33,7 +36,7 @@ import java.util.function.Function;
  * methods get called and other resources get cleaned up whenever processing is complete. Without this inversion
  * it is very easy to unintentionally leak resources when iterating over something that is backed by a resource.
  * <p>
- * Sequences also expose {#see com.metamx.common.guava.Yielder} Yielder objects which allow you to implement a
+ * Sequences also expose {#see io.druid.java.util.common.guava.Yielder} Yielder objects which allow you to implement a
  * continuation over the Sequence. Yielder do not offer the same guarantees of automatic resource management
  * as the accumulate method, but they are Closeable and will do the proper cleanup when close() is called on them.
  */
@@ -68,6 +71,23 @@ public interface Sequence<T>
     return new MappedSequence<>(this, mapper);
   }
 
+  default List<T> toList()
+  {
+    return accumulate(new ArrayList<>(), Accumulators.list());
+  }
+
+  default Sequence<T> limit(int limit)
+  {
+    return new LimitedSequence<>(this, limit);
+  }
+
+  default <R> Sequence<R> flatMap(
+      Function<? super T, ? extends Sequence<? extends R>> mapper
+  )
+  {
+    return new ConcatSequence<>(this.map(mapper));
+  }
+
   default <R> Sequence<R> flatMerge(
       Function<? super T, ? extends Sequence<? extends R>> mapper,
       Ordering<? super R> ordering
@@ -79,5 +99,10 @@ public interface Sequence<T>
   default Sequence<T> withEffect(Runnable effect, Executor effectExecutor)
   {
     return Sequences.withEffect(this, effect, effectExecutor);
+  }
+
+  default Sequence<T> withBaggage(Closeable baggage)
+  {
+    return Sequences.withBaggage(this, baggage);
   }
 }

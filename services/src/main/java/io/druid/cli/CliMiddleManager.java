@@ -21,12 +21,15 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-
 import io.airlift.airline.Command;
+import io.druid.discovery.DruidNodeDiscoveryProvider;
+import io.druid.discovery.WorkerNodeService;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.IndexingServiceModuleHelper;
 import io.druid.guice.IndexingServiceTaskLogsModule;
@@ -35,14 +38,18 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.PolyBind;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.overlord.ForkingTaskRunner;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
 import io.druid.indexing.worker.WorkerTaskMonitor;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.indexing.worker.http.TaskManagementResource;
 import io.druid.indexing.worker.http.WorkerResource;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -56,7 +63,7 @@ import java.util.List;
  */
 @Command(
     name = "middleManager",
-    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service."
+    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service, see http://druid.io/docs/latest/design/middlemanager.html for a description"
 )
 public class CliMiddleManager extends ServerRunnable
 {
@@ -89,15 +96,39 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+
 
             binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
             binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
 
             LifecycleModule.register(binder, WorkerTaskMonitor.class);
-            binder.bind(JettyServerInitializer.class).toInstance(new MiddleManagerJettyServerInitializer());
+            binder.bind(JettyServerInitializer.class)
+                  .to(MiddleManagerJettyServerInitializer.class)
+                  .in(LazySingleton.class);
             Jerseys.addResource(binder, WorkerResource.class);
+            Jerseys.addResource(binder, TaskManagementResource.class);
 
             LifecycleModule.register(binder, Server.class);
+
+            binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
+                new DiscoverySideEffectsProvider(
+                    DruidNodeDiscoveryProvider.NODE_TYPE_MM,
+                    ImmutableList.of(WorkerNodeService.class)
+                )
+            ).in(LazySingleton.class);
+            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
           }
 
           @Provides
@@ -110,6 +141,17 @@ public class CliMiddleManager extends ServerRunnable
                 config.getIp(),
                 config.getCapacity(),
                 config.getVersion()
+            );
+          }
+
+          @Provides
+          @LazySingleton
+          public WorkerNodeService getWorkerNodeService(WorkerConfig workerConfig)
+          {
+            return new WorkerNodeService(
+                workerConfig.getIp(),
+                workerConfig.getCapacity(),
+                workerConfig.getVersion()
             );
           }
         },

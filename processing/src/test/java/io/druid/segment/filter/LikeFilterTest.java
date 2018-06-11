@@ -28,12 +28,12 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.query.extraction.SubstringDimExtractionFn;
 import io.druid.query.filter.LikeDimFilter;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,18 +50,18 @@ public class LikeFilterTest extends BaseFilterTest
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", new DateTime("2000")),
+          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
           new DimensionsSpec(null, null, null)
       )
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "foo")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "foobar")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "bar")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "foobarbaz")),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "foo%bar"))
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "foo")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "foobar")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "bar")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "foobarbaz")).get(0),
+      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "foo%bar")).get(0)
   );
 
   public LikeFilterTest(

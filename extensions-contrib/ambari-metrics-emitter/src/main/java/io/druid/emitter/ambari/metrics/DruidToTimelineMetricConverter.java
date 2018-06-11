@@ -21,14 +21,14 @@ package io.druid.emitter.ambari.metrics;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = WhiteListBasedDruidToTimelineEventConverter.class)
-@JsonSubTypes(value= {
-    @JsonSubTypes.Type(name="all", value = SendAllTimelineEventConverter.class),
-    @JsonSubTypes.Type(name="whiteList", value = WhiteListBasedDruidToTimelineEventConverter.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "all", value = SendAllTimelineEventConverter.class),
+    @JsonSubTypes.Type(name = "whiteList", value = WhiteListBasedDruidToTimelineEventConverter.class)
 })
 
 public interface DruidToTimelineMetricConverter

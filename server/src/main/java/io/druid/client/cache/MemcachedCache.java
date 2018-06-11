@@ -19,7 +19,6 @@
 
 package io.druid.client.cache;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -31,13 +30,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Ints;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
@@ -56,6 +55,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -80,14 +80,14 @@ public class MemcachedCache implements Cache
    * If some other algorithms are considered as the default algorithm instead of this one, the cache distribution for
    * those hash algorithms should be checked and compared using {@code CacheDistributionTest}.
    */
-  final static HashAlgorithm MURMUR3_128 = new HashAlgorithm()
+  static final HashAlgorithm MURMUR3_128 = new HashAlgorithm()
   {
     final HashFunction fn = Hashing.murmur3_128();
 
     @Override
     public long hash(String k)
     {
-      return fn.hashString(k, Charsets.UTF_8).asLong();
+      return fn.hashString(k, StandardCharsets.UTF_8).asLong();
     }
 
     @Override
@@ -344,8 +344,8 @@ public class MemcachedCache implements Cache
           // (approx < 5% difference in counts across nodes, with 5 cache nodes)
           .setKetamaNodeRepetitions(1000)
           .setHashAlg(MURMUR3_128)
-          .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-          .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+          .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(StringUtils.toUpperCase(config.getProtocol())))
+          .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(StringUtils.toUpperCase(config.getLocator())))
           .setDaemon(true)
           .setFailureMode(FailureMode.Cancel)
           .setTranscoder(transcoder)
@@ -500,7 +500,7 @@ public class MemcachedCache implements Cache
   private static byte[] serializeValue(NamedKey key, byte[] value)
   {
     byte[] keyBytes = key.toByteArray();
-    return ByteBuffer.allocate(Ints.BYTES + keyBytes.length + value.length)
+    return ByteBuffer.allocate(Integer.BYTES + keyBytes.length + value.length)
                      .putInt(keyBytes.length)
                      .put(keyBytes)
                      .put(value)
@@ -600,8 +600,7 @@ public class MemcachedCache implements Cache
       MemcachedClientIF.MAX_KEY_LENGTH
       - 40 // length of namespace hash
       - 40 // length of key hash
-      - 2  // length of separators
-      ;
+      - 2; // length of separators
 
   private static String computeKeyHash(String memcachedPrefix, NamedKey key)
   {

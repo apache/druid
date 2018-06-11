@@ -19,103 +19,32 @@
 
 package io.druid.segment;
 
-import io.druid.java.util.common.io.Closer;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.IOPeon;
-import io.druid.segment.serde.DoubleGenericColumnPartSerde;
+import io.druid.segment.serde.ColumnPartSerde;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.IntBuffer;
-import java.util.List;
-
-public class DoubleDimensionMergerV9 implements DimensionMergerV9<Double>
+public class DoubleDimensionMergerV9 extends NumericDimensionMergerV9
 {
-  protected String dimensionName;
-  protected ProgressIndicator progress;
-  protected final IndexSpec indexSpec;
-  protected ColumnCapabilities capabilities;
-  protected final File outDir;
-  protected IOPeon ioPeon;
-  private DoubleColumnSerializer serializer;
 
-  public DoubleDimensionMergerV9(
-      String dimensionName,
-      IndexSpec indexSpec,
-      File outDir,
-      IOPeon ioPeon,
-      ColumnCapabilities capabilities,
-      ProgressIndicator progress
-  )
+  DoubleDimensionMergerV9(String dimensionName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
-    this.dimensionName = dimensionName;
-    this.indexSpec = indexSpec;
-    this.capabilities = capabilities;
-    this.outDir = outDir;
-    this.ioPeon = ioPeon;
-    this.progress = progress;
-
-    try {
-      setupEncodedValueWriter();
-    }
-    catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
-  }
-
-  protected void setupEncodedValueWriter() throws IOException
-  {
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
-    this.serializer = DoubleColumnSerializer.create(ioPeon, dimensionName, metCompression);
-    serializer.open();
+    super(dimensionName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override
-  public ColumnDescriptor makeColumnDescriptor() throws IOException
+  GenericColumnSerializer setupEncodedValueWriter()
   {
-    serializer.close();
+    return IndexMergerV9.createDoubleColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
+  }
+
+  @Override
+  public ColumnDescriptor makeColumnDescriptor()
+  {
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.DOUBLE);
-    builder.addSerde(
-        DoubleGenericColumnPartSerde.serializerBuilder()
-                                    .withByteOrder(IndexIO.BYTE_ORDER)
-                                    .withDelegate(serializer)
-                                    .build()
-    );
+    ColumnPartSerde serde = IndexMergerV9.createDoubleColumnPartSerde(serializer, indexSpec);
+    builder.addSerde(serde);
     return builder.build();
-  }
-
-  @Override
-  public void writeMergedValueMetadata(List<IndexableAdapter> adapters) throws IOException
-  {
-    // double columns do not have additional metadata
-  }
-
-  @Override
-  public Double convertSegmentRowValuesToMergedRowValues(Double segmentRow, int segmentIndexNumber)
-  {
-    return segmentRow;
-  }
-
-  @Override
-  public void processMergedRow(Double rowValues) throws IOException
-  {
-    serializer.serialize(rowValues);
-  }
-
-  @Override
-  public void writeIndexes(List<IntBuffer> segmentRowNumConversions, Closer closer) throws IOException
-  {
-    // double columns do not have indexes
-  }
-
-  @Override
-  public boolean canSkip()
-  {
-    // a double column can never be all null
-    return false;
   }
 }

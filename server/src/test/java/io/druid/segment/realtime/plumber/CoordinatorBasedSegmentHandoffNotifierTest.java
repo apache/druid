@@ -24,6 +24,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableSegmentLoadInfo;
 import io.druid.client.coordinator.CoordinatorClient;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.SegmentDescriptor;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
@@ -35,7 +36,6 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CoordinatorBasedSegmentHandoffNotifierTest
@@ -51,9 +51,9 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   };
 
   @Test
-  public void testHandoffCallbackNotCalled() throws IOException, InterruptedException
+  public void testHandoffCallbackNotCalled()
   {
-    Interval interval = new Interval(
+    Interval interval = Intervals.of(
         "2011-04-01/2011-04-02"
     );
     SegmentDescriptor descriptor = new SegmentDescriptor(
@@ -108,9 +108,9 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   }
 
   @Test
-  public void testHandoffCallbackCalled() throws IOException, InterruptedException
+  public void testHandoffCallbackCalled()
   {
-    Interval interval = new Interval(
+    Interval interval = Intervals.of(
         "2011-04-01/2011-04-02"
     );
     SegmentDescriptor descriptor = new SegmentDescriptor(
@@ -168,7 +168,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   @Test
   public void testHandoffChecksForVersion()
   {
-    Interval interval = new Interval(
+    Interval interval = Intervals.of(
         "2011-04-01/2011-04-02"
     );
     Assert.assertFalse(
@@ -212,7 +212,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   @Test
   public void testHandoffChecksForAssignableServer()
   {
-    Interval interval = new Interval(
+    Interval interval = Intervals.of(
         "2011-04-01/2011-04-02"
     );
     Assert.assertTrue(
@@ -243,7 +243,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   @Test
   public void testHandoffChecksForPartitionNumber()
   {
-    Interval interval = new Interval(
+    Interval interval = Intervals.of(
         "2011-04-01/2011-04-02"
     );
     Assert.assertTrue(
@@ -281,7 +281,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
             Lists.newArrayList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(
-                        new Interval(
+                        Intervals.of(
                             "2011-04-01/2011-04-02"
                         ), "v1", 1
                     ),
@@ -289,7 +289,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
                 )
             ),
             new SegmentDescriptor(
-                new Interval(
+                Intervals.of(
                     "2011-04-01/2011-04-03"
                 ), "v1", 1
             )
@@ -301,7 +301,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
             Lists.newArrayList(
                 new ImmutableSegmentLoadInfo(
                     createSegment(
-                        new Interval(
+                        Intervals.of(
                             "2011-04-01/2011-04-04"
                         ), "v1", 1
                     ),
@@ -309,7 +309,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
                 )
             ),
             new SegmentDescriptor(
-                new Interval(
+                Intervals.of(
                     "2011-04-02/2011-04-03"
                 ), "v1", 1
             )

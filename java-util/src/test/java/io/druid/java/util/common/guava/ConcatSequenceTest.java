@@ -165,7 +165,7 @@ public class ConcatSequenceTest
   }
 
   @Test
-  public void testClosingOfSequenceSequenceWhenExceptionThrown() throws Exception
+  public void testClosingOfSequenceSequenceWhenExceptionThrown()
   {
     final AtomicInteger closedCount = new AtomicInteger(0);
     final Sequence<Integer> seq = Sequences.concat(
@@ -226,7 +226,7 @@ public class ConcatSequenceTest
                             public boolean hasNext()
                             {
                               boolean result = baseIter.hasNext();
-                              if(!result) {
+                              if (!result) {
                                 lastSeqFullyRead.set(true);
                               }
                               return result;
@@ -269,17 +269,17 @@ public class ConcatSequenceTest
     );
 
     List<Integer> result = new ArrayList<>();
-    while(!yielder.isDone()) {
+    while (!yielder.isDone()) {
       result.add(yielder.get());
       yielder = yielder.next(null);
     }
     yielder.close();
 
-    Assert.assertEquals(ImmutableList.of(1,2,3,4,5,6), result);
+    Assert.assertEquals(ImmutableList.of(1, 2, 3, 4, 5, 6), result);
   }
 
   @SuppressWarnings("unchecked")
-  public void testAll(Iterable <List<Integer>> vals) throws IOException
+  public void testAll(Iterable<List<Integer>> vals) throws IOException
   {
     final Iterable<TestSequence<Integer>> theSequences = Iterables.transform(
         vals,

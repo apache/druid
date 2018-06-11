@@ -29,13 +29,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.concurrent.ScheduledExecutors;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import io.druid.indexing.worker.Worker;
+import io.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -103,8 +105,8 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     private final Set<String> currentlyTerminating = Sets.newHashSet();
 
     private int targetWorkerCount = -1;
-    private DateTime lastProvisionTime = new DateTime();
-    private DateTime lastTerminateTime = new DateTime();
+    private DateTime lastProvisionTime = DateTimes.nowUtc();
+    private DateTime lastTerminateTime = lastProvisionTime;
 
     SimpleProvisioner(WorkerTaskRunner runner)
     {
@@ -117,9 +119,9 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       boolean didProvision = false;
-      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
-      if (workerConfig == null || workerConfig.getAutoScaler() == null) {
-        log.error("No workerConfig available, cannot provision new workers.");
+      final DefaultWorkerBehaviorConfig workerConfig =
+          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "provision", log);
+      if (workerConfig == null) {
         return false;
       }
 
@@ -154,7 +156,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           break;
         } else {
           currentlyProvisioning.addAll(newNodes);
-          lastProvisionTime = new DateTime();
+          lastProvisionTime = DateTimes.nowUtc();
           scalingStats.addProvisionEvent(provisioned);
           want -= provisioned.getNodeIds().size();
           didProvision = true;
@@ -162,7 +164,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
       }
 
       if (!currentlyProvisioning.isEmpty()) {
-        Duration durSinceLastProvision = new Duration(lastProvisionTime, new DateTime());
+        Duration durSinceLastProvision = new Duration(lastProvisionTime, DateTimes.nowUtc());
         log.info("%s provisioning. Current wait time: %s", currentlyProvisioning, durSinceLastProvision);
         if (durSinceLastProvision.isLongerThan(config.getMaxScalingDuration().toStandardDuration())) {
           log.makeAlert("Worker node provisioning taking too long!")
@@ -182,9 +184,9 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
     public synchronized boolean doTerminate()
     {
       Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-      final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
+      final DefaultWorkerBehaviorConfig workerConfig =
+          PendingTaskBasedWorkerProvisioningStrategy.getDefaultWorkerBehaviorConfig(workerConfigRef, "terminate", log);
       if (workerConfig == null) {
-        log.warn("No workerConfig available, cannot terminate workers.");
         return false;
       }
 
@@ -207,14 +209,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           )
       );
 
-      final Set<String> stillExisting = Sets.newHashSet();
-      for (String s : currentlyTerminating) {
-        if (workerNodeIds.contains(s)) {
-          stillExisting.add(s);
-        }
-      }
-      currentlyTerminating.clear();
-      currentlyTerminating.addAll(stillExisting);
+      currentlyTerminating.retainAll(workerNodeIds);
 
       Collection<ImmutableWorkerInfo> workers = runner.getWorkers();
       updateTargetWorkerCount(workerConfig, pendingTasks, workers);
@@ -250,14 +245,14 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
                                                            .terminate(ImmutableList.copyOf(laziestWorkerIps));
             if (terminated != null) {
               currentlyTerminating.addAll(terminated.getNodeIds());
-              lastTerminateTime = new DateTime();
+              lastTerminateTime = DateTimes.nowUtc();
               scalingStats.addTerminateEvent(terminated);
               didTerminate = true;
             }
           }
         }
       } else {
-        Duration durSinceLastTerminate = new Duration(lastTerminateTime, new DateTime());
+        Duration durSinceLastTerminate = new Duration(lastTerminateTime, DateTimes.nowUtc());
 
         log.info("%s terminating. Current wait time: %s", currentlyTerminating, durSinceLastTerminate);
 
@@ -276,7 +271,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
 
 
     private void updateTargetWorkerCount(
-        final WorkerBehaviorConfig workerConfig,
+        final DefaultWorkerBehaviorConfig workerConfig,
         final Collection<? extends TaskRunnerWorkItem> pendingTasks,
         final Collection<ImmutableWorkerInfo> zkWorkers
     )

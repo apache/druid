@@ -36,15 +36,25 @@ postAggregation : {
 }
 ```
 
-### Field accessor post-aggregator
+### Field accessor post-aggregators
 
-This returns the value produced by the specified [aggregator](../querying/aggregations.html).
+These post-aggregators return the value produced by the specified [aggregator](../querying/aggregations.html).
 
 `fieldName` refers to the output name of the aggregator given in the [aggregations](../querying/aggregations.html) portion of the query.
+For complex aggregators, like "cardinality" and "hyperUnique", the `type` of the post-aggregator determines what
+the post-aggregator will return. Use type "fieldAccess" to return the raw aggregation object, or use type
+"finalizingFieldAccess" to return a finalized value, such as an estimated cardinality.
 
 ```json
 { "type" : "fieldAccess", "name": <output_name>, "fieldName" : <aggregator_name> }
 ```
+
+or
+
+```json
+{ "type" : "finalizingFieldAccess", "name": <output_name>, "fieldName" : <aggregator_name> }
+```
+
 
 ### Constant post-aggregator
 
@@ -107,7 +117,11 @@ JavaScript-based functionality is disabled by default. Please refer to the Druid
 The hyperUniqueCardinality post aggregator is used to wrap a hyperUnique object such that it can be used in post aggregations.
 
 ```json
-{ "type"  : "hyperUniqueCardinality", "name": <output name>, "fieldName"  : <the name field value of the hyperUnique aggregator>}
+{
+  "type"  : "hyperUniqueCardinality",
+  "name": <output name>,
+  "fieldName"  : <the name field value of the hyperUnique aggregator>
+}
 ```
 
 It can be used in a sample calculation as so:
@@ -128,6 +142,10 @@ It can be used in a sample calculation as so:
   }]
 ```
 
+This post-aggregator will inherit the rounding behavior of the aggregator it references. Note that this inheritance
+is only effective if you directly reference an aggregator. Going through another post-aggregator, for example, will
+cause the user-specified rounding behavior to get lost and default to "no rounding".
+
 ## Example Usage
 
 In this example, let’s calculate a simple percentage using post aggregators. Let’s imagine our data set has a metric called "total".
@@ -144,14 +162,35 @@ The format of the query JSON is as follows:
   "postAggregations" : [{
     "type"   : "arithmetic",
     "name"   : "average",
+    "fn"     : "/",
+    "fields" : [
+           { "type" : "fieldAccess", "name" : "tot", "fieldName" : "tot" },
+           { "type" : "fieldAccess", "name" : "rows", "fieldName" : "rows" }
+         ]
+  }]
+  ...
+}
+```
+
+
+```json
+{
+  ...
+  "aggregations" : [
+    { "type" : "doubleSum", "name" : "tot", "fieldName" : "total" },
+    { "type" : "doubleSum", "name" : "part", "fieldName" : "part" }
+  ],
+  "postAggregations" : [{
+    "type"   : "arithmetic",
+    "name"   : "part_percentage",
     "fn"     : "*",
     "fields" : [
        { "type"   : "arithmetic",
-         "name"   : "div",
+         "name"   : "ratio",
          "fn"     : "/",
          "fields" : [
-           { "type" : "fieldAccess", "name" : "tot", "fieldName" : "tot" },
-           { "type" : "fieldAccess", "name" : "rows", "fieldName" : "rows" }
+           { "type" : "fieldAccess", "name" : "part", "fieldName" : "part" },
+           { "type" : "fieldAccess", "name" : "tot", "fieldName" : "tot" }
          ]
        },
        { "type" : "constant", "name": "const", "value" : 100 }

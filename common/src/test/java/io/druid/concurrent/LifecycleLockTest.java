@@ -57,7 +57,7 @@ public class LifecycleLockTest
             finishLatch.countDown();
           }
           catch (InterruptedException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
           }
         }
       }.start();
@@ -99,7 +99,7 @@ public class LifecycleLockTest
             finishLatch.countDown();
           }
           catch (InterruptedException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
           }
         }
       }.start();
@@ -138,8 +138,7 @@ public class LifecycleLockTest
     lifecycleLock.started();
     lifecycleLock.exitStart();
     Assert.assertTrue(lifecycleLock.canStop());
-    lifecycleLock.exitStop();
-    lifecycleLock.reset();
+    lifecycleLock.exitStopAndReset();
     Assert.assertTrue(lifecycleLock.canStart());
   }
 

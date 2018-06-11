@@ -19,24 +19,44 @@
 
 package io.druid.metadata;
 
+import java.util.List;
+
 /**
  */
 public interface MetadataStorageConnector
 {
+  String CONFIG_TABLE_KEY_COLUMN = "name";
+  String CONFIG_TABLE_VALUE_COLUMN = "payload";
+
   Void insertOrUpdate(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] value
-  ) throws Exception;
+      String tableName,
+      String keyColumn,
+      String valueColumn,
+      String key,
+      byte[] value
+  );
 
   byte[] lookup(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key
+      String tableName,
+      String keyColumn,
+      String valueColumn,
+      String key
   );
+
+  /**
+   * Atomic compare-and-swap variant of insertOrUpdate().
+   *
+   * @param updates Set of updates to be made. If compare checks succeed for all updates, perform all updates.
+   *                If any compare check fails, reject all updates.
+   * @return true if updates were made, false otherwise
+   * @throws Exception
+   */
+  default boolean compareAndSwap(
+      List<MetadataCASUpdate> updates
+  )
+  {
+    throw new UnsupportedOperationException("compareAndSwap is not implemented.");
+  }
 
   void createDataSourceTable();
 

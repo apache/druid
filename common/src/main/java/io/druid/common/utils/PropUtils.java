@@ -59,7 +59,7 @@ public class PropUtils
       return Integer.parseInt(retVal);
     }
     catch (NumberFormatException e) {
-      throw new ISE(e, "Property[%s] is expected to be an int, it is not[%s].",property, retVal);
+      throw new ISE(e, "Property[%s] is expected to be an int, it is not[%s].", property, retVal);
     }
   }
 }

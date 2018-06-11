@@ -103,7 +103,7 @@ public class StringComparators
     @Override
     public int compare(String str1, String str2)
     {
-      int[] pos = { 0, 0 };
+      int[] pos = {0, 0};
 
       if (str1 == null) {
         if (str2 == null) {

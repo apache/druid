@@ -19,11 +19,14 @@
 
 package io.druid.query.aggregation.hyperloglog;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.hll.HLLCV0;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.StringUtils;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,23 +35,23 @@ import java.util.Random;
 
 public class HyperUniquesAggregatorFactoryTest
 {
-  final static HyperUniquesAggregatorFactory aggregatorFactory = new HyperUniquesAggregatorFactory(
+  static final HyperUniquesAggregatorFactory aggregatorFactory = new HyperUniquesAggregatorFactory(
       "hyperUnique",
       "uniques"
   );
-  final static String V0_BASE64 = "AAYbEyQwFyQVASMCVFEQQgEQIxIhM4ISAQMhUkICEDFDIBMhMgFQFAFAMjAAEhEREyVAEiUBAhIjISATMCECMiERIRIiVRFRAyIAEgFCQSMEJAITATAAEAMQgCEBEjQiAyUTAyEQASJyAGURAAISAwISATETQhAREBYDIVIlFTASAzJgERIgRCcmUyAwNAMyEJMjIhQXQhEWECABQDETATEREjIRAgEyIiMxMBQiAkBBMDYAMEQQACMzMhIkMTQSkYIRABIBADMBAhIEISAENkEBQDAxETMAIEEwEzQiQSEVQSFBBAQDICIiAVIAMTAQIQYBIRABADMDEzEAQSMkEiAYFBAQI0AmECEyQSARRTIVMhEkMiKAMCUBxUghAkIBI3EmMAQiACEAJDJCAAADOzESEDBCRjMgEUQQETQwEWIhA6MlAiAAZDI1AgEIIDUyFDIHMQEEAwIRBRABBStCZCQhAgJSMQIiQEEURTBmM1MxACIAETGhMgQnBRICNiIREyIUNAEAAkABAwQSEBJBIhIhIRERAiIRACUhEUAVMkQGEVMjECYjACBwEQQSIRIgAAEyExQUFSEAIBJCIDIDYTAgMiNBIUADUiETADMoFEADETMCIwUEQkIAESMSIzIABDERIXEhIiACQgUSEgJiQCAUARIRAREDQiEUAkQgAgQiIEAzIxRCARIgBAAVAzMAECEwE0Qh8gAAASEhEiAiMhUxcRImIVABATYyUBAwIoE1QhRDIiYBIBEBEiQSQyERAAADMAARAEACFYUwQSQBIRIgURITARFSEzEHEBACOTMREBIAMjIgEhU0cxEQIRIhIi1wEgMRUBEgMQIRAnAVASURMHQBAiEyBSAAEBQTAWQ5EQA0IUMSISAUEiASIjIhMhMFJBBSEjEAECEwACASEQFBAjARITEQIgYTEKEAeAAiMkEyARowARFBAicRISIBIxAQAgEBARMCIRQgMSIVIAkjMxIAIEMyADASMgFRIjEyKjEjBBIEQCUAARYBEQMxMCIBACNCACRCMlEzUUAAUDM1MhAjEgAxAAISAVFQECAhQAMBMhEzEgASNxAhFRIxECMRJBQAERAToBgQMhJSRQFAEhAwMiIhMQAwAgQiBQJiIGMQQhEiQxR1MiAjIAIEEiAkARECEzQlMjECIRATBgIhEBQAIQAEATEjBCMwAgMBMhAhIyFBIxQAARI1AAEABCIDFBIRUzMBIgAgEiARQCASMQQDQCFBAQAUJwMUElAyIAIRBSIRITICEAIxMAEUBEYTcBMBEEIxMREwIRIDAGIAEgYxBAEANCAhBAI2UhIiIgIRABIEVRAwNEIQERQgEFMhFCQSIAEhQDMTEQMiAjJyEQ==";
+  static final String V0_BASE64 = "AAYbEyQwFyQVASMCVFEQQgEQIxIhM4ISAQMhUkICEDFDIBMhMgFQFAFAMjAAEhEREyVAEiUBAhIjISATMCECMiERIRIiVRFRAyIAEgFCQSMEJAITATAAEAMQgCEBEjQiAyUTAyEQASJyAGURAAISAwISATETQhAREBYDIVIlFTASAzJgERIgRCcmUyAwNAMyEJMjIhQXQhEWECABQDETATEREjIRAgEyIiMxMBQiAkBBMDYAMEQQACMzMhIkMTQSkYIRABIBADMBAhIEISAENkEBQDAxETMAIEEwEzQiQSEVQSFBBAQDICIiAVIAMTAQIQYBIRABADMDEzEAQSMkEiAYFBAQI0AmECEyQSARRTIVMhEkMiKAMCUBxUghAkIBI3EmMAQiACEAJDJCAAADOzESEDBCRjMgEUQQETQwEWIhA6MlAiAAZDI1AgEIIDUyFDIHMQEEAwIRBRABBStCZCQhAgJSMQIiQEEURTBmM1MxACIAETGhMgQnBRICNiIREyIUNAEAAkABAwQSEBJBIhIhIRERAiIRACUhEUAVMkQGEVMjECYjACBwEQQSIRIgAAEyExQUFSEAIBJCIDIDYTAgMiNBIUADUiETADMoFEADETMCIwUEQkIAESMSIzIABDERIXEhIiACQgUSEgJiQCAUARIRAREDQiEUAkQgAgQiIEAzIxRCARIgBAAVAzMAECEwE0Qh8gAAASEhEiAiMhUxcRImIVABATYyUBAwIoE1QhRDIiYBIBEBEiQSQyERAAADMAARAEACFYUwQSQBIRIgURITARFSEzEHEBACOTMREBIAMjIgEhU0cxEQIRIhIi1wEgMRUBEgMQIRAnAVASURMHQBAiEyBSAAEBQTAWQ5EQA0IUMSISAUEiASIjIhMhMFJBBSEjEAECEwACASEQFBAjARITEQIgYTEKEAeAAiMkEyARowARFBAicRISIBIxAQAgEBARMCIRQgMSIVIAkjMxIAIEMyADASMgFRIjEyKjEjBBIEQCUAARYBEQMxMCIBACNCACRCMlEzUUAAUDM1MhAjEgAxAAISAVFQECAhQAMBMhEzEgASNxAhFRIxECMRJBQAERAToBgQMhJSRQFAEhAwMiIhMQAwAgQiBQJiIGMQQhEiQxR1MiAjIAIEEiAkARECEzQlMjECIRATBgIhEBQAIQAEATEjBCMwAgMBMhAhIyFBIxQAARI1AAEABCIDFBIRUzMBIgAgEiARQCASMQQDQCFBAQAUJwMUElAyIAIRBSIRITICEAIxMAEUBEYTcBMBEEIxMREwIRIDAGIAEgYxBAEANCAhBAI2UhIiIgIRABIEVRAwNEIQERQgEFMhFCQSIAEhQDMTEQMiAjJyEQ==";
 
   private final HashFunction fn = Hashing.murmur3_128();
 
   @Test
-  public void testDeserializeV0() throws Exception
+  public void testDeserializeV0()
   {
     Object v0 = aggregatorFactory.deserialize(V0_BASE64);
     Assert.assertEquals("deserialized value is HLLCV0", HLLCV0.class, v0.getClass());
   }
 
   @Test
-  public void testCompare1() throws Exception
+  public void testCompare1()
   {
     HyperLogLogCollector collector1 = HyperLogLogCollector.makeLatestCollector();
     HyperLogLogCollector collector2 = HyperLogLogCollector.makeLatestCollector();
@@ -64,7 +67,7 @@ public class HyperUniquesAggregatorFactoryTest
   }
 
   @Test
-  public void testCompare2() throws Exception
+  public void testCompare2()
   {
     Random rand = new Random(0);
     HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
@@ -83,8 +86,8 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       Assert.assertEquals(
-              Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-              comparator.compare(collector1, collector2)
+          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
+          comparator.compare(collector1, collector2)
       );
     }
 
@@ -102,8 +105,8 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       Assert.assertEquals(
-              Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-              comparator.compare(collector1, collector2)
+          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
+          comparator.compare(collector1, collector2)
       );
     }
 
@@ -121,14 +124,14 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       Assert.assertEquals(
-              Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
-              comparator.compare(collector1, collector2)
+          Double.compare(collector1.estimateCardinality(), collector2.estimateCardinality()),
+          comparator.compare(collector1, collector2)
       );
     }
   }
 
   @Test
-  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception
+  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases()
   {
     // given
     Random rand = new Random(0);
@@ -150,20 +153,42 @@ public class HyperUniquesAggregatorFactoryTest
       }
 
       // when
-      final int orderedByCardinality = Double.compare(leftCollector.estimateCardinality(),
-              rightCollector.estimateCardinality());
+      final int orderedByCardinality = Double.compare(
+          leftCollector.estimateCardinality(),
+          rightCollector.estimateCardinality()
+      );
       final int orderedByComparator = comparator.compare(leftCollector, rightCollector);
 
       // then, assert hyperloglog comparator behaves consistently with estimated cardinalities
       Assert.assertEquals(
-              StringUtils.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
-                                 "Left={cardinality=%f, hll=%s},\n" +
-                                 "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
-                                 leftCollector.estimateCardinality(), leftCollector,
-                                 rightCollector.estimateCardinality(), rightCollector),
-              orderedByCardinality,
-              orderedByComparator
+          StringUtils.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
+                             "Left={cardinality=%f, hll=%s},\n" +
+                             "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
+                             leftCollector.estimateCardinality(), leftCollector,
+                             rightCollector.estimateCardinality(), rightCollector
+          ),
+          orderedByCardinality,
+          orderedByComparator
       );
     }
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory(
+        "foo",
+        "bar",
+        true,
+        true
+    );
+
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final AggregatorFactory factory2 = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(factory),
+        AggregatorFactory.class
+    );
+
+    Assert.assertEquals(factory, factory2);
   }
 }

@@ -25,17 +25,19 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheStats;
 import io.druid.client.cache.MapCache;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -56,15 +58,12 @@ import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
 import io.druid.query.topn.TopNResultValue;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -80,7 +79,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CachingQueryRunnerTest
 {
   @Parameterized.Parameters(name = "numBackgroundThreads={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(5, 1, 0));
   }
@@ -92,11 +91,11 @@ public class CachingQueryRunnerTest
   );
 
   private static final Object[] objects = new Object[]{
-      new DateTime("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
-      new DateTime("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-      new DateTime("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
-      new DateTime("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
-      new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
+      DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
+      DateTimes.of("2011-01-06"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+      DateTimes.of("2011-01-07"), "a", 50, 4991, "b", 50, 4990, "c", 50, 4989,
+      DateTimes.of("2011-01-08"), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986,
+      DateTimes.of("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
   };
 
   private ExecutorService backgroundExecutorService;
@@ -156,13 +155,13 @@ public class CachingQueryRunnerTest
                                     .build();
 
       Result row1 = new Result(
-          new DateTime("2011-04-01"),
+          DateTimes.of("2011-04-01"),
           new TimeseriesResultValue(
               ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
           )
       );
       Result row2 = new Result<>(
-          new DateTime("2011-04-02"),
+          DateTimes.of("2011-04-02"),
           new TimeseriesResultValue(
               ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
           )
@@ -203,7 +202,7 @@ public class CachingQueryRunnerTest
           }
 
           @Override
-          public void after(boolean isDone, Throwable thrown) throws Exception
+          public void after(boolean isDone, Throwable thrown)
           {
             closable.close();
           }
@@ -258,7 +257,7 @@ public class CachingQueryRunnerTest
     };
 
     String segmentIdentifier = "segment";
-    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
+    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     CachingQueryRunner runner = new CachingQueryRunner(
@@ -300,12 +299,12 @@ public class CachingQueryRunnerTest
     );
 
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Sequence res = runner.run(query, context);
+    Sequence res = runner.run(QueryPlus.wrap(query), context);
     // base sequence is not closed yet
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
 
-    ArrayList results = Sequences.toList(res, new ArrayList());
+    List results = res.toList();
     Assert.assertTrue(closable.isClosed());
     Assert.assertEquals(expectedRes.toString(), results.toString());
 
@@ -315,7 +314,7 @@ public class CachingQueryRunnerTest
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 
-    Function<Object, Result> fn = cacheStrategy.pullFromCache();
+    Function<Object, Result> fn = cacheStrategy.pullFromSegmentLevelCache();
     List<Result> cacheResults = Lists.newArrayList(
         Iterators.transform(
             objectMapper.readValues(
@@ -332,11 +331,11 @@ public class CachingQueryRunnerTest
       List<Result> expectedResults,
       Query query,
       QueryToolChest toolchest
-  ) throws Exception
+  )
   {
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     String segmentIdentifier = "segment";
-    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
+    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
@@ -350,7 +349,7 @@ public class CachingQueryRunnerTest
         cache,
         objectMapper,
         cacheKey,
-        Iterables.transform(expectedResults, cacheStrategy.prepareForCache())
+        Iterables.transform(expectedResults, cacheStrategy.prepareForSegmentLevelCache())
     );
 
     CachingQueryRunner runner = new CachingQueryRunner(
@@ -386,12 +385,11 @@ public class CachingQueryRunnerTest
 
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    List<Result> results = Sequences.toList(runner.run(query, context), new ArrayList());
+    List<Result> results = runner.run(QueryPlus.wrap(query), context).toList();
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 
-  private List<Result> makeTopNResults
-      (boolean cachedResults, Object... objects)
+  private List<Result> makeTopNResults(boolean cachedResults, Object... objects)
   {
     List<Result> retVal = Lists.newArrayList();
     int index = 0;
@@ -442,7 +440,7 @@ public class CachingQueryRunnerTest
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       Assert.assertFalse(closed.get());
       Assert.assertTrue(closed.compareAndSet(false, true));

@@ -25,6 +25,7 @@ public class VirtualColumnCacheHelper
   public static final byte CACHE_TYPE_ID_EXPRESSION = 0x01;
 
   // Starting byte 0xFF is reserved for site-specific virtual columns.
+  @SuppressWarnings("unused")
   public static final byte CACHE_TYPE_ID_USER_DEFINED = (byte) 0xFF;
 
   private VirtualColumnCacheHelper()

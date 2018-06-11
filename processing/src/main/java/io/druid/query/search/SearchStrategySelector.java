@@ -21,14 +21,8 @@ package io.druid.query.search;
 
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.ISE;
-import io.druid.query.search.search.AutoStrategy;
-import io.druid.query.search.search.CursorOnlyStrategy;
-import io.druid.query.search.search.UseIndexesStrategy;
-import io.druid.query.search.search.SearchQuery;
-import io.druid.query.search.search.SearchQueryConfig;
-import io.druid.query.search.search.SearchStrategy;
 
 public class SearchStrategySelector
 {

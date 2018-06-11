@@ -19,6 +19,8 @@
 
 package io.druid.query;
 
+import io.druid.guice.annotations.PublicApi;
+
 /**
  * This factory is used for DI of custom {@link QueryMetrics} implementations for all query types, which don't (yet)
  * need to emit custom dimensions and/or metrics, i. e. they are good with the generic {@link QueryMetrics} interface.
@@ -32,7 +34,11 @@ package io.druid.query;
  *
  * And then setting property:
  * druid.query.generic.queryMetricsFactory=myCustomGenericQueryMetricsFactory
+ *
+ * Unlike {@link QueryMetrics} itself, this interface is considered stable and is expected to be injected into custom
+ * Query extensions that do not want to worry about the potential instability of {@link QueryMetrics}.
  */
+@PublicApi
 public interface GenericQueryMetricsFactory
 {
   /**

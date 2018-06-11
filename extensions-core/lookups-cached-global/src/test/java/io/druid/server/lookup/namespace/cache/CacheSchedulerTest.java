@@ -26,13 +26,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.concurrent.Execs;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -76,7 +77,11 @@ public class CacheSchedulerTest
         @Override
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
-          return new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+          return new OnHeapNamespaceExtractionCacheManager(
+              lifecycle,
+              new NoopServiceEmitter(),
+              new NamespaceExtractionConfig()
+          );
         }
       };
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_OFF_HEAP_CACHE_MANAGER =
@@ -86,7 +91,11 @@ public class CacheSchedulerTest
         @Override
         public NamespaceExtractionCacheManager apply(@Nullable Lifecycle lifecycle)
         {
-          return new OffHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter());
+          return new OffHeapNamespaceExtractionCacheManager(
+              lifecycle,
+              new NoopServiceEmitter(),
+              new NamespaceExtractionConfig()
+          );
         }
       };
 
@@ -138,7 +147,7 @@ public class CacheSchedulerTest
           final CacheScheduler scheduler
       ) throws InterruptedException
       {
-        Thread.sleep(2);// To make absolutely sure there is a unique currentTimeMillis
+        Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
         String version = Long.toString(System.currentTimeMillis());
         CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(id, version);
         // Don't actually read off disk because TravisCI doesn't like that
@@ -172,7 +181,7 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000)
-  public void testSimpleSubmission() throws ExecutionException, InterruptedException
+  public void testSimpleSubmission() throws InterruptedException
   {
     UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
@@ -191,7 +200,7 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000)
-  public void testPeriodicUpdatesScheduled() throws ExecutionException, InterruptedException
+  public void testPeriodicUpdatesScheduled() throws InterruptedException
   {
     final int repeatCount = 5;
     final long delay = 5;
@@ -225,7 +234,7 @@ public class CacheSchedulerTest
 
 
   @Test(timeout = 10_000) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
-  public void testConcurrentAddDelete() throws ExecutionException, InterruptedException, TimeoutException
+  public void testConcurrentAddDelete() throws InterruptedException
   {
     final int threads = 10;
     final int deletesPerThread = 5;
@@ -298,15 +307,14 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000L)
-  public void testSimpleDelete() throws InterruptedException, TimeoutException, ExecutionException
+  public void testSimpleDelete() throws InterruptedException
   {
     testDelete();
   }
 
-  public void testDelete()
-      throws InterruptedException, TimeoutException, ExecutionException
+  public void testDelete() throws InterruptedException
   {
-    final long period = 1_000L;// Give it some time between attempts to update
+    final long period = 1_000L; // Give it some time between attempts to update
     final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
     CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000);
     Assert.assertNotNull(entry);
@@ -349,7 +357,7 @@ public class CacheSchedulerTest
 
   @Test(timeout = 10_000)
   public void testShutdown()
-      throws NoSuchFieldException, IllegalAccessException, InterruptedException, ExecutionException
+      throws InterruptedException
   {
     final long period = 5L;
     try {
@@ -382,7 +390,7 @@ public class CacheSchedulerTest
   }
 
   @Test(timeout = 10_000)
-  public void testRunCount() throws InterruptedException, ExecutionException
+  public void testRunCount() throws InterruptedException
   {
     final int numWaits = 5;
     try {

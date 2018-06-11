@@ -22,30 +22,44 @@ package io.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import io.druid.common.guava.SettableSupplier;
+import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.ValueMatcher;
-import io.druid.query.groupby.RowBasedColumnSelectorFactory;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.transform.RowFunction;
+import io.druid.segment.transform.Transform;
+import io.druid.segment.transform.TransformSpec;
+import io.druid.segment.transform.Transformer;
+import org.joda.time.DateTime;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class DimFilterHavingSpec extends BaseHavingSpec
 {
-  private final DimFilter dimFilter;
-  private final SettableSupplier<Row> rowSupplier;
+  private static final boolean DEFAULT_FINALIZE = true;
 
-  private ValueMatcher valueMatcher;
+  private final DimFilter dimFilter;
+  private final boolean finalize;
+
+  private Map<String, ValueType> rowSignature = new HashMap<>();
+  private Map<String, AggregatorFactory> aggregators = new HashMap<>();
+  private Transformer transformer = null;
   private int evalCount;
 
   @JsonCreator
   public DimFilterHavingSpec(
-      @JsonProperty("filter") final DimFilter dimFilter
+      @JsonProperty("filter") final DimFilter dimFilter,
+      @JsonProperty("finalize") final Boolean finalize
   )
   {
     this.dimFilter = Preconditions.checkNotNull(dimFilter, "filter");
-    this.rowSupplier = new SettableSupplier<>();
+    this.finalize = finalize == null ? DEFAULT_FINALIZE : finalize;
   }
 
   @JsonProperty("filter")
@@ -54,11 +68,22 @@ public class DimFilterHavingSpec extends BaseHavingSpec
     return dimFilter;
   }
 
+  @JsonProperty
+  public boolean isFinalize()
+  {
+    return finalize;
+  }
+
   @Override
   public void setRowSignature(Map<String, ValueType> rowSignature)
   {
-    this.valueMatcher = dimFilter.toFilter()
-                                 .makeMatcher(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature));
+    this.rowSignature = rowSignature;
+  }
+
+  @Override
+  public void setAggregators(final Map<String, AggregatorFactory> aggregators)
+  {
+    this.aggregators = aggregators;
   }
 
   @Override
@@ -66,17 +91,23 @@ public class DimFilterHavingSpec extends BaseHavingSpec
   {
     int oldEvalCount = evalCount;
     evalCount++;
-    rowSupplier.set(row);
-    final boolean retVal = valueMatcher.matches();
+
+    if (transformer == null) {
+      transformer = createTransformer(dimFilter, rowSignature, aggregators, finalize);
+    }
+
+    final boolean retVal = transformer.transform(new RowAsInputRow(row)) != null;
+
     if (evalCount != oldEvalCount + 1) {
       // Oops, someone was using this from two different threads, bad caller.
       throw new IllegalStateException("concurrent 'eval' calls not permitted!");
     }
+
     return retVal;
   }
 
   @Override
-  public boolean equals(Object o)
+  public boolean equals(final Object o)
   {
     if (this == o) {
       return true;
@@ -84,16 +115,15 @@ public class DimFilterHavingSpec extends BaseHavingSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    DimFilterHavingSpec that = (DimFilterHavingSpec) o;
-
-    return dimFilter.equals(that.dimFilter);
+    final DimFilterHavingSpec that = (DimFilterHavingSpec) o;
+    return finalize == that.finalize &&
+           Objects.equals(dimFilter, that.dimFilter);
   }
 
   @Override
   public int hashCode()
   {
-    return dimFilter.hashCode();
+    return Objects.hash(dimFilter, finalize);
   }
 
   @Override
@@ -101,6 +131,121 @@ public class DimFilterHavingSpec extends BaseHavingSpec
   {
     return "DimFilterHavingSpec{" +
            "dimFilter=" + dimFilter +
+           ", finalize=" + finalize +
            '}';
+  }
+
+  private static Transformer createTransformer(
+      final DimFilter filter,
+      final Map<String, ValueType> rowSignature,
+      final Map<String, AggregatorFactory> aggregators,
+      final boolean finalize
+  )
+  {
+    final List<Transform> transforms = new ArrayList<>();
+
+    if (finalize) {
+      for (AggregatorFactory aggregator : aggregators.values()) {
+        final String name = aggregator.getName();
+
+        transforms.add(
+            new Transform()
+            {
+              @Override
+              public String getName()
+              {
+                return name;
+              }
+
+              @Override
+              public RowFunction getRowFunction()
+              {
+                return row -> aggregator.finalizeComputation(row.getRaw(name));
+              }
+            }
+        );
+      }
+    }
+
+    return new TransformSpec(filter, transforms).toTransformer(rowSignature);
+  }
+
+  private static class RowAsInputRow implements InputRow
+  {
+    private final Row row;
+
+    public RowAsInputRow(final Row row)
+    {
+      this.row = row;
+    }
+
+    @Override
+    public List<String> getDimensions()
+    {
+      return Collections.emptyList();
+    }
+
+    @Override
+    public long getTimestampFromEpoch()
+    {
+      return row.getTimestampFromEpoch();
+    }
+
+    @Override
+    public DateTime getTimestamp()
+    {
+      return row.getTimestamp();
+    }
+
+    @Override
+    public List<String> getDimension(final String dimension)
+    {
+      return row.getDimension(dimension);
+    }
+
+    @Override
+    public Object getRaw(final String dimension)
+    {
+      return row.getRaw(dimension);
+    }
+
+    @Override
+    public Number getMetric(final String metric)
+    {
+      return row.getMetric(metric);
+    }
+
+    @Override
+    public int compareTo(final Row o)
+    {
+      return row.compareTo(o);
+    }
+
+    @Override
+    public boolean equals(final Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final RowAsInputRow that = (RowAsInputRow) o;
+      return Objects.equals(row, that.row);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(row);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "RowAsInputRow{" +
+             "row=" + row +
+             '}';
+    }
   }
 }

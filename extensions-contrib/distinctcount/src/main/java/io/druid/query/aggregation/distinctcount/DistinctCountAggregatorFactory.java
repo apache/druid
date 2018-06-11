@@ -29,6 +29,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregateCombiner;
+import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -120,6 +122,13 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    // This is likely wrong as well as combine(), see https://github.com/druid-io/druid/pull/2602#issuecomment-321224202
+    return new LongSumAggregateCombiner();
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new LongSumAggregatorFactory(name, name);
@@ -190,7 +199,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES;
+    return Long.BYTES;
   }
 
   @Override

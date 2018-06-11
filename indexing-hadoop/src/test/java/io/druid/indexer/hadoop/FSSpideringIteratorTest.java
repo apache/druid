@@ -76,8 +76,8 @@ public class FSSpideringIteratorTest
           )
       );
 
-      for (int i = 0; i < testFiles.length; i++) {
-        Assert.assertTrue(files.remove(testFiles[i]));
+      for (String testFile : testFiles) {
+        Assert.assertTrue(files.remove(testFile));
       }
 
       Assert.assertTrue(files.isEmpty());

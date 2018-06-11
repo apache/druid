@@ -22,11 +22,12 @@ package io.druid.query.timeboundary;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.io.CharSource;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -56,14 +57,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
 @RunWith(Parameterized.class)
 public class TimeBoundaryQueryRunnerTest
 {
-  @Parameterized.Parameters(name="{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
@@ -114,7 +116,7 @@ public class TimeBoundaryQueryRunnerTest
   private static IncrementalIndex newIndex(String minTimeStamp, int maxRowCount)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(new DateTime(minTimeStamp).getMillis())
+        .withMinTimestamp(DateTimes.of(minTimeStamp).getMillis())
         .withQueryGranularity(Granularities.HOUR)
         .withMetrics(TestIndex.METRIC_AGGS)
         .build();
@@ -156,7 +158,7 @@ public class TimeBoundaryQueryRunnerTest
     timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk(segment1));
 
     segmentIdentifiers = Lists.newArrayList();
-    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(new Interval("2011-01-12/2011-01-17"))) {
+    for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-17"))) {
       segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()));
     }
 
@@ -173,11 +175,9 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "automotive")
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        customRunner.run(timeBoundaryQuery, context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    List<Result<TimeBoundaryResultValue>> results =
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
     Assert.assertTrue(Iterables.size(results) > 0);
 
@@ -185,8 +185,8 @@ public class TimeBoundaryQueryRunnerTest
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(new DateTime("2011-01-13T00:00:00.000Z"), minTime);
-    Assert.assertEquals(new DateTime("2011-01-16T00:00:00.000Z"), maxTime);
+    Assert.assertEquals(DateTimes.of("2011-01-13T00:00:00.000Z"), minTime);
+    Assert.assertEquals(DateTimes.of("2011-01-16T00:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -199,11 +199,9 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "foobar") // foobar dimension does not exist
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        customRunner.run(timeBoundaryQuery, context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    List<Result<TimeBoundaryResultValue>> results =
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
     Assert.assertTrue(Iterables.size(results) == 0);
   }
@@ -216,17 +214,14 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .build();
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery, context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), minTime);
-    Assert.assertEquals(new DateTime("2011-04-15T00:00:00.000Z"), maxTime);
+    Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), minTime);
+    Assert.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -237,18 +232,15 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery, context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
     Assert.assertNull(minTime);
-    Assert.assertEquals(new DateTime("2011-04-15T00:00:00.000Z"), maxTime);
+    Assert.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -259,26 +251,23 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
-    Map<String, Object> context = new MapMaker().makeMap();
+    Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(timeBoundaryQuery, context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), minTime);
+    Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), minTime);
     Assert.assertNull(maxTime);
   }
 
   @Test
-  public void testMergeResults() throws Exception
+  public void testMergeResults()
   {
     List<Result<TimeBoundaryResultValue>> results = Arrays.asList(
         new Result<>(
-            new DateTime(),
+            DateTimes.nowUtc(),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     "maxTime", "2012-01-01",
@@ -287,7 +276,7 @@ public class TimeBoundaryQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime(),
+            DateTimes.nowUtc(),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(
                     "maxTime", "2012-02-01",
@@ -300,11 +289,11 @@ public class TimeBoundaryQueryRunnerTest
     TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
-    Assert.assertTrue(actual.iterator().next().getValue().getMaxTime().equals(new DateTime("2012-02-01")));
+    Assert.assertTrue(actual.iterator().next().getValue().getMaxTime().equals(DateTimes.of("2012-02-01")));
   }
 
   @Test
-  public void testMergeResultsEmptyResults() throws Exception
+  public void testMergeResultsEmptyResults()
   {
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
 

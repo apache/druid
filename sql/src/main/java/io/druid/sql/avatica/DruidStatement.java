@@ -22,13 +22,13 @@ package io.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import io.druid.concurrent.Execs;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.DruidPlanner;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.planner.PlannerResult;
@@ -152,12 +152,17 @@ public class DruidStatement implements Closeable
     return columns;
   }
 
-  public DruidStatement prepare(final PlannerFactory plannerFactory, final String query, final long maxRowCount)
+  public DruidStatement prepare(
+      final PlannerFactory plannerFactory,
+      final String query,
+      final long maxRowCount,
+      final AuthenticationResult authenticationResult
+  )
   {
     try (final DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
       synchronized (lock) {
         ensure(State.NEW);
-        this.plannerResult = planner.plan(query);
+        this.plannerResult = planner.plan(query, authenticationResult);
         this.maxRowCount = maxRowCount;
         this.query = query;
         this.signature = Meta.Signature.create(
@@ -196,7 +201,7 @@ public class DruidStatement implements Closeable
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =
             maxRowCount >= 0 && maxRowCount <= Integer.MAX_VALUE
-            ? Sequences.limit(baseSequence, (int) maxRowCount)
+            ? baseSequence.limit((int) maxRowCount)
             : baseSequence;
 
         yielder = Yielders.each(retSequence);

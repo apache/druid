@@ -22,7 +22,14 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.InputRow;
+import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.java.util.common.collect.Utils;
 
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import java.util.List;
+
+@ExtensionPoint
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = StringInputRowParser.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "string", value = StringInputRowParser.class),
@@ -31,9 +38,29 @@ import io.druid.data.input.InputRow;
 })
 public interface InputRowParser<T>
 {
-  public InputRow parse(T input) ;
+  /**
+   * Parse an input into list of {@link InputRow}. List can contains null for rows that should be thrown away,
+   * or throws {@code ParseException} if the input is unparseable. This method should never return null otherwise
+   * lots of things will break.
+   */
+  @NotNull
+  default List<InputRow> parseBatch(T input)
+  {
+    return Utils.nullableListOf(parse(input));
+  }
 
-  public ParseSpec getParseSpec();
+  /**
+   * Parse an input into an {@link InputRow}. Return null if this input should be thrown away, or throws
+   * {@code ParseException} if the input is unparseable.
+   */
+  @Deprecated
+  @Nullable
+  default InputRow parse(T input)
+  {
+    return null;
+  }
 
-  public InputRowParser withParseSpec(ParseSpec parseSpec) ;
+  ParseSpec getParseSpec();
+
+  InputRowParser withParseSpec(ParseSpec parseSpec);
 }

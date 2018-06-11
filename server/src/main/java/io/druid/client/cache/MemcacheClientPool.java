@@ -64,7 +64,7 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
 
     CountingHolder[] connections = new CountingHolder[capacity];
     // eagerly instantiate all items in the pool
-    for(int i = 0; i < capacity; ++i) {
+    for (int i = 0; i < capacity; ++i) {
       connections[i] = new CountingHolder(generator.get());
     }
     // Assign the final field after filling the array to ensure visibility of elements
@@ -92,6 +92,10 @@ final class MemcacheClientPool implements Supplier<ResourceHolder<MemcachedClien
   {
     private final AtomicInteger count = new AtomicInteger(0);
     private final MemcachedClientIF clientIF;
+    /**
+     * The point of Cleaner is to be referenced. Action is performed when it becomes unreachable, so it doesn't need
+     * to be used directly.
+     */
     @SuppressWarnings("unused")
     private final Cleaner cleaner;
 

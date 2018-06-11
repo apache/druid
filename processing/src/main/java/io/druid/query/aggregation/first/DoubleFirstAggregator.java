@@ -21,47 +21,35 @@ package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.segment.DoubleColumnSelector;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 
 public class DoubleFirstAggregator implements Aggregator
 {
 
-  private final DoubleColumnSelector valueSelector;
-  private final LongColumnSelector timeSelector;
-  private final String name;
+  private final BaseDoubleColumnValueSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
 
   protected long firstTime;
   protected double firstValue;
 
-  public DoubleFirstAggregator(
-      String name,
-      LongColumnSelector timeSelector,
-      DoubleColumnSelector valueSelector
-  )
+  public DoubleFirstAggregator(BaseLongColumnValueSelector timeSelector, BaseDoubleColumnValueSelector valueSelector)
   {
-    this.name = name;
     this.valueSelector = valueSelector;
     this.timeSelector = timeSelector;
 
-    reset();
+    firstTime = Long.MAX_VALUE;
+    firstValue = 0;
   }
 
   @Override
   public void aggregate()
   {
-    long time = timeSelector.get();
+    long time = timeSelector.getLong();
     if (time < firstTime) {
       firstTime = time;
-      firstValue = valueSelector.get();
+      firstValue = valueSelector.getDouble();
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    firstTime = Long.MAX_VALUE;
-    firstValue = 0;
   }
 
   @Override

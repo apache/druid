@@ -23,10 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.audit.AuditManager;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
 
@@ -64,7 +64,7 @@ public class SQLAuditManagerProvider implements AuditManagerProvider
           new Lifecycle.Handler()
           {
             @Override
-            public void start() throws Exception
+            public void start()
             {
               connector.createAuditTable();
             }

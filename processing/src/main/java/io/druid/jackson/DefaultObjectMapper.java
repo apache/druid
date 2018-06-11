@@ -32,7 +32,7 @@ public class DefaultObjectMapper extends ObjectMapper
 {
   public DefaultObjectMapper()
   {
-    this((JsonFactory)null);
+    this((JsonFactory) null);
   }
 
   public DefaultObjectMapper(DefaultObjectMapper mapper)

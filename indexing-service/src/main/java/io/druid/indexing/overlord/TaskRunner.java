@@ -21,7 +21,7 @@ package io.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ListenableFuture;
-
+import io.druid.guice.annotations.PublicApi;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
@@ -35,6 +35,7 @@ import java.util.concurrent.Executor;
  * Interface for handing off tasks. Managed by a {@link TaskQueue}.
  * Holds state
  */
+@PublicApi
 public interface TaskRunner
 {
   /**
@@ -42,6 +43,11 @@ public interface TaskRunner
    * the list of tasks (and status futures).
    */
   List<Pair<Task, ListenableFuture<TaskStatus>>> restore();
+
+  /**
+   * Start the state of the runner.
+   */
+  void start();
 
   /**
    * Register a listener with this task runner. On registration, the listener will get events corresponding to the
@@ -94,9 +100,4 @@ public interface TaskRunner
    * @return ScalingStats if the runner has an underlying resource which can scale, Optional.absent() otherwise
    */
   Optional<ScalingStats> getScalingStats();
-
-  /**
-   * Start the state of the runner
-   */
-  void start();
 }

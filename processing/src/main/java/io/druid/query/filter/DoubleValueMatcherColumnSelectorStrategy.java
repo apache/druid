@@ -20,15 +20,16 @@
 package io.druid.query.filter;
 
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.filter.BooleanValueMatcher;
 
 
-public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherColumnSelectorStrategy<DoubleColumnSelector>
+public class DoubleValueMatcherColumnSelectorStrategy
+    implements ValueMatcherColumnSelectorStrategy<BaseDoubleColumnValueSelector>
 {
   @Override
-  public ValueMatcher makeValueMatcher(final DoubleColumnSelector selector, final String value)
+  public ValueMatcher makeValueMatcher(final BaseDoubleColumnValueSelector selector, final String value)
   {
     final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value);
     if (matchVal == null) {
@@ -41,7 +42,7 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public boolean matches()
       {
-        return Double.doubleToLongBits(selector.get()) == matchValLongBits;
+        return Double.doubleToLongBits(selector.getDouble()) == matchValLongBits;
       }
 
       @Override
@@ -54,7 +55,8 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
 
   @Override
   public ValueMatcher makeValueMatcher(
-      final DoubleColumnSelector selector, DruidPredicateFactory predicateFactory
+      final BaseDoubleColumnValueSelector selector,
+      DruidPredicateFactory predicateFactory
   )
   {
     final DruidDoublePredicate predicate = predicateFactory.makeDoublePredicate();
@@ -63,7 +65,7 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
       @Override
       public boolean matches()
       {
-        return predicate.applyDouble(selector.get());
+        return predicate.applyDouble(selector.getDouble());
       }
 
       @Override
@@ -76,14 +78,14 @@ public class DoubleValueMatcherColumnSelectorStrategy implements ValueMatcherCol
   }
 
   @Override
-  public ValueGetter makeValueGetter(final DoubleColumnSelector selector)
+  public ValueGetter makeValueGetter(final BaseDoubleColumnValueSelector selector)
   {
     return new ValueGetter()
     {
       @Override
       public String[] get()
       {
-        return new String[]{ Double.toString(selector.get()) };
+        return new String[]{Double.toString(selector.getDouble())};
       }
     };
   }

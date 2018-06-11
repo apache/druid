@@ -34,7 +34,7 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
   )
   {
     ValueType type = capabilities.getType();
-    switch(type) {
+    switch (type) {
       case STRING:
         return new StringCardinalityAggregatorColumnSelectorStrategy();
       case LONG:

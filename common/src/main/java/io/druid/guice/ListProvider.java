@@ -25,7 +25,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 
-import java.lang.annotation.Annotation;
 import java.util.List;
 
 /**
@@ -38,16 +37,6 @@ public class ListProvider<T> implements Provider<List<T>>
   public ListProvider<T> add(Class<? extends T> clazz)
   {
     return add(Key.get(clazz));
-  }
-
-  public ListProvider<T> add(Class<? extends T> clazz, Class<? extends Annotation> annotation)
-  {
-    return add(Key.get(clazz, annotation));
-  }
-
-  public ListProvider<T> add(Class<? extends T> clazz, Annotation annotation)
-  {
-    return add(Key.get(clazz, annotation));
   }
 
   public ListProvider<T> add(Key<? extends T> key)

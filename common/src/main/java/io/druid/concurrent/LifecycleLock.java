@@ -115,6 +115,11 @@ public final class LifecycleLock
       }
     }
 
+    boolean isStarted()
+    {
+      return getState() == START_EXITED_SUCCESSFUL;
+    }
+
     boolean awaitStarted()
     {
       try {
@@ -124,7 +129,7 @@ public final class LifecycleLock
       catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-      return getState() == START_EXITED_SUCCESSFUL;
+      return isStarted();
     }
 
     boolean awaitStarted(long timeNanos)
@@ -138,7 +143,7 @@ public final class LifecycleLock
       catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
-      return getState() == START_EXITED_SUCCESSFUL;
+      return isStarted();
     }
 
     @Override
@@ -170,9 +175,9 @@ public final class LifecycleLock
       }
     }
 
-    void reset()
+    void exitStopAndReset()
     {
-      if (!compareAndSetState(STOPPED, NOT_STARTED)) {
+      if (!compareAndSetState(STOPPING, NOT_STARTED)) {
         throw new IllegalMonitorStateException("Not called exitStop() before reset()");
       }
     }
@@ -182,7 +187,7 @@ public final class LifecycleLock
 
   /**
    * Start latch, only one canStart() call in any thread on this LifecycleLock object could return true, if {@link
-   * #reset()} is not called in between.
+   * #exitStopAndReset()} is not called in between.
    */
   public boolean canStart()
   {
@@ -208,6 +213,15 @@ public final class LifecycleLock
   public void exitStart()
   {
     sync.exitStart();
+  }
+
+  /**
+   * Returns {@code true} if {@link #started()} was called before that. Returns {@code false} if {@link #started()} is
+   * not called before {@link #exitStart()}, or if {@link #canStop()} is already called on this LifecycleLock.
+   */
+  public boolean isStarted()
+  {
+    return sync.isStarted();
   }
 
   /**
@@ -243,8 +257,8 @@ public final class LifecycleLock
   }
 
   /**
-   * If this LifecycleLock is used in a restartable object, which uses {@link #reset()}, exitStop() must be called
-   * before exit from stop() on this object, usually in a finally block.
+   * Finalizes stopping the the LifecycleLock. This method must be called before exit from stop() on this object,
+   * usually in a finally block. If you're using a restartable object, use {@link #exitStopAndReset()} instead.
    *
    * @throws IllegalMonitorStateException if {@link #canStop()} is not yet called on this LifecycleLock
    */
@@ -254,12 +268,14 @@ public final class LifecycleLock
   }
 
   /**
-   * Resets the LifecycleLock after {@link #exitStop()}, so that {@link #canStart()} could be called again.
+   * Finalizes stopping the LifecycleLock and resets it, so that {@link #canStart()} could be called again. If this
+   * LifecycleLock is used in a restartable object, this method must be called before exit from stop() on this object,
+   * usually in a finally block.
    *
-   * @throws IllegalMonitorStateException if {@link #exitStop()} is not yet called on this LifecycleLock
+   * @throws IllegalMonitorStateException if {@link #canStop()} is not yet called on this LifecycleLock
    */
-  public void reset()
+  public void exitStopAndReset()
   {
-    sync.reset();
+    sync.exitStopAndReset();
   }
 }

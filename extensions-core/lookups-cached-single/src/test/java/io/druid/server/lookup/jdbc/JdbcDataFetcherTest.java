@@ -58,7 +58,7 @@ public class JdbcDataFetcherTest
   );
 
   @Before
-  public void setUp() throws InterruptedException
+  public void setUp()
   {
     jdbcDataFetcher = new JdbcDataFetcher(derbyConnectorRule.getMetadataConnectorConfig(), "tableName", "keyColumn", "valueColumn",
                                           100);
@@ -91,7 +91,7 @@ public class JdbcDataFetcherTest
   }
 
   @Test
-  public void testFetch() throws InterruptedException
+  public void testFetch()
   {
     Assert.assertEquals("null check", null, jdbcDataFetcher.fetch("baz"));
     assertMapLookup(lookupMap, jdbcDataFetcher);
@@ -100,28 +100,21 @@ public class JdbcDataFetcherTest
   @Test
   public void testFetchAll()
   {
-    ImmutableMap.Builder<String,String> mapBuilder = ImmutableMap.builder();
-    for (Map.Entry<String, String> entry: jdbcDataFetcher.fetchAll()
-         ) {
-      mapBuilder.put(entry.getKey(), entry.getValue());
-    }
+    ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
+    jdbcDataFetcher.fetchAll().forEach(mapBuilder::put);
     Assert.assertEquals("maps should match", lookupMap, mapBuilder.build());
   }
 
   @Test
   public void testFetchKeys()
   {
-    ImmutableMap.Builder<String,String> mapBuilder = ImmutableMap.builder();
-    for (Map.Entry<String, String> entry: jdbcDataFetcher.fetch(lookupMap.keySet())
-        ) {
-      mapBuilder.put(entry.getKey(), entry.getValue());
-    }
-
+    ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
+    jdbcDataFetcher.fetch(lookupMap.keySet()).forEach(mapBuilder::put);
     Assert.assertEquals(lookupMap, mapBuilder.build());
   }
 
   @Test
-  public void testReverseFetch() throws InterruptedException
+  public void testReverseFetch()
   {
     Assert.assertEquals(
         "reverse lookup should match",

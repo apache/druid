@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.druid.indexing.common.task.Task;
 
-import java.io.IOException;
-
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "lockAcquire", value = LockAcquireAction.class),
@@ -39,11 +37,12 @@ import java.io.IOException;
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
     @JsonSubTypes.Type(name = "segmentMetadataUpdate", value = SegmentMetadataUpdateAction.class),
     @JsonSubTypes.Type(name = "segmentAllocate", value = SegmentAllocateAction.class),
-    @JsonSubTypes.Type(name = "resetDataSourceMetadata", value = ResetDataSourceMetadataAction.class)
+    @JsonSubTypes.Type(name = "resetDataSourceMetadata", value = ResetDataSourceMetadataAction.class),
+    @JsonSubTypes.Type(name = "checkPointDataSourceMetadata", value = CheckPointDataSourceMetadataAction.class)
 })
 public interface TaskAction<RetType>
 {
-  public TypeReference<RetType> getReturnTypeReference(); // T_T
-  public RetType perform(Task task, TaskActionToolbox toolbox) throws IOException;
-  public boolean isAudited();
+  TypeReference<RetType> getReturnTypeReference(); // T_T
+  RetType perform(Task task, TaskActionToolbox toolbox);
+  boolean isAudited();
 }

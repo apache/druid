@@ -23,18 +23,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
-import io.druid.segment.Rowboat;
-import io.druid.segment.RowboatFilteringIndexAdapter;
+import io.druid.segment.RowFilteringIndexAdapter;
+import io.druid.segment.RowPointer;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
@@ -62,10 +62,11 @@ public class AppendTask extends MergeTaskBase
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(id, dataSource, segments, context);
+    super(id, dataSource, segments, segmentWriteOutMediumFactory, context);
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
     this.aggregators = aggregators;
   }
@@ -74,17 +75,11 @@ public class AppendTask extends MergeTaskBase
   public File merge(final TaskToolbox toolbox, final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
-    VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
-        Comparators.naturalNullsFirst()
-    );
-
-    for (DataSegment segment : segments.keySet()) {
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-    }
+    VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(segments.keySet());
 
     final Iterable<SegmentToMergeHolder> segmentsToMerge = Iterables.concat(
         Iterables.transform(
-            timeline.lookup(new Interval("1000-01-01/3000-01-01")),
+            timeline.lookup(Intervals.of("1000-01-01/3000-01-01")),
             new Function<TimelineObjectHolder<String, DataSegment>, Iterable<SegmentToMergeHolder>>()
             {
               @Override
@@ -100,7 +95,7 @@ public class AppendTask extends MergeTaskBase
                       {
                         DataSegment segment = chunkInput.getObject();
                         return new SegmentToMergeHolder(
-                            segment, input.getInterval(),
+                            input.getInterval(),
                             Preconditions.checkNotNull(
                                 segments.get(segment),
                                 "File for segment %s", segment.getIdentifier()
@@ -117,18 +112,9 @@ public class AppendTask extends MergeTaskBase
     List<IndexableAdapter> adapters = Lists.newArrayList();
     for (final SegmentToMergeHolder holder : segmentsToMerge) {
       adapters.add(
-          new RowboatFilteringIndexAdapter(
-              new QueryableIndexIndexableAdapter(
-                  toolbox.getIndexIO().loadIndex(holder.getFile())
-              ),
-              new Predicate<Rowboat>()
-              {
-                @Override
-                public boolean apply(Rowboat input)
-                {
-                  return holder.getInterval().contains(input.getTimestamp());
-                }
-              }
+          new RowFilteringIndexAdapter(
+              new QueryableIndexIndexableAdapter(toolbox.getIndexIO().loadIndex(holder.getFile())),
+              (RowPointer rowPointer) -> holder.getInterval().contains(rowPointer.getTimestamp())
           )
       );
     }
@@ -138,7 +124,8 @@ public class AppendTask extends MergeTaskBase
         adapters,
         aggregators == null ? null : aggregators.toArray(new AggregatorFactory[aggregators.size()]),
         outDir,
-        indexSpec
+        indexSpec,
+        getSegmentWriteOutMediumFactory()
     );
   }
 
@@ -156,20 +143,13 @@ public class AppendTask extends MergeTaskBase
 
   private static class SegmentToMergeHolder
   {
-    private final DataSegment segment;
     private final Interval interval;
     private final File file;
 
-    private SegmentToMergeHolder(DataSegment segment, Interval interval, File file)
+    private SegmentToMergeHolder(Interval interval, File file)
     {
-      this.segment = segment;
       this.interval = interval;
       this.file = file;
-    }
-
-    public DataSegment getSegment()
-    {
-      return segment;
     }
 
     public Interval getInterval()

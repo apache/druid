@@ -44,7 +44,7 @@ import java.util.Random;
 
 public class TestBroker implements Closeable
 {
-  private final static Random RANDOM = new Random();
+  private static final Random RANDOM = new Random();
 
   private final String zookeeperConnect;
   private final File directory;
@@ -77,6 +77,7 @@ public class TestBroker implements Closeable
     props.setProperty("log.dirs", directory.toString());
     props.setProperty("broker.id", String.valueOf(id));
     props.setProperty("port", String.valueOf(new Random().nextInt(9999) + 10000));
+    props.setProperty("advertised.host.name", "localhost");
     props.putAll(brokerProps);
 
     final KafkaConfig config = new KafkaConfig(props);

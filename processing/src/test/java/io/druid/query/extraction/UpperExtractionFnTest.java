@@ -31,9 +31,9 @@ public class UpperExtractionFnTest
   public void testApply()
   {
     Assert.assertEquals("UPPER", extractionFn.apply("uPpeR"));
-    Assert.assertEquals(null,  extractionFn.apply(""));
+    Assert.assertEquals(null, extractionFn.apply(""));
     Assert.assertEquals(null, extractionFn.apply(null));
-    Assert.assertEquals(null, extractionFn.apply((Object)null));
+    Assert.assertEquals(null, extractionFn.apply((Object) null));
     Assert.assertEquals("1", extractionFn.apply(1));
   }
 

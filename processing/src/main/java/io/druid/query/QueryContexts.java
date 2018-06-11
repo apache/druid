@@ -21,9 +21,11 @@ package io.druid.query;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IAE;
-import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Numbers;
 
+@PublicApi
 public class QueryContexts
 {
   public static final String PRIORITY_KEY = "priority";
@@ -35,6 +37,8 @@ public class QueryContexts
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
+  public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
+  public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = 300_000; // 5 minutes
@@ -68,6 +72,26 @@ public class QueryContexts
   public static <T> boolean isUseCache(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "useCache", defaultValue);
+  }
+
+  public static <T> boolean isPopulateResultLevelCache(Query<T> query)
+  {
+    return isPopulateResultLevelCache(query, DEFAULT_POPULATE_RESULTLEVEL_CACHE);
+  }
+
+  public static <T> boolean isPopulateResultLevelCache(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "populateResultLevelCache", defaultValue);
+  }
+
+  public static <T> boolean isUseResultLevelCache(Query<T> query)
+  {
+    return isUseResultLevelCache(query, DEFAULT_USE_RESULTLEVEL_CACHE);
+  }
+
+  public static <T> boolean isUseResultLevelCache(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "useResultLevelCache", defaultValue);
   }
 
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)
@@ -130,6 +154,23 @@ public class QueryContexts
     }
   }
 
+  public static <T> Query<T> verifyMaxQueryTimeout(Query<T> query, long maxQueryTimeout)
+  {
+    long timeout = getTimeout(query);
+    if (timeout > maxQueryTimeout) {
+      throw new IAE(
+          "configured [%s = %s] is more than enforced limit of maxQueryTimeout [%s].",
+          TIMEOUT_KEY,
+          timeout,
+          maxQueryTimeout
+      );
+    } else {
+      return query;
+    }
+  }
+
+
+
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
   {
     return parseLong(query, MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
@@ -171,46 +212,23 @@ public class QueryContexts
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)
   {
-    Object val = query.getContextValue(key);
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Long.parseLong((String) val);
-    } else if (val instanceof Number) {
-      return ((Number) val).longValue();
-    } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
-    }
+    final Object val = query.getContextValue(key);
+    return val == null ? defaultValue : Numbers.parseLong(val);
   }
 
   static <T> int parseInt(Query<T> query, String key, int defaultValue)
   {
-    Object val = query.getContextValue(key);
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Integer.parseInt((String) val);
-    } else if (val instanceof Number) {
-      return ((Number) val).intValue();
-    } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
-    }
+    final Object val = query.getContextValue(key);
+    return val == null ? defaultValue : Numbers.parseInt(val);
   }
 
   static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
   {
-    Object val = query.getContextValue(key);
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Boolean.parseBoolean((String) val);
-    } else if (val instanceof Boolean) {
-      return (boolean) val;
-    } else {
-      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
-    }
+    final Object val = query.getContextValue(key);
+    return val == null ? defaultValue : Numbers.parseBoolean(val);
+  }
+
+  private QueryContexts()
+  {
   }
 }

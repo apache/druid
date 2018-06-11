@@ -19,21 +19,23 @@
 
 package io.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import io.druid.data.input.Row;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.math.expr.Evals;
-import io.druid.query.DataSource;
 import io.druid.query.Query;
-import io.druid.query.QueryDataSource;
 import io.druid.query.Result;
 import io.druid.query.groupby.GroupByQuery;
+import io.druid.query.scan.ScanQuery;
 import io.druid.query.select.EventHolder;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
@@ -46,8 +48,10 @@ import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.column.Column;
 import io.druid.server.QueryLifecycleFactory;
+import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerContext;
+import io.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
@@ -67,14 +71,17 @@ public class QueryMaker
 {
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerContext plannerContext;
+  private final ObjectMapper jsonMapper;
 
   public QueryMaker(
       final QueryLifecycleFactory queryLifecycleFactory,
-      final PlannerContext plannerContext
+      final PlannerContext plannerContext,
+      final ObjectMapper jsonMapper
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.plannerContext = plannerContext;
+    this.jsonMapper = jsonMapper;
   }
 
   public PlannerContext getPlannerContext()
@@ -82,53 +89,85 @@ public class QueryMaker
     return plannerContext;
   }
 
-  public Sequence<Object[]> runQuery(
-      final DataSource dataSource,
-      final DruidQueryBuilder queryBuilder
+  public ObjectMapper getJsonMapper()
+  {
+    return jsonMapper;
+  }
+
+  public Sequence<Object[]> runQuery(final DruidQuery druidQuery)
+  {
+    final Query query = druidQuery.getQuery();
+
+    if (query instanceof TimeseriesQuery) {
+      return executeTimeseries(druidQuery, (TimeseriesQuery) query);
+    } else if (query instanceof TopNQuery) {
+      return executeTopN(druidQuery, (TopNQuery) query);
+    } else if (query instanceof GroupByQuery) {
+      return executeGroupBy(druidQuery, (GroupByQuery) query);
+    } else if (query instanceof ScanQuery) {
+      return executeScan(druidQuery, (ScanQuery) query);
+    } else if (query instanceof SelectQuery) {
+      return executeSelect(druidQuery, (SelectQuery) query);
+    } else {
+      throw new ISE("Cannot run query of class[%s]", query.getClass().getName());
+    }
+  }
+
+  private Sequence<Object[]> executeScan(
+      final DruidQuery druidQuery,
+      final ScanQuery query
   )
   {
-    if (dataSource instanceof QueryDataSource) {
-      final GroupByQuery outerQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
-      if (outerQuery == null) {
-        // Bug in the planner rules. They shouldn't allow this to happen.
-        throw new IllegalStateException("Can't use QueryDataSource without an outer groupBy query!");
-      }
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
+    final RowSignature outputRowSignature = druidQuery.getOutputRowSignature();
 
-      return executeGroupBy(queryBuilder, outerQuery);
+    // SQL row column index -> Scan query column index
+    final int[] columnMapping = new int[outputRowSignature.getRowOrder().size()];
+    final Map<String, Integer> scanColumnOrder = Maps.newHashMap();
+
+    for (int i = 0; i < query.getColumns().size(); i++) {
+      scanColumnOrder.put(query.getColumns().get(i), i);
     }
 
-    final TimeseriesQuery tsQuery = queryBuilder.toTimeseriesQuery(dataSource, plannerContext);
-    if (tsQuery != null) {
-      return executeTimeseries(queryBuilder, tsQuery);
+    for (int i = 0; i < outputRowSignature.getRowOrder().size(); i++) {
+      final Integer index = scanColumnOrder.get(outputRowSignature.getRowOrder().get(i));
+      columnMapping[i] = index == null ? -1 : index;
     }
 
-    final TopNQuery topNQuery = queryBuilder.toTopNQuery(dataSource, plannerContext);
-    if (topNQuery != null) {
-      return executeTopN(queryBuilder, topNQuery);
-    }
+    return Sequences.concat(
+        Sequences.map(
+            runQuery(query),
+            scanResult -> {
+              final List<Object[]> retVals = new ArrayList<>();
+              final List<List<Object>> rows = (List<List<Object>>) scanResult.getEvents();
 
-    final GroupByQuery groupByQuery = queryBuilder.toGroupByQuery(dataSource, plannerContext);
-    if (groupByQuery != null) {
-      return executeGroupBy(queryBuilder, groupByQuery);
-    }
+              for (List<Object> row : rows) {
+                final Object[] retVal = new Object[fieldList.size()];
+                for (RelDataTypeField field : fieldList) {
+                  retVal[field.getIndex()] = coerce(
+                      row.get(columnMapping[field.getIndex()]),
+                      field.getType().getSqlTypeName()
+                  );
+                }
+                retVals.add(retVal);
+              }
 
-    final SelectQuery selectQuery = queryBuilder.toSelectQuery(dataSource, plannerContext);
-    if (selectQuery != null) {
-      return executeSelect(queryBuilder, selectQuery);
-    }
-
-    throw new IllegalStateException("WTF?! Cannot execute query even though we planned it?");
+              return Sequences.simple(retVals);
+            }
+        )
+    );
   }
 
   private Sequence<Object[]> executeSelect(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final SelectQuery baseQuery
   )
   {
-    Preconditions.checkState(queryBuilder.getGrouping() == null, "grouping must be null");
+    Preconditions.checkState(druidQuery.getGrouping() == null, "grouping must be null");
 
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final Integer limit = queryBuilder.getLimitSpec() != null ? queryBuilder.getLimitSpec().getLimit() : null;
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
+    final Integer limit = druidQuery.getLimitSpec() != null ? druidQuery.getLimitSpec().getLimit() : null;
+    final RowSignature outputRowSignature = druidQuery.getOutputRowSignature();
 
     // Select is paginated, we need to make multiple queries.
     final Sequence<Sequence<Object[]>> sequenceOfSequences = Sequences.simple(
@@ -178,13 +217,12 @@ public class QueryMaker
 
                             pagingIdentifiers.set(result.getValue().getPagingIdentifiers());
                             final List<Object[]> retVals = new ArrayList<>();
-
                             for (EventHolder holder : result.getValue().getEvents()) {
                               morePages.set(true);
                               final Map<String, Object> map = holder.getEvent();
                               final Object[] retVal = new Object[fieldList.size()];
                               for (RelDataTypeField field : fieldList) {
-                                final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+                                final String outputName = outputRowSignature.getRowOrder().get(field.getIndex());
                                 if (outputName.equals(Column.TIME_COLUMN_NAME)) {
                                   retVal[field.getIndex()] = coerce(
                                       holder.getTimestamp().getMillis(),
@@ -229,21 +267,19 @@ public class QueryMaker
   private <T> Sequence<T> runQuery(final Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
-
-    // Authorization really should be applied in planning. At this point the query has already begun to execute.
-    // So, use "null" authorizationInfo to force the query to fail if security is enabled.
-    return queryLifecycleFactory.factorize().runSimple(query, null, null);
+    final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
+    return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }
 
   private Sequence<Object[]> executeTimeseries(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final TimeseriesQuery query
   )
   {
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
-    final String timeOutputName = queryBuilder.getGrouping().getDimensions().isEmpty()
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
+    final String timeOutputName = druidQuery.getGrouping().getDimensions().isEmpty()
                                   ? null
-                                  : Iterables.getOnlyElement(queryBuilder.getGrouping().getDimensions())
+                                  : Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions())
                                              .getOutputName();
 
     return Sequences.map(
@@ -257,7 +293,7 @@ public class QueryMaker
             final Object[] retVal = new Object[fieldList.size()];
 
             for (final RelDataTypeField field : fieldList) {
-              final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+              final String outputName = druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex());
               if (outputName.equals(timeOutputName)) {
                 retVal[field.getIndex()] = coerce(result.getTimestamp(), field.getType().getSqlTypeName());
               } else {
@@ -272,11 +308,11 @@ public class QueryMaker
   }
 
   private Sequence<Object[]> executeTopN(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final TopNQuery query
   )
   {
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
 
     return Sequences.concat(
         Sequences.map(
@@ -292,7 +328,7 @@ public class QueryMaker
                 for (DimensionAndMetricValueExtractor row : rows) {
                   final Object[] retVal = new Object[fieldList.size()];
                   for (final RelDataTypeField field : fieldList) {
-                    final String outputName = queryBuilder.getRowOrder().get(field.getIndex());
+                    final String outputName = druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex());
                     retVal[field.getIndex()] = coerce(row.getMetric(outputName), field.getType().getSqlTypeName());
                   }
 
@@ -307,11 +343,11 @@ public class QueryMaker
   }
 
   private Sequence<Object[]> executeGroupBy(
-      final DruidQueryBuilder queryBuilder,
+      final DruidQuery druidQuery,
       final GroupByQuery query
   )
   {
-    final List<RelDataTypeField> fieldList = queryBuilder.getRowType().getFieldList();
+    final List<RelDataTypeField> fieldList = druidQuery.getOutputRowType().getFieldList();
 
     return Sequences.map(
         runQuery(query),
@@ -323,7 +359,7 @@ public class QueryMaker
             final Object[] retVal = new Object[fieldList.size()];
             for (RelDataTypeField field : fieldList) {
               retVal[field.getIndex()] = coerce(
-                  row.getRaw(queryBuilder.getRowOrder().get(field.getIndex())),
+                  row.getRaw(druidQuery.getOutputRowSignature().getRowOrder().get(field.getIndex())),
                   field.getType().getSqlTypeName()
               );
             }
@@ -349,6 +385,8 @@ public class QueryMaker
       return ColumnMetaData.Rep.of(Float.class);
     } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
       return ColumnMetaData.Rep.of(Double.class);
+    } else if (sqlType == SqlTypeName.BOOLEAN) {
+      return ColumnMetaData.Rep.of(Boolean.class);
     } else if (sqlType == SqlTypeName.OTHER) {
       return ColumnMetaData.Rep.of(Object.class);
     } else {
@@ -373,33 +411,9 @@ public class QueryMaker
     } else if (value == null) {
       coercedValue = null;
     } else if (sqlType == SqlTypeName.DATE) {
-      final DateTime dateTime;
-
-      if (value instanceof Number) {
-        dateTime = new DateTime(((Number) value).longValue());
-      } else if (value instanceof String) {
-        dateTime = new DateTime(Long.parseLong((String) value));
-      } else if (value instanceof DateTime) {
-        dateTime = (DateTime) value;
-      } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
-      }
-
-      return Calcites.jodaToCalciteDate(dateTime, plannerContext.getTimeZone());
+      return Calcites.jodaToCalciteDate(coerceDateTime(value, sqlType), plannerContext.getTimeZone());
     } else if (sqlType == SqlTypeName.TIMESTAMP) {
-      final DateTime dateTime;
-
-      if (value instanceof Number) {
-        dateTime = new DateTime(((Number) value).longValue());
-      } else if (value instanceof String) {
-        dateTime = new DateTime(Long.parseLong((String) value));
-      } else if (value instanceof DateTime) {
-        dateTime = (DateTime) value;
-      } else {
-        throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
-      }
-
-      return Calcites.jodaToCalciteTimestamp(dateTime, plannerContext.getTimeZone());
+      return Calcites.jodaToCalciteTimestamp(coerceDateTime(value, sqlType), plannerContext.getTimeZone());
     } else if (sqlType == SqlTypeName.BOOLEAN) {
       if (value instanceof String) {
         coercedValue = Evals.asBoolean(((String) value));
@@ -445,5 +459,21 @@ public class QueryMaker
     }
 
     return coercedValue;
+  }
+
+  private static DateTime coerceDateTime(Object value, SqlTypeName sqlType)
+  {
+    final DateTime dateTime;
+
+    if (value instanceof Number) {
+      dateTime = DateTimes.utc(((Number) value).longValue());
+    } else if (value instanceof String) {
+      dateTime = DateTimes.utc(Long.parseLong((String) value));
+    } else if (value instanceof DateTime) {
+      dateTime = (DateTime) value;
+    } else {
+      throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+    }
+    return dateTime;
   }
 }

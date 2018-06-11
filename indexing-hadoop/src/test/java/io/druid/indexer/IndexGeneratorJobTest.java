@@ -31,6 +31,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
@@ -79,18 +80,18 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
 {
-  final private static AggregatorFactory[] aggs1 = {
+  private static final AggregatorFactory[] aggs1 = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
 
-  final private static AggregatorFactory[] aggs2 = {
+  private static final AggregatorFactory[] aggs2 = {
       new CountAggregatorFactory("count")
   };
 
   @Parameterized.Parameters(name = "useCombiner={0}, partitionType={1}, interval={2}, shardInfoForEachSegment={3}, " +
                                    "data={4}, inputFormatName={5}, inputRowParser={6}, maxRowsInMemory={7}, " +
-                                   "aggs={8}, datasourceName={9}, forceExtendableShardSpecs={10}")
+                                   "maxBytesInMemory={8}, aggs={9}, datasourceName={10}, forceExtendableShardSpecs={11}")
   public static Collection<Object[]> constructFeed()
   {
     final List<Object[]> baseConstructors = Arrays.asList(
@@ -150,6 +151,7 @@ public class IndexGeneratorJobTest
                     null
                 ),
                 null,
+                null,
                 aggs1,
                 "website"
             },
@@ -196,6 +198,7 @@ public class IndexGeneratorJobTest
                         0
                     )
                 ),
+                null,
                 null,
                 aggs1,
                 "website"
@@ -244,6 +247,7 @@ public class IndexGeneratorJobTest
                     ),
                     null
                 ),
+                null,
                 null,
                 aggs1,
                 "website"
@@ -302,6 +306,7 @@ public class IndexGeneratorJobTest
                     )
                 ),
                 null,
+                null,
                 aggs1,
                 "website"
             },
@@ -334,6 +339,7 @@ public class IndexGeneratorJobTest
                     null
                 ),
                 1, // force 1 row max per index for easier testing
+                null,
                 aggs2,
                 "inherit_dims"
             },
@@ -366,6 +372,7 @@ public class IndexGeneratorJobTest
                     null
                 ),
                 1, // force 1 row max per index for easier testing
+                null,
                 aggs2,
                 "inherit_dims2"
             }
@@ -375,7 +382,7 @@ public class IndexGeneratorJobTest
     // Run each baseConstructor with/without forceExtendableShardSpecs.
     final List<Object[]> constructors = Lists.newArrayList();
     for (Object[] baseConstructor : baseConstructors) {
-      for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2 ; forceExtendableShardSpecs++) {
+      for (int forceExtendableShardSpecs = 0; forceExtendableShardSpecs < 2; forceExtendableShardSpecs++) {
         final Object[] fullConstructor = new Object[baseConstructor.length + 1];
         System.arraycopy(baseConstructor, 0, fullConstructor, 0, baseConstructor.length);
         fullConstructor[baseConstructor.length] = forceExtendableShardSpecs == 0;
@@ -397,6 +404,7 @@ public class IndexGeneratorJobTest
   private final String inputFormatName;
   private final InputRowParser inputRowParser;
   private final Integer maxRowsInMemory;
+  private final Long maxBytesInMemory;
   private final AggregatorFactory[] aggs;
   private final String datasourceName;
   private final boolean forceExtendableShardSpecs;
@@ -415,19 +423,21 @@ public class IndexGeneratorJobTest
       String inputFormatName,
       InputRowParser inputRowParser,
       Integer maxRowsInMemory,
+      Long maxBytesInMemory,
       AggregatorFactory[] aggs,
       String datasourceName,
       boolean forceExtendableShardSpecs
-  ) throws IOException
+  )
   {
     this.useCombiner = useCombiner;
     this.partitionType = partitionType;
     this.shardInfoForEachSegment = shardInfoForEachSegment;
-    this.interval = new Interval(interval);
+    this.interval = Intervals.of(interval);
     this.data = data;
     this.inputFormatName = inputFormatName;
     this.inputRowParser = inputRowParser;
     this.maxRowsInMemory = maxRowsInMemory;
+    this.maxBytesInMemory = maxBytesInMemory;
     this.aggs = aggs;
     this.datasourceName = datasourceName;
     this.forceExtendableShardSpecs = forceExtendableShardSpecs;
@@ -495,6 +505,7 @@ public class IndexGeneratorJobTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)
                 ),
+                null,
                 mapper
             ),
             new HadoopIOConfig(
@@ -509,6 +520,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 maxRowsInMemory,
+                maxBytesInMemory,
                 false,
                 false,
                 false,
@@ -521,6 +533,8 @@ public class IndexGeneratorJobTest
                 null,
                 forceExtendableShardSpecs,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -560,8 +574,8 @@ public class IndexGeneratorJobTest
     for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
       List<ShardSpec> specs = constructShardSpecFromShardInfo(partitionType, shardInfoForEachShard[segmentNum++]);
       List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
-      for (int i = 0; i < specs.size(); ++i) {
-        actualSpecs.add(new HadoopyShardSpec(specs.get(i), shardCount++));
+      for (ShardSpec spec : specs) {
+        actualSpecs.add(new HadoopyShardSpec(spec, shardCount++));
       }
 
       shardSpecs.put(segmentGranularity.getStartMillis(), actualSpecs);
@@ -578,7 +592,7 @@ public class IndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {

@@ -22,10 +22,12 @@ package io.druid.indexing.common.actions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ObjectMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -44,7 +46,7 @@ public class SegmentTransactionalInsertActionTest
   public TaskActionTestKit actionTestKit = new TaskActionTestKit();
 
   private static final String DATA_SOURCE = "none";
-  private static final Interval INTERVAL = new Interval("2020/2020T01");
+  private static final Interval INTERVAL = Intervals.of("2020/2020T01");
   private static final String PARTY_YEAR = "1999";
   private static final String THE_DISTANT_FUTURE = "3000";
 
@@ -87,9 +89,9 @@ public class SegmentTransactionalInsertActionTest
   @Test
   public void testTransactional() throws Exception
   {
-    final Task task = new NoopTask(null, 0, 0, null, null, null);
+    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     SegmentPublishResult result1 = new SegmentTransactionalInsertAction(
         ImmutableSet.of(SEGMENT1),
@@ -128,9 +130,9 @@ public class SegmentTransactionalInsertActionTest
   @Test
   public void testFailTransactional() throws Exception
   {
-    final Task task = new NoopTask(null, 0, 0, null, null, null);
+    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     SegmentPublishResult result = new SegmentTransactionalInsertAction(
         ImmutableSet.of(SEGMENT1),
@@ -147,10 +149,10 @@ public class SegmentTransactionalInsertActionTest
   @Test
   public void testFailBadVersion() throws Exception
   {
-    final Task task = new NoopTask(null, 0, 0, null, null, null);
+    final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));

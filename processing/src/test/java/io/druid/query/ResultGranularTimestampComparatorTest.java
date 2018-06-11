@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
@@ -27,7 +28,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -36,7 +36,7 @@ import java.util.Arrays;
 public class ResultGranularTimestampComparatorTest
 {
   @Parameterized.Parameters(name = "descending={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(Arrays.asList(false, true));
   }
@@ -48,7 +48,7 @@ public class ResultGranularTimestampComparatorTest
     this.descending = descending;
   }
 
-  private final DateTime time = new DateTime("2011-11-11");
+  private final DateTime time = DateTimes.of("2011-11-11");
 
   @Test
   public void testCompareAll()

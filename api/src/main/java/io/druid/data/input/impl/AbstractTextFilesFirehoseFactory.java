@@ -41,14 +41,14 @@ import java.util.NoSuchElementException;
  * This is an abstract class for firehose factory for making firehoses reading text files.
  * It provides an unified {@link #connect(StringInputRowParser, File)} implementation for its subclasses.
  *
- * @param <ObjectType> object type representing input data
+ * @param <T> object type representing input data
  */
-public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
+public abstract class AbstractTextFilesFirehoseFactory<T>
     implements FirehoseFactory<StringInputRowParser>
 {
   private static final Logger LOG = new Logger(AbstractTextFilesFirehoseFactory.class);
 
-  private List<ObjectType> objects;
+  private List<T> objects;
 
   @Override
   public Firehose connect(StringInputRowParser firehoseParser, File temporaryDirectory) throws IOException
@@ -56,7 +56,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
     if (objects == null) {
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "initObjects"));
     }
-    final Iterator<ObjectType> iterator = objects.iterator();
+    final Iterator<T> iterator = objects.iterator();
     return new FileIteratingFirehose(
         new Iterator<LineIterator>()
         {
@@ -72,7 +72,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
             if (!hasNext()) {
               throw new NoSuchElementException();
             }
-            final ObjectType object = iterator.next();
+            final T object = iterator.next();
             try {
               return IOUtils.lineIterator(wrapObjectStream(object, openObjectStream(object)), Charsets.UTF_8);
             }
@@ -97,7 +97,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
    *
    * @return a collection of initialized objects.
    */
-  protected abstract Collection<ObjectType> initObjects() throws IOException;
+  protected abstract Collection<T> initObjects() throws IOException;
 
   /**
    * Open an input stream from the given object.  If the object is compressed, this method should return a byte stream
@@ -106,10 +106,8 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
    * @param object an object to be read
    *
    * @return an input stream for the object
-   *
-   * @throws IOException
    */
-  protected abstract InputStream openObjectStream(ObjectType object) throws IOException;
+  protected abstract InputStream openObjectStream(T object) throws IOException;
 
   /**
    * Wrap the given input stream if needed.  The decompression logic should be applied to the given stream if the object
@@ -117,8 +115,7 @@ public abstract class AbstractTextFilesFirehoseFactory<ObjectType>
    *
    * @param object an input object
    * @param stream a stream for the object
-   * @return
-   * @throws IOException
+   * @return an wrapped input stream
    */
-  protected abstract InputStream wrapObjectStream(ObjectType object, InputStream stream) throws IOException;
+  protected abstract InputStream wrapObjectStream(T object, InputStream stream) throws IOException;
 }

@@ -22,43 +22,60 @@ package io.druid.segment.data;
 import io.druid.java.util.common.IAE;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
-
-import java.io.IOException;
 
 /**
  */
 public final class ArrayBasedIndexedInts implements IndexedInts
 {
-  private static final ArrayBasedIndexedInts EMPTY = new ArrayBasedIndexedInts(IntArrays.EMPTY_ARRAY, 0);
+  static final IndexedInts EMPTY = new ArrayBasedIndexedInts();
 
-  public static ArrayBasedIndexedInts of(int[] expansion)
+  private int[] expansion;
+  private int size;
+
+  public ArrayBasedIndexedInts()
   {
-    if (expansion.length == 0) {
-      return EMPTY;
-    }
-    return new ArrayBasedIndexedInts(expansion, expansion.length);
+    expansion = IntArrays.EMPTY_ARRAY;
+    size = 0;
   }
 
-  public static ArrayBasedIndexedInts of(int[] expansion, int size)
-  {
-    if (size == 0) {
-      return EMPTY;
-    }
-    if (size < 0 || size > expansion.length) {
-      throw new IAE("Size[%s] should be between 0 and %s", size, expansion.length);
-    }
-    return new ArrayBasedIndexedInts(expansion, size);
-  }
-
-  private final int[] expansion;
-  private final int size;
-
-  private ArrayBasedIndexedInts(int[] expansion, int size)
+  public ArrayBasedIndexedInts(int[] expansion)
   {
     this.expansion = expansion;
+    this.size = expansion.length;
+  }
+
+  public void ensureSize(int size)
+  {
+    if (expansion.length < size) {
+      expansion = new int[size];
+    }
+  }
+
+  public void setSize(int size)
+  {
+    if (size < 0 || size > expansion.length) {
+      throw new IAE("Size[%d] > expansion.length[%d] or < 0", size, expansion.length);
+    }
     this.size = size;
+  }
+
+  /**
+   * Sets the values from the given array. The given values array is not reused and not prone to be mutated later.
+   * Instead, the values from this array are copied into an array which is internal to ArrayBasedIndexedInts.
+   */
+  public void setValues(int[] values, int size)
+  {
+    if (size < 0 || size > values.length) {
+      throw new IAE("Size[%d] should be between 0 and %d", size, values.length);
+    }
+    ensureSize(size);
+    System.arraycopy(values, 0, expansion, 0, size);
+    this.size = size;
+  }
+
+  public void setValue(int index, int value)
+  {
+    expansion[index] = value;
   }
 
   @Override
@@ -70,27 +87,10 @@ public final class ArrayBasedIndexedInts implements IndexedInts
   @Override
   public int get(int index)
   {
-    if (index >= size) {
-      throw new IndexOutOfBoundsException("index: " + index + ", size: " + size);
+    if (index < 0 || index >= size) {
+      throw new IAE("index[%d] >= size[%d] or < 0", index, size);
     }
     return expansion[index];
-  }
-
-  @Override
-  public IntIterator iterator()
-  {
-    return IntIterators.wrap(expansion, 0, size);
-  }
-
-  @Override
-  public void fill(int index, int[] toFill)
-  {
-    throw new UnsupportedOperationException("fill not supported");
-  }
-
-  @Override
-  public void close() throws IOException
-  {
   }
 
   @Override

@@ -23,10 +23,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import com.google.common.io.OutputSupplier;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
@@ -51,7 +50,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-import org.joda.time.DateTime;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -64,7 +62,6 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -91,6 +88,7 @@ public class JobHelper
   {
     return new Path(base, "classpath");
   }
+
   public static final String INDEX_ZIP = "index.zip";
   public static final String DESCRIPTOR_JSON = "descriptor.json";
 
@@ -160,18 +158,13 @@ public class JobHelper
       if (jarFile.getName().endsWith(".jar")) {
         try {
           RetryUtils.retry(
-              new Callable<Boolean>()
-              {
-                @Override
-                public Boolean call() throws Exception
-                {
-                  if (isSnapshot(jarFile)) {
-                    addSnapshotJarToClassPath(jarFile, intermediateClassPath, fs, job);
-                  } else {
-                    addJarToClassPath(jarFile, distributedClassPath, intermediateClassPath, fs, job);
-                  }
-                  return true;
+              () -> {
+                if (isSnapshot(jarFile)) {
+                  addSnapshotJarToClassPath(jarFile, intermediateClassPath, fs, job);
+                } else {
+                  addJarToClassPath(jarFile, distributedClassPath, intermediateClassPath, fs, job);
                 }
+                return true;
               },
               shouldRetryPredicate(),
               NUM_RETRIES
@@ -283,17 +276,9 @@ public class JobHelper
   static void uploadJar(File jarFile, final Path path, final FileSystem fs) throws IOException
   {
     log.info("Uploading jar to path[%s]", path);
-    ByteStreams.copy(
-        Files.newInputStreamSupplier(jarFile),
-        new OutputSupplier<OutputStream>()
-        {
-          @Override
-          public OutputStream getOutput() throws IOException
-          {
-            return fs.create(path);
-          }
-        }
-    );
+    try (OutputStream os = fs.create(path)) {
+      Files.asByteSource(jarFile).copyTo(os);
+    }
   }
 
   static boolean isSnapshot(File jarFile)
@@ -360,23 +345,18 @@ public class JobHelper
     }
   }
 
-  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
+  public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
   {
-    String failedMessage = null;
-    for (Jobby job : jobs) {
-      if (failedMessage == null) {
-        if (!job.run()) {
-          failedMessage = StringUtils.format("Job[%s] failed!", job.getClass());
-        }
-      }
-    }
+    boolean succeeded = job.run();
 
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
-      if (failedMessage == null || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
         Path workingPath = config.makeIntermediatePath();
         log.info("Deleting path[%s]", workingPath);
         try {
-          workingPath.getFileSystem(injectSystemProperties(new Configuration())).delete(workingPath, true);
+          Configuration conf = injectSystemProperties(new Configuration());
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
         }
         catch (IOException e) {
           log.error(e, "Failed to cleanup path[%s]", workingPath);
@@ -384,11 +364,35 @@ public class JobHelper
       }
     }
 
-    if (failedMessage != null) {
-      throw new ISE(failedMessage);
+    return succeeded;
+  }
+
+  public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
+  {
+    boolean succeeded = true;
+    for (Jobby job : jobs) {
+      if (!job.run()) {
+        succeeded = false;
+        break;
+      }
     }
 
-    return true;
+    if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
+      if (succeeded || config.getSchema().getTuningConfig().isCleanupOnFailure()) {
+        Path workingPath = config.makeIntermediatePath();
+        log.info("Deleting path[%s]", workingPath);
+        try {
+          Configuration conf = injectSystemProperties(new Configuration());
+          config.addJobProperties(conf);
+          workingPath.getFileSystem(conf).delete(workingPath, true);
+        }
+        catch (IOException e) {
+          log.error(e, "Failed to cleanup path[%s]", workingPath);
+        }
+      }
+    }
+
+    return succeeded;
   }
 
   public static DataSegment serializeOutIndex(
@@ -566,8 +570,10 @@ public class JobHelper
       DataSegmentPusher dataSegmentPusher
   )
   {
-    return new Path(prependFSIfNullScheme(fs, basePath),
-                    dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName));
+    return new Path(
+        prependFSIfNullScheme(fs, basePath),
+        dataSegmentPusher.makeIndexPathName(segmentTemplate, baseFileName)
+    );
   }
 
   public static Path makeTmpPath(
@@ -580,9 +586,10 @@ public class JobHelper
   {
     return new Path(
         prependFSIfNullScheme(fs, basePath),
-        StringUtils.format("./%s.%d",
-                           dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
-                           taskAttemptID.getId()
+        StringUtils.format(
+            "./%s.%d",
+            dataSegmentPusher.makeIndexPathName(segmentTemplate, JobHelper.INDEX_ZIP),
+            taskAttemptID.getId()
         )
     );
   }
@@ -605,50 +612,45 @@ public class JobHelper
   {
     try {
       return RetryUtils.retry(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call() throws Exception
-            {
-              final boolean needRename;
+          () -> {
+            final boolean needRename;
 
-              if (outputFS.exists(finalIndexZipFilePath)) {
-                // NativeS3FileSystem.rename won't overwrite, so we might need to delete the old index first
-                final FileStatus zipFile = outputFS.getFileStatus(indexZipFilePath);
-                final FileStatus finalIndexZipFile = outputFS.getFileStatus(finalIndexZipFilePath);
+            if (outputFS.exists(finalIndexZipFilePath)) {
+              // NativeS3FileSystem.rename won't overwrite, so we might need to delete the old index first
+              final FileStatus zipFile = outputFS.getFileStatus(indexZipFilePath);
+              final FileStatus finalIndexZipFile = outputFS.getFileStatus(finalIndexZipFilePath);
 
-                if (zipFile.getModificationTime() >= finalIndexZipFile.getModificationTime()
-                    || zipFile.getLen() != finalIndexZipFile.getLen()) {
-                  log.info(
-                      "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
-                      finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
-                      finalIndexZipFile.getLen(),
-                      zipFile.getPath(),
-                      new DateTime(zipFile.getModificationTime()),
-                      zipFile.getLen()
-                  );
-                  outputFS.delete(finalIndexZipFilePath, false);
-                  needRename = true;
-                } else {
-                  log.info(
-                      "File[%s / %s / %sB] existed and will be kept",
-                      finalIndexZipFile.getPath(),
-                      new DateTime(finalIndexZipFile.getModificationTime()),
-                      finalIndexZipFile.getLen()
-                  );
-                  needRename = false;
-                }
-              } else {
+              if (zipFile.getModificationTime() >= finalIndexZipFile.getModificationTime()
+                  || zipFile.getLen() != finalIndexZipFile.getLen()) {
+                log.info(
+                    "File[%s / %s / %sB] existed, but wasn't the same as [%s / %s / %sB]",
+                    finalIndexZipFile.getPath(),
+                    DateTimes.utc(finalIndexZipFile.getModificationTime()),
+                    finalIndexZipFile.getLen(),
+                    zipFile.getPath(),
+                    DateTimes.utc(zipFile.getModificationTime()),
+                    zipFile.getLen()
+                );
+                outputFS.delete(finalIndexZipFilePath, false);
                 needRename = true;
-              }
-
-              if (needRename) {
-                log.info("Attempting rename from [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
-                return outputFS.rename(indexZipFilePath, finalIndexZipFilePath);
               } else {
-                return true;
+                log.info(
+                    "File[%s / %s / %sB] existed and will be kept",
+                    finalIndexZipFile.getPath(),
+                    DateTimes.utc(finalIndexZipFile.getModificationTime()),
+                    finalIndexZipFile.getLen()
+                );
+                needRename = false;
               }
+            } else {
+              needRename = true;
+            }
+
+            if (needRename) {
+              log.info("Attempting rename from [%s] to [%s]", indexZipFilePath, finalIndexZipFilePath);
+              return outputFS.rename(indexZipFilePath, finalIndexZipFilePath);
+            } else {
+              return true;
             }
           },
           FileUtils.IS_EXCEPTION,
@@ -807,14 +809,6 @@ public class JobHelper
       }
 
       @Override
-      public void progressSection(String section, String message)
-      {
-        log.info("Progress message for section [%s] : [%s]", section, message);
-        context.progress();
-        context.setStatus(StringUtils.format("PROGRESS [%s]", section));
-      }
-
-      @Override
       public void stopSection(String section)
       {
         context.progress();
@@ -827,14 +821,7 @@ public class JobHelper
   {
     try {
       return RetryUtils.retry(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call() throws Exception
-            {
-              return fs.delete(path, recursive);
-            }
-          },
+          () -> fs.delete(path, recursive),
           shouldRetryPredicate(),
           NUM_RETRIES
       );
@@ -843,5 +830,15 @@ public class JobHelper
       log.error(e, "Failed to cleanup path[%s]", path);
       throw Throwables.propagate(e);
     }
+  }
+
+  public static String getJobTrackerAddress(Configuration config)
+  {
+    String jobTrackerAddress = config.get("mapred.job.tracker");
+    if (jobTrackerAddress == null) {
+      // New Property name for Hadoop 3.0 and later versions
+      jobTrackerAddress = config.get("mapreduce.jobtracker.address");
+    }
+    return jobTrackerAddress;
   }
 }

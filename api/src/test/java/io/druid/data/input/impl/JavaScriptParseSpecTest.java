@@ -58,9 +58,9 @@ public class JavaScriptParseSpecTest
         "abc",
         JavaScriptConfig.getEnabledInstance()
     );
-    final JavaScriptParseSpec serde = jsonMapper.readValue(
+    final JavaScriptParseSpec serde = (JavaScriptParseSpec) jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
-        JavaScriptParseSpec.class
+        ParseSpec.class
     );
     Assert.assertEquals("abc", serde.getTimestampSpec().getTimestampColumn());
     Assert.assertEquals("iso", serde.getTimestampSpec().getTimestampFormat());
@@ -81,7 +81,7 @@ public class JavaScriptParseSpecTest
     );
 
     final Parser<String, Object> parser = spec.makeParser();
-    final Map<String, Object> obj = parser.parse("x-y");
+    final Map<String, Object> obj = parser.parseToMap("x-y");
     Assert.assertEquals(ImmutableMap.of("one", "x", "two", "y"), obj);
   }
 

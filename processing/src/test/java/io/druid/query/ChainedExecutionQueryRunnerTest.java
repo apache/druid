@@ -26,8 +26,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.timeseries.TimeseriesQuery;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
@@ -93,7 +93,7 @@ public class ChainedExecutionQueryRunnerTest
                 new IAnswer<Void>()
                 {
                   @Override
-                  public Void answer() throws Throwable
+                  public Void answer()
                   {
                     queryIsRegistered.countDown();
                     return null;
@@ -119,14 +119,12 @@ public class ChainedExecutionQueryRunnerTest
         )
     );
     Map<String, Object> context = ImmutableMap.<String, Object>of();
-    final Sequence seq = chainedRunner.run(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource("test")
-              .intervals("2014/2015")
-              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
-              .build(),
-        context
-    );
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test")
+                                  .intervals("2014/2015")
+                                  .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
+                                  .build();
+    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
         new Runnable()
@@ -134,7 +132,7 @@ public class ChainedExecutionQueryRunnerTest
           @Override
           public void run()
           {
-            Sequences.toList(seq, Lists.newArrayList());
+            seq.toList();
           }
         }
     );
@@ -219,7 +217,7 @@ public class ChainedExecutionQueryRunnerTest
                 new IAnswer<Void>()
                 {
                   @Override
-                  public Void answer() throws Throwable
+                  public Void answer()
                   {
                     queryIsRegistered.countDown();
                     return null;
@@ -246,15 +244,13 @@ public class ChainedExecutionQueryRunnerTest
         )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    final Sequence seq = chainedRunner.run(
-        Druids.newTimeseriesQueryBuilder()
-              .dataSource("test")
-              .intervals("2014/2015")
-              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
-              .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
-              .build(),
-        context
-    );
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test")
+                                  .intervals("2014/2015")
+                                  .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
+                                  .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
+                                  .build();
+    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
         new Runnable()
@@ -262,7 +258,7 @@ public class ChainedExecutionQueryRunnerTest
           @Override
           public void run()
           {
-            Sequences.toList(seq, Lists.newArrayList());
+            seq.toList();
           }
         }
     );

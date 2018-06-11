@@ -139,7 +139,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
 
   public HadoopDruidIndexerConfig getHadoopDruidIndexerConfig()
   {
-    if(config == null) {
+    if (config == null) {
       try {
         if (argumentSpec.startsWith("{")) {
           config = HadoopDruidIndexerConfig.fromString(argumentSpec);

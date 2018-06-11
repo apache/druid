@@ -30,11 +30,13 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
+import io.druid.server.coordination.DataSegmentChangeRequest;
 import io.druid.server.coordination.DruidServerMetadata;
-import io.druid.server.coordination.SegmentChangeRequestHistory;
-import io.druid.server.coordination.SegmentChangeRequestsSnapshot;
+import io.druid.server.coordination.ChangeRequestHistory;
+import io.druid.server.coordination.ChangeRequestsSnapshot;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -43,7 +45,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -91,7 +92,7 @@ public class BatchDataSegmentAnnouncerTest
     cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(testBasePath);
 
-    jsonMapper = new DefaultObjectMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
 
     announcer = new Announcer(
         cf,
@@ -187,8 +188,8 @@ public class BatchDataSegmentAnnouncerTest
       Assert.assertEquals(Sets.newHashSet(firstSegment, secondSegment), segments);
     }
 
-    SegmentChangeRequestsSnapshot snapshot = segmentAnnouncer.getSegmentChangesSince(
-        new SegmentChangeRequestHistory.Counter(-1, -1)
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = segmentAnnouncer.getSegmentChangesSince(
+        new ChangeRequestHistory.Counter(-1, -1)
     ).get();
     Assert.assertEquals(2, snapshot.getRequests().size());
     Assert.assertEquals(2, snapshot.getCounter().getCounter());
@@ -211,7 +212,7 @@ public class BatchDataSegmentAnnouncerTest
     Assert.assertEquals(4, snapshot.getCounter().getCounter());
 
     snapshot = segmentAnnouncer.getSegmentChangesSince(
-        new SegmentChangeRequestHistory.Counter(-1, -1)
+        new ChangeRequestHistory.Counter(-1, -1)
     ).get();
     Assert.assertEquals(0, snapshot.getRequests().size());
     Assert.assertEquals(4, snapshot.getCounter().getCounter());
@@ -310,15 +311,15 @@ public class BatchDataSegmentAnnouncerTest
     }
     Assert.assertEquals(allSegments, testSegments);
 
-    SegmentChangeRequestsSnapshot snapshot = null;
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = null;
 
     if (testHistory) {
       snapshot = segmentAnnouncer.getSegmentChangesSince(
-          new SegmentChangeRequestHistory.Counter(-1, -1)
+          new ChangeRequestHistory.Counter(-1, -1)
       ).get();
       Assert.assertEquals(testSegments.size(), snapshot.getRequests().size());
-    Assert.assertEquals(testSegments.size(), snapshot.getCounter().getCounter());
-  }
+      Assert.assertEquals(testSegments.size(), snapshot.getCounter().getCounter());
+    }
 
     segmentAnnouncer.unannounceSegments(testSegments);
 
@@ -332,7 +333,7 @@ public class BatchDataSegmentAnnouncerTest
       Assert.assertEquals(2 * testSegments.size(), snapshot.getCounter().getCounter());
 
       snapshot = segmentAnnouncer.getSegmentChangesSince(
-          new SegmentChangeRequestHistory.Counter(-1, -1)
+          new ChangeRequestHistory.Counter(-1, -1)
       ).get();
       Assert.assertEquals(0, snapshot.getRequests().size());
       Assert.assertEquals(2 * testSegments.size(), snapshot.getCounter().getCounter());
@@ -353,11 +354,11 @@ public class BatchDataSegmentAnnouncerTest
                       .dataSource("foo")
                       .interval(
                           new Interval(
-                              new DateTime("2013-01-01").plusDays(offset),
-                              new DateTime("2013-01-02").plusDays(offset)
+                              DateTimes.of("2013-01-01").plusDays(offset),
+                              DateTimes.of("2013-01-02").plusDays(offset)
                           )
                       )
-                      .version(new DateTime().toString())
+                      .version(DateTimes.nowUtc().toString())
                       .dimensions(ImmutableList.<String>of("dim1", "dim2"))
                       .metrics(ImmutableList.<String>of("met1", "met2"))
                       .loadSpec(ImmutableMap.<String, Object>of("type", "local"))

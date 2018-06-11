@@ -26,6 +26,9 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Random;
 
+/**
+ * TODO retwrite using JMH and move to the benchmarks module
+ */
 public class ApproximateHistogramErrorBenchmark
 {
   private boolean debug = true;
@@ -40,18 +43,6 @@ public class ApproximateHistogramErrorBenchmark
   public ApproximateHistogramErrorBenchmark setDebug(boolean debug)
   {
     this.debug = debug;
-    return this;
-  }
-
-  public ApproximateHistogramErrorBenchmark setNumBuckets(int numBuckets)
-  {
-    this.numBuckets = numBuckets;
-    return this;
-  }
-
-  public ApproximateHistogramErrorBenchmark setNumBreaks(int numBreaks)
-  {
-    this.numBreaks = numBreaks;
     return this;
   }
 
@@ -164,26 +155,26 @@ public class ApproximateHistogramErrorBenchmark
     float err1 = 0;
     float err2 = 0;
     for (int j = 0; j < hcounts.length; j++) {
-      err1 += (float)Math.abs((hcounts[j] - ahcounts1[j]) / numValues);
-      err2 += (float)Math.abs((hcounts[j] - ahcounts2[j]) / numValues);
+      err1 += (float) Math.abs((hcounts[j] - ahcounts1[j]) / numValues);
+      err2 += (float) Math.abs((hcounts[j] - ahcounts2[j]) / numValues);
     }
 
     if (debug) {
       float sum = 0;
       for (double v : hcounts) {
-        sum += (float)v;
+        sum += (float) v;
       }
       System.out.println("Exact Histogram Sum:");
       System.out.println(sum);
       sum = 0;
       for (double v : ahcounts1) {
-        sum += (float)v;
+        sum += (float) v;
       }
       System.out.println("Approximate Histogram Sum:");
       System.out.println(sum);
       sum = 0;
       for (double v : ahcounts2) {
-        sum += (float)v;
+        sum += (float) v;
       }
       System.out.println("Approximate Histogram Rule Fold Sum:");
       System.out.println(sum);

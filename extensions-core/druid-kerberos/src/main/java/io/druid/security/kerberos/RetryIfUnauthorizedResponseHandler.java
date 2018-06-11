@@ -19,23 +19,21 @@
 
 package io.druid.security.kerberos;
 
-import com.metamx.http.client.response.ClientResponse;
-import com.metamx.http.client.response.HttpResponseHandler;
+import io.druid.java.util.http.client.response.ClientResponse;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
 import io.druid.java.util.common.logger.Logger;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
-  implements HttpResponseHandler<RetryResponseHolder<Intermediate>, RetryResponseHolder<Final>>
+    implements HttpResponseHandler<RetryResponseHolder<Intermediate>, RetryResponseHolder<Final>>
 {
   private static final Logger log = new Logger(RetryIfUnauthorizedResponseHandler.class);
   private final HttpResponseHandler<Intermediate, Final> httpResponseHandler;
 
 
-  public RetryIfUnauthorizedResponseHandler(
-    HttpResponseHandler<Intermediate, Final> httpResponseHandler
-  )
+  public RetryIfUnauthorizedResponseHandler(HttpResponseHandler<Intermediate, Final> httpResponseHandler)
   {
     this.httpResponseHandler = httpResponseHandler;
   }
@@ -55,7 +53,8 @@ public class RetryIfUnauthorizedResponseHandler<Intermediate, Final>
 
   @Override
   public ClientResponse<RetryResponseHolder<Intermediate>> handleChunk(
-    ClientResponse<RetryResponseHolder<Intermediate>> clientResponse, HttpChunk httpChunk
+      ClientResponse<RetryResponseHolder<Intermediate>> clientResponse,
+      HttpChunk httpChunk
   )
   {
     if (clientResponse.getObj().shouldRetry()) {

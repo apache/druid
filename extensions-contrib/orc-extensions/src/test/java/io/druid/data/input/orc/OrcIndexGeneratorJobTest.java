@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import io.druid.java.util.common.StringUtils;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
@@ -38,13 +37,15 @@ import io.druid.indexer.HadoopyShardSpec;
 import io.druid.indexer.IndexGeneratorJob;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexIndexableAdapter;
-import io.druid.segment.Rowboat;
+import io.druid.segment.RowIterator;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.DataSegment;
@@ -84,7 +85,7 @@ import java.util.zip.ZipInputStream;
 
 public class OrcIndexGeneratorJobTest
 {
-  static private final AggregatorFactory[] aggs = {
+  private static final AggregatorFactory[] aggs = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
@@ -117,21 +118,24 @@ public class OrcIndexGeneratorJobTest
           "2014102212,i.example.com,963",
           "2014102212,j.example.com,333"
       );
-  private final Interval interval = new Interval("2014-10-22T00:00:00Z/P1D");
+  private final Interval interval = Intervals.of("2014-10-22T00:00:00Z/P1D");
   private File dataRoot;
   private File outputRoot;
-  private Integer[][][] shardInfoForEachSegment = new Integer[][][]{{
-      {0, 4},
-      {1, 4},
-      {2, 4},
-      {3, 4}
-  }};
+  private Integer[][][] shardInfoForEachSegment = new Integer[][][]{
+      {
+          {0, 4},
+          {1, 4},
+          {2, 4},
+          {3, 4}
+      }
+  };
   private final InputRowParser inputRowParser = new OrcHadoopInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec("timestamp", "yyyyMMddHH", null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null)
       ),
-      "struct<timestamp:string,host:string,visited_num:int>"
+      "struct<timestamp:string,host:string,visited_num:int>",
+      null
   );
 
   private File writeDataToLocalOrcFile(File outputDir, List<String> data) throws IOException
@@ -203,6 +207,7 @@ public class OrcIndexGeneratorJobTest
                 new UniformGranularitySpec(
                     Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)
                 ),
+                null,
                 mapper
             ),
             new HadoopIOConfig(
@@ -212,6 +217,7 @@ public class OrcIndexGeneratorJobTest
             ),
             new HadoopTuningConfig(
                 outputRoot.getCanonicalPath(),
+                null,
                 null,
                 null,
                 null,
@@ -229,6 +235,8 @@ public class OrcIndexGeneratorJobTest
                 null,
                 false,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -247,7 +255,7 @@ public class OrcIndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
@@ -302,11 +310,11 @@ public class OrcIndexGeneratorJobTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        for (Rowboat row: adapter.getRows()) {
-          Object[] metrics = row.getMetrics();
-
-          rowCount++;
-          Assert.assertTrue(metrics.length == 2);
+        try (RowIterator rowIt = adapter.getRows()) {
+          while (rowIt.moveToNext()) {
+            rowCount++;
+            Assert.assertEquals(2, rowIt.getPointer().getNumMetrics());
+          }
         }
       }
       Assert.assertEquals(rowCount, data.size());

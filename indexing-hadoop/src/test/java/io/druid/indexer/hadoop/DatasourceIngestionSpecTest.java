@@ -22,6 +22,7 @@ package io.druid.indexer.hadoop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import io.druid.java.util.common.Intervals;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
@@ -35,12 +36,12 @@ import java.util.List;
  */
 public class DatasourceIngestionSpecTest
 {
-  private static final ObjectMapper MAPPER = TestHelper.getJsonMapper();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testSingleIntervalSerde() throws Exception
   {
-    Interval interval = Interval.parse("2014/2015");
+    Interval interval = Intervals.of("2014/2015");
 
     DatasourceIngestionSpec expected = new DatasourceIngestionSpec(
         "test",
@@ -50,7 +51,8 @@ public class DatasourceIngestionSpecTest
         new SelectorDimFilter("dim", "value", null),
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
-        false
+        false,
+        null
     );
 
     DatasourceIngestionSpec actual = MAPPER.readValue(MAPPER.writeValueAsString(expected), DatasourceIngestionSpec.class);
@@ -74,7 +76,7 @@ public class DatasourceIngestionSpecTest
         DatasourceIngestionSpec.class
     );
 
-    List<Interval> intervals = ImmutableList.of(Interval.parse("2014/2015"), Interval.parse("2016/2017"));
+    List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
 
     DatasourceIngestionSpec expected = new DatasourceIngestionSpec(
         "test",
@@ -84,7 +86,8 @@ public class DatasourceIngestionSpecTest
         null,
         null,
         null,
-        false
+        false,
+        null
     );
 
     Assert.assertEquals(expected, actual);
@@ -119,7 +122,7 @@ public class DatasourceIngestionSpecTest
         ImmutableList.of(
             new DataSegment(
                 "test",
-                Interval.parse("2014/2017"),
+                Intervals.of("2014/2017"),
                 "v0",
                 null,
                 null,
@@ -132,7 +135,8 @@ public class DatasourceIngestionSpecTest
         new SelectorDimFilter("dim", "value", null),
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
-        true
+        true,
+        null
     );
 
     actual = MAPPER.readValue(
@@ -152,7 +156,7 @@ public class DatasourceIngestionSpecTest
     DatasourceIngestionSpec actual = MAPPER.readValue(jsonStr, DatasourceIngestionSpec.class);
 
     Assert.assertEquals(
-        new DatasourceIngestionSpec("test", Interval.parse("2014/2015"), null, null, null, null, null, false),
+        new DatasourceIngestionSpec("test", Intervals.of("2014/2015"), null, null, null, null, null, false, null),
         actual
     );
   }

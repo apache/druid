@@ -26,17 +26,22 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.ObjectMetadata;
 import io.druid.indexing.overlord.SegmentPublishResult;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.TestHelper;
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
@@ -52,10 +57,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private final ObjectMapper mapper = new DefaultObjectMapper();
+  @Rule
+  public final ExpectedException expectedException = ExpectedException.none();
+
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
+
   private final DataSegment defaultSegment = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -67,7 +76,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment defaultSegment2 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -79,7 +88,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment defaultSegment3 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-03T00Z/2015-01-04T00Z"),
+      Intervals.of("2015-01-03T00Z/2015-01-04T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -92,7 +101,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   // Overshadows defaultSegment, defaultSegment2
   private final DataSegment defaultSegment4 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -104,7 +113,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment0of0 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -116,7 +125,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment1of0 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -128,7 +137,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment2of0 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -140,7 +149,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment2of1 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -152,7 +161,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private final DataSegment numberedSegment3of1 = new DataSegment(
       "fooDataSource",
-      Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
+      Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
       "zversion",
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
@@ -171,10 +180,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    mapper.registerSubtypes(LinearShardSpec.class);
+    mapper.registerSubtypes(LinearShardSpec.class, NumberedShardSpec.class);
     derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
+    derbyConnector.createPendingSegmentsTable();
     metadataUpdateCounter.set(0);
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         mapper,
@@ -205,7 +215,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
               new HandleCallback<Integer>()
               {
                 @Override
-                public Integer withHandle(Handle handle) throws Exception
+                public Integer withHandle(Handle handle)
                 {
                   return handle.createStatement(
                       StringUtils.format(
@@ -227,7 +237,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new HandleCallback<List<String>>()
         {
           @Override
-          public List<String> withHandle(Handle handle) throws Exception
+          public List<String> withHandle(Handle handle)
           {
             return handle.createQuery("SELECT id FROM " + table + " WHERE used = true ORDER BY id")
                          .map(StringMapper.FIRST)
@@ -523,8 +533,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.getUsedSegmentsForIntervals(
             defaultSegment.getDataSource(),
             ImmutableList.of(
-                Interval.parse("2015-01-03T00Z/2015-01-03T05Z"),
-                Interval.parse("2015-01-03T09Z/2015-01-04T00Z")
+                Intervals.of("2015-01-03T00Z/2015-01-03T05Z"),
+                Intervals.of("2015-01-03T09Z/2015-01-04T00Z")
             )
         )
     );
@@ -554,7 +564,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Set<DataSegment> actualSegments = ImmutableSet.copyOf(
         coordinator.getUsedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            Interval.parse("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z") // end is exclusive
+            Intervals.of("2014-12-31T23:59:59.999Z/2015-01-01T00:00:00.001Z") // end is exclusive
         )
     );
     Assert.assertEquals(
@@ -573,7 +583,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUsedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Interval.parse("2015-1-1T23:59:59.999Z/2015-02-01T00Z")
+                Intervals.of("2015-1-1T23:59:59.999Z/2015-02-01T00Z")
             )
         )
     );
@@ -701,7 +711,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.getUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Interval.parse("2000/2999")
+                Intervals.of("2000/2999")
             )
         )
     );
@@ -824,5 +834,106 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     // Should not update dataSource metadata.
     Assert.assertEquals(0, metadataUpdateCounter.get());
+  }
+
+  @Test
+  public void testAllocatePendingSegment()
+  {
+    final String dataSource = "ds";
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    final SegmentIdentifier identifier = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        null,
+        interval,
+        "version",
+        false
+    );
+
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
+
+    final SegmentIdentifier identifier1 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        identifier.toString(),
+        interval,
+        identifier.getVersion(),
+        false
+    );
+
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
+
+    final SegmentIdentifier identifier2 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        identifier1.toString(),
+        interval,
+        identifier1.getVersion(),
+        false
+    );
+
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
+
+    final SegmentIdentifier identifier3 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq",
+        identifier1.toString(),
+        interval,
+        identifier1.getVersion(),
+        false
+    );
+
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier3.toString());
+    Assert.assertEquals(identifier2, identifier3);
+
+    final SegmentIdentifier identifier4 = coordinator.allocatePendingSegment(
+        dataSource,
+        "seq1",
+        null,
+        interval,
+        "version",
+        false
+    );
+
+    Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_3", identifier4.toString());
+  }
+
+  @Test
+  public void testDeletePendingSegment() throws InterruptedException
+  {
+    final String dataSource = "ds";
+    final Interval interval = Intervals.of("2017-01-01/2017-02-01");
+    String prevSegmentId = null;
+
+    final DateTime begin = DateTimes.nowUtc();
+
+    for (int i = 0; i < 10; i++) {
+      final SegmentIdentifier identifier = coordinator.allocatePendingSegment(
+          dataSource,
+          "seq",
+          prevSegmentId,
+          interval,
+          "version",
+          false
+      );
+      prevSegmentId = identifier.toString();
+    }
+    Thread.sleep(100);
+
+    final DateTime secondBegin = DateTimes.nowUtc();
+    for (int i = 0; i < 5; i++) {
+      final SegmentIdentifier identifier = coordinator.allocatePendingSegment(
+          dataSource,
+          "seq",
+          prevSegmentId,
+          interval,
+          "version",
+          false
+      );
+      prevSegmentId = identifier.toString();
+    }
+
+    final int numDeleted = coordinator.deletePendingSegments(dataSource, new Interval(begin, secondBegin));
+    Assert.assertEquals(10, numDeleted);
   }
 }

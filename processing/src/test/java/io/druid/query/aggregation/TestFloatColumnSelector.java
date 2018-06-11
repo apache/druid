@@ -33,9 +33,15 @@ public class TestFloatColumnSelector extends io.druid.segment.TestFloatColumnSel
   }
 
   @Override
-  public float get()
+  public float getFloat()
   {
     return floats[index];
+  }
+
+  @Override
+  public boolean isNull()
+  {
+    return false;
   }
 
   public void increment()

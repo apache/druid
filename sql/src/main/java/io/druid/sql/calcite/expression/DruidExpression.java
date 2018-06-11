@@ -22,6 +22,7 @@ package io.druid.sql.calcite.expression;
 import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
@@ -34,7 +35,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Represents three kinds of expression-like concepts that native Druid queries support:
+ * Represents two kinds of expression-like concepts that native Druid queries support:
  *
  * (1) SimpleExtractions, which are direct column access, possibly with an extractionFn
  * (2) native Druid expressions.
@@ -64,7 +65,7 @@ public class DruidExpression
 
   public static DruidExpression fromColumn(final String column)
   {
-    return new DruidExpression(SimpleExtraction.of(column, null), String.format("\"%s\"", escape(column)));
+    return new DruidExpression(SimpleExtraction.of(column, null), StringUtils.format("\"%s\"", escape(column)));
   }
 
   public static DruidExpression fromExpression(final String expression)

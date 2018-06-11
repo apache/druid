@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -60,7 +59,6 @@ public class PagingSpec
   private final Map<String, Integer> pagingIdentifiers;
   private final int threshold;
   private final boolean fromNext;
-  private final SelectQueryConfig config;
 
   @JsonCreator
   public PagingSpec(
@@ -72,7 +70,6 @@ public class PagingSpec
   {
     this.pagingIdentifiers = pagingIdentifiers == null ? Maps.<String, Integer>newHashMap() : pagingIdentifiers;
     this.threshold = threshold;
-    this.config = config;
 
     boolean defaultFromNext = config.getEnableFromNextDefault();
     this.fromNext = fromNext == null ? defaultFromNext : fromNext;
@@ -116,13 +113,13 @@ public class PagingSpec
     int pagingValuesSize = 0;
     for (Map.Entry<String, Integer> entry : pagingIdentifiers.entrySet()) {
       pagingKeys[index] = StringUtils.toUtf8(entry.getKey());
-      pagingValues[index] = ByteBuffer.allocate(Ints.BYTES).putInt(entry.getValue()).array();
+      pagingValues[index] = ByteBuffer.allocate(Integer.BYTES).putInt(entry.getValue()).array();
       pagingKeysSize += pagingKeys[index].length;
-      pagingValuesSize += Ints.BYTES;
+      pagingValuesSize += Integer.BYTES;
       index++;
     }
 
-    final byte[] thresholdBytes = ByteBuffer.allocate(Ints.BYTES).putInt(threshold).array();
+    final byte[] thresholdBytes = ByteBuffer.allocate(Integer.BYTES).putInt(threshold).array();
 
     final ByteBuffer queryCacheKey = ByteBuffer.allocate(pagingKeysSize + pagingValuesSize + thresholdBytes.length + 1);
 

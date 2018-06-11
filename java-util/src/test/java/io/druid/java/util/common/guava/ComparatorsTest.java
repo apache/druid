@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common.guava;
 
+import io.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,7 +32,7 @@ import java.util.Comparator;
 public class ComparatorsTest
 {
   @Test
-  public void testInverse() throws Exception
+  public void testInverse()
   {
     Comparator<Integer> normal = Comparators.comparable();
     Comparator<Integer> inverted = Comparators.inverse(normal);
@@ -59,72 +60,72 @@ public class ComparatorsTest
   }
 
   @Test
-  public void testIntervalsByStartThenEnd() throws Exception
+  public void testIntervalsByStartThenEnd()
   {
     Comparator<Interval> comp = Comparators.intervalsByStartThenEnd();
 
-    Assert.assertEquals(0, comp.compare(new Interval("P1d/2011-04-02"), new Interval("2011-04-01/2011-04-02")));
-    Assert.assertEquals(-1, comp.compare(new Interval("2011-03-31/2011-04-02"), new Interval("2011-04-01/2011-04-02")));
-    Assert.assertEquals(1, comp.compare(new Interval("2011-04-01/2011-04-02"), new Interval("2011-03-31/2011-04-02")));
-    Assert.assertEquals(1, comp.compare(new Interval("2011-04-01/2011-04-03"), new Interval("2011-04-01/2011-04-02")));
-    Assert.assertEquals(-1, comp.compare(new Interval("2011-04-01/2011-04-03"), new Interval("2011-04-01/2011-04-04")));
+    Assert.assertEquals(0, comp.compare(Intervals.of("P1d/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
+    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-03-31/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
+    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-02"), Intervals.of("2011-03-31/2011-04-02")));
+    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-02")));
+    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-04")));
 
     Interval[] intervals = new Interval[]{
-        new Interval("2011-04-01T18/2011-04-02T13"),
-        new Interval("2011-04-01/2011-04-03"),
-        new Interval("2011-04-01/2011-04-04"),
-        new Interval("2011-04-02/2011-04-04"),
-        new Interval("2011-04-01/2011-04-02"),
-        new Interval("2011-04-02/2011-04-03"),
-        new Interval("2011-04-02/2011-04-03T06")
+        Intervals.of("2011-04-01T18/2011-04-02T13"),
+        Intervals.of("2011-04-01/2011-04-03"),
+        Intervals.of("2011-04-01/2011-04-04"),
+        Intervals.of("2011-04-02/2011-04-04"),
+        Intervals.of("2011-04-01/2011-04-02"),
+        Intervals.of("2011-04-02/2011-04-03"),
+        Intervals.of("2011-04-02/2011-04-03T06")
     };
     Arrays.sort(intervals, comp);
 
     Assert.assertArrayEquals(
         new Interval[]{
-            new Interval("2011-04-01/2011-04-02"),
-            new Interval("2011-04-01/2011-04-03"),
-            new Interval("2011-04-01/2011-04-04"),
-            new Interval("2011-04-01T18/2011-04-02T13"),
-            new Interval("2011-04-02/2011-04-03"),
-            new Interval("2011-04-02/2011-04-03T06"),
-            new Interval("2011-04-02/2011-04-04"),
+            Intervals.of("2011-04-01/2011-04-02"),
+            Intervals.of("2011-04-01/2011-04-03"),
+            Intervals.of("2011-04-01/2011-04-04"),
+            Intervals.of("2011-04-01T18/2011-04-02T13"),
+            Intervals.of("2011-04-02/2011-04-03"),
+            Intervals.of("2011-04-02/2011-04-03T06"),
+            Intervals.of("2011-04-02/2011-04-04"),
         },
         intervals
     );
   }
 
   @Test
-  public void testIntervalsByEndThenStart() throws Exception
+  public void testIntervalsByEndThenStart()
   {
     Comparator<Interval> comp = Comparators.intervalsByEndThenStart();
 
-    Assert.assertEquals(0, comp.compare(new Interval("P1d/2011-04-02"), new Interval("2011-04-01/2011-04-02")));
-    Assert.assertEquals(-1, comp.compare(new Interval("2011-04-01/2011-04-03"), new Interval("2011-04-01/2011-04-04")));
-    Assert.assertEquals(1, comp.compare(new Interval("2011-04-01/2011-04-02"), new Interval("2011-04-01/2011-04-01")));
-    Assert.assertEquals(-1, comp.compare(new Interval("2011-04-01/2011-04-03"), new Interval("2011-04-02/2011-04-03")));
-    Assert.assertEquals(1, comp.compare(new Interval("2011-04-01/2011-04-03"), new Interval("2011-03-31/2011-04-03")));
+    Assert.assertEquals(0, comp.compare(Intervals.of("P1d/2011-04-02"), Intervals.of("2011-04-01/2011-04-02")));
+    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-01/2011-04-04")));
+    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-02"), Intervals.of("2011-04-01/2011-04-01")));
+    Assert.assertEquals(-1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-04-02/2011-04-03")));
+    Assert.assertEquals(1, comp.compare(Intervals.of("2011-04-01/2011-04-03"), Intervals.of("2011-03-31/2011-04-03")));
 
     Interval[] intervals = new Interval[]{
-        new Interval("2011-04-01T18/2011-04-02T13"),
-        new Interval("2011-04-01/2011-04-03"),
-        new Interval("2011-04-01/2011-04-04"),
-        new Interval("2011-04-02/2011-04-04"),
-        new Interval("2011-04-01/2011-04-02"),
-        new Interval("2011-04-02/2011-04-03"),
-        new Interval("2011-04-02/2011-04-03T06")
+        Intervals.of("2011-04-01T18/2011-04-02T13"),
+        Intervals.of("2011-04-01/2011-04-03"),
+        Intervals.of("2011-04-01/2011-04-04"),
+        Intervals.of("2011-04-02/2011-04-04"),
+        Intervals.of("2011-04-01/2011-04-02"),
+        Intervals.of("2011-04-02/2011-04-03"),
+        Intervals.of("2011-04-02/2011-04-03T06")
     };
     Arrays.sort(intervals, comp);
 
     Assert.assertArrayEquals(
         new Interval[]{
-            new Interval("2011-04-01/2011-04-02"),
-            new Interval("2011-04-01T18/2011-04-02T13"),
-            new Interval("2011-04-01/2011-04-03"),
-            new Interval("2011-04-02/2011-04-03"),
-            new Interval("2011-04-02/2011-04-03T06"),
-            new Interval("2011-04-01/2011-04-04"),
-            new Interval("2011-04-02/2011-04-04")
+            Intervals.of("2011-04-01/2011-04-02"),
+            Intervals.of("2011-04-01T18/2011-04-02T13"),
+            Intervals.of("2011-04-01/2011-04-03"),
+            Intervals.of("2011-04-02/2011-04-03"),
+            Intervals.of("2011-04-02/2011-04-03T06"),
+            Intervals.of("2011-04-01/2011-04-04"),
+            Intervals.of("2011-04-02/2011-04-04")
             },
         intervals
     );

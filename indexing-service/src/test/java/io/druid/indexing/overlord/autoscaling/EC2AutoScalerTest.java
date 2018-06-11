@@ -69,7 +69,7 @@ public class EC2AutoScalerTest
   private SimpleWorkerProvisioningConfig managementConfig;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     amazonEC2Client = EasyMock.createMock(AmazonEC2Client.class);
     describeInstancesResult = EasyMock.createMock(DescribeInstancesResult.class);
@@ -85,7 +85,7 @@ public class EC2AutoScalerTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     EasyMock.verify(amazonEC2Client);
     EasyMock.verify(describeInstancesResult);
@@ -137,7 +137,7 @@ public class EC2AutoScalerTest
   }
 
   @Test
-  public void testIptoIdLookup() throws Exception
+  public void testIptoIdLookup()
   {
     EC2AutoScaler autoScaler = new EC2AutoScaler(
         0,
@@ -194,7 +194,7 @@ public class EC2AutoScalerTest
   }
 
   @Test
-  public void testIdToIpLookup() throws Exception
+  public void testIdToIpLookup()
   {
     EC2AutoScaler autoScaler = new EC2AutoScaler(
         0,

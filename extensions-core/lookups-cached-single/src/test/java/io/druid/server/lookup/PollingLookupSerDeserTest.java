@@ -79,7 +79,7 @@ public class PollingLookupSerDeserTest
     }
 
     @Override
-    public Iterable<Map.Entry<Object,Object>> fetchAll()
+    public Iterable<Map.Entry<Object, Object>> fetchAll()
     {
       return Collections.emptyMap().entrySet();
     }

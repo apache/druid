@@ -21,13 +21,15 @@ package io.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.common.Intervals;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -35,7 +37,6 @@ import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
@@ -43,7 +44,6 @@ import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentServerAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -111,56 +111,63 @@ public class TaskToolboxTest
         mockIndexIO,
         mockCache,
         mockCacheConfig,
-        mockIndexMergerV9
+        mockIndexMergerV9,
+        null,
+        null,
+        null,
+        null,
+        new NoopTestTaskFileWriter()
     );
   }
 
   @Test
   public void testGetDataSegmentArchiver()
   {
-    Assert.assertEquals(mockDataSegmentArchiver,taskToolbox.build(task).getDataSegmentArchiver());
+    Assert.assertEquals(mockDataSegmentArchiver, taskToolbox.build(task).getDataSegmentArchiver());
   }
 
   @Test
   public void testGetSegmentAnnouncer()
   {
-    Assert.assertEquals(mockSegmentAnnouncer,taskToolbox.build(task).getSegmentAnnouncer());
+    Assert.assertEquals(mockSegmentAnnouncer, taskToolbox.build(task).getSegmentAnnouncer());
   }
 
   @Test
   public void testGetQueryRunnerFactoryConglomerate()
   {
-    Assert.assertEquals(mockQueryRunnerFactoryConglomerate,taskToolbox.build(task).getQueryRunnerFactoryConglomerate());
+    Assert.assertEquals(mockQueryRunnerFactoryConglomerate, taskToolbox.build(task).getQueryRunnerFactoryConglomerate());
   }
 
   @Test
   public void testGetQueryExecutorService()
   {
-    Assert.assertEquals(mockQueryExecutorService,taskToolbox.build(task).getQueryExecutorService());
+    Assert.assertEquals(mockQueryExecutorService, taskToolbox.build(task).getQueryExecutorService());
   }
 
   @Test
   public void testGetMonitorScheduler()
   {
-    Assert.assertEquals(mockMonitorScheduler,taskToolbox.build(task).getMonitorScheduler());
+    Assert.assertEquals(mockMonitorScheduler, taskToolbox.build(task).getMonitorScheduler());
   }
 
   @Test
   public void testGetObjectMapper()
   {
-    Assert.assertEquals(ObjectMapper,taskToolbox.build(task).getObjectMapper());
+    Assert.assertEquals(ObjectMapper, taskToolbox.build(task).getObjectMapper());
   }
 
   @Test
   public void testFetchSegments() throws SegmentLoadingException, IOException
   {
     File expectedFile = temporaryFolder.newFile();
-    EasyMock.expect(mockSegmentLoaderLocalCacheManager.getSegmentFiles((DataSegment)EasyMock.anyObject()))
+    EasyMock
+        .expect(mockSegmentLoaderLocalCacheManager.getSegmentFiles(EasyMock.anyObject()))
         .andReturn(expectedFile).anyTimes();
-    EasyMock.expect(mockSegmentLoaderLocalCacheManager.withConfig((SegmentLoaderConfig)EasyMock.anyObject()))
+    EasyMock
+        .expect(mockSegmentLoaderLocalCacheManager.withConfig(EasyMock.anyObject()))
         .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
     EasyMock.replay(mockSegmentLoaderLocalCacheManager);
-    DataSegment dataSegment = DataSegment.builder().dataSource("source").interval(new Interval("2012-01-01/P1D")).version("1").size(1).build();
+    DataSegment dataSegment = DataSegment.builder().dataSource("source").interval(Intervals.of("2012-01-01/P1D")).version("1").size(1).build();
     List<DataSegment> segments = ImmutableList.of
         (
             dataSegment
@@ -171,7 +178,7 @@ public class TaskToolboxTest
   @Test
   public void testGetEmitter()
   {
-    Assert.assertEquals(mockEmitter,taskToolbox.build(task).getEmitter());
+    Assert.assertEquals(mockEmitter, taskToolbox.build(task).getEmitter());
   }
 
   @Test
@@ -187,13 +194,13 @@ public class TaskToolboxTest
   }
 
   @Test
-  public void testGetCache() throws Exception
+  public void testGetCache()
   {
     Assert.assertEquals(mockCache, taskToolbox.build(task).getCache());
   }
 
   @Test
-  public void testGetCacheConfig() throws Exception
+  public void testGetCacheConfig()
   {
     Assert.assertEquals(mockCacheConfig, taskToolbox.build(task).getCacheConfig());
   }

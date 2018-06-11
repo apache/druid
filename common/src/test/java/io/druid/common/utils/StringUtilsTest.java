@@ -23,14 +23,12 @@ import io.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.UnsupportedEncodingException;
-
 /**
  */
 public class StringUtilsTest
 {
   // copied from https://github.com/druid-io/druid/pull/2612
-  public final static String[] TEST_STRINGS = new String[]{
+  public static final String[] TEST_STRINGS = new String[]{
       "peach", "péché", "pêche", "sin", "",
       "☃", "C", "c", "Ç", "ç", "G", "g", "Ğ", "ğ", "I", "ı", "İ", "i",
       "O", "o", "Ö", "ö", "S", "s", "Ş", "ş", "U", "u", "Ü", "ü", "ä",
@@ -50,7 +48,7 @@ public class StringUtilsTest
   };
 
   @Test
-  public void binaryLengthAsUTF8Test() throws UnsupportedEncodingException
+  public void binaryLengthAsUTF8Test()
   {
     for (String string : TEST_STRINGS) {
       Assert.assertEquals(StringUtils.toUtf8(string).length, StringUtils.estimatedBinaryLengthAsUTF8(string));
@@ -58,7 +56,7 @@ public class StringUtilsTest
   }
 
   @Test
-  public void binaryLengthAsUTF8InvalidTest() throws UnsupportedEncodingException
+  public void binaryLengthAsUTF8InvalidTest()
   {
     // we can fix this but looks trivial case, imho
     String invalid = "\uD841";  // high only

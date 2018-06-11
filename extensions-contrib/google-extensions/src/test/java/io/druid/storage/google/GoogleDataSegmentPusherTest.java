@@ -25,11 +25,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -48,17 +48,6 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
   private static final String bucket = "bucket";
   private static final String prefix = "prefix";
   private static final String path = "prefix/test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final DataSegment dataSegment = new DataSegment(
-      "test",
-      new Interval("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.<String, Object>of("bucket", bucket, "path", path),
-      null,
-      null,
-      new NoneShardSpec(),
-      0,
-      1
-  );
 
   private GoogleStorage storage;
   private GoogleAccountConfig googleAccountConfig;
@@ -87,9 +76,9 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
-        new Interval("2015/2016"),
+        Intervals.of("2015/2016"),
         "0",
-        Maps.<String, Object>newHashMap(),
+        Maps.newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
         new NoneShardSpec(),
@@ -105,18 +94,26 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
          jsonMapper
     ).addMockedMethod("insert", File.class, String.class, String.class).createMock();
 
-    final String storageDir = pusher.getStorageDir(segmentToPush);
+    final String storageDir = pusher.getStorageDir(segmentToPush, false);
     final String indexPath = prefix + "/" + storageDir + "/" + "index.zip";
     final String descriptorPath = prefix + "/" + storageDir + "/" + "descriptor.json";
 
-    pusher.insert(EasyMock.anyObject(File.class), EasyMock.eq("application/zip"), EasyMock.eq(indexPath));
+    pusher.insert(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq("application/zip"),
+        EasyMock.eq(indexPath)
+    );
     expectLastCall();
-    pusher.insert(EasyMock.anyObject(File.class), EasyMock.eq("application/json"), EasyMock.eq(descriptorPath));
+    pusher.insert(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq("application/json"),
+        EasyMock.eq(descriptorPath)
+    );
     expectLastCall();
 
     replayAll();
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush);
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, false);
 
     Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assert.assertEquals(segmentToPush, segment);

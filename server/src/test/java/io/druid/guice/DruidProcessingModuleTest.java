@@ -26,7 +26,7 @@ import org.junit.Test;
 public class DruidProcessingModuleTest
 {
 
-  @Test(expected=ProvisionException.class)
+  @Test(expected = ProvisionException.class)
   public void testMemoryCheckThrowsException()
   {
     DruidProcessingModule module = new DruidProcessingModule();

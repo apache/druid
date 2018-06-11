@@ -19,9 +19,7 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -31,19 +29,19 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import io.druid.collections.StupidPool;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
-import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -77,9 +75,11 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.StringFormatExtractionFn;
 import io.druid.query.extraction.StrlenExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -90,8 +90,6 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -99,8 +97,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,8 +111,8 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class TopNQueryRunnerTest
 {
-  @Parameterized.Parameters(name="{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> constructorFeeder()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
     List<Object[]> parameters = new ArrayList<>();
@@ -139,7 +135,7 @@ public class TopNQueryRunnerTest
     return parameters;
   }
 
-  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners() throws IOException
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
     retVal.addAll(
@@ -159,14 +155,7 @@ public class TopNQueryRunnerTest
             new TopNQueryRunnerFactory(
                 new StupidPool<ByteBuffer>(
                     "TopNQueryRunnerFactory-bufferPool",
-                    new Supplier<ByteBuffer>()
-                    {
-                      @Override
-                      public ByteBuffer get()
-                      {
-                        return ByteBuffer.allocate(20000);
-                      }
-                    }
+                    () -> ByteBuffer.allocate(20000)
                 ),
                 new TopNQueryQueryToolChest(
                     new TopNQueryConfig(),
@@ -266,7 +255,7 @@ public class TopNQueryRunnerTest
         chest.mergeResults(runner),
         chest
     );
-    return mergeRunner.run(query, context);
+    return mergeRunner.run(QueryPlus.wrap(query), context);
   }
 
   @Test
@@ -296,7 +285,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
-            new DateTime("2020-04-02T00:00:00.000Z"),
+            DateTimes.of("2020-04-02T00:00:00.000Z"),
             new TopNResultValue(ImmutableList.of())
         )
     );
@@ -329,7 +318,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -376,6 +365,61 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testTopNOnMissingColumn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new DefaultDimensionSpec("nonexistentColumn", "alias"))
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(Collections.singletonList(new CountAggregatorFactory("rows")))
+        .build();
+
+    final HashMap<String, Object> resultMap = new HashMap<>();
+    resultMap.put("alias", null);
+    resultMap.put("rows", 1209L);
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(Collections.<Map<String, Object>>singletonList(resultMap))
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOnMissingColumnWithExtractionFn()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(new ExtractionDimensionSpec("nonexistentColumn", "alias", new StringFormatExtractionFn("theValue")))
+        .metric("rows")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(Collections.singletonList(new CountAggregatorFactory("rows")))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Collections.<Map<String, Object>>singletonList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("alias", "theValue")
+                        .put("rows", 1209L)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
   public void testFullOnTopNOverPostAggs()
   {
     TopNQuery query = new TopNQueryBuilder()
@@ -401,7 +445,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -473,7 +517,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -536,7 +580,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -590,7 +634,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -635,7 +679,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -685,7 +729,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -702,6 +746,56 @@ public class TopNQueryRunnerTest
                         .put("market", "upfront")
                         .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_2)
                         .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_2 + 1)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverHyperUniqueExpressionRounded()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(QueryRunnerTestHelper.qualityUniquesRounded)
+        )
+        .postAggregators(
+            Collections.singletonList(new ExpressionPostAggregator(
+                QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric,
+                "uniques + 1",
+                null,
+                TestExprMacroTable.INSTANCE
+            ))
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put(QueryRunnerTestHelper.uniqueMetric, 9L)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 10L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put(QueryRunnerTestHelper.uniqueMetric, 2L)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 3L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put(QueryRunnerTestHelper.uniqueMetric, 2L)
+                        .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, 3L)
                         .build()
                 )
             )
@@ -730,7 +824,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -752,7 +846,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-02-01T00:00:00.000Z"),
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -774,7 +868,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-03-01T00:00:00.000Z"),
+            DateTimes.of("2011-03-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -796,7 +890,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -842,7 +936,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -864,7 +958,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-02-01T00:00:00.000Z"),
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -886,7 +980,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-03-01T00:00:00.000Z"),
+            DateTimes.of("2011-03-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -908,7 +1002,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -955,7 +1049,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -977,7 +1071,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-02-01T00:00:00.000Z"),
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -999,7 +1093,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-03-01T00:00:00.000Z"),
+            DateTimes.of("2011-03-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1021,7 +1115,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1066,7 +1160,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-01T00:00:00.000Z"),
+            DateTimes.of("2011-01-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1088,7 +1182,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-02-01T00:00:00.000Z"),
+            DateTimes.of("2011-02-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1110,7 +1204,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-03-01T00:00:00.000Z"),
+            DateTimes.of("2011-03-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1132,7 +1226,7 @@ public class TopNQueryRunnerTest
             )
         ),
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -1180,7 +1274,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1212,58 +1306,36 @@ public class TopNQueryRunnerTest
         query,
         specialContext
     );
-    List<Result<BySegmentTopNResultValue>> resultList = Sequences.toList(
-        Sequences.map(
-            results,
-            new Function<Result<TopNResultValue>, Result<BySegmentTopNResultValue>>()
-            {
-              @Nullable
-              @Override
-              public Result<BySegmentTopNResultValue> apply(
-                  Result<TopNResultValue> input
-              )
-              {
-                // Stupid type erasure
-                Object val = input.getValue();
-                if (val instanceof BySegmentResultValue) {
-                  BySegmentResultValue bySegVal = (BySegmentResultValue) val;
-                  List<?> results = bySegVal.getResults();
-                  return new Result<BySegmentTopNResultValue>(
-                      input.getTimestamp(),
-                      new BySegmentTopNResultValue(
-                          Lists.transform(
-                              results,
-                              new Function<Object, Result<TopNResultValue>>()
-                              {
-                                @Nullable
-                                @Override
-                                public Result<TopNResultValue> apply(@Nullable Object input)
-                                {
-                                  if (Preconditions.checkNotNull(input) instanceof Result) {
-                                    Result result = (Result) input;
-                                    Object resVal = result.getValue();
-                                    if (resVal instanceof TopNResultValue) {
-                                      return new Result<TopNResultValue>(
-                                          result.getTimestamp(),
-                                          (TopNResultValue) resVal
-                                      );
-                                    }
-                                  }
-                                  throw new IAE("Bad input: [%s]", input);
-                                }
-                              }
-                          ),
-                          bySegVal.getSegmentId(),
-                          bySegVal.getInterval()
-                      )
-                  );
-                }
-                throw new ISE("Bad type");
-              }
-            }
-        ),
-        Lists.<Result<BySegmentTopNResultValue>>newArrayList()
-    );
+    List<Result<BySegmentTopNResultValue>> resultList = results
+        .map((Result<TopNResultValue> input) -> {
+          // Stupid type erasure
+          Object val = input.getValue();
+          if (val instanceof BySegmentResultValue) {
+            BySegmentResultValue bySegVal = (BySegmentResultValue) val;
+            return new Result<>(
+                input.getTimestamp(),
+                new BySegmentTopNResultValue(
+                    Lists.transform(
+                        bySegVal.getResults(),
+                        res -> {
+                          if (Preconditions.checkNotNull(res) instanceof Result) {
+                            Result theResult = (Result) res;
+                            Object resVal = theResult.getValue();
+                            if (resVal instanceof TopNResultValue) {
+                              return new Result<>(theResult.getTimestamp(), (TopNResultValue) resVal);
+                            }
+                          }
+                          throw new IAE("Bad input: [%s]", res);
+                        }
+                    ),
+                    bySegVal.getSegmentId(),
+                    bySegVal.getInterval()
+                )
+            );
+          }
+          throw new ISE("Bad type");
+        })
+        .toList();
     Result<BySegmentTopNResultValue> result = resultList.get(0);
     TestHelper.assertExpectedResults(expectedResults, result.getValue().getResults());
   }
@@ -1285,7 +1357,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1333,7 +1405,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1381,7 +1453,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1429,7 +1501,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1470,7 +1542,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1504,7 +1576,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1547,7 +1619,7 @@ public class TopNQueryRunnerTest
         .threshold(4)
         .intervals(
             new MultipleIntervalSegmentSpec(
-                Arrays.asList(new Interval("2011-04-01T00:00:00.000Z/2011-04-02T00:00:00.000Z"))
+                Arrays.asList(Intervals.of("2011-04-01T00:00:00.000Z/2011-04-02T00:00:00.000Z"))
             )
         )
         .aggregators(commonAggregators)
@@ -1556,7 +1628,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1604,7 +1676,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1642,33 +1714,24 @@ public class TopNQueryRunnerTest
         .aggregators(commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
-    HashMap<String, Object> context = new HashMap<String, Object>();
     assertExpectedResults(
         Lists.<Result<TopNResultValue>>newArrayList(
             new Result<TopNResultValue>(
-                new DateTime("2011-04-01T00:00:00.000Z"),
+                DateTimes.of("2011-04-01T00:00:00.000Z"),
                 new TopNResultValue(Lists.<Map<String, Object>>newArrayList())
             )
-        ), query
+        ),
+        query
     );
   }
 
   @Test
   public void testTopNWithNonExistentFilterMultiDim()
   {
-    AndDimFilter andDimFilter = Druids.newAndDimFilterBuilder()
-                                      .fields(
-                                          Lists.<DimFilter>newArrayList(
-                                              Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.marketDimension)
-                                                    .value("billyblank")
-                                                    .build(),
-                                              Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.qualityDimension)
-                                                    .value("mezzanine")
-                                                    .build()
-                                          )
-                                      ).build();
+    AndDimFilter andDimFilter = new AndDimFilter(
+        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "billyblank", null),
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null)
+    );
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
@@ -1683,7 +1746,7 @@ public class TopNQueryRunnerTest
     assertExpectedResults(
         Lists.<Result<TopNResultValue>>newArrayList(
             new Result<TopNResultValue>(
-                new DateTime("2011-04-01T00:00:00.000Z"),
+                DateTimes.of("2011-04-01T00:00:00.000Z"),
                 new TopNResultValue(Lists.<Map<String, Object>>newArrayList())
             )
         ), query
@@ -1706,21 +1769,20 @@ public class TopNQueryRunnerTest
         .build();
 
     assertExpectedResults(
-        Sequences.toList(
-            runWithMerge(
-                new TopNQueryBuilder()
-                    .dataSource(QueryRunnerTestHelper.dataSource)
-                    .granularity(QueryRunnerTestHelper.allGran)
-                    .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-                    .dimension(QueryRunnerTestHelper.marketDimension)
-                    .metric(QueryRunnerTestHelper.indexMetric)
-                    .threshold(4)
-                    .intervals(QueryRunnerTestHelper.firstToThird)
-                    .aggregators(commonAggregators)
-                    .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                    .build()
-            ), Lists.<Result<TopNResultValue>>newArrayList()
-        ), query
+        runWithMerge(
+            new TopNQueryBuilder()
+                .dataSource(QueryRunnerTestHelper.dataSource)
+                .granularity(QueryRunnerTestHelper.allGran)
+                .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine")
+                .dimension(QueryRunnerTestHelper.marketDimension)
+                .metric(QueryRunnerTestHelper.indexMetric)
+                .threshold(4)
+                .intervals(QueryRunnerTestHelper.firstToThird)
+                .aggregators(commonAggregators)
+                .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                .build()
+        ).toList(),
+        query
     );
   }
 
@@ -1740,21 +1802,25 @@ public class TopNQueryRunnerTest
         .build();
 
     assertExpectedResults(
-        Sequences.toList(
-            runWithMerge(
-                new TopNQueryBuilder()
-                    .dataSource(QueryRunnerTestHelper.dataSource)
-                    .granularity(QueryRunnerTestHelper.allGran)
-                    .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine", "automotive", "business")
-                    .dimension(QueryRunnerTestHelper.qualityDimension)
-                    .metric(QueryRunnerTestHelper.indexMetric)
-                    .threshold(4)
-                    .intervals(QueryRunnerTestHelper.firstToThird)
-                    .aggregators(commonAggregators)
-                    .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                    .build()
-            ), Lists.<Result<TopNResultValue>>newArrayList()
-        ), query
+        runWithMerge(
+            new TopNQueryBuilder()
+                .dataSource(QueryRunnerTestHelper.dataSource)
+                .granularity(QueryRunnerTestHelper.allGran)
+                .filters(
+                    QueryRunnerTestHelper.qualityDimension,
+                    "mezzanine",
+                    "automotive",
+                    "business"
+                )
+                .dimension(QueryRunnerTestHelper.qualityDimension)
+                .metric(QueryRunnerTestHelper.indexMetric)
+                .threshold(4)
+                .intervals(QueryRunnerTestHelper.firstToThird)
+                .aggregators(commonAggregators)
+                .postAggregators(Arrays.asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                .build()
+        ).toList(),
+        query
     );
   }
 
@@ -1775,7 +1841,7 @@ public class TopNQueryRunnerTest
 
     final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1816,7 +1882,7 @@ public class TopNQueryRunnerTest
 
     final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1864,7 +1930,7 @@ public class TopNQueryRunnerTest
 
     final ArrayList<Result<TopNResultValue>> expectedResults = Lists.newArrayList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -1918,7 +1984,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Collections.<Map<String, Object>>singletonList(
                     QueryRunnerTestHelper.orderedMap(
@@ -1952,7 +2018,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Collections.<Map<String, Object>>singletonList(
                     QueryRunnerTestHelper.orderedMap(
@@ -1986,7 +2052,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Collections.<Map<String, Object>>singletonList(
                     QueryRunnerTestHelper.orderedMap(
@@ -2019,7 +2085,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2064,7 +2130,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2099,7 +2165,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2139,7 +2205,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2179,7 +2245,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2219,7 +2285,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2245,7 +2311,7 @@ public class TopNQueryRunnerTest
 
 
   @Test
-  public void testTopNDimExtractionToOne() throws IOException
+  public void testTopNDimExtractionToOne()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -2264,11 +2330,9 @@ public class TopNQueryRunnerTest
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    Granularity gran = Granularities.DAY;
-
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2282,10 +2346,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    List<Result<TopNResultValue>> list = Sequences.toList(
-        runWithMerge(query),
-        new ArrayList<Result<TopNResultValue>>()
-    );
+    List<Result<TopNResultValue>> list = runWithMerge(query).toList();
     Assert.assertEquals(list.size(), 1);
     Assert.assertEquals("Didn't merge results", list.get(0).getValue().getValue().size(), 1);
     TestHelper.assertExpectedResults(expectedResults, list, "Failed to match");
@@ -2317,7 +2378,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2382,7 +2443,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2433,7 +2494,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2484,7 +2545,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2548,7 +2609,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2613,7 +2674,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2680,7 +2741,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2746,7 +2807,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2812,7 +2873,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2879,7 +2940,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2932,7 +2993,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -2985,7 +3046,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3038,7 +3099,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3108,7 +3169,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3155,7 +3216,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3201,7 +3262,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3275,7 +3336,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3363,7 +3424,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3412,7 +3473,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3466,7 +3527,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 withDuplicateResults(
                     Arrays.<Map<String, Object>>asList(
@@ -3516,14 +3577,14 @@ public class TopNQueryRunnerTest
             .threshold(10)
             .intervals(QueryRunnerTestHelper.firstToThird)
             .aggregators(duplicateAggregators(
-                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs,false),
-                new CardinalityAggregatorFactory("numVals1",aggregatorDimensionSpecs,false)
+                new CardinalityAggregatorFactory("numVals", aggregatorDimensionSpecs, false),
+                new CardinalityAggregatorFactory("numVals1", aggregatorDimensionSpecs, false)
             ))
             .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 withDuplicateResults(
                     Collections.singletonList(
@@ -3573,7 +3634,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -3689,23 +3750,24 @@ public class TopNQueryRunnerTest
         )
     );
 
+    @SuppressWarnings("unused") // TODO: fix this test
     List<Result<BySegmentResultValueClass>> expectedResults = Collections.singletonList(
         new Result<BySegmentResultValueClass>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new BySegmentResultValueClass(
                 Collections.singletonList(
                     new Result<TopNResultValue>(
-                        new DateTime("2011-01-12T00:00:00.000Z"),
+                        DateTimes.of("2011-01-12T00:00:00.000Z"),
                         topNResult
                     )
                 ),
                 QueryRunnerTestHelper.segmentId,
-                new Interval("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z")
+                Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z")
             )
         )
     );
     Sequence<Result<TopNResultValue>> results = runWithMerge(query);
-    for (Result<TopNResultValue> result : Sequences.toList(results, new ArrayList<Result<TopNResultValue>>())) {
+    for (Result<TopNResultValue> result : results.toList()) {
       Assert.assertEquals(result.getValue(), result.getValue()); // TODO: fix this test
     }
   }
@@ -3731,7 +3793,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01"),
+            DateTimes.of("2011-04-01"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3795,7 +3857,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -3851,7 +3913,7 @@ public class TopNQueryRunnerTest
     map.put("minIndex", 59.02102279663086D);
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
                     map
@@ -3899,7 +3961,7 @@ public class TopNQueryRunnerTest
     map.put("minIndex", 59.02102279663086D);
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
                     map
@@ -3930,7 +3992,7 @@ public class TopNQueryRunnerTest
     map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
                     map,
@@ -3968,7 +4030,7 @@ public class TopNQueryRunnerTest
     map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
                     map
@@ -3995,7 +4057,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
                     ImmutableMap.<String, Object>of(
@@ -4028,7 +4090,7 @@ public class TopNQueryRunnerTest
         .build();
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-02T00:00:00.000Z"),
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
                 withDuplicateResults(
                     Arrays.asList(
@@ -4047,7 +4109,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
   }
 
   @Test
@@ -4067,7 +4129,7 @@ public class TopNQueryRunnerTest
         .build();
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-02T00:00:00.000Z"),
+            DateTimes.of("2011-04-02T00:00:00.000Z"),
             new TopNResultValue(
                 withDuplicateResults(
                     Arrays.asList(
@@ -4086,7 +4148,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()));
   }
 
 
@@ -4118,7 +4180,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -4183,7 +4245,7 @@ public class TopNQueryRunnerTest
     map.put("minIndex", 59.02102279663086D);
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
                     map
@@ -4209,14 +4271,14 @@ public class TopNQueryRunnerTest
         chest.mergeResults(chest.preMergeQueryDecoration(runner)),
         chest
     );
-    return Runner.run(query, context);
+    return Runner.run(QueryPlus.wrap(query), context);
   }
 
   @Test
   public void testTopNWithExtractionFilterNoExistingValue()
   {
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("","NULL");
+    extractionMap.put("", "NULL");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
@@ -4248,7 +4310,7 @@ public class TopNQueryRunnerTest
     map.put("minIndex", 59.02102279663086D);
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.asList(
                     map
@@ -4288,7 +4350,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4363,7 +4425,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4435,7 +4497,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4507,7 +4569,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4580,7 +4642,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4650,7 +4712,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-04-01T00:00:00.000Z"),
+            DateTimes.of("2011-04-01T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
@@ -4710,7 +4772,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4782,7 +4844,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4854,7 +4916,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4926,7 +4988,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -4998,7 +5060,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -5073,7 +5135,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -5161,7 +5223,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     expectedMap
@@ -5200,7 +5262,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -5278,7 +5340,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -5347,7 +5409,7 @@ public class TopNQueryRunnerTest
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
@@ -5474,11 +5536,79 @@ public class TopNQueryRunnerTest
       rows.sort((r1, r2) -> ((Comparable) r2.get(metric)).compareTo(r1.get(metric)));
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<>(
-              new DateTime("2011-01-12T00:00:00.000Z"),
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
               new TopNResultValue(rows)
           )
       );
       assertExpectedResults(expectedResults, query);
     }
+  }
+
+
+  @Test
+  public void testFullOnTopNBoundFilterAndLongSumMetric()
+  {
+    // this tests the stack overflow issue from https://github.com/druid-io/druid/issues/4628
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension, "Market")
+        .filters(new BoundDimFilter(
+            QueryRunnerTestHelper.indexMetric,
+            "0",
+            "46.64980229268867",
+            true,
+            true,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ))
+        .metric("Count")
+        .threshold(5)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.asList(new LongSumAggregatorFactory("Count", "qualityLong"))
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(Arrays.asList())
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  /**
+   * Regression test for https://github.com/druid-io/druid/issues/5132
+   */
+  @Test
+  public void testTopNWithNonBitmapFilter()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .filters(new BoundDimFilter(
+            Column.TIME_COLUMN_NAME,
+            "0",
+            String.valueOf(Long.MAX_VALUE),
+            true,
+            true,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ))
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("count")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(
+            Collections.singletonList(new DoubleSumAggregatorFactory("count", "qualityDouble"))
+        )
+        .build();
+
+    // Don't check results, just the fact that the query could complete
+    Assert.assertNotNull(runWithMerge(query).toList());
   }
 }

@@ -23,12 +23,12 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.LongColumnSelector;
+import io.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -83,9 +83,15 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
     return new LongMaxBufferAggregator(getLongColumnSelector(metricFactory));
   }
 
-  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.getLongColumnSelector(metricFactory, macroTable, fieldName, expression, Long.MIN_VALUE);
+    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+        metricFactory,
+        macroTable,
+        fieldName,
+        expression,
+        Long.MIN_VALUE
+    );
   }
 
   @Override
@@ -98,6 +104,33 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   public Object combine(Object lhs, Object rhs)
   {
     return LongMaxAggregator.combineValues(lhs, rhs);
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new LongAggregateCombiner()
+    {
+      private long max;
+
+      @Override
+      public void reset(ColumnValueSelector selector)
+      {
+        max = selector.getLong();
+      }
+
+      @Override
+      public void fold(ColumnValueSelector selector)
+      {
+        max = Math.max(max, selector.getLong());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return max;
+      }
+    };
   }
 
   @Override
@@ -184,7 +217,7 @@ public class LongMaxAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return Longs.BYTES;
+    return Long.BYTES;
   }
 
   @Override

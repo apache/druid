@@ -29,6 +29,7 @@ import io.druid.client.cache.MapCache;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.client.selector.TierSelectorStrategy;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.DataSource;
 import io.druid.query.Druids;
@@ -70,7 +71,7 @@ public class CachingClusteredClientFunctionalityTest
   protected Cache cache;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
@@ -79,11 +80,11 @@ public class CachingClusteredClientFunctionalityTest
   }
 
   @Test
-  public void testUncoveredInterval() throws Exception
+  public void testUncoveredInterval()
   {
-    addToTimeline(new Interval("2015-01-02/2015-01-03"), "1");
-    addToTimeline(new Interval("2015-01-04/2015-01-05"), "1");
-    addToTimeline(new Interval("2015-02-04/2015-02-05"), "1");
+    addToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1");
+    addToTimeline(Intervals.of("2015-01-04/2015-01-05"), "1");
+    addToTimeline(Intervals.of("2015-02-04/2015-02-05"), "1");
 
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource("test")
@@ -145,7 +146,7 @@ public class CachingClusteredClientFunctionalityTest
   {
     List<Interval> expectedList = Lists.newArrayListWithExpectedSize(intervals.length);
     for (String interval : intervals) {
-      expectedList.add(new Interval(interval));
+      expectedList.add(Intervals.of(interval));
     }
     Assert.assertEquals((Object) expectedList, context.get("uncoveredIntervals"));
     Assert.assertEquals(uncoveredIntervalsOverflowed, context.get("uncoveredIntervalsOverflowed"));
@@ -238,7 +239,7 @@ public class CachingClusteredClientFunctionalityTest
           }
 
           @Override
-          public void registerServerCallback(Executor exec, ServerCallback callback)
+          public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
           {
 
           }

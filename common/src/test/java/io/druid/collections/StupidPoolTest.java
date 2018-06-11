@@ -28,8 +28,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
 public class StupidPoolTest
 {
   private Supplier<String> generator;
@@ -48,7 +46,7 @@ public class StupidPoolTest
   }
 
   @After
-  public void tearDown() throws IOException
+  public void tearDown()
   {
     if (resourceHolderObj != null) {
       resourceHolderObj.close();
@@ -64,7 +62,7 @@ public class StupidPoolTest
   }
 
   @Test(expected = ISE.class)
-  public void testExceptionInResourceHolderGet() throws IOException
+  public void testExceptionInResourceHolderGet()
   {
     resourceHolderObj.close();
     resourceHolderObj.get();
@@ -77,6 +75,7 @@ public class StupidPoolTest
     // Wait until dangling object string is returned to the pool
     for (int i = 0; i < 6000 && poolOfString.leakedObjectsCount() == 0; i++) {
       System.gc();
+      @SuppressWarnings("unused")
       byte[] garbage = new byte[10_000_000];
       Thread.sleep(10);
     }

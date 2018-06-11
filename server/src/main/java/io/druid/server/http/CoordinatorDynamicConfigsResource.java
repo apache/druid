@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
+import io.druid.common.config.ConfigManager.SetResult;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.java.util.common.Intervals;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
 import io.druid.server.http.security.ConfigResourceFilter;
 import org.joda.time.Interval;
@@ -87,14 +89,19 @@ public class CoordinatorDynamicConfigsResource
         CoordinatorDynamicConfig.class
     ).get();
 
-    if (!manager.set(
+    final SetResult setResult = manager.set(
         CoordinatorDynamicConfig.CONFIG_KEY,
         current == null ? dynamicConfigBuilder.build() : dynamicConfigBuilder.build(current),
         new AuditInfo(author, comment, req.getRemoteAddr())
-    )) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
+    );
+
+    if (setResult.isOk()) {
+      return Response.ok().build();
+    } else {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", setResult.getException()))
+                     .build();
     }
-    return Response.ok().build();
   }
 
   @GET
@@ -105,7 +112,7 @@ public class CoordinatorDynamicConfigsResource
       @QueryParam("count") final Integer count
   )
   {
-    Interval theInterval = interval == null ? null : new Interval(interval);
+    Interval theInterval = interval == null ? null : Intervals.of(interval);
     if (theInterval == null && count != null) {
       try {
         return Response.ok(

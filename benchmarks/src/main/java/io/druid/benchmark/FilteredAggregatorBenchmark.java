@@ -20,7 +20,6 @@
 package io.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -32,12 +31,12 @@ import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
+import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -46,8 +45,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
@@ -56,7 +53,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -73,6 +70,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -125,17 +123,11 @@ public class FilteredAggregatorBenchmark
   private TimeseriesQuery query;
   private File tmpDir;
 
-  private static String JS_FN = "function(str) { return 'super-' + str; }";
-  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(
-      JS_FN,
-      false,
-      JavaScriptConfig.getEnabledInstance()
-  );
-
   static {
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -145,7 +137,7 @@ public class FilteredAggregatorBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   @Setup
@@ -202,7 +194,8 @@ public class FilteredAggregatorBenchmark
     indexFile = INDEX_MERGER_V9.persist(
         incIndex,
         tmpDir,
-        new IndexSpec()
+        new IndexSpec(),
+        null
     );
     qIndex = INDEX_IO.loadIndex(indexFile);
 
@@ -251,20 +244,18 @@ public class FilteredAggregatorBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
-    return Sequences.toList(queryResult, Lists.<T>newArrayList());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    return queryResult.toList();
   }
 
-  // Filtered agg doesn't work with ingestion, cardinality is not supported in incremental index
-  // See https://github.com/druid-io/druid/issues/3164
-  // @Benchmark
+  @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void ingest(Blackhole blackhole) throws Exception
   {
     incIndexFilteredAgg = makeIncIndex(filteredMetrics);
     for (InputRow row : inputRows) {
-      int rv = incIndexFilteredAgg.add(row);
+      int rv = incIndexFilteredAgg.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -272,7 +263,7 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleIncrementalIndex(Blackhole blackhole) throws Exception
+  public void querySingleIncrementalIndex(Blackhole blackhole)
   {
     QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -289,7 +280,7 @@ public class FilteredAggregatorBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndex(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndex(Blackhole blackhole)
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,

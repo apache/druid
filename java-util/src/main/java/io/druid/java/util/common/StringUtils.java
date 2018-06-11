@@ -19,12 +19,13 @@
 
 package io.druid.java.util.common;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 
+import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.IllegalFormatException;
 import java.util.Locale;
 
@@ -36,8 +37,8 @@ public class StringUtils
 {
   public static final byte[] EMPTY_BYTES = new byte[0];
   @Deprecated // Charset parameters to String are currently slower than the charset's string name
-  public static final Charset UTF8_CHARSET = Charsets.UTF_8;
-  public static final String UTF8_STRING = Charsets.UTF_8.toString();
+  public static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
+  public static final String UTF8_STRING = StandardCharsets.UTF_8.toString();
 
   // should be used only for estimation
   // returns the same result with StringUtils.fromUtf8(value).length for valid string values
@@ -81,7 +82,7 @@ public class StringUtils
   {
     final byte[] bytes = new byte[numBytes];
     buffer.get(bytes);
-    return StringUtils.fromUtf8(bytes);
+    return fromUtf8(bytes);
   }
 
   public static String fromUtf8(final ByteBuffer buffer)
@@ -100,6 +101,15 @@ public class StringUtils
     }
   }
 
+  @Nullable
+  public static byte[] toUtf8Nullable(@Nullable final String string)
+  {
+    if (string == null) {
+      return null;
+    }
+    return toUtf8(string);
+  }
+
   /**
    * Equivalent of String.format(Locale.ENGLISH, message, formatArgs).
    */
@@ -115,7 +125,7 @@ public class StringUtils
    */
   public static String nonStrictFormat(String message, Object... formatArgs)
   {
-    if(formatArgs == null || formatArgs.length == 0) {
+    if (formatArgs == null || formatArgs.length == 0) {
       return message;
     }
     try {
@@ -138,5 +148,28 @@ public class StringUtils
   public static String toUpperCase(String s)
   {
     return s.toUpperCase(Locale.ENGLISH);
+  }
+
+  public static String removeChar(String s, char c)
+  {
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == c) {
+        return removeChar(s, c, i);
+      }
+    }
+    return s;
+  }
+
+  private static String removeChar(String s, char c, int firstOccurranceIndex)
+  {
+    StringBuilder sb = new StringBuilder(s.length() - 1);
+    sb.append(s, 0, firstOccurranceIndex);
+    for (int i = firstOccurranceIndex + 1; i < s.length(); i++) {
+      char charOfString = s.charAt(i);
+      if (charOfString != c) {
+        sb.append(charOfString);
+      }
+    }
+    return sb.toString();
   }
 }

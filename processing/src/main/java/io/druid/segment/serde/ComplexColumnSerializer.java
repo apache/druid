@@ -19,82 +19,67 @@
 
 package io.druid.segment.serde;
 
+import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
+import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
-import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.ObjectStrategy;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
 public class ComplexColumnSerializer implements GenericColumnSerializer
 {
-  private final IOPeon ioPeon;
+  @PublicApi
+  public static ComplexColumnSerializer create(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy strategy)
+  {
+    return new ComplexColumnSerializer(segmentWriteOutMedium, filenameBase, strategy);
+  }
+
+  private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ObjectStrategy strategy;
   private GenericIndexedWriter writer;
-  public ComplexColumnSerializer(
-      IOPeon ioPeon,
-      String filenameBase,
-      ObjectStrategy strategy
-  )
+
+  private ComplexColumnSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy strategy)
   {
-    this.ioPeon = ioPeon;
+    this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.strategy = strategy;
-  }
-
-  public static ComplexColumnSerializer create(
-      IOPeon ioPeon,
-      String filenameBase,
-      ObjectStrategy strategy
-  )
-  {
-    return new ComplexColumnSerializer(ioPeon, filenameBase, strategy);
   }
 
   @SuppressWarnings(value = "unchecked")
   @Override
   public void open() throws IOException
   {
-    writer = new GenericIndexedWriter(
-        ioPeon, StringUtils.format("%s.complex_column", filenameBase), strategy
-    );
+    writer = new GenericIndexedWriter(segmentWriteOutMedium, StringUtils.format("%s.complex_column", filenameBase), strategy);
     writer.open();
   }
 
-  @SuppressWarnings(value = "unchecked")
   @Override
-  public void serialize(Object obj) throws IOException
+  public void serialize(ColumnValueSelector selector) throws IOException
   {
-    writer.write(obj);
+    writer.write(selector.getObject());
   }
 
   @Override
-  public void close() throws IOException
-  {
-    writer.close();
-  }
-
-  @Override
-  public long getSerializedSize()
+  public long getSerializedSize() throws IOException
   {
     return writer.getSerializedSize();
   }
 
   @Override
-  public void writeToChannel(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    writeToChannelVersionOne(channel);
+    writeToVersionOne(channel);
   }
 
-  private void writeToChannelVersionOne(WritableByteChannel channel) throws IOException
+  private void writeToVersionOne(WritableByteChannel channel) throws IOException
   {
-    writer.writeToChannel(
-        channel,
-        null
-    ); //null for the FileSmoosher means that we default to "version 1" of GenericIndexed.
+    //null for the FileSmoosher means that we default to "version 1" of GenericIndexed.
+    writer.writeTo(channel, null);
   }
 }

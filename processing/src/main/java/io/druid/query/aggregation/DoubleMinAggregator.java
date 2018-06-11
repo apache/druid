@@ -19,42 +19,31 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.DoubleColumnSelector;
-
-import java.util.Comparator;
+import io.druid.segment.BaseDoubleColumnValueSelector;
 
 /**
  */
 public class DoubleMinAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = DoubleSumAggregator.COMPARATOR;
-
   static double combineValues(Object lhs, Object rhs)
   {
     return Math.min(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
-  private final DoubleColumnSelector selector;
+  private final BaseDoubleColumnValueSelector selector;
 
   private double min;
 
-  public DoubleMinAggregator(DoubleColumnSelector selector)
+  public DoubleMinAggregator(BaseDoubleColumnValueSelector selector)
   {
     this.selector = selector;
-
-    reset();
+    this.min = Double.POSITIVE_INFINITY;
   }
 
   @Override
   public void aggregate()
   {
-    min = Math.min(min, (double) selector.get());
-  }
-
-  @Override
-  public void reset()
-  {
-    min = Double.POSITIVE_INFINITY;
+    min = Math.min(min, selector.getDouble());
   }
 
   @Override

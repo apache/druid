@@ -35,7 +35,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -51,7 +50,7 @@ public abstract class HadoopTask extends AbstractTask
   private static final Logger log = new Logger(HadoopTask.class);
   private static final ExtensionsConfig extensionsConfig;
 
-  final static Injector injector = GuiceInjectors.makeStartupInjector();
+  static final Injector injector = GuiceInjectors.makeStartupInjector();
 
   static {
     extensionsConfig = injector.getInstance(ExtensionsConfig.class);
@@ -78,6 +77,8 @@ public abstract class HadoopTask extends AbstractTask
   // This could stand to have a more robust detection methodology.
   // Right now it just looks for `druid.*\.jar`
   // This is only used for classpath isolation in the runTask isolation stuff, so it shooouuullldddd be ok.
+  /** {@link #buildClassLoader(TaskToolbox)} has outdated javadocs referencing this field, TODO update */
+  @SuppressWarnings("unused")
   protected static final Predicate<URL> IS_DRUID_URL = new Predicate<URL>()
   {
     @Override
@@ -101,18 +102,20 @@ public abstract class HadoopTask extends AbstractTask
    *
    * This isolation is *only* for the part of the HadoopTask that calls runTask in an isolated manner.
    *
-   * Jars for the job are the same jars as for the classloader EXCEPT the hadoopDependencyCoordinates, which are not used in the job jars.
+   * Jars for the job are the same jars as for the classloader EXCEPT the hadoopDependencyCoordinates, which are not
+   * used in the job jars.
    *
    * The URLs in the resultant classloader are loaded in this priority:
    *
-   * 1. Non-Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class. This will probably be the ApplicationClassLoader
+   * 1. Non-Druid jars (see {@link #IS_DRUID_URL}) found in the ClassLoader for HadoopIndexTask.class. This will
+   * probably be the ApplicationClassLoader
    * 2. Hadoop jars found in the hadoop dependency coordinates directory, loaded in the order they are specified in
-   * 3. Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class
+   * 3. Druid jars (see {@link #IS_DRUID_URL}) found in the ClassLoader for HadoopIndexTask.class
    * 4. Extension URLs maintaining the order specified in the extensions list in the extensions config
    *
    * At one point I tried making each one of these steps a URLClassLoader, but it is not easy to make a properly
-   * predictive IS_DRUID_URL that captures all things which reference druid classes. This lead to a case where the
-   * class loader isolation worked great for stock druid, but failed in many common use cases including extension
+   * predictive {@link #IS_DRUID_URL} that captures all things which reference druid classes. This lead to a case where
+   * the class loader isolation worked great for stock druid, but failed in many common use cases including extension
    * jars on the classpath which were not listed in the extensions list.
    *
    * As such, the current approach is to make a list of URLs for a URLClassLoader based on the priority above, and use
@@ -123,15 +126,14 @@ public abstract class HadoopTask extends AbstractTask
    *
    * @param toolbox The toolbox to pull the default coordinates from if not present in the task
    * @return An isolated URLClassLoader not tied by parent chain to the ApplicationClassLoader
-   * @throws MalformedURLException from Initialization.getClassLoaderForExtension
    */
-  protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws MalformedURLException
+  protected ClassLoader buildClassLoader(final TaskToolbox toolbox)
   {
     return buildClassLoader(hadoopDependencyCoordinates, toolbox.getConfig().getDefaultHadoopCoordinates());
   }
 
   public static ClassLoader buildClassLoader(final List<String> hadoopDependencyCoordinates,
-                                             final List<String> defaultHadoopCoordinates) throws MalformedURLException
+                                             final List<String> defaultHadoopCoordinates)
   {
     final List<String> finalHadoopDependencyCoordinates = hadoopDependencyCoordinates != null
                                                           ? hadoopDependencyCoordinates
@@ -143,7 +145,7 @@ public abstract class HadoopTask extends AbstractTask
 
     final List<URL> extensionURLs = Lists.newArrayList();
     for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
-      final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension);
+      final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
       extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
     }
 
@@ -157,7 +159,7 @@ public abstract class HadoopTask extends AbstractTask
             finalHadoopDependencyCoordinates,
             extensionsConfig
         )) {
-      final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency);
+      final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
       localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
     }
 
@@ -215,6 +217,34 @@ public abstract class HadoopTask extends AbstractTask
       return (OutputType) method.invoke(null, input);
     }
     catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
+      throw Throwables.propagate(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
+    }
+  }
+
+  /**
+   * This method tries to isolate class loading during a Function call
+   *
+   * @param clazzName    The Class which has an instance method called `runTask`
+   * @param loader       The loader to use as the context class loader during invocation
+   *
+   * @return The result of the method invocation
+   */
+  public static Object getForeignClassloaderObject(
+      final String clazzName,
+      final ClassLoader loader
+  )
+  {
+    log.debug("Launching [%s] on class loader [%s]", clazzName, loader);
+    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(loader);
+      final Class<?> clazz = loader.loadClass(clazzName);
+      return clazz.newInstance();
+    }
+    catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
       throw Throwables.propagate(e);
     }
     finally {

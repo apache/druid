@@ -22,6 +22,7 @@ package io.druid.server;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -38,5 +39,30 @@ public class QueryStats
   public Map<String, Object> getStats()
   {
     return stats;
+  }
+
+  @Override
+  public boolean equals(final Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final QueryStats that = (QueryStats) o;
+    return Objects.equals(stats, that.stats);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(stats);
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.valueOf(stats);
   }
 }

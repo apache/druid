@@ -31,7 +31,7 @@ import java.util.List;
 
 public abstract class BottomUpTransform implements Function<Filtration, Filtration>
 {
-  protected abstract DimFilter process(final DimFilter filter);
+  protected abstract DimFilter process(DimFilter filter);
 
   private DimFilter checkedProcess(final DimFilter filter)
   {

@@ -21,9 +21,11 @@ package io.druid.guice;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import io.druid.guice.annotations.PublicApi;
 
 /**
  */
+@PublicApi
 public class DruidGuiceExtensions implements Module
 {
   @Override

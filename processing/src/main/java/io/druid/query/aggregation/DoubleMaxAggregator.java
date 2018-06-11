@@ -19,42 +19,31 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.DoubleColumnSelector;
-
-import java.util.Comparator;
+import io.druid.segment.BaseDoubleColumnValueSelector;
 
 /**
  */
 public class DoubleMaxAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = DoubleSumAggregator.COMPARATOR;
-
   static double combineValues(Object lhs, Object rhs)
   {
     return Math.max(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
-  private final DoubleColumnSelector selector;
+  private final BaseDoubleColumnValueSelector selector;
 
   private double max;
 
-  public DoubleMaxAggregator(DoubleColumnSelector selector)
+  public DoubleMaxAggregator(BaseDoubleColumnValueSelector selector)
   {
     this.selector = selector;
-
-    reset();
+    this.max = Double.NEGATIVE_INFINITY;
   }
 
   @Override
   public void aggregate()
   {
-    max = Math.max(max, selector.get());
-  }
-
-  @Override
-  public void reset()
-  {
-    max = Double.NEGATIVE_INFINITY;
+    max = Math.max(max, selector.getDouble());
   }
 
   @Override

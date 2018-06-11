@@ -22,8 +22,10 @@ package io.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.client.CachingClusteredClient;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.query.FluentQueryRunnerBuilder;
 import io.druid.query.PostProcessingOperator;
 import io.druid.query.Query;
@@ -31,9 +33,11 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.ResultLevelCachingQueryRunner;
 import io.druid.query.RetryQueryRunner;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
+import io.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
 /**
@@ -45,6 +49,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final QueryToolChestWarehouse warehouse;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
+  private final ServerConfig serverConfig;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
+
 
   @Inject
   public ClientQuerySegmentWalker(
@@ -52,7 +60,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CachingClusteredClient baseClient,
       QueryToolChestWarehouse warehouse,
       RetryQueryRunnerConfig retryConfig,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      ServerConfig serverConfig,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.emitter = emitter;
@@ -60,6 +71,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.warehouse = warehouse;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
+    this.serverConfig = serverConfig;
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
   }
 
   @Override
@@ -77,6 +91,22 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> QueryRunner<T> makeRunner(Query<T> query, QueryRunner<T> baseClientRunner)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+
+    // This does not adhere to the fluent workflow. See https://github.com/druid-io/druid/issues/5517
+    return new ResultLevelCachingQueryRunner<>(makeRunner(query, baseClientRunner, toolChest),
+                                               toolChest,
+                                               query,
+                                               objectMapper,
+                                               cache,
+                                               cacheConfig);
+  }
+
+  private <T> QueryRunner<T> makeRunner(
+      Query<T> query,
+      QueryRunner<T> baseClientRunner,
+      QueryToolChest<T, Query<T>> toolChest
+  )
+  {
     PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
         query.<String>getContextValue("postProcessing"),
         new TypeReference<PostProcessingOperator<T>>()
@@ -86,11 +116,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     return new FluentQueryRunnerBuilder<>(toolChest)
         .create(
-            new RetryQueryRunner<>(
-                baseClientRunner,
-                toolChest,
-                retryConfig,
-                objectMapper
+            new SetAndVerifyContextQueryRunner<>(
+                serverConfig,
+                new RetryQueryRunner<>(
+                    baseClientRunner,
+                    retryConfig,
+                    objectMapper
+                )
             )
         )
         .applyPreMergeDecoration()
@@ -99,6 +131,4 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .emitCPUTimeMetric(emitter)
         .postProcess(postProcessing);
   }
-
-
 }

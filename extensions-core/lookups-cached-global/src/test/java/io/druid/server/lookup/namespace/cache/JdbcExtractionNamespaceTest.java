@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.concurrent.Execs;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -36,6 +36,7 @@ import io.druid.query.lookup.namespace.CacheGenerator;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
+import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -51,6 +52,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -72,12 +74,14 @@ public class JdbcExtractionNamespaceTest
   private static final String keyName = "keyName";
   private static final String valName = "valName";
   private static final String tsColumn_ = "tsColumn";
-  private static final Map<String, String> renames = ImmutableMap.of(
-      "foo", "bar",
-      "bad", "bar",
-      "how about that", "foo",
-      "empty string", ""
+  private static final String filterColumn = "filterColumn";
+  private static final Map<String, String[]> renames = ImmutableMap.of(
+      "foo", new String[]{"bar", "1"},
+      "bad", new String[]{"bar", "1"},
+      "how about that", new String[]{"foo", "0"},
+      "empty string", new String[]{"empty string", "0"}
   );
+
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters()
@@ -124,9 +128,10 @@ public class JdbcExtractionNamespaceTest
                 0,
                 handle.createStatement(
                     StringUtils.format(
-                        "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64))",
+                        "CREATE TABLE %s (%s TIMESTAMP, %s VARCHAR(64), %s VARCHAR(64), %s VARCHAR(64))",
                         tableName,
                         tsColumn_,
+                        filterColumn,
                         keyName,
                         valName
                     )
@@ -151,7 +156,7 @@ public class JdbcExtractionNamespaceTest
                 try (Closeable closeable = new Closeable()
                 {
                   @Override
-                  public void close() throws IOException
+                  public void close()
                   {
                     future.cancel(true);
                   }
@@ -166,7 +171,7 @@ public class JdbcExtractionNamespaceTest
             closer.register(new Closeable()
             {
               @Override
-              public void close() throws IOException
+              public void close()
               {
                 if (scheduler == null) {
                   return;
@@ -174,9 +179,12 @@ public class JdbcExtractionNamespaceTest
                 Assert.assertEquals(0, scheduler.getActiveEntries());
               }
             });
-            for (Map.Entry<String, String> entry : renames.entrySet()) {
+            for (Map.Entry<String, String[]> entry : renames.entrySet()) {
               try {
-                insertValues(handle, entry.getKey(), entry.getValue(), "2015-01-01 00:00:00");
+                String key = entry.getKey();
+                String value = entry.getValue()[0];
+                String filter = entry.getValue()[1];
+                insertValues(handle, key, value, filter, "2015-01-01 00:00:00");
               }
               catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -193,6 +201,7 @@ public class JdbcExtractionNamespaceTest
                     {
                       private final JdbcCacheGenerator delegate =
                           new JdbcCacheGenerator();
+
                       @Override
                       public CacheScheduler.VersionedCache generateCache(
                           final JdbcExtractionNamespace namespace,
@@ -217,7 +226,7 @@ public class JdbcExtractionNamespaceTest
                       }
                     }
                 ),
-                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter)
+                new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
             );
             try {
               lifecycle.start();
@@ -244,7 +253,7 @@ public class JdbcExtractionNamespaceTest
                     try (final Closeable closeable = new Closeable()
                     {
                       @Override
-                      public void close() throws IOException
+                      public void close()
                       {
                         future.cancel(true);
                       }
@@ -262,17 +271,12 @@ public class JdbcExtractionNamespaceTest
         }
     );
 
-    try (final Closeable closeable =
-             new Closeable()
-             {
-               @Override
-               public void close() throws IOException
-               {
-                 if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
-                   throw new IOException("Unable to stop future");
-                 }
-               }
-             }) {
+    Closeable closeable = () -> {
+      if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
+        throw new IOException("Unable to stop future");
+      }
+    };
+    try (final Closeable c = closeable) {
       handleRef = setupFuture.get(10, TimeUnit.SECONDS);
     }
     Assert.assertNotNull(handleRef);
@@ -322,26 +326,33 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  private void insertValues(final Handle handle, final String key, final String val, final String updateTs)
+  private void insertValues(
+      final Handle handle,
+      final String key,
+      final String val,
+      final String filter,
+      final String updateTs
+  )
       throws InterruptedException
   {
     final String query;
+    final String statementVal = val != null ? "'%s'" : "%s";
     if (tsColumn == null) {
       handle.createStatement(
           StringUtils.format("DELETE FROM %s WHERE %s='%s'", tableName, keyName, key)
       ).setQueryTimeout(1).execute();
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s) VALUES ('%s', '%s')",
+          "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', " + statementVal + ")",
           tableName,
-          keyName, valName,
-          key, val
+          filterColumn, keyName, valName,
+          filter, key, val
       );
     } else {
       query = StringUtils.format(
-          "INSERT INTO %s (%s, %s, %s) VALUES ('%s', '%s', '%s')",
+          "INSERT INTO %s (%s, %s, %s, %s) VALUES ('%s', '%s', '%s', " + statementVal + ")",
           tableName,
-          tsColumn, keyName, valName,
-          updateTs, key, val
+          tsColumn, filterColumn, keyName, valName,
+          updateTs, filter, key, val
       );
     }
     Assert.assertEquals(1, handle.createStatement(query).setQueryTimeout(1).execute());
@@ -352,9 +363,8 @@ public class JdbcExtractionNamespaceTest
   }
 
   @Test(timeout = 10_000L)
-  public void testMapping()
-      throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
-             InterruptedException, TimeoutException
+  public void testMappingWithoutFilter()
+      throws InterruptedException
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
@@ -362,29 +372,63 @@ public class JdbcExtractionNamespaceTest
         keyName,
         valName,
         tsColumn,
+        null,
         new Period(0)
     );
     try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
       CacheSchedulerTest.waitFor(entry);
       final Map<String, String> map = entry.getCache();
 
-      for (Map.Entry<String, String> e : renames.entrySet()) {
+      for (Map.Entry<String, String[]> e : renames.entrySet()) {
         String key = e.getKey();
-        String val = e.getValue();
-        Assert.assertEquals("non-null check", Strings.emptyToNull(val), Strings.emptyToNull(map.get(key)));
+        String[] val = e.getValue();
+        String field = val[0];
+        Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
       }
       Assert.assertEquals("null check", null, map.get("baz"));
     }
   }
 
+  @Test(timeout = 20_000L)
+  public void testMappingWithFilter()
+      throws InterruptedException
+  {
+    final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        tableName,
+        keyName,
+        valName,
+        tsColumn,
+        filterColumn + "='1'",
+        new Period(0)
+    );
+    try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
+      CacheSchedulerTest.waitFor(entry);
+      final Map<String, String> map = entry.getCache();
+
+      for (Map.Entry<String, String[]> e : renames.entrySet()) {
+        String key = e.getKey();
+        String[] val = e.getValue();
+        String field = val[0];
+        String filterVal = val[1];
+
+        if (filterVal.equals("1")) {
+          Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
+        } else {
+          Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));
+        }
+      }
+    }
+  }
+
   @Test(timeout = 10_000L)
   public void testSkipOld()
-      throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
+      throws InterruptedException
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
       if (tsColumn != null) {
-        insertValues(handleRef, "foo", "baz", "1900-01-01 00:00:00");
+        insertValues(handleRef, "foo", "baz", null, "1900-01-01 00:00:00");
       }
       assertUpdated(entry, "foo", "bar");
     }
@@ -392,17 +436,30 @@ public class JdbcExtractionNamespaceTest
 
   @Test(timeout = 60_000L)
   public void testFindNew()
-      throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
+      throws InterruptedException
   {
     try (final CacheScheduler.Entry entry = ensureEntry()) {
       assertUpdated(entry, "foo", "bar");
-      insertValues(handleRef, "foo", "baz", "2900-01-01 00:00:00");
+      insertValues(handleRef, "foo", "baz", null, "2900-01-01 00:00:00");
       assertUpdated(entry, "foo", "baz");
     }
   }
 
+  @Test(timeout = 60_000L)
+  public void testIgnoresNullValues()
+      throws InterruptedException
+  {
+    try (final CacheScheduler.Entry entry = ensureEntry()) {
+      insertValues(handleRef, "fooz", null, null, "2900-01-01 00:00:00");
+      waitForUpdates(1_000L, 2L);
+      Thread.sleep(100);
+      Set set = entry.getCache().keySet();
+      Assert.assertFalse(set.contains("fooz"));
+    }
+  }
+
   private CacheScheduler.Entry ensureEntry()
-      throws NoSuchFieldException, IllegalAccessException, InterruptedException
+      throws InterruptedException
   {
     final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
         derbyConnectorRule.getMetadataConnectorConfig(),
@@ -410,6 +467,7 @@ public class JdbcExtractionNamespaceTest
         keyName,
         valName,
         tsColumn,
+        null,
         new Period(10)
     );
     CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace);
