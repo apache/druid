@@ -255,7 +255,11 @@ public class CompressionUtils
     return result;
   }
 
-  public static void validateZipOutputFile(String sourceFilename, final File outFile, final File outDir) throws IOException
+  public static void validateZipOutputFile(
+      String sourceFilename,
+      final File outFile,
+      final File outDir
+  ) throws IOException
   {
     // check for evil zip exploit that allows writing output to arbitrary directories
     final File canonicalOutFile = outFile.getCanonicalFile();
@@ -265,7 +269,7 @@ public class CompressionUtils
           "Unzipped output path[%s] of sourceFile[%s] does not start with outDir[%s].",
           canonicalOutFile,
           sourceFilename,
-          outDir
+          canonicalOutDir
       );
     }
   }
@@ -581,5 +585,17 @@ public class CompressionUtils
     } else {
       return in;
     }
+  }
+
+  // Helper method for unit tests
+  public static void makeEvilZip(File outputFile) throws IOException
+  {
+    ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(outputFile));
+    ZipEntry zipEntry = new ZipEntry("../../../../../../../../../../../../../../../tmp/evil.txt");
+    zipOutputStream.putNextEntry(zipEntry);
+    byte[] output = StringUtils.toUtf8("evil text");
+    zipOutputStream.write(output);
+    zipOutputStream.closeEntry();
+    zipOutputStream.close();
   }
 }

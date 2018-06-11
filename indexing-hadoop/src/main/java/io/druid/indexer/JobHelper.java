@@ -707,13 +707,9 @@ public class JobHelper
               try (ZipInputStream in = new ZipInputStream(fileSystem.open(zip, 1 << 13))) {
                 for (ZipEntry entry = in.getNextEntry(); entry != null; entry = in.getNextEntry()) {
                   final String fileName = entry.getName();
-                  final String outputPath = outDir.getAbsolutePath() + File.separator + fileName;
+                  final String outputPath = new File(outDir, fileName).getAbsolutePath();
 
-                  CompressionUtils.validateZipOutputFile(
-                      zip.getName(),
-                      new File(outputPath),
-                      outDir
-                  );
+                  CompressionUtils.validateZipOutputFile(zip.getName(), new File(outputPath), outDir);
 
                   try (final OutputStream out = new BufferedOutputStream(new FileOutputStream(outputPath))) {
                     for (int len = in.read(buffer); len >= 0; len = in.read(buffer)) {

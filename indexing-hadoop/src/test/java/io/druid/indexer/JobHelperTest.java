@@ -25,6 +25,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -187,14 +188,18 @@ public class JobHelperTest
   @Test
   public void testEvilZip() throws IOException
   {
+    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
+
     final File evilResult = new File("/tmp/evil.txt");
     Files.deleteIfExists(evilResult.toPath());
 
-    final String evilZipPath = getClass().getClassLoader().getResource("evil.zip").getFile();
-    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
+    File evilZip = new File(tmpDir, "evil.zip");
+    Files.deleteIfExists(evilZip.toPath());
+    CompressionUtils.makeEvilZip(evilZip);
+
     try {
       JobHelper.unzipNoGuava(
-          new Path(evilZipPath),
+          new Path(evilZip.getCanonicalPath()),
           new Configuration(),
           tmpDir,
           new Progressable()

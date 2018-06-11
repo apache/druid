@@ -316,12 +316,15 @@ public class CompressionUtilsTest
   @Test
   public void testEvilZip() throws IOException
   {
+    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
+
     final File evilResult = new File("/tmp/evil.txt");
     java.nio.file.Files.deleteIfExists(evilResult.toPath());
 
-    final String evilZipPath = getClass().getClassLoader().getResource("evil.zip").getFile();
-    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
-    File evilZip = new File(evilZipPath);
+    File evilZip = new File(tmpDir, "evil.zip");
+    java.nio.file.Files.deleteIfExists(evilZip.toPath());
+    CompressionUtils.makeEvilZip(evilZip);
+
     try {
       CompressionUtils.unzip(evilZip, tmpDir);
     }
