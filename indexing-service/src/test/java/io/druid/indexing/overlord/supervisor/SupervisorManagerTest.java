@@ -99,21 +99,16 @@ public class SupervisorManagerTest extends EasyMockSupport
     supervisor1.stop(true);
     replayAll();
 
-    manager.createOrUpdateAndStartSupervisor(spec2);
-    Assert.assertEquals(2, manager.getSupervisorIds().size());
-    Assert.assertEquals(spec2, manager.getSupervisorSpec("id1").get());
-    verifyAll();
-
     resetAll();
     metadataSupervisorManager.insert(eq("id1"), anyObject(NoopSupervisorSpec.class));
     supervisor2.stop(true);
     replayAll();
 
+    resetAll();
     boolean retVal = manager.stopAndRemoveSupervisor("id1");
     Assert.assertTrue(retVal);
     Assert.assertEquals(1, manager.getSupervisorIds().size());
     Assert.assertEquals(Optional.absent(), manager.getSupervisorSpec("id1"));
-    verifyAll();
 
     resetAll();
     supervisor3.stop(false);
