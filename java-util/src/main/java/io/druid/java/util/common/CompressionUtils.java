@@ -232,6 +232,9 @@ public class CompressionUtils
       while (enumeration.hasMoreElements()) {
         final ZipEntry entry = enumeration.nextElement();
         final File outFile = new File(outDir, entry.getName());
+
+        validateZipOutputFile(pulledFile.getCanonicalPath(), outFile, outDir);
+
         result.addFiles(
             FileUtils.retryCopy(
                 new ByteSource()
@@ -250,6 +253,25 @@ public class CompressionUtils
       }
     }
     return result;
+  }
+
+  public static void validateZipOutputFile(
+      String sourceFilename,
+      final File outFile,
+      final File outDir
+  ) throws IOException
+  {
+    // check for evil zip exploit that allows writing output to arbitrary directories
+    final File canonicalOutFile = outFile.getCanonicalFile();
+    final String canonicalOutDir = outDir.getCanonicalPath();
+    if (!canonicalOutFile.toPath().startsWith(canonicalOutDir)) {
+      throw new ISE(
+          "Unzipped output path[%s] of sourceFile[%s] does not start with outDir[%s].",
+          canonicalOutFile,
+          sourceFilename,
+          canonicalOutDir
+      );
+    }
   }
 
   /**
@@ -271,6 +293,8 @@ public class CompressionUtils
       ZipEntry entry;
       while ((entry = zipIn.getNextEntry()) != null) {
         final File file = new File(outDir, entry.getName());
+
+        validateZipOutputFile("", file, outDir);
 
         NativeIO.chunkedCopy(zipIn, file);
 
@@ -561,5 +585,17 @@ public class CompressionUtils
     } else {
       return in;
     }
+  }
+
+  // Helper method for unit tests (for checking that we fixed https://snyk.io/research/zip-slip-vulnerability)
+  public static void makeEvilZip(File outputFile) throws IOException
+  {
+    ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(outputFile));
+    ZipEntry zipEntry = new ZipEntry("../../../../../../../../../../../../../../../tmp/evil.txt");
+    zipOutputStream.putNextEntry(zipEntry);
+    byte[] output = StringUtils.toUtf8("evil text");
+    zipOutputStream.write(output);
+    zipOutputStream.closeEntry();
+    zipOutputStream.close();
   }
 }
