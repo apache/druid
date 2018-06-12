@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.NoopTestTaskFileWriter;
@@ -111,6 +112,7 @@ public class TaskToolboxTest
         mockIndexIO,
         mockCache,
         mockCacheConfig,
+        new CachePopulatorStats(),
         mockIndexMergerV9,
         null,
         null,

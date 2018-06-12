@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -1457,6 +1458,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
         new CacheConfig(),
+        new CachePopulatorStats(),
         testUtils.getTestIndexMergerV9(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),

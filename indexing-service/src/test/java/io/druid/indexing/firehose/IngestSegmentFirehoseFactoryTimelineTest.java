@@ -340,6 +340,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           INDEX_IO,
           null,
           null,
+          null,
           INDEX_MERGER_V9,
           null,
           null,

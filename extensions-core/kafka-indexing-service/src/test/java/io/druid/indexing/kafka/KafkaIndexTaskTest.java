@@ -36,6 +36,7 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
@@ -2229,6 +2230,7 @@ public class KafkaIndexTaskTest
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
         new CacheConfig(),
+        new CachePopulatorStats(),
         testUtils.getTestIndexMergerV9(),
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),

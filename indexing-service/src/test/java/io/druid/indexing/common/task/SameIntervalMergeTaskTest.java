@@ -252,6 +252,7 @@ public class SameIntervalMergeTaskTest
             indexIO,
             null,
             null,
+            null,
             EasyMock.createMock(IndexMergerV9.class),
             null,
             null,
