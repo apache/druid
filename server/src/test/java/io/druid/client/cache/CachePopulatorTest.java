@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.jackson.JacksonUtils;
@@ -95,7 +96,9 @@ public class CachePopulatorTest
 
     // Shutdown executor to ensure background updates have happened.
     exec.shutdown();
-    exec.awaitTermination(30, TimeUnit.SECONDS);
+    if (!exec.awaitTermination(30, TimeUnit.SECONDS)) {
+      throw new ISE("Timed out while waiting for executor to shutdown.");
+    }
 
     Assert.assertEquals(strings, readFromCache(makeKey(1)));
     Assert.assertEquals(1, stats.snapshot().getNumOk());
@@ -115,7 +118,9 @@ public class CachePopulatorTest
 
     // Shutdown executor to ensure background updates have happened.
     exec.shutdown();
-    exec.awaitTermination(30, TimeUnit.SECONDS);
+    if (!exec.awaitTermination(30, TimeUnit.SECONDS)) {
+      throw new ISE("Timed out while waiting for executor to shutdown.");
+    }
 
     Assert.assertEquals(strings, readFromCache(makeKey(1)));
     Assert.assertNull(readFromCache(makeKey(2)));
