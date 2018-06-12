@@ -155,15 +155,22 @@ public class BasicHTTPAuthenticator implements Authenticator
     ) throws IOException, ServletException
     {
       HttpServletResponse httpResp = (HttpServletResponse) servletResponse;
-      String userSecret = BasicAuthUtils.getBasicUserSecretFromHttpReq((HttpServletRequest) servletRequest);
 
-      if (userSecret == null) {
+      String encodedUserSecret = BasicAuthUtils.getEncodedUserSecretFromHttpReq((HttpServletRequest) servletRequest);
+      if (encodedUserSecret == null) {
         // Request didn't have HTTP Basic auth credentials, move on to the next filter
         filterChain.doFilter(servletRequest, servletResponse);
         return;
       }
 
-      String[] splits = userSecret.split(":");
+      String decodedUserSecret = BasicAuthUtils.decodeUserSecret(encodedUserSecret);
+      if (decodedUserSecret == null) {
+        // we recognized a Basic auth header, but could not decode the user secret
+        httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return;
+      }
+
+      String[] splits = decodedUserSecret.split(":");
       if (splits.length != 2) {
         httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         return;
@@ -177,6 +184,7 @@ public class BasicHTTPAuthenticator implements Authenticator
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
       } else {
         httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return;
       }
 
       filterChain.doFilter(servletRequest, servletResponse);
