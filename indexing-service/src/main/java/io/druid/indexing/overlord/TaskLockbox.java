@@ -31,14 +31,15 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Comparators;
+import io.druid.java.util.emitter.EmittingLogger;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -133,12 +134,7 @@ public class TaskLockbox
           continue;
         }
 
-        final TaskLockPosse taskLockPosse = createOrFindLockPosse(
-            task,
-            savedTaskLock.getInterval(),
-            savedTaskLock.getVersion(),
-            savedTaskLock.getType()
-        );
+        final TaskLockPosse taskLockPosse = createOrFindLockPosse(task, savedTaskLock);
         if (taskLockPosse != null) {
           taskLockPosse.addTask(task);
 
@@ -147,9 +143,8 @@ public class TaskLockbox
           if (savedTaskLock.getVersion().equals(taskLock.getVersion())) {
             taskLockCount++;
             log.info(
-                "Reacquired lock on interval[%s] version[%s] for task: %s",
-                savedTaskLock.getInterval(),
-                savedTaskLock.getVersion(),
+                "Reacquired lock[%s] for task: %s",
+                taskLock,
                 task.getId()
             );
           } else {
@@ -340,7 +335,7 @@ public class TaskLockbox
    *
    * @return a lock posse or null if any posse is found and a new poss cannot be created
    *
-   * @see #createNewTaskLockPosse(TaskLockType, String, String, Interval, String, int)
+   * @see #createNewTaskLockPosse
    */
   @Nullable
   private TaskLockPosse createOrFindLockPosse(
@@ -353,8 +348,78 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      final String dataSource = task.getDataSource();
-      final int priority = task.getPriority();
+      return createOrFindLockPosse(
+          lockType,
+          task.getId(),
+          task.getGroupId(),
+          task.getDataSource(),
+          interval,
+          preferredVersion,
+          task.getPriority(),
+          false
+      );
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Nullable
+  private TaskLockPosse createOrFindLockPosse(Task task, TaskLock taskLock)
+  {
+    giant.lock();
+
+    try {
+      Preconditions.checkArgument(
+          task.getGroupId().equals(taskLock.getGroupId()),
+          "lock groupId[%s] is different from task groupId[%s]",
+          taskLock.getGroupId(),
+          task.getGroupId()
+      );
+      Preconditions.checkArgument(
+          task.getDataSource().equals(taskLock.getDataSource()),
+          "lock dataSource[%s] is different from task dataSource[%s]",
+          taskLock.getDataSource(),
+          task.getDataSource()
+      );
+      Preconditions.checkArgument(
+          task.getPriority() == taskLock.getPriority(),
+          "lock priority[%s] is different from task priority[%s]",
+          taskLock.getPriority(),
+          task.getPriority()
+      );
+
+      return createOrFindLockPosse(
+          taskLock.getType(),
+          task.getId(),
+          taskLock.getGroupId(),
+          taskLock.getDataSource(),
+          taskLock.getInterval(),
+          taskLock.getVersion(),
+          taskLock.getPriority(),
+          taskLock.isRevoked()
+      );
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  @Nullable
+  private TaskLockPosse createOrFindLockPosse(
+      TaskLockType lockType,
+      String taskId,
+      String groupId,
+      String dataSource,
+      Interval interval,
+      @Nullable String preferredVersion,
+      int priority,
+      boolean revoked
+  )
+  {
+    giant.lock();
+
+    try {
       final List<TaskLockPosse> foundPosses = findLockPossesOverlapsInterval(dataSource, interval);
 
       if (foundPosses.size() > 0) {
@@ -362,7 +427,7 @@ public class TaskLockbox
         // If they can't be reused, check lock priority and revoke existing locks if possible.
         final List<TaskLockPosse> filteredPosses = foundPosses
             .stream()
-            .filter(posse -> matchGroupIdAndContainInterval(posse.taskLock, task, interval))
+            .filter(posse -> matchGroupIdAndContainInterval(posse.taskLock, groupId, interval))
             .collect(Collectors.toList());
 
         if (filteredPosses.size() == 0) {
@@ -372,11 +437,12 @@ public class TaskLockbox
             // Any number of shared locks can be acquired for the same dataSource and interval.
             return createNewTaskLockPosse(
                 lockType,
-                task.getGroupId(),
+                groupId,
                 dataSource,
                 interval,
                 preferredVersion,
-                priority
+                priority,
+                revoked
             );
           } else {
             if (isAllRevocable(foundPosses, priority)) {
@@ -385,14 +451,40 @@ public class TaskLockbox
 
               return createNewTaskLockPosse(
                   lockType,
-                  task.getGroupId(),
+                  groupId,
                   dataSource,
                   interval,
                   preferredVersion,
-                  priority
+                  priority,
+                  revoked
               );
             } else {
-              log.info("Cannot create a new taskLockPosse because some locks of same or higher priorities exist");
+              final String messagePrefix;
+              if (preferredVersion == null) {
+                messagePrefix = StringUtils.format(
+                    "Cannot create a new taskLockPosse for task[%s], interval[%s], priority[%d], revoked[%s]",
+                    taskId,
+                    interval,
+                    priority,
+                    revoked
+                );
+              } else {
+                messagePrefix = StringUtils.format(
+                    "Cannot create a new taskLockPosse for task[%s], interval[%s],"
+                    + " preferredVersion[%s], priority[%d], revoked[%s]",
+                    taskId,
+                    interval,
+                    preferredVersion,
+                    priority,
+                    revoked
+                );
+              }
+
+              log.info(
+                  "%s because existing locks[%s] have same or higher priorities",
+                  messagePrefix,
+                  foundPosses
+              );
               return null;
             }
           }
@@ -404,7 +496,7 @@ public class TaskLockbox
           } else {
             throw new ISE(
                 "Task[%s] already acquired a lock for interval[%s] but different type[%s]",
-                task.getId(),
+                taskId,
                 interval,
                 foundPosse.getTaskLock().getType()
             );
@@ -413,7 +505,7 @@ public class TaskLockbox
           // case 3) we found multiple lock posses for the given task
           throw new ISE(
               "Task group[%s] has multiple locks for the same interval[%s]?",
-              task.getGroupId(),
+              groupId,
               interval
           );
         }
@@ -422,11 +514,12 @@ public class TaskLockbox
         // Let's make a new one.
         return createNewTaskLockPosse(
             lockType,
-            task.getGroupId(),
+            groupId,
             dataSource,
             interval,
             preferredVersion,
-            priority
+            priority,
+            revoked
         );
       }
     }
@@ -447,6 +540,7 @@ public class TaskLockbox
    * @param interval         interval to be locked
    * @param preferredVersion preferred version string
    * @param priority         lock priority
+   * @param revoked          indicate the lock is revoked
    *
    * @return a new {@link TaskLockPosse}
    */
@@ -456,7 +550,8 @@ public class TaskLockbox
       String dataSource,
       Interval interval,
       @Nullable String preferredVersion,
-      int priority
+      int priority,
+      boolean revoked
   )
   {
     giant.lock();
@@ -479,7 +574,7 @@ public class TaskLockbox
       }
 
       final TaskLockPosse posseToUse = new TaskLockPosse(
-          new TaskLock(lockType, groupId, dataSource, interval, version, priority)
+          new TaskLock(lockType, groupId, dataSource, interval, version, priority, revoked)
       );
       running.computeIfAbsent(dataSource, k -> new TreeMap<>(Comparators.intervalsByStartThenEnd()))
              .computeIfAbsent(interval, k -> new ArrayList<>())
@@ -810,10 +905,10 @@ public class TaskLockbox
     }
   }
 
-  private static boolean matchGroupIdAndContainInterval(TaskLock existingLock, Task task, Interval interval)
+  private static boolean matchGroupIdAndContainInterval(TaskLock existingLock, String taskGroupId, Interval interval)
   {
     return existingLock.getInterval().contains(interval) &&
-           existingLock.getGroupId().equals(task.getGroupId());
+           existingLock.getGroupId().equals(taskGroupId);
   }
 
   private static boolean isAllSharedLocks(List<TaskLockPosse> lockPosses)
@@ -856,7 +951,7 @@ public class TaskLockbox
   }
 
   @VisibleForTesting
-  public Map<String, NavigableMap<Interval, List<TaskLockPosse>>> getAllLocks()
+  Map<String, NavigableMap<Interval, List<TaskLockPosse>>> getAllLocks()
   {
     return running;
   }
@@ -914,7 +1009,7 @@ public class TaskLockbox
 
     void forEachTask(Consumer<String> action)
     {
-      Preconditions.checkNotNull(action);
+      Preconditions.checkNotNull(action, "action");
       taskIds.forEach(action);
     }
 
