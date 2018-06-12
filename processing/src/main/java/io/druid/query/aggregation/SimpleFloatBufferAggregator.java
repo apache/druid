@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 
 public abstract class SimpleFloatBufferAggregator implements BufferAggregator
 {
-  protected final BaseFloatColumnValueSelector selector;
+  final BaseFloatColumnValueSelector selector;
 
   SimpleFloatBufferAggregator(BaseFloatColumnValueSelector selector)
   {
