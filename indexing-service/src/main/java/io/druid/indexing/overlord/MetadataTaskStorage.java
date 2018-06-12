@@ -258,15 +258,15 @@ public class MetadataTaskStorage implements TaskStorage
     Preconditions.checkNotNull(newLock, "newLock");
 
     log.info(
-        "Replacing lock on interval[%s] version[%s] for task: %s",
-        oldLock.getInterval(),
-        oldLock.getVersion(),
+        "Replacing an existing lock[%s] with a new lock[%s] for task: %s",
+        oldLock,
+        newLock,
         taskid
     );
 
     final Long oldLockId = handler.getLockId(taskid, oldLock);
     if (oldLockId == null) {
-      throw new ISE("Cannot find lock[%s]", oldLock);
+      throw new ISE("Cannot find an existing lock[%s]", oldLock);
     }
 
     handler.replaceLock(taskid, oldLockId, newLock);
