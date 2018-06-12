@@ -593,6 +593,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
               .withQuerySegmentSpec(segmentsOfServerSpec),
           responseContext
       );
+      final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
+
       return resultsBySegments
           .map(result -> {
             final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
@@ -600,7 +602,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
                 getCachePopulatorKey(resultsOfSegment.getSegmentId(), resultsOfSegment.getInterval());
             Sequence<T> res = Sequences.simple(resultsOfSegment.getResults());
             if (cachePopulatorKey != null) {
-              res = cachePopulator.wrap(res, strategy, cache, cachePopulatorKey);
+              res = cachePopulator.wrap(res, cacheFn::apply, cache, cachePopulatorKey);
             }
             return res.map(
                 toolChest.makePreComputeManipulatorFn(downstreamQuery, MetricManipulatorFns.deserializing())::apply

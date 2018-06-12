@@ -21,7 +21,6 @@ package io.druid.client.cache;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -31,13 +30,12 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.query.CacheStrategy;
-import io.druid.query.Query;
 
 import java.io.ByteArrayOutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 
 public class BackgroundCachePopulator implements CachePopulator
 {
@@ -62,14 +60,13 @@ public class BackgroundCachePopulator implements CachePopulator
   }
 
   @Override
-  public <T, CacheType, QueryType extends Query<T>> Sequence<T> wrap(
+  public <T, CacheType> Sequence<T> wrap(
       final Sequence<T> sequence,
-      final CacheStrategy<T, CacheType, QueryType> cacheStrategy,
+      final Function<T, CacheType> cacheFn,
       final Cache cache,
       final Cache.NamedKey cacheKey
   )
   {
-    final Function<T, CacheType> cacheFn = cacheStrategy.prepareForSegmentLevelCache();
     final List<ListenableFuture<CacheType>> cacheFutures = new LinkedList<>();
 
     final Sequence<T> wrappedSequence = Sequences.map(

@@ -132,7 +132,8 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     }
 
     if (populateCache) {
-      return cachePopulator.wrap(base.run(queryPlus, responseContext), strategy, cache, key);
+      final Function cacheFn = strategy.pullFromSegmentLevelCache();
+      return cachePopulator.wrap(base.run(queryPlus, responseContext), value -> cacheFn.apply(value), cache, key);
     } else {
       return base.run(queryPlus, responseContext);
     }

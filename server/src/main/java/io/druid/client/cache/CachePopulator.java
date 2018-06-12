@@ -20,14 +20,14 @@
 package io.druid.client.cache;
 
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.query.CacheStrategy;
-import io.druid.query.Query;
+
+import java.util.function.Function;
 
 public interface CachePopulator
 {
-  <T, CacheType, QueryType extends Query<T>> Sequence<T> wrap(
+  <T, CacheType> Sequence<T> wrap(
       Sequence<T> sequence,
-      CacheStrategy<T, CacheType, QueryType> cacheStrategy,
+      Function<T, CacheType> cacheFn,
       Cache cache,
       Cache.NamedKey cacheKey
   );
