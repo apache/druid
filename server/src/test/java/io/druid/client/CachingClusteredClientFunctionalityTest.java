@@ -78,7 +78,7 @@ public class CachingClusteredClientFunctionalityTest
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
     client = makeClient(
-        new ForegroundCachePopulator(CachingClusteredClientTest.jsonMapper, new CachePopulatorStats(), - 1)
+        new ForegroundCachePopulator(CachingClusteredClientTest.jsonMapper, new CachePopulatorStats(), -1)
     );
   }
 

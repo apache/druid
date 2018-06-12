@@ -153,7 +153,7 @@ public class ServerManagerTest
         },
         new NoopServiceEmitter(),
         serverManagerExec,
-        new ForegroundCachePopulator(new DefaultObjectMapper(), new CachePopulatorStats(), - 1),
+        new ForegroundCachePopulator(new DefaultObjectMapper(), new CachePopulatorStats(), -1),
         new DefaultObjectMapper(),
         new LocalCacheProvider().get(),
         new CacheConfig(),
