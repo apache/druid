@@ -39,6 +39,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
@@ -161,7 +162,8 @@ public class AppenderatorImpl implements Appenderator
       IndexIO indexIO,
       IndexMerger indexMerger,
       Cache cache,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats
   )
   {
     this.schema = Preconditions.checkNotNull(schema, "schema");
@@ -181,7 +183,8 @@ public class AppenderatorImpl implements Appenderator
         conglomerate,
         queryExecutorService,
         Preconditions.checkNotNull(cache, "cache"),
-        cacheConfig
+        cacheConfig,
+        cachePopulatorStats
     );
     maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());

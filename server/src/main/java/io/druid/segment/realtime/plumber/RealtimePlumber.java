@@ -32,6 +32,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.common.utils.VMUtils;
@@ -146,6 +147,7 @@ public class RealtimePlumber implements Plumber
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats,
       ObjectMapper objectMapper
   )
   {
@@ -168,7 +170,8 @@ public class RealtimePlumber implements Plumber
         conglomerate,
         queryExecutorService,
         cache,
-        cacheConfig
+        cacheConfig,
+        cachePopulatorStats
     );
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());

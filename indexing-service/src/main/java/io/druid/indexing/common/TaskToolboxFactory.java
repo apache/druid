@@ -23,10 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import io.druid.java.util.emitter.service.ServiceEmitter;
-import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.discovery.DataNodeService;
 import io.druid.discovery.DruidNodeAnnouncer;
 import io.druid.discovery.LookupNodeService;
@@ -35,6 +34,8 @@ import io.druid.guice.annotations.RemoteChatHandler;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -73,6 +74,7 @@ public class TaskToolboxFactory
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
+  private final CachePopulatorStats cachePopulatorStats;
   private final IndexMergerV9 indexMergerV9;
   private final DruidNodeAnnouncer druidNodeAnnouncer;
   private final DruidNode druidNode;
@@ -100,6 +102,7 @@ public class TaskToolboxFactory
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats,
       IndexMergerV9 indexMergerV9,
       DruidNodeAnnouncer druidNodeAnnouncer,
       @RemoteChatHandler DruidNode druidNode,
@@ -126,6 +129,7 @@ public class TaskToolboxFactory
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
     this.cacheConfig = cacheConfig;
+    this.cachePopulatorStats = cachePopulatorStats;
     this.indexMergerV9 = indexMergerV9;
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
@@ -157,6 +161,7 @@ public class TaskToolboxFactory
         indexIO,
         cache,
         cacheConfig,
+        cachePopulatorStats,
         indexMergerV9,
         druidNodeAnnouncer,
         druidNode,

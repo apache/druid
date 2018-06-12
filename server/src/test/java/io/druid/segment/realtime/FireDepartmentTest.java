@@ -22,6 +22,7 @@ package io.druid.segment.realtime;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -115,6 +116,7 @@ public class FireDepartmentTest
                 TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()),
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
+                new CachePopulatorStats(),
                 TestHelper.makeJsonMapper()
 
             ),

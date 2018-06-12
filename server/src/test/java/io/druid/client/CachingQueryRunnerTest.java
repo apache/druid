@@ -30,6 +30,7 @@ import io.druid.client.cache.BackgroundCachePopulator;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CachePopulator;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.CacheStats;
 import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.MapCache;
@@ -114,10 +115,11 @@ public class CachingQueryRunnerTest
       cachePopulator = new BackgroundCachePopulator(
           Execs.multiThreaded(numBackgroundThreads, "CachingQueryRunnerTest-%d"),
           objectMapper,
+          new CachePopulatorStats(),
           -1
       );
     } else {
-      cachePopulator = new ForegroundCachePopulator(objectMapper, -1);
+      cachePopulator = new ForegroundCachePopulator(objectMapper, new CachePopulatorStats(), -1);
     }
   }
 

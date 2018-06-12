@@ -28,6 +28,7 @@ import com.google.inject.ProvisionException;
 import io.druid.client.cache.BackgroundCachePopulator;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CachePopulator;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
@@ -68,7 +69,11 @@ public class DruidProcessingModule implements Module
 
   @Provides
   @LazySingleton
-  public CachePopulator getCachePopulator(@Smile ObjectMapper smileMapper, CacheConfig cacheConfig)
+  public CachePopulator getCachePopulator(
+      @Smile ObjectMapper smileMapper,
+      CachePopulatorStats cachePopulatorStats,
+      CacheConfig cacheConfig
+  )
   {
     if (cacheConfig.getNumBackgroundThreads() > 0) {
       final ExecutorService exec = Executors.newFixedThreadPool(
@@ -80,9 +85,9 @@ public class DruidProcessingModule implements Module
               .build()
       );
 
-      return new BackgroundCachePopulator(exec, smileMapper, cacheConfig.getMaxEntrySize());
+      return new BackgroundCachePopulator(exec, smileMapper, cachePopulatorStats, cacheConfig.getMaxEntrySize());
     } else {
-      return new ForegroundCachePopulator(smileMapper, cacheConfig.getMaxEntrySize());
+      return new ForegroundCachePopulator(smileMapper, cachePopulatorStats, cacheConfig.getMaxEntrySize());
     }
   }
 

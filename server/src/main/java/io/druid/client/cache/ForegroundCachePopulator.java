@@ -40,11 +40,17 @@ public class ForegroundCachePopulator implements CachePopulator
 
   private final Object lock = new Object();
   private final ObjectMapper objectMapper;
+  private final CachePopulatorStats cachePopulatorStats;
   private final long maxEntrySize;
 
-  public ForegroundCachePopulator(final ObjectMapper objectMapper, final long maxEntrySize)
+  public ForegroundCachePopulator(
+      final ObjectMapper objectMapper,
+      final CachePopulatorStats cachePopulatorStats,
+      final long maxEntrySize
+  )
   {
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
+    this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
     this.maxEntrySize = maxEntrySize;
   }
 
@@ -100,17 +106,20 @@ public class ForegroundCachePopulator implements CachePopulator
             synchronized (lock) {
               jsonGenerator.close();
 
-              if (isDone && !tooBig.get()) {
-                // Check maxEntrySize one more time, after closing/flushing jsonGenerator.
-                if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
+              if (isDone) {
+                // Check tooBig, then check maxEntrySize one more time, after closing/flushing jsonGenerator.
+                if (tooBig.get() || (maxEntrySize > 0 && bytes.size() > maxEntrySize)) {
+                  cachePopulatorStats.incrementOversized();
                   return;
                 }
 
                 try {
                   cache.put(cacheKey, bytes.toByteArray());
+                  cachePopulatorStats.incrementOk();
                 }
                 catch (Exception e) {
                   log.warn(e, "Unable to write to cache");
+                  cachePopulatorStats.incrementError();
                 }
               }
             }

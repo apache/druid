@@ -45,16 +45,19 @@ public class BackgroundCachePopulator implements CachePopulator
 
   private final ListeningExecutorService exec;
   private final ObjectMapper objectMapper;
+  private final CachePopulatorStats cachePopulatorStats;
   private final long maxEntrySize;
 
   public BackgroundCachePopulator(
       final ExecutorService exec,
       final ObjectMapper objectMapper,
+      final CachePopulatorStats cachePopulatorStats,
       final long maxEntrySize
   )
   {
     this.exec = MoreExecutors.listeningDecorator(exec);
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
+    this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
     this.maxEntrySize = maxEntrySize;
   }
 
@@ -119,19 +122,23 @@ public class BackgroundCachePopulator implements CachePopulator
           gen.writeObject(result);
 
           if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
+            cachePopulatorStats.incrementOversized();
             return;
           }
         }
       }
 
       if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
+        cachePopulatorStats.incrementOversized();
         return;
       }
 
       cache.put(cacheKey, bytes.toByteArray());
+      cachePopulatorStats.incrementOk();
     }
     catch (Exception e) {
       log.warn(e, "Could not populate cache");
+      cachePopulatorStats.incrementError();
     }
   }
 }

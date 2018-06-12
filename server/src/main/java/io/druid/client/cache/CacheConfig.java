@@ -52,7 +52,7 @@ public class CacheConfig
   private int cacheBulkMergeLimit = Integer.MAX_VALUE;
 
   @JsonProperty
-  private int maxEntrySize = -1;
+  private int maxEntrySize = 1_000_000;
 
   @JsonProperty
   private List<String> unCacheable = ImmutableList.of(Query.SELECT);

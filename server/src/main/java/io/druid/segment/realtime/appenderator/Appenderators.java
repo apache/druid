@@ -22,6 +22,7 @@ package io.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -52,7 +53,8 @@ public class Appenderators
       ServiceEmitter emitter,
       ExecutorService queryExecutorService,
       Cache cache,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats
   )
   {
     return new AppenderatorImpl(
@@ -68,7 +70,8 @@ public class Appenderators
         indexIO,
         indexMerger,
         cache,
-        cacheConfig
+        cacheConfig,
+        cachePopulatorStats
     );
   }
 
@@ -119,6 +122,7 @@ public class Appenderators
         null,
         indexIO,
         indexMerger,
+        null,
         null,
         null
     );

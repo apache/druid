@@ -24,6 +24,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.druid.client.cache.Cache;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.CacheProvider;
 import io.druid.guice.annotations.Global;
 
@@ -48,6 +49,7 @@ public class CacheModule implements Module
   public void configure(Binder binder)
   {
     binder.bind(Cache.class).toProvider(Key.get(CacheProvider.class, Global.class)).in(ManageLifecycle.class);
+    binder.bind(CachePopulatorStats.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, prefix, CacheProvider.class, Global.class);
 
     binder.install(new HybridCacheModule(prefix));

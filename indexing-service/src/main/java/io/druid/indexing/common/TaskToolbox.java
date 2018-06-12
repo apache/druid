@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.inject.Provider;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
@@ -89,6 +90,7 @@ public class TaskToolbox
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
+  private final CachePopulatorStats cachePopulatorStats;
   private final IndexMergerV9 indexMergerV9;
   private final TaskReportFileWriter taskReportFileWriter;
 
@@ -117,6 +119,7 @@ public class TaskToolbox
       IndexIO indexIO,
       Cache cache,
       CacheConfig cacheConfig,
+      CachePopulatorStats cachePopulatorStats,
       IndexMergerV9 indexMergerV9,
       DruidNodeAnnouncer druidNodeAnnouncer,
       DruidNode druidNode,
@@ -144,6 +147,7 @@ public class TaskToolbox
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
     this.cacheConfig = cacheConfig;
+    this.cachePopulatorStats = cachePopulatorStats;
     this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.druidNodeAnnouncer = druidNodeAnnouncer;
     this.druidNode = druidNode;
@@ -266,6 +270,11 @@ public class TaskToolbox
   public CacheConfig getCacheConfig()
   {
     return cacheConfig;
+  }
+
+  public CachePopulatorStats getCachePopulatorStats()
+  {
+    return cachePopulatorStats;
   }
 
   public IndexMergerV9 getIndexMergerV9()

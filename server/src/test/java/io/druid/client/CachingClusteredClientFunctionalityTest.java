@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.MapCache;
 import io.druid.client.selector.QueryableDruidServer;
@@ -76,7 +77,9 @@ public class CachingClusteredClientFunctionalityTest
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    client = makeClient(new ForegroundCachePopulator(CachingClusteredClientTest.jsonMapper, -1));
+    client = makeClient(
+        new ForegroundCachePopulator(CachingClusteredClientTest.jsonMapper, new CachePopulatorStats(), - 1)
+    );
   }
 
   @Test

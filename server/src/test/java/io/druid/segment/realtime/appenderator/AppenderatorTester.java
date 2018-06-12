@@ -22,6 +22,7 @@ package io.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -275,7 +276,8 @@ public class AppenderatorTester implements AutoCloseable
         emitter,
         queryExecutor,
         MapCache.create(2048),
-        new CacheConfig()
+        new CacheConfig(),
+        new CachePopulatorStats()
     );
   }
 

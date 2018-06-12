@@ -45,8 +45,9 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import io.druid.client.cache.BackgroundCachePopulator;
 import io.druid.client.cache.Cache;
-import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulator;
+import io.druid.client.cache.CachePopulatorStats;
 import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.MapCache;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
@@ -334,7 +335,7 @@ public class CachingClusteredClientTest
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, -1));
+    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1));
 
     servers = new DruidServer[]{
         new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
@@ -426,7 +427,14 @@ public class CachingClusteredClientTest
       }
     };
 
-    client = makeClient(new BackgroundCachePopulator(randomizingExecutorService, jsonMapper, -1));
+    client = makeClient(
+        new BackgroundCachePopulator(
+            randomizingExecutorService,
+            jsonMapper,
+            new CachePopulatorStats(),
+            -1
+        )
+    );
 
     // callback to be run every time a query run is complete, to ensure all background
     // caching tasks are executed, and cache is populated before we move onto the next query
@@ -583,7 +591,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, -1), cache, limit);
+    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1), cache, limit);
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
     EasyMock.expect(dataSegment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
@@ -608,7 +616,7 @@ public class CachingClusteredClientTest
             .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
             .once();
     EasyMock.replay(cache);
-    client = makeClient(new ForegroundCachePopulator(jsonMapper, -1), cache, 0);
+    client = makeClient(new ForegroundCachePopulator(jsonMapper, new CachePopulatorStats(), -1), cache, 0);
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
     EasyMock.verify(cache);
     EasyMock.verify(dataSegment);
