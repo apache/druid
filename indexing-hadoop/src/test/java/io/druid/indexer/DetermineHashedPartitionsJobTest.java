@@ -27,6 +27,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
@@ -35,7 +36,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -44,7 +44,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -115,7 +114,7 @@ public class DetermineHashedPartitionsJobTest
                 0,
                 1,
                 first,
-                new PeriodGranularity(new Period("P1D"), null, DateTimeZone.forID("America/Los_Angeles"))
+                new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles"))
             }
         }
     );
@@ -129,7 +128,7 @@ public class DetermineHashedPartitionsJobTest
       int expectedNumTimeBuckets,
       int[] expectedNumOfShards,
       Granularity segmentGranularity
-  ) throws IOException
+  )
   {
     this.expectedNumOfShards = expectedNumOfShards;
     this.expectedNumTimeBuckets = expectedNumTimeBuckets;
@@ -199,6 +198,7 @@ public class DetermineHashedPartitionsJobTest
             null,
             null,
             null,
+            null,
             false,
             false,
             false,
@@ -211,6 +211,8 @@ public class DetermineHashedPartitionsJobTest
             null,
             false,
             false,
+            null,
+            null,
             null
         )
     );

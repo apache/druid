@@ -27,8 +27,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Ints;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -37,6 +35,7 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
+import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -45,7 +44,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.CloseQuietly;
-import io.druid.query.DruidMetrics;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -87,7 +86,7 @@ public class RealtimeIndexTask extends AbstractTask
   public static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
-  private final static Random random = new Random();
+  private static final Random random = new Random();
 
   private static String makeTaskId(FireDepartment fireDepartment)
   {
@@ -102,7 +101,7 @@ public class RealtimeIndexTask extends AbstractTask
   static String makeTaskId(String dataSource, int partitionNumber, DateTime timestamp, int randomBits)
   {
     final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Ints.BYTES * 2; ++i) {
+    for (int i = 0; i < Integer.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
     }
     return StringUtils.format(
@@ -193,7 +192,7 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public boolean isReady(TaskActionClient taskActionClient) throws Exception
+  public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
   }
@@ -321,12 +320,8 @@ public class RealtimeIndexTask extends AbstractTask
         tuningConfig
     );
     this.metrics = fireDepartment.getMetrics();
-    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
-        ImmutableList.of(fireDepartment),
-        ImmutableMap.of(
-            DruidMetrics.TASK_ID, new String[]{getId()}
-        )
-    );
+    final RealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(this, fireDepartment);
+
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means

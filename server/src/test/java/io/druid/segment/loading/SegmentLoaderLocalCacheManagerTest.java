@@ -25,10 +25,13 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.TestHelper;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -37,21 +40,35 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
 
+@RunWith(Parameterized.class)
 public class SegmentLoaderLocalCacheManagerTest
 {
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
+
   @Rule
   public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   private final ObjectMapper jsonMapper;
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   private File localSegmentCacheFolder;
   private SegmentLoaderLocalCacheManager manager;
 
-  public SegmentLoaderLocalCacheManagerTest()
+  public SegmentLoaderLocalCacheManagerTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     jsonMapper = new DefaultObjectMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
@@ -61,6 +78,7 @@ public class SegmentLoaderLocalCacheManagerTest
             new LocalDataSegmentPuller()
         )
     );
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
   }
 
   @Before
@@ -76,14 +94,14 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
   }
 
   @Test
-  public void testIfSegmentIsLoaded() throws Exception
+  public void testIfSegmentIsLoaded()
   {
     final DataSegment cachedSegment = dataSegmentWithInterval("2014-10-20T00:00:00Z/P1D");
     final File cachedSegmentFile = new File(
@@ -150,7 +168,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
@@ -203,7 +221,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
@@ -258,7 +276,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );
@@ -312,7 +330,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig2);
 
     manager = new SegmentLoaderLocalCacheManager(
-        TestHelper.getTestIndexIO(),
+        TestHelper.getTestIndexIO(segmentWriteOutMediumFactory),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );

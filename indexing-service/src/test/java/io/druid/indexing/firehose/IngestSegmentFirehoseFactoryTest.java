@@ -31,7 +31,6 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
@@ -51,6 +50,7 @@ import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
@@ -61,6 +61,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -81,7 +82,6 @@ import io.druid.segment.loading.LocalDataSegmentPuller;
 import io.druid.segment.loading.LocalLoadSpec;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
@@ -132,7 +132,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   static {
     TestUtils testUtils = new TestUtils();
-    MAPPER = setupInjectablesInObjectMapper(TestHelper.getJsonMapper());
+    MAPPER = setupInjectablesInObjectMapper(TestHelper.makeJsonMapper());
     INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
     TASK_STORAGE = new HeapMemoryTaskStorage(
@@ -164,27 +164,27 @@ public class IngestSegmentFirehoseFactoryTest
         .buildOnheap();
 
     for (Integer i = 0; i < MAX_ROWS; ++i) {
-      index.add(ROW_PARSER.parse(buildRow(i.longValue())));
+      index.add(ROW_PARSER.parseBatch(buildRow(i.longValue())).get(0));
     }
 
     if (!persistDir.mkdirs() && !persistDir.exists()) {
       throw new IOE("Could not create directory at [%s]", persistDir.getAbsolutePath());
     }
-    INDEX_MERGER_V9.persist(index, persistDir, indexSpec);
+    INDEX_MERGER_V9.persist(index, persistDir, indexSpec, null);
 
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
-      final private Set<DataSegment> published = Sets.newHashSet();
-      final private Set<DataSegment> nuked = Sets.newHashSet();
+      private final Set<DataSegment> published = Sets.newHashSet();
+      private final Set<DataSegment> nuked = Sets.newHashSet();
 
       @Override
-      public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException
+      public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
       {
         return ImmutableList.copyOf(segmentSet);
       }
 
       @Override
-      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval) throws IOException
+      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval)
       {
         return ImmutableList.copyOf(segmentSet);
       }
@@ -249,7 +249,7 @@ public class IngestSegmentFirehoseFactoryTest
           }
 
           @Override
-          public DataSegment push(File file, DataSegment segment) throws IOException
+          public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
           {
             return segment;
           }
@@ -263,13 +263,13 @@ public class IngestSegmentFirehoseFactoryTest
         new DataSegmentKiller()
         {
           @Override
-          public void kill(DataSegment segments) throws SegmentLoadingException
+          public void kill(DataSegment segments)
           {
 
           }
 
           @Override
-          public void killAll() throws IOException
+          public void killAll()
           {
             throw new UnsupportedOperationException("not implemented");
           }
@@ -278,7 +278,6 @@ public class IngestSegmentFirehoseFactoryTest
         {
           @Override
           public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec)
-              throws SegmentLoadingException
           {
             return dataSegment;
           }
@@ -286,13 +285,13 @@ public class IngestSegmentFirehoseFactoryTest
         new DataSegmentArchiver()
         {
           @Override
-          public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+          public DataSegment archive(DataSegment segment)
           {
             return segment;
           }
 
           @Override
-          public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+          public DataSegment restore(DataSegment segment)
           {
             return segment;
           }
@@ -314,7 +313,8 @@ public class IngestSegmentFirehoseFactoryTest
         null,
         null,
         null,
-        null
+        null,
+        new NoopTestTaskFileWriter()
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(
@@ -477,7 +477,7 @@ public class IngestSegmentFirehoseFactoryTest
   }
 
   @BeforeClass
-  public static void setUpStatic() throws IOException, InterruptedException
+  public static void setUpStatic()
   {
     for (int i = 0; i < MAX_SHARD_NUMBER; ++i) {
       segmentSet.add(buildSegment(i));

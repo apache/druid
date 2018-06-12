@@ -38,7 +38,7 @@ public class AndDimFilter implements DimFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
-  final private List<DimFilter> fields;
+  private final List<DimFilter> fields;
 
   @JsonCreator
   public AndDimFilter(

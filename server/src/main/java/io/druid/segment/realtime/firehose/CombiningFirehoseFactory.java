@@ -23,11 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -54,7 +54,7 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
   }
 
   @Override
-  public Firehose connect(InputRowParser parser, File temporaryDirectory) throws IOException
+  public Firehose connect(InputRowParser parser, File temporaryDirectory)
   {
     return new CombiningFirehose(parser, temporaryDirectory);
   }
@@ -72,7 +72,7 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
     private final Iterator<FirehoseFactory> firehoseFactoryIterator;
     private volatile Firehose currentFirehose;
 
-    CombiningFirehose(InputRowParser parser, File temporaryDirectory) throws IOException
+    CombiningFirehose(InputRowParser parser, File temporaryDirectory)
     {
       this.firehoseFactoryIterator = delegateFactoryList.iterator();
       this.parser = parser;

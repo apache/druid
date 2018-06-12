@@ -36,19 +36,16 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -74,6 +71,9 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.metadata.EntryExistsException;
 import io.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -229,6 +229,7 @@ public class KafkaSupervisor implements Supervisor
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
   private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
@@ -255,7 +256,8 @@ public class KafkaSupervisor implements Supervisor
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       final KafkaIndexTaskClientFactory taskClientFactory,
       final ObjectMapper mapper,
-      final KafkaSupervisorSpec spec
+      final KafkaSupervisorSpec spec,
+      final RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
     this.taskStorage = taskStorage;
@@ -265,6 +267,7 @@ public class KafkaSupervisor implements Supervisor
     this.spec = spec;
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
+    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
 
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
@@ -486,6 +489,22 @@ public class KafkaSupervisor implements Supervisor
   }
 
   @Override
+  public Map<String, Map<String, Object>> getStats()
+  {
+    try {
+      return getCurrentTotalStats();
+    }
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      log.error(ie, "getStats() interrupted.");
+      throw new RuntimeException(ie);
+    }
+    catch (ExecutionException | TimeoutException eete) {
+      throw new RuntimeException(eete);
+    }
+  }
+
+  @Override
   public void reset(DataSourceMetadata dataSourceMetadata)
   {
     log.info("Posting ResetNotice");
@@ -633,7 +652,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException
+    public void handle() throws ExecutionException, InterruptedException
     {
       // check for consistency
       // if already received request for this sequenceName and dataSourceMetadata combination then return
@@ -670,7 +689,7 @@ public class KafkaSupervisor implements Supervisor
         // as when the task starts they are sent existing checkpoints
         Preconditions.checkState(
             checkpoints.size() <= 1,
-            "Got checkpoint request with null as previous check point, however found more than one checkpoints in metadata store"
+            "Got checkpoint request with null as previous check point, however found more than one checkpoints"
         );
         if (checkpoints.size() == 1) {
           log.info("Already checkpointed with dataSourceMetadata [%s]", checkpoints.get(0));
@@ -879,7 +898,7 @@ public class KafkaSupervisor implements Supervisor
   private static String getRandomId()
   {
     final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Ints.BYTES * 2; ++i) {
+    for (int i = 0; i < Integer.BYTES * 2; ++i) {
       suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
     }
     return suffix.toString();
@@ -1788,7 +1807,8 @@ public class KafkaSupervisor implements Supervisor
           kafkaIOConfig,
           context,
           null,
-          null
+          null,
+          rowIngestionMetersFactory
       );
 
       Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
@@ -1985,14 +2005,13 @@ public class KafkaSupervisor implements Supervisor
     return false;
   }
 
-  private KafkaSupervisorReport generateReport(boolean includeOffsets)
+  private SupervisorReport<KafkaSupervisorReportPayload> generateReport(boolean includeOffsets)
   {
     int numPartitions = partitionGroups.values().stream().mapToInt(Map::size).sum();
 
     Map<Integer, Long> partitionLag = getLagPerPartition(getHighestCurrentOffsets());
-    KafkaSupervisorReport report = new KafkaSupervisorReport(
+    final KafkaSupervisorReportPayload payload = new KafkaSupervisorReportPayload(
         dataSource,
-        DateTimes.nowUtc(),
         ioConfig.getTopic(),
         numPartitions,
         ioConfig.getReplicas(),
@@ -2001,6 +2020,11 @@ public class KafkaSupervisor implements Supervisor
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? offsetsLastUpdated : null
+    );
+    SupervisorReport<KafkaSupervisorReportPayload> report = new SupervisorReport<>(
+        dataSource,
+        DateTimes.nowUtc(),
+        payload
     );
 
     List<TaskReportData> taskReports = Lists.newArrayList();
@@ -2059,7 +2083,7 @@ public class KafkaSupervisor implements Supervisor
         }
       }
 
-      taskReports.forEach(report::addTask);
+      taskReports.forEach(payload::addTask);
     }
     catch (Exception e) {
       log.warn(e, "Failed to generate status report");
@@ -2117,7 +2141,7 @@ public class KafkaSupervisor implements Supervisor
                      && latestOffsetsFromKafka.get(e.getKey()) != null
                      && e.getValue() != null
                      ? latestOffsetsFromKafka.get(e.getKey()) - e.getValue()
-                     : null
+                     : Integer.MIN_VALUE
             )
         );
   }
@@ -2195,4 +2219,106 @@ public class KafkaSupervisor implements Supervisor
       }
     };
   }
+
+  /**
+   * Collect row ingestion stats from all tasks managed by this supervisor.
+   *
+   * @return A map of groupId->taskId->task row stats
+   *
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
+   */
+  private Map<String, Map<String, Object>> getCurrentTotalStats() throws InterruptedException, ExecutionException, TimeoutException
+  {
+    Map<String, Map<String, Object>> allStats = Maps.newHashMap();
+    final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
+    final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
+
+    for (int groupId : taskGroups.keySet()) {
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId),
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
+                }
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
+
+    for (int groupId : pendingCompletionTaskGroups.keySet()) {
+      TaskGroup group = taskGroups.get(groupId);
+      for (String taskId : group.taskIds()) {
+        futures.add(
+            Futures.transform(
+                taskClient.getMovingAveragesAsync(taskId),
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
+                  return new StatsFromTaskResult(
+                      groupId,
+                      taskId,
+                      currentStats
+                  );
+                }
+            )
+        );
+        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+      }
+    }
+
+    List<StatsFromTaskResult> results = Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    for (int i = 0; i < results.size(); i++) {
+      StatsFromTaskResult result = results.get(i);
+      if (result != null) {
+        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> Maps.newHashMap());
+        groupMap.put(result.getTaskId(), result.getStats());
+      } else {
+        Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
+        log.error("Failed to get stats for group[%d]-task[%s]", groupAndTaskId.lhs, groupAndTaskId.rhs);
+      }
+    }
+
+    return allStats;
+  }
+
+  private static class StatsFromTaskResult
+  {
+    private final String groupId;
+    private final String taskId;
+    private final Map<String, Object> stats;
+
+    public StatsFromTaskResult(
+        int groupId,
+        String taskId,
+        Map<String, Object> stats
+    )
+    {
+      this.groupId = String.valueOf(groupId);
+      this.taskId = taskId;
+      this.stats = stats;
+    }
+
+    public String getGroupId()
+    {
+      return groupId;
+    }
+
+    public String getTaskId()
+    {
+      return taskId;
+    }
+
+    public Map<String, Object> getStats()
+    {
+      return stats;
+    }
+  }
+
 }

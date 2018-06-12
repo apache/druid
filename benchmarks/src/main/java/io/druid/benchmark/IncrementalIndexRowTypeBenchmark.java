@@ -39,7 +39,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -128,7 +127,7 @@ public class IncrementalIndexRowTypeBenchmark
   }
 
   @Setup
-  public void setup() throws IOException
+  public void setup()
   {
     rng = new Random(9999);
 
@@ -146,9 +145,8 @@ public class IncrementalIndexRowTypeBenchmark
   }
 
   @Setup(Level.Iteration)
-  public void setup2() throws IOException
+  public void setup2()
   {
-    ;
     incIndex = makeIncIndex();
     incFloatIndex = makeIncIndex();
     incStrIndex = makeIncIndex();
@@ -162,7 +160,7 @@ public class IncrementalIndexRowTypeBenchmark
   {
     for (int i = 0; i < maxRows; i++) {
       InputRow row = longRows.get(i);
-      int rv = incIndex.add(row);
+      int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -175,7 +173,7 @@ public class IncrementalIndexRowTypeBenchmark
   {
     for (int i = 0; i < maxRows; i++) {
       InputRow row = floatRows.get(i);
-      int rv = incFloatIndex.add(row);
+      int rv = incFloatIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
@@ -188,7 +186,7 @@ public class IncrementalIndexRowTypeBenchmark
   {
     for (int i = 0; i < maxRows; i++) {
       InputRow row = stringRows.get(i);
-      int rv = incStrIndex.add(row);
+      int rv = incStrIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }

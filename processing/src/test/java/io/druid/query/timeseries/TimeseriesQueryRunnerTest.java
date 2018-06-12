@@ -30,7 +30,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.granularity.PeriodGranularity;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryPlus;
@@ -71,7 +70,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -87,7 +86,7 @@ public class TimeseriesQueryRunnerTest
   public static final Map<String, Object> CONTEXT = ImmutableMap.of();
 
   @Parameterized.Parameters(name = "{0}:descending={1}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(
         // runners
@@ -159,10 +158,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
@@ -183,10 +179,7 @@ public class TimeseriesQueryRunnerTest
                                   .descending(descending)
                                   .build();
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     final String[] expectedIndex = descending ?
                                    QueryRunnerTestHelper.expectedFullOnIndexValuesDesc :
@@ -249,10 +242,7 @@ public class TimeseriesQueryRunnerTest
                                   .descending(descending)
                                   .build();
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     final DateTime expectedLast = descending ?
                                   QueryRunnerTestHelper.earliest :
@@ -291,10 +281,7 @@ public class TimeseriesQueryRunnerTest
     DateTime expectedEarliest = DateTimes.of("2011-01-12");
     DateTime expectedLast = DateTimes.of("2011-04-15");
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     Result<TimeseriesResultValue> result = results.iterator().next();
 
     Assert.assertEquals(expectedEarliest, result.getTimestamp());
@@ -336,10 +323,7 @@ public class TimeseriesQueryRunnerTest
                                   QueryRunnerTestHelper.earliest :
                                   QueryRunnerTestHelper.last;
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     for (Result<TimeseriesResultValue> result : results) {
       DateTime current = result.getTimestamp();
@@ -401,12 +385,154 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesGrandTotal()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
+                                  .descending(descending)
+                                  .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = new ArrayList<>();
+
+    expectedResults.add(
+        new Result<>(
+            DateTimes.of("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "rows",
+                    13L,
+                    "index",
+                    6619L,
+                    "uniques",
+                    QueryRunnerTestHelper.UNIQUES_9,
+                    QueryRunnerTestHelper.addRowsIndexConstantMetric,
+                    6633.0
+                )
+            )
+        )
+    );
+
+    expectedResults.add(
+        new Result<>(
+            DateTimes.of("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "rows",
+                    13L,
+                    "index",
+                    5827L,
+                    "uniques",
+                    QueryRunnerTestHelper.UNIQUES_9,
+                    QueryRunnerTestHelper.addRowsIndexConstantMetric,
+                    5841.0
+                )
+            )
+        )
+    );
+
+    if (descending) {
+      Collections.reverse(expectedResults);
+    }
+
+    expectedResults.add(
+        new Result<>(
+            null,
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "rows",
+                    26L,
+                    "index",
+                    12446L,
+                    "uniques",
+                    QueryRunnerTestHelper.UNIQUES_9,
+                    QueryRunnerTestHelper.addRowsIndexConstantMetric,
+                    12473.0
+                )
+            )
+        )
+    );
+
+    // Must create a toolChest so we can run mergeResults (which applies grand totals).
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+
+    // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
+    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
+        toolChest.mergeResults(runner),
+        toolChest
+    );
+
+    final List results = finalRunner.run(QueryPlus.wrap(query), CONTEXT).toList();
+
+    TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesIntervalOutOfRanges()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.emptyInterval)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum
+                                      )
+                                  )
+                                  .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
+                                  .descending(descending)
+                                  .context(ImmutableMap.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, false))
+                                  .build();
+    List<Result<TimeseriesResultValue>> expectedResults = new ArrayList<>();
+
+    expectedResults.add(
+        new Result<>(
+            QueryRunnerTestHelper.emptyInterval.getIntervals().get(0).getStart(),
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "rows",
+                    0L,
+                    "index",
+                    0L,
+                    QueryRunnerTestHelper.addRowsIndexConstantMetric,
+                    1.0
+                )
+            )
+        )
+    );
+
+    // Must create a toolChest so we can run mergeResults (which creates the zeroed-out row).
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+
+    // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
+    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
+        toolChest.mergeResults(runner),
+        toolChest
+    );
+
+    final List results = finalRunner.run(QueryPlus.wrap(query), CONTEXT).toList();
+    TestHelper.assertExpectedResults(expectedResults, results);
   }
 
   @Test
@@ -449,10 +575,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     assertExpectedResults(expectedResults, results);
   }
@@ -476,7 +599,7 @@ public class TimeseriesQueryRunnerTest
                                       new PeriodGranularity(
                                           new Period("P1D"),
                                           null,
-                                          DateTimeZone.forID("America/Los_Angeles")
+                                          DateTimes.inferTzfromString("America/Los_Angeles")
                                       )
                                   )
                                   .descending(descending)
@@ -484,23 +607,20 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-03-31", DateTimeZone.forID("America/Los_Angeles")),
+            new DateTime("2011-03-31", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L)
             )
         ),
         new Result<>(
-            new DateTime("2011-04-01T", DateTimeZone.forID("America/Los_Angeles")),
+            new DateTime("2011-04-01T", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L)
             )
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     assertExpectedResults(expectedResults, results);
   }
@@ -538,10 +658,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(QueryPlus.wrap(query1), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results1 = runner.run(QueryPlus.wrap(query1), CONTEXT).toList();
     assertExpectedResults(expectedResults1, results1);
 
     TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
@@ -573,10 +690,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        runner.run(QueryPlus.wrap(query2), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results2 = runner.run(QueryPlus.wrap(query2), CONTEXT).toList();
     assertExpectedResults(expectedResults2, results2);
   }
 
@@ -590,7 +704,7 @@ public class TimeseriesQueryRunnerTest
                                        new PeriodGranularity(
                                            new Period("P7D"),
                                            null,
-                                           DateTimeZone.forID("America/Los_Angeles")
+                                           DateTimes.inferTzfromString("America/Los_Angeles")
                                        )
                                    )
                                    .intervals(
@@ -612,23 +726,20 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-06T00:00:00.000-08:00", DateTimeZone.forID("America/Los_Angeles")),
+            new DateTime("2011-01-06T00:00:00.000-08:00", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 13L, "idx", 6071L)
             )
         ),
         new Result<>(
-            new DateTime("2011-01-13T00:00:00.000-08:00", DateTimeZone.forID("America/Los_Angeles")),
+            new DateTime("2011-01-13T00:00:00.000-08:00", DateTimes.inferTzfromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 91L, "idx", 33382L)
             )
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(QueryPlus.wrap(query1), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results1 = runner.run(QueryPlus.wrap(query1), CONTEXT).toList();
     assertExpectedResults(expectedResults1, results1);
   }
 
@@ -693,10 +804,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(QueryPlus.wrap(query1), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results1 = runner.run(QueryPlus.wrap(query1), CONTEXT).toList();
     assertExpectedResults(expectedResults1, results1);
   }
 
@@ -735,10 +843,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(QueryPlus.wrap(query1), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results1 = runner.run(QueryPlus.wrap(query1), CONTEXT).toList();
     assertExpectedResults(expectedResults1, results1);
   }
 
@@ -775,10 +880,7 @@ public class TimeseriesQueryRunnerTest
             )
         )
     );
-    Iterable<Result<TimeseriesResultValue>> results1 = Sequences.toList(
-        runner.run(QueryPlus.wrap(query1), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results1 = runner.run(QueryPlus.wrap(query1), CONTEXT).toList();
     assertExpectedResults(expectedResults1, results1);
 
     TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
@@ -811,10 +913,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        runner.run(QueryPlus.wrap(query2), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results2 = runner.run(QueryPlus.wrap(query2), CONTEXT).toList();
     assertExpectedResults(expectedResults2, results2);
   }
 
@@ -843,10 +942,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -892,10 +988,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -941,10 +1034,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -990,10 +1080,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1039,10 +1126,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1088,10 +1172,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1137,10 +1218,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1186,10 +1264,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1235,10 +1310,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1290,10 +1362,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1351,10 +1420,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1400,10 +1466,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1445,10 +1508,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1468,10 +1528,7 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1513,10 +1570,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1558,10 +1612,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1603,10 +1654,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1652,10 +1700,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, results);
   }
 
@@ -1689,10 +1734,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, actualResults);
   }
 
@@ -1727,10 +1769,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     assertExpectedResults(expectedResults, actualResults);
   }
 
@@ -1831,10 +1870,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     if (descending) {
       TestHelper.assertExpectedResults(expectedDescendingResults, actualResults);
     } else {
@@ -1865,14 +1901,8 @@ public class TimeseriesQueryRunnerTest
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .descending(descending)
         .build();
-    Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query1), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> expectedResults = runner.run(QueryPlus.wrap(query1), CONTEXT).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
@@ -1900,14 +1930,8 @@ public class TimeseriesQueryRunnerTest
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .descending(descending)
         .build();
-    Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query1), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> expectedResults = runner.run(QueryPlus.wrap(query1), CONTEXT).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
@@ -1944,14 +1968,8 @@ public class TimeseriesQueryRunnerTest
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .descending(descending)
         .build();
-    Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query2), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> expectedResults = runner.run(QueryPlus.wrap(query2), CONTEXT).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
@@ -1988,14 +2006,8 @@ public class TimeseriesQueryRunnerTest
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .descending(descending)
         .build();
-    Iterable<Result<TimeseriesResultValue>> expectedResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query2), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> expectedResults = runner.run(QueryPlus.wrap(query2), CONTEXT).toList();
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
@@ -2024,10 +2036,7 @@ public class TimeseriesQueryRunnerTest
         .descending(descending)
         .build();
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01"),
@@ -2071,10 +2080,7 @@ public class TimeseriesQueryRunnerTest
         .descending(descending)
         .build();
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
@@ -2119,10 +2125,7 @@ public class TimeseriesQueryRunnerTest
         .descending(descending)
         .build();
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
@@ -2169,10 +2172,7 @@ public class TimeseriesQueryRunnerTest
         .descending(descending)
         .build();
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01"),
@@ -2216,10 +2216,7 @@ public class TimeseriesQueryRunnerTest
         .descending(descending)
         .build();
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01"),
@@ -2271,10 +2268,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
 
     assertExpectedResults(expectedResults, actualResults);
   }
@@ -2355,10 +2349,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
@@ -2410,10 +2401,7 @@ public class TimeseriesQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), CONTEXT).toList();
     TestHelper.assertExpectedResults(expectedResults, results);
 
     QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
@@ -2421,10 +2409,9 @@ public class TimeseriesQueryRunnerTest
     );
     QueryRunner<Result<TimeseriesResultValue>> optimizedRunner = toolChest.postMergeQueryDecoration(
         toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
-    Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
-        new FinalizeResultsQueryRunner(optimizedRunner, toolChest).run(QueryPlus.wrap(query), CONTEXT),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> results2 = new FinalizeResultsQueryRunner(optimizedRunner, toolChest)
+        .run(QueryPlus.wrap(query), CONTEXT)
+        .toList();
     TestHelper.assertExpectedResults(expectedResults, results2);
 
   }

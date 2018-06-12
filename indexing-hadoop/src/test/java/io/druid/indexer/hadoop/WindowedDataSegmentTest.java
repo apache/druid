@@ -22,8 +22,8 @@ package io.druid.indexer.hadoop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -34,7 +34,7 @@ import java.io.IOException;
 
 public class WindowedDataSegmentTest
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private static final DataSegment SEGMENT = new DataSegment(
       "test1",
       Intervals.of("2000/3000"),

@@ -30,15 +30,14 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.ResourceLimitExceededException;
 import io.druid.server.security.AllowAllAuthenticator;
-import io.druid.server.security.NoopEscalator;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
-import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.DruidOperatorTable;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.planner.PlannerFactory;
 import io.druid.sql.calcite.schema.DruidSchema;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.QueryLogHook;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -60,7 +59,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 
-public class SqlResourceTest
+public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
@@ -76,10 +75,10 @@ public class SqlResourceTest
 
   private HttpServletRequest req;
 
+
   @Before
   public void setUp() throws Exception
   {
-    Calcites.setSystemProperties();
     walker = CalciteTests.createMockWalker(temporaryFolder.newFolder());
 
     final PlannerConfig plannerConfig = new PlannerConfig();
@@ -87,6 +86,7 @@ public class SqlResourceTest
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
@@ -108,9 +108,7 @@ public class SqlResourceTest
             operatorTable,
             macroTable,
             plannerConfig,
-            new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new NoopEscalator(),
             CalciteTests.getJsonMapper()
         )
     );
@@ -143,7 +141,9 @@ public class SqlResourceTest
   {
     final List<List<Object>> rows = doPost(
         new SqlQuery("SELECT COUNT(*), 'foo' FROM druid.foo", SqlQuery.ResultFormat.ARRAY, null),
-        new TypeReference<List<List<Object>>>() {}
+        new TypeReference<List<List<Object>>>()
+        {
+        }
     ).rhs;
 
     Assert.assertEquals(
@@ -317,6 +317,8 @@ public class SqlResourceTest
 
   private Pair<QueryInterruptedException, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception
   {
-    return doPost(query, new TypeReference<List<Map<String, Object>>>() {});
+    return doPost(query, new TypeReference<List<Map<String, Object>>>()
+    {
+    });
   }
 }

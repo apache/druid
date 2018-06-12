@@ -83,9 +83,6 @@ public class VarianceAggregatorTest
     assertValues((VarianceAggregatorCollector) agg.get(), 3, 7.3d, 2.9866d);
     aggregate(selector, agg);
     assertValues((VarianceAggregatorCollector) agg.get(), 4, 8.6d, 3.95d);
-
-    agg.reset();
-    assertValues((VarianceAggregatorCollector) agg.get(), 0, 0d, 0d);
   }
 
   private void assertValues(VarianceAggregatorCollector holder, long count, double sum, double nvariance)
@@ -138,7 +135,7 @@ public class VarianceAggregatorTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     VarianceAggregatorFactory one = new VarianceAggregatorFactory("name1", "fieldName1");
     VarianceAggregatorFactory oneMore = new VarianceAggregatorFactory("name1", "fieldName1");

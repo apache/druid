@@ -19,19 +19,24 @@
 
 package io.druid.indexer;
 
+import com.google.common.collect.ImmutableList;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.RE;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.collect.Utils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.List;
 
 public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<Object, Object, KEYOUT, VALUEOUT>
 {
@@ -61,55 +66,88 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   protected void map(Object key, Object value, Context context) throws IOException, InterruptedException
   {
     try {
-      final InputRow inputRow;
-      try {
-        inputRow = parseInputRow(value, parser);
-      }
-      catch (ParseException e) {
-        if (reportParseExceptions) {
-          throw e;
+      final List<InputRow> inputRows = parseInputRow(value, parser);
+
+      for (InputRow inputRow : inputRows) {
+        try {
+          if (inputRow == null) {
+            // Throw away null rows from the parser.
+            log.debug("Throwing away row [%s]", value);
+            context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).increment(1);
+            continue;
+          }
+
+          if (!Intervals.ETERNITY.contains(inputRow.getTimestamp())) {
+            final String errorMsg = StringUtils.format(
+                "Encountered row with timestamp that cannot be represented as a long: [%s]",
+                inputRow
+            );
+            throw new ParseException(errorMsg);
+          }
+
+          if (!granularitySpec.bucketIntervals().isPresent()
+              || granularitySpec.bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()))
+                                .isPresent()) {
+            innerMap(inputRow, context, reportParseExceptions);
+          } else {
+            context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).increment(1);
+          }
         }
-        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value);
-        context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
-        return; // we're ignoring this invalid row
+        catch (ParseException pe) {
+          handleParseException(pe, context);
+        }
       }
-
-      if (inputRow == null) {
-        // Throw away null rows from the parser.
-        log.debug("Throwing away row [%s]", value);
-        return;
-      }
-
-      if (!granularitySpec.bucketIntervals().isPresent()
-          || granularitySpec.bucketInterval(DateTimes.utc(inputRow.getTimestampFromEpoch()))
-                            .isPresent()) {
-        innerMap(inputRow, context, reportParseExceptions);
-      }
+    }
+    catch (ParseException pe) {
+      handleParseException(pe, context);
     }
     catch (RuntimeException e) {
       throw new RE(e, "Failure on row[%s]", value);
     }
   }
 
-  @Nullable
-  public static InputRow parseInputRow(Object value, InputRowParser parser)
+  private void handleParseException(ParseException pe, Context context)
+  {
+    context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
+    Counter unparseableCounter = context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER);
+    Counter processedWithErrorsCounter = context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER);
+
+    if (pe.isFromPartiallyValidRow()) {
+      processedWithErrorsCounter.increment(1);
+    } else {
+      unparseableCounter.increment(1);
+    }
+
+    if (config.isLogParseExceptions()) {
+      log.error(pe, "Encountered parse exception: ");
+    }
+
+    long rowsUnparseable = unparseableCounter.getValue();
+    long rowsProcessedWithError = processedWithErrorsCounter.getValue();
+    if (rowsUnparseable + rowsProcessedWithError > config.getMaxParseExceptions()) {
+      log.error("Max parse exceptions exceeded, terminating task...");
+      throw new RuntimeException("Max parse exceptions exceeded, terminating task...", pe);
+    }
+  }
+
+  private static List<InputRow> parseInputRow(Object value, InputRowParser parser)
   {
     if (parser instanceof StringInputRowParser && value instanceof Text) {
       //Note: This is to ensure backward compatibility with 0.7.0 and before
       //HadoopyStringInputRowParser can handle this and this special case is not needed
       //except for backward compatibility
-      return ((StringInputRowParser) parser).parse(value.toString());
+      return Utils.nullableListOf(((StringInputRowParser) parser).parse(value.toString()));
     } else if (value instanceof InputRow) {
-      return (InputRow) value;
+      return ImmutableList.of((InputRow) value);
     } else if (value == null) {
       // Pass through nulls so they get thrown away.
-      return null;
+      return Utils.nullableListOf((InputRow) null);
     } else {
-      return parser.parse(value);
+      return parser.parseBatch(value);
     }
   }
 
-  abstract protected void innerMap(InputRow inputRow, Context context, boolean reportParseExceptions)
+  protected abstract void innerMap(InputRow inputRow, Context context, boolean reportParseExceptions)
       throws IOException, InterruptedException;
 
 }

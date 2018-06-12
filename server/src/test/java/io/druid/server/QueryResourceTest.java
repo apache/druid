@@ -25,8 +25,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.guava.Sequence;
@@ -80,7 +80,7 @@ public class QueryResourceTest
 {
   private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of());
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
 
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
   public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
@@ -170,6 +170,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -206,6 +207,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -247,13 +249,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            new AuthConfig(null, null),
+            new AuthConfig(),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null),
+        new AuthConfig(),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -301,6 +303,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
@@ -354,13 +357,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            new AuthConfig(null, null),
+            new AuthConfig(),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null),
+        new AuthConfig(),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );
@@ -426,6 +429,8 @@ public class QueryResourceTest
             .andReturn(null)
             .anyTimes();
 
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .anyTimes();
@@ -475,13 +480,13 @@ public class QueryResourceTest
             new DefaultGenericQueryMetricsFactory(jsonMapper),
             new NoopServiceEmitter(),
             testRequestLogger,
-            new AuthConfig(null, null),
+            new AuthConfig(),
             authMapper
         ),
         jsonMapper,
         jsonMapper,
         queryManager,
-        new AuthConfig(null, null),
+        new AuthConfig(),
         authMapper,
         new DefaultGenericQueryMetricsFactory(jsonMapper)
     );

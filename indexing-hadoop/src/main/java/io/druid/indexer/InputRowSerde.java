@@ -22,17 +22,24 @@ package io.druid.indexer;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.Rows;
+import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.VirtualColumns;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
@@ -40,6 +47,7 @@ import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,9 +57,228 @@ public class InputRowSerde
 {
   private static final Logger log = new Logger(InputRowSerde.class);
 
-  public static final byte[] toBytes(final InputRow row, AggregatorFactory[] aggs, boolean reportParseExceptions)
+  private static final IndexSerdeTypeHelper STRING_HELPER = new StringIndexSerdeTypeHelper();
+  private static final IndexSerdeTypeHelper LONG_HELPER = new LongIndexSerdeTypeHelper();
+  private static final IndexSerdeTypeHelper FLOAT_HELPER = new FloatIndexSerdeTypeHelper();
+  private static final IndexSerdeTypeHelper DOUBLE_HELPER = new DoubleIndexSerdeTypeHelper();
+
+  public interface IndexSerdeTypeHelper<T>
+  {
+    ValueType getType();
+
+    void serialize(ByteArrayDataOutput out, Object value);
+
+    T deserialize(ByteArrayDataInput in);
+  }
+
+  public static Map<String, IndexSerdeTypeHelper> getTypeHelperMap(DimensionsSpec dimensionsSpec)
+  {
+    Map<String, IndexSerdeTypeHelper> typeHelperMap = Maps.newHashMap();
+    for (DimensionSchema dimensionSchema : dimensionsSpec.getDimensions()) {
+      IndexSerdeTypeHelper typeHelper;
+      switch (dimensionSchema.getValueType()) {
+        case STRING:
+          typeHelper = STRING_HELPER;
+          break;
+        case LONG:
+          typeHelper = LONG_HELPER;
+          break;
+        case FLOAT:
+          typeHelper = FLOAT_HELPER;
+          break;
+        case DOUBLE:
+          typeHelper = DOUBLE_HELPER;
+          break;
+        default:
+          throw new IAE("Invalid type: [%s]", dimensionSchema.getValueType());
+      }
+      typeHelperMap.put(dimensionSchema.getName(), typeHelper);
+    }
+    return typeHelperMap;
+  }
+
+  public static class SerializeResult
+  {
+    private final byte[] serializedRow;
+    private final List<String> parseExceptionMessages;
+
+    public SerializeResult(
+        final byte[] serializedRow,
+        final List<String> parseExceptionMessages
+    )
+    {
+      this.serializedRow = serializedRow;
+      this.parseExceptionMessages = parseExceptionMessages;
+    }
+
+    public byte[] getSerializedRow()
+    {
+      return serializedRow;
+    }
+
+    public List<String> getParseExceptionMessages()
+    {
+      return parseExceptionMessages;
+    }
+  }
+
+  public static class StringIndexSerdeTypeHelper implements IndexSerdeTypeHelper<List<String>>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.STRING;
+    }
+
+    @Override
+    public void serialize(ByteArrayDataOutput out, Object value)
+    {
+      List<String> values = Rows.objectToStrings(value);
+      try {
+        writeStringArray(values, out);
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+
+    @Override
+    public List<String> deserialize(ByteArrayDataInput in)
+    {
+      try {
+        return readStringArray(in);
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+  }
+
+  public static class LongIndexSerdeTypeHelper implements IndexSerdeTypeHelper<Long>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.LONG;
+    }
+
+    @Override
+    public void serialize(ByteArrayDataOutput out, Object value)
+    {
+      ParseException exceptionToThrow = null;
+      Long ret = null;
+      try {
+        ret = DimensionHandlerUtils.convertObjectToLong(value, true);
+      }
+      catch (ParseException pe) {
+        exceptionToThrow = pe;
+      }
+
+      if (ret == null) {
+        // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+        // we'll also need to change the serialized encoding so that it can represent numeric nulls
+        ret = DimensionHandlerUtils.ZERO_LONG;
+      }
+      out.writeLong(ret);
+
+      if (exceptionToThrow != null) {
+        throw exceptionToThrow;
+      }
+    }
+
+    @Override
+    public Long deserialize(ByteArrayDataInput in)
+    {
+      return in.readLong();
+    }
+  }
+
+  public static class FloatIndexSerdeTypeHelper implements IndexSerdeTypeHelper<Float>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.FLOAT;
+    }
+
+    @Override
+    public void serialize(ByteArrayDataOutput out, Object value)
+    {
+      ParseException exceptionToThrow = null;
+      Float ret = null;
+      try {
+        ret = DimensionHandlerUtils.convertObjectToFloat(value, true);
+      }
+      catch (ParseException pe) {
+        exceptionToThrow = pe;
+      }
+
+      if (ret == null) {
+        // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+        // we'll also need to change the serialized encoding so that it can represent numeric nulls
+        ret = DimensionHandlerUtils.ZERO_FLOAT;
+      }
+      out.writeFloat(ret);
+
+      if (exceptionToThrow != null) {
+        throw exceptionToThrow;
+      }
+    }
+
+    @Override
+    public Float deserialize(ByteArrayDataInput in)
+    {
+      return in.readFloat();
+    }
+  }
+
+  public static class DoubleIndexSerdeTypeHelper implements IndexSerdeTypeHelper<Double>
+  {
+    @Override
+    public ValueType getType()
+    {
+      return ValueType.DOUBLE;
+    }
+
+    @Override
+    public void serialize(ByteArrayDataOutput out, Object value)
+    {
+      ParseException exceptionToThrow = null;
+      Double ret = null;
+      try {
+        ret = DimensionHandlerUtils.convertObjectToDouble(value, true);
+      }
+      catch (ParseException pe) {
+        exceptionToThrow = pe;
+      }
+
+      if (ret == null) {
+        // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+        // we'll also need to change the serialized encoding so that it can represent numeric nulls
+        ret = DimensionHandlerUtils.ZERO_DOUBLE;
+      }
+      out.writeDouble(ret);
+
+      if (exceptionToThrow != null) {
+        throw exceptionToThrow;
+      }
+    }
+
+    @Override
+    public Double deserialize(ByteArrayDataInput in)
+    {
+      return in.readDouble();
+    }
+  }
+
+  public static final SerializeResult toBytes(
+      final Map<String, IndexSerdeTypeHelper> typeHelperMap,
+      final InputRow row,
+      AggregatorFactory[] aggs
+  )
   {
     try {
+      List<String> parseExceptionMessages = new ArrayList<>();
       ByteArrayDataOutput out = ByteStreams.newDataOutput();
 
       //write timestamp
@@ -63,21 +290,23 @@ public class InputRowSerde
       WritableUtils.writeVInt(out, dimList.size());
       if (dimList != null) {
         for (String dim : dimList) {
-          List<String> dimValues = row.getDimension(dim);
+          IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dim);
+          if (typeHelper == null) {
+            typeHelper = STRING_HELPER;
+          }
           writeString(dim, out);
-          writeStringArray(dimValues, out);
+
+          try {
+            typeHelper.serialize(out, row.getRaw(dim));
+          }
+          catch (ParseException pe) {
+            parseExceptionMessages.add(pe.getMessage());
+          }
         }
       }
 
       //writing all metrics
-      Supplier<InputRow> supplier = new Supplier<InputRow>()
-      {
-        @Override
-        public InputRow get()
-        {
-          return row;
-        }
-      };
+      Supplier<InputRow> supplier = () -> row;
       WritableUtils.writeVInt(out, aggs.length);
       for (AggregatorFactory aggFactory : aggs) {
         String k = aggFactory.getName();
@@ -96,10 +325,8 @@ public class InputRowSerde
           }
           catch (ParseException e) {
             // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (reportParseExceptions) {
-              throw new ParseException(e, "Encountered parse error for aggregator[%s]", k);
-            }
             log.debug(e, "Encountered parse error, skipping aggregator[%s].", k);
+            parseExceptionMessages.add(e.getMessage());
           }
 
           String t = aggFactory.getTypeName();
@@ -119,7 +346,7 @@ public class InputRowSerde
         }
       }
 
-      return out.toByteArray();
+      return new SerializeResult(out.toByteArray(), parseExceptionMessages);
     }
     catch (IOException ex) {
       throw new RuntimeException(ex);
@@ -176,10 +403,14 @@ public class InputRowSerde
     return values;
   }
 
-  public static final InputRow fromBytes(byte[] data, AggregatorFactory[] aggs)
+  public static final InputRow fromBytes(
+      final Map<String, IndexSerdeTypeHelper> typeHelperMap,
+      byte[] data,
+      AggregatorFactory[] aggs
+  )
   {
     try {
-      DataInput in = ByteStreams.newDataInput(data);
+      ByteArrayDataInput in = ByteStreams.newDataInput(data);
 
       //Read timestamp
       long timestamp = in.readLong();
@@ -192,14 +423,25 @@ public class InputRowSerde
       for (int i = 0; i < dimNum; i++) {
         String dimension = readString(in);
         dimensions.add(dimension);
-        List<String> dimensionValues = readStringArray(in);
-        if (dimensionValues == null) {
+
+        IndexSerdeTypeHelper typeHelper = typeHelperMap.get(dimension);
+        if (typeHelper == null) {
+          typeHelper = STRING_HELPER;
+        }
+        Object dimValues = typeHelper.deserialize(in);
+        if (dimValues == null) {
           continue;
         }
-        if (dimensionValues.size() == 1) {
-          event.put(dimension, dimensionValues.get(0));
+
+        if (typeHelper.getType() == ValueType.STRING) {
+          List<String> dimensionValues = (List<String>) dimValues;
+          if (dimensionValues.size() == 1) {
+            event.put(dimension, dimensionValues.get(0));
+          } else {
+            event.put(dimension, dimensionValues);
+          }
         } else {
-          event.put(dimension, dimensionValues);
+          event.put(dimension, dimValues);
         }
       }
 

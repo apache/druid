@@ -47,8 +47,8 @@ import io.druid.segment.IdLookup;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.SingleIndexedInt;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -100,11 +100,13 @@ public class FilteredAggregatorTest
                 @Override
                 public IndexedInts getRow()
                 {
+                  SingleIndexedInt row = new SingleIndexedInt();
                   if (selector.getIndex() % 3 == 2) {
-                    return ArrayBasedIndexedInts.of(new int[]{1});
+                    row.setValue(1);
                   } else {
-                    return ArrayBasedIndexedInts.of(new int[]{0});
+                    row.setValue(0);
                   }
+                  return row;
                 }
 
                 @Override

@@ -293,7 +293,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
 
-
   @Override
   public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
   {
@@ -341,7 +340,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
-      public Function<Result<TopNResultValue>, Object> prepareForCache()
+      public Function<Result<TopNResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<TopNResultValue>, Object>()
         {
@@ -361,6 +360,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               for (String aggName : aggFactoryNames) {
                 vals.add(result.getMetric(aggName));
               }
+              if (isResultLevelCache) {
+                for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+                  vals.add(result.getMetric(postAgg.getName()));
+                }
+              }
               retVal.add(vals);
             }
             return retVal;
@@ -369,7 +373,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
-      public Function<Object, Result<TopNResultValue>> pullFromCache()
+      public Function<Object, Result<TopNResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<TopNResultValue>>()
         {
@@ -384,6 +388,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             Iterator<Object> inputIter = results.iterator();
             DateTime timestamp = granularity.toDateTime(((Number) inputIter.next()).longValue());
 
+            // Need a value transformer to convert generic Jackson-deserialized type into the proper type.
+            final Function<Object, Object> dimValueTransformer = TopNMapFn.getValueTransformer(
+                query.getDimensionSpec().getOutputType()
+            );
+
             while (inputIter.hasNext()) {
               List<Object> result = (List<Object>) inputIter.next();
               Map<String, Object> vals = Maps.newLinkedHashMap();
@@ -391,7 +400,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               Iterator<AggregatorFactory> aggIter = aggs.iterator();
               Iterator<Object> resultIter = result.iterator();
 
-              vals.put(query.getDimensionSpec().getOutputName(), resultIter.next());
+              vals.put(query.getDimensionSpec().getOutputName(), dimValueTransformer.apply(resultIter.next()));
 
               while (aggIter.hasNext() && resultIter.hasNext()) {
                 final AggregatorFactory factory = aggIter.next();
@@ -401,7 +410,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               for (PostAggregator postAgg : postAggs) {
                 vals.put(postAgg.getName(), postAgg.compute(vals));
               }
-
+              if (isResultLevelCache) {
+                Iterator<PostAggregator> postItr = query.getPostAggregatorSpecs().iterator();
+                while (postItr.hasNext() && resultIter.hasNext()) {
+                  vals.put(postItr.next().getName(), resultIter.next());
+                }
+              }
               retVal.add(vals);
             }
 

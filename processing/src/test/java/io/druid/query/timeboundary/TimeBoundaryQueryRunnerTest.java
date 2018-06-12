@@ -26,7 +26,6 @@ import com.google.common.io.CharSource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -66,7 +65,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TimeBoundaryQueryRunnerTest
 {
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
@@ -177,10 +176,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    List<Result<TimeBoundaryResultValue>> results =
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
     Assert.assertTrue(Iterables.size(results) > 0);
 
@@ -203,10 +200,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    List<Result<TimeBoundaryResultValue>> results =
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
 
     Assert.assertTrue(Iterables.size(results) == 0);
   }
@@ -220,10 +215,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .build();
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
     HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
@@ -242,10 +234,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .build();
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
@@ -264,10 +253,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .build();
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
-    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(timeBoundaryQuery), context),
-        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
@@ -277,7 +263,7 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   @Test
-  public void testMergeResults() throws Exception
+  public void testMergeResults()
   {
     List<Result<TimeBoundaryResultValue>> results = Arrays.asList(
         new Result<>(
@@ -307,7 +293,7 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   @Test
-  public void testMergeResultsEmptyResults() throws Exception
+  public void testMergeResultsEmptyResults()
   {
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
 

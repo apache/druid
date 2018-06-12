@@ -115,8 +115,9 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`type`|String|The indexing task type, this should always be `kafka`.|yes|
-|`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 75000)|
-|`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number is post-aggregation rows.|no (default == 5000000)|
+|`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists). Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|no (default == 1000000)|
+|`maxBytesInMemory`|Long|The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally this is computed internally and user does not need to set it. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists).  |no (default == One-sixth of max JVM memory)|
+|`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == 5000000)|
 |`intermediatePersistPeriod`|ISO8601 Period|The period that determines the rate at which intermediate persists occur.|no (default == PT10M)|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
 |`indexSpec`|Object|Tune how data is indexed, see 'IndexSpec' below for more details.|no|
@@ -129,6 +130,8 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
 |`shutdownTimeout`|ISO8601 Period|How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|no (default == PT80S)|
 |`offsetFetchPeriod`|ISO8601 Period|How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and calculate lag.|no (default == PT30S, min == PT5S)|
+|`segmentWriteOutMediumFactory`|String|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used)|
+|`intermediateHandoffPeriod`|ISO8601 Period|How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == P2147483647D)|
 
 #### IndexSpec
 
@@ -162,7 +165,7 @@ For Roaring bitmaps:
 |`consumerProperties`|Map<String, String>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.|yes|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKafkaPartitions}`.|no (default == 1)|
-|`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment. Note that segments are only pushed to deep storage and loadable by historical nodes when the indexing task completes.|no (default == PT1H)|
+|`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
 |`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
 |`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
 |`useEarliestOffset`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting offsets from Kafka. This flag determines whether it retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
@@ -310,40 +313,18 @@ In this way, configuration changes can be applied without requiring any pause in
 
 ### On the Subject of Segments
 
-The Kafka indexing service may generate a significantly large number of segments which over time will cause query
-performance issues if not properly managed. One important characteristic to understand is that the Kafka indexing task
-will generate a Druid partition in each segment granularity interval for each partition in the Kafka topic. As an
-example, if you are ingesting realtime data and your segment granularity is 15 minutes with 10 partitions in the Kafka
-topic, you would generate a minimum of 40 segments an hour. This is a limitation imposed by the Kafka architecture which
-guarantees delivery order within a partition but not across partitions. Therefore as a consumer of Kafka, in order to
-generate segments deterministically (and be able to provide exactly-once ingestion semantics) partitions need to be
-handled separately.
+Each Kafka Indexing Task puts events consumed from Kafka partitions assigned to it in a single segment for each segment
+granular interval until maxRowsPerSegment or intermediateHandoffPeriod limit is reached, at this point a new partition
+for this segment granularity is created for further events. Kafka Indexing Task also does incremental hand-offs which
+means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment
+or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
+and new set of segments will be created for further events. This means that the task can run for longer durations of time
+without accumulating old segments locally on Middle Manager nodes and it is encouraged to do so.
 
-Compounding this, if your taskDuration was also set to 15 minutes, you would actually generate 80 segments an hour since
-any given 15 minute interval would be handled by two tasks. For an example of this behavior, let's say we started the
-supervisor at 9:05 with a 15 minute segment granularity. The first task would create a segment for 9:00-9:15 and a
-segment for 9:15-9:30 before stopping at 9:20. A second task would be created at 9:20 which would create another segment
-for 9:15-9:30 and a segment for 9:30-9:45 before stopping at 9:35. Hence, if taskDuration and segmentGranularity are the
-same duration, you will get two tasks generating a segment for each segment granularity interval.
-
-Understanding this behavior is the first step to managing the number of segments produced. Some recommendations for
-keeping the number of segments low are:
-
-  * Keep the number of Kafka partitions to the minimum required to sustain the required throughput for your event streams.
-  * Increase segment granularity and task duration so that more events are written into the same segment. One
-    consideration here is that segments are only handed off to historical nodes after the task duration has elapsed.
-    Since workers tend to be configured with less query-serving resources than historical nodes, query performance may
-    suffer if tasks run excessively long without handing off segments.
-
-In many production installations which have been ingesting events for a long period of time, these suggestions alone
-will not be sufficient to keep the number of segments at an optimal level. It is recommended that scheduled re-indexing
-tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
-Currently, the recommended way of doing this is by running periodic Hadoop batch ingestion jobs and using a `dataSource`
-inputSpec to read from the segments generated by the Kafka indexing tasks. Details on how to do this can be found under
-['Updating Existing Data'](../../ingestion/update-existing-data.html). Note that the Merge Task and Append Task described
-[here](../../ingestion/tasks.html) will not work as they require unsharded segments while Kafka indexing tasks always
-generated sharded segments.
-
-There is ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
-Hadoop (see [here](https://github.com/druid-io/druid/pull/1998) and [here](https://github.com/druid-io/druid/pull/3611)
-for related PRs).
+Kafka Indexing Service may still produce some small segments. Lets say the task duration is 4 hours, segment granularity
+is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10, new set of tasks will be started and
+events for the interval 13:00 - 14:00 may be split across previous and new set of tasks. If you see it becoming a problem then
+one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
+Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).
+There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
+Hadoop (see [here](https://github.com/druid-io/druid/pull/5102)).

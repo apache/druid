@@ -23,7 +23,6 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
-import java.io.Closeable;
 import java.util.function.IntConsumer;
 
 /**
@@ -33,8 +32,13 @@ import java.util.function.IntConsumer;
  * for-each iteration with boxing.
  */
 @PublicApi
-public interface IndexedInts extends Closeable, HotLoopCallee
+public interface IndexedInts extends HotLoopCallee
 {
+  static IndexedInts empty()
+  {
+    return ArrayBasedIndexedInts.EMPTY;
+  }
+
   @CalledFromHotLoop
   int size();
   @CalledFromHotLoop
@@ -46,5 +50,17 @@ public interface IndexedInts extends Closeable, HotLoopCallee
     for (int i = 0; i < size; i++) {
       action.accept(get(i));
     }
+  }
+
+  @SuppressWarnings("unused") // Set up your IDE to render IndexedInts impls using this method during debug.
+  default String debugToString()
+  {
+    StringBuilder sb = new StringBuilder("[");
+    forEach(v -> sb.append(v).append(',').append(' '));
+    if (sb.length() > 1) {
+      sb.setLength(sb.length() - 2);
+    }
+    sb.append(']');
+    return sb.toString();
   }
 }

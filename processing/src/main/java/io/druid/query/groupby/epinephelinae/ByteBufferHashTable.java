@@ -19,7 +19,6 @@
 
 package io.druid.query.groupby.epinephelinae;
 
-import com.google.common.primitives.Ints;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 
@@ -47,7 +46,7 @@ public class ByteBufferHashTable
 
   protected final int maxSizeForTesting; // Integer.MAX_VALUE in production, only used for unit tests
 
-  protected static final int HASH_SIZE = Ints.BYTES;
+  protected static final int HASH_SIZE = Integer.BYTES;
 
   protected final float maxLoadFactor;
   protected final int initialBuckets;
@@ -109,7 +108,7 @@ public class ByteBufferHashTable
     if (maxBuckets < 1) {
       throw new IAE(
           "Not enough capacity for even one row! Need[%,d] but have[%,d].",
-          bucketSizeWithHash + Ints.BYTES,
+          bucketSizeWithHash + Integer.BYTES,
           buffer.capacity()
       );
     }

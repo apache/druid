@@ -38,7 +38,7 @@ public class AllowAllAuthenticator implements Authenticator
   public static final AuthenticationResult ALLOW_ALL_RESULT = new AuthenticationResult(
       AuthConfig.ALLOW_ALL_NAME,
       AuthConfig.ALLOW_ALL_NAME,
-      null
+      AuthConfig.ALLOW_ALL_NAME, null
   );
 
   @Override
@@ -71,7 +71,7 @@ public class AllowAllAuthenticator implements Authenticator
     return new Filter()
     {
       @Override
-      public void init(FilterConfig filterConfig) throws ServletException
+      public void init(FilterConfig filterConfig)
       {
 
       }

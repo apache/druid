@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.core.NoopEmitter;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
@@ -34,6 +32,8 @@ import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.emitter.core.NoopEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -67,7 +67,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -201,7 +200,7 @@ public class QueryRunnerTestHelper
       qualityUniques
   );
 
-  public final static List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
+  public static final List<AggregatorFactory> commonFloatAggregators = Arrays.asList(
       new FloatSumAggregatorFactory("index", "indexFloat"),
       new CountAggregatorFactory("rows"),
       new HyperUniquesAggregatorFactory(
@@ -340,7 +339,6 @@ public class QueryRunnerTestHelper
   public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
       QueryRunnerFactory<T, QueryType> factory
   )
-      throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final IncrementalIndex noRollupRtIndex = TestIndex.getNoRollupIncrementalTestIndex();
@@ -364,7 +362,6 @@ public class QueryRunnerTestHelper
   public static Collection<?> makeUnionQueryRunners(
       QueryRunnerFactory factory
   )
-      throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();

@@ -26,19 +26,19 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
-import io.druid.indexing.common.TaskLocation;
+import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
+import io.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunner;
@@ -52,11 +52,12 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.helpers.OverlordHelperManager;
 import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.CloseQuietly;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
-import io.druid.server.initialization.IndexerZkConfig;
-import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthTestUtils;
@@ -79,7 +80,6 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -128,9 +128,10 @@ public class OverlordTest
   public void setUp() throws Exception
   {
     req = EasyMock.createMock(HttpServletRequest.class);
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).anyTimes();
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
@@ -162,7 +163,6 @@ public class OverlordTest
     taskCompletionCountDownLatches[0] = new CountDownLatch(1);
     taskCompletionCountDownLatches[1] = new CountDownLatch(1);
     announcementLatch = new CountDownLatch(1);
-    IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
@@ -211,10 +211,12 @@ public class OverlordTest
     }
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
 
+    final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage);
     // Test Overlord resource stuff
     overlordResource = new OverlordResource(
         taskMaster,
-        new TaskStorageQueryAdapter(taskStorage),
+        taskStorageQueryAdapter,
+        new IndexerMetadataStorageAdapter(taskStorageQueryAdapter, null),
         null,
         null,
         null,
@@ -235,7 +237,7 @@ public class OverlordTest
 
     // Task payload for task_0 should be present in taskStorage
     response = overlordResource.getTaskPayload(taskId_0);
-    Assert.assertEquals(task_0, ((Map) response.getEntity()).get("payload"));
+    Assert.assertEquals(task_0, ((TaskPayloadResponse) response.getEntity()).getPayload());
 
     // Task not present in taskStorage - should fail
     response = overlordResource.getTaskPayload("whatever");
@@ -243,16 +245,16 @@ public class OverlordTest
 
     // Task status of the submitted task should be running
     response = overlordResource.getTaskStatus(taskId_0);
-    Assert.assertEquals(taskId_0, ((Map) response.getEntity()).get("task"));
+    Assert.assertEquals(taskId_0, ((TaskStatusResponse) response.getEntity()).getTask());
     Assert.assertEquals(
         TaskStatus.running(taskId_0).getStatusCode(),
-        ((TaskStatus) ((Map) response.getEntity()).get("status")).getStatusCode()
+        ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
     );
 
     // Simulate completion of task_0
     taskCompletionCountDownLatches[Integer.parseInt(taskId_0)].countDown();
     // Wait for taskQueue to handle success status of task_0
-    waitForTaskStatus(taskId_0, TaskStatus.Status.SUCCESS);
+    waitForTaskStatus(taskId_0, TaskState.SUCCESS);
 
     // Manually insert task in taskStorage
     // Verifies sync from storage
@@ -262,22 +264,25 @@ public class OverlordTest
     // Wait for task runner to run task_1
     runTaskCountDownLatches[Integer.parseInt(taskId_1)].await();
 
-    response = overlordResource.getRunningTasks(req);
+    response = overlordResource.getRunningTasks(null, req);
     // 1 task that was manually inserted should be in running state
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
-    final OverlordResource.TaskResponseObject taskResponseObject = ((List<OverlordResource.TaskResponseObject>) response
+    final TaskStatusPlus taskResponseObject = ((List<TaskStatusPlus>) response
         .getEntity()).get(0);
-    Assert.assertEquals(taskId_1, taskResponseObject.toJson().get("id"));
-    Assert.assertEquals(TASK_LOCATION, taskResponseObject.toJson().get("location"));
+    Assert.assertEquals(taskId_1, taskResponseObject.getId());
+    Assert.assertEquals(TASK_LOCATION, taskResponseObject.getLocation());
 
     // Simulate completion of task_1
     taskCompletionCountDownLatches[Integer.parseInt(taskId_1)].countDown();
     // Wait for taskQueue to handle success status of task_1
-    waitForTaskStatus(taskId_1, TaskStatus.Status.SUCCESS);
+    waitForTaskStatus(taskId_1, TaskState.SUCCESS);
 
     // should return number of tasks which are not in running state
-    response = overlordResource.getCompleteTasks(req);
+    response = overlordResource.getCompleteTasks(null, req);
     Assert.assertEquals(2, (((List) response.getEntity()).size()));
+
+    response = overlordResource.getCompleteTasks(1, req);
+    Assert.assertEquals(1, (((List) response.getEntity()).size()));
     taskMaster.stop();
     Assert.assertFalse(taskMaster.isLeader());
     EasyMock.verify(taskLockbox, taskActionClientFactory);
@@ -287,11 +292,11 @@ public class OverlordTest
    * These method will not timeout until the condition is met so calling method should ensure timeout
    * This method also assumes that the task with given taskId is present
    * */
-  private void waitForTaskStatus(String taskId, TaskStatus.Status status) throws InterruptedException
+  private void waitForTaskStatus(String taskId, TaskState status) throws InterruptedException
   {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);
-      if (status.equals(((TaskStatus) ((Map) response.getEntity()).get("status")).getStatusCode())) {
+      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode())) {
         break;
       }
       Thread.sleep(10);
@@ -299,7 +304,7 @@ public class OverlordTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     tearDownServerAndCurator();
   }
@@ -383,6 +388,18 @@ public class OverlordTest
         public TaskLocation getLocation()
         {
           return TASK_LOCATION;
+        }
+
+        @Override
+        public String getTaskType()
+        {
+          return task.getType();
+        }
+
+        @Override
+        public String getDataSource()
+        {
+          return task.getDataSource();
         }
       };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);

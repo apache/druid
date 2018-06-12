@@ -36,7 +36,6 @@ import io.druid.sql.calcite.planner.Calcites;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import javax.annotation.Nonnull;
@@ -152,35 +151,25 @@ public class RowSignature
       final RelDataType type;
 
       if (Column.TIME_COLUMN_NAME.equals(columnName)) {
-        type = typeFactory.createSqlType(SqlTypeName.TIMESTAMP);
+        type = Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
       } else {
         switch (columnType) {
           case STRING:
             // Note that there is no attempt here to handle multi-value in any special way. Maybe one day...
-            type = typeFactory.createTypeWithNullability(
-                typeFactory.createTypeWithCharsetAndCollation(
-                    typeFactory.createSqlType(SqlTypeName.VARCHAR),
-                    Calcites.defaultCharset(),
-                    SqlCollation.IMPLICIT
-                ),
-                true
-            );
+            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
             break;
           case LONG:
-            type = typeFactory.createSqlType(SqlTypeName.BIGINT);
+            type = Calcites.createSqlType(typeFactory, SqlTypeName.BIGINT);
             break;
           case FLOAT:
-            type = typeFactory.createSqlType(SqlTypeName.FLOAT);
+            type = Calcites.createSqlType(typeFactory, SqlTypeName.FLOAT);
             break;
           case DOUBLE:
-            type = typeFactory.createSqlType(SqlTypeName.DOUBLE);
+            type = Calcites.createSqlType(typeFactory, SqlTypeName.DOUBLE);
             break;
           case COMPLEX:
             // Loses information about exactly what kind of complex column this is.
-            type = typeFactory.createTypeWithNullability(
-                typeFactory.createSqlType(SqlTypeName.OTHER),
-                true
-            );
+            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.OTHER, true);
             break;
           default:
             throw new ISE("WTF?! valueType[%s] not translatable?", columnType);

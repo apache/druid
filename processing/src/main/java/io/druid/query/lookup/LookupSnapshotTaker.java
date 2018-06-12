@@ -19,13 +19,15 @@
 
 package io.druid.query.lookup;
 
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.druid.guice.annotations.Json;
+import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 
 import java.io.File;
@@ -33,16 +35,13 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-
 public class LookupSnapshotTaker
 {
   private static final Logger LOGGER = new Logger(LookupSnapshotTaker.class);
-  protected static final String PERSIST_FILE_NAME = "lookupSnapshot.json";
+  private static final String PERSIST_FILE_SUFFIX = "lookupSnapshot.json";
 
   private final ObjectMapper objectMapper;
   private final File persistDirectory;
-  private final File persistFile;
-
 
   public LookupSnapshotTaker(
       final @Json ObjectMapper jsonMapper,
@@ -50,7 +49,10 @@ public class LookupSnapshotTaker
   )
   {
     this.objectMapper = jsonMapper;
-    Preconditions.checkArgument(!Strings.isNullOrEmpty(persistDirectory), "can not work without specifying persistDirectory");
+    Preconditions.checkArgument(
+        !Strings.isNullOrEmpty(persistDirectory),
+        "can not work without specifying persistDirectory"
+    );
     this.persistDirectory = new File(persistDirectory);
     if (!this.persistDirectory.exists()) {
       Preconditions.checkArgument(this.persistDirectory.mkdirs(), "Oups was not able to create persist directory");
@@ -58,11 +60,12 @@ public class LookupSnapshotTaker
     if (!this.persistDirectory.isDirectory()) {
       throw new ISE("Can only persist to directories, [%s] wasn't a directory", persistDirectory);
     }
-    this.persistFile = new File(persistDirectory, PERSIST_FILE_NAME);
   }
 
-  public synchronized List<LookupBean> pullExistingSnapshot()
+  public synchronized List<LookupBean> pullExistingSnapshot(final String tier)
   {
+    final File persistFile = getPersistFile(tier);
+
     List<LookupBean> lookupBeanList;
     try {
       if (!persistFile.isFile()) {
@@ -72,7 +75,7 @@ public class LookupSnapshotTaker
         LOGGER.warn("found empty file no lookups to load from [%s]", persistFile.getAbsolutePath());
         return Collections.emptyList();
       }
-      lookupBeanList = objectMapper.readValue(persistFile, new TypeReference<List<LookupBean>>(){});
+      lookupBeanList = objectMapper.readValue(persistFile, new TypeReference<List<LookupBean>>() {});
       return lookupBeanList;
     }
     catch (IOException e) {
@@ -80,18 +83,21 @@ public class LookupSnapshotTaker
     }
   }
 
-  public synchronized void takeSnapshot(List<LookupBean> lookups)
+  public synchronized void takeSnapshot(String tier, List<LookupBean> lookups)
   {
+    final File persistFile = getPersistFile(tier);
+
     try {
-      objectMapper.writeValue(persistFile, lookups);
+      FileUtils.writeAtomically(persistFile, out -> objectMapper.writeValue(out, lookups));
     }
     catch (IOException e) {
       throw new ISE(e, "Exception during serialization of lookups using file [%s]", persistFile.getAbsolutePath());
     }
   }
 
-  public File getPersistFile()
+  @VisibleForTesting
+  File getPersistFile(final String tier)
   {
-    return persistFile;
+    return new File(persistDirectory, StringUtils.format("%s.%s", tier, PERSIST_FILE_SUFFIX));
   }
 }

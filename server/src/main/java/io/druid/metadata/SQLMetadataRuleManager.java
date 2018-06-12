@@ -31,19 +31,19 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.client.DruidServer;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
@@ -237,7 +237,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
               new HandleCallback<Map<String, List<Rule>>>()
               {
                 @Override
-                public Map<String, List<Rule>> withHandle(Handle handle) throws Exception
+                public Map<String, List<Rule>> withHandle(Handle handle)
                 {
                   return handle.createQuery(
                       // Return latest version rule by dataSource
@@ -281,7 +281,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                                          Pair<String, List<Rule>> stringObjectMap,
                                          FoldController foldController,
                                          StatementContext statementContext
-                                     ) throws SQLException
+                                     )
                                      {
                                        try {
                                          String dataSource = stringObjectMap.lhs;

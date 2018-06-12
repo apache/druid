@@ -93,7 +93,7 @@ public class ChainedExecutionQueryRunnerTest
                 new IAnswer<Void>()
                 {
                   @Override
-                  public Void answer() throws Throwable
+                  public Void answer()
                   {
                     queryIsRegistered.countDown();
                     return null;
@@ -132,7 +132,7 @@ public class ChainedExecutionQueryRunnerTest
           @Override
           public void run()
           {
-            Sequences.toList(seq, Lists.newArrayList());
+            seq.toList();
           }
         }
     );
@@ -217,7 +217,7 @@ public class ChainedExecutionQueryRunnerTest
                 new IAnswer<Void>()
                 {
                   @Override
-                  public Void answer() throws Throwable
+                  public Void answer()
                   {
                     queryIsRegistered.countDown();
                     return null;
@@ -258,7 +258,7 @@ public class ChainedExecutionQueryRunnerTest
           @Override
           public void run()
           {
-            Sequences.toList(seq, Lists.newArrayList());
+            seq.toList();
           }
         }
     );

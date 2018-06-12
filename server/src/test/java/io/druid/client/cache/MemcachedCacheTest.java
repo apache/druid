@@ -30,10 +30,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.Event;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.AbstractMonitor;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.guice.GuiceInjectors;
@@ -44,6 +40,10 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.AbstractMonitor;
 import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
@@ -73,10 +73,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  */
@@ -122,7 +120,7 @@ public class MemcachedCacheTest
   };
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     cache = new MemcachedCache(
         Suppliers.<ResourceHolder<MemcachedClientIF>>ofInstance(
@@ -228,7 +226,7 @@ public class MemcachedCacheTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
     put(cache, "a", HI, 1);
@@ -253,7 +251,7 @@ public class MemcachedCacheTest
   }
 
   @Test
-  public void testGetBulk() throws Exception
+  public void testGetBulk()
   {
     Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
@@ -481,13 +479,13 @@ class MockMemcachedClient implements MemcachedClientIF
       }
 
       @Override
-      public Boolean get() throws InterruptedException, ExecutionException
+      public Boolean get()
       {
         return true;
       }
 
       @Override
-      public Boolean get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException
+      public Boolean get(long l, TimeUnit timeUnit)
       {
         return true;
       }
@@ -539,13 +537,13 @@ class MockMemcachedClient implements MemcachedClientIF
       }
 
       @Override
-      public T get() throws InterruptedException, ExecutionException
+      public T get()
       {
         return theValue;
       }
 
       @Override
-      public T get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException
+      public T get(long l, TimeUnit timeUnit)
       {
         return theValue;
       }
@@ -643,7 +641,7 @@ class MockMemcachedClient implements MemcachedClientIF
       }
 
       @Override
-      public Map<String, T> getSome(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException
+      public Map<String, T> getSome(long timeout, TimeUnit unit)
       {
         return get();
       }
@@ -685,7 +683,7 @@ class MockMemcachedClient implements MemcachedClientIF
       }
 
       @Override
-      public Map<String, T> get() throws InterruptedException, ExecutionException
+      public Map<String, T> get()
       {
         Map<String, T> retVal = Maps.newHashMap();
 
@@ -700,7 +698,6 @@ class MockMemcachedClient implements MemcachedClientIF
 
       @Override
       public Map<String, T> get(long l, TimeUnit timeUnit)
-          throws InterruptedException, ExecutionException, TimeoutException
       {
         return get();
       }

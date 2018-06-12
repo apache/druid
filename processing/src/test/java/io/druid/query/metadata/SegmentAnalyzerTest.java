@@ -19,9 +19,7 @@
 
 package io.druid.query.metadata;
 
-import com.google.common.collect.Lists;
 import io.druid.data.input.impl.DimensionSchema;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.LegacyDataSource;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -52,13 +50,13 @@ public class SegmentAnalyzerTest
       EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class);
 
   @Test
-  public void testIncrementalWorks() throws Exception
+  public void testIncrementalWorks()
   {
     testIncrementalWorksHelper(null);
     testIncrementalWorksHelper(emptyAnalyses);
   }
 
-  private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses) throws Exception
+  private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
         new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), null),
@@ -111,13 +109,13 @@ public class SegmentAnalyzerTest
   }
 
   @Test
-  public void testMappedWorks() throws Exception
+  public void testMappedWorks()
   {
     testMappedWorksHelper(null);
     testMappedWorksHelper(emptyAnalyses);
   }
 
-  private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses) throws Exception
+  private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
         new QueryableIndexSegment("test_1", TestIndex.getMMappedTestIndex()),
@@ -195,6 +193,6 @@ public class SegmentAnalyzerTest
         new LegacyDataSource("test"), new LegacySegmentSpec("2011/2012"), null, null, null, analyses, false, false
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    return Sequences.toList(runner.run(QueryPlus.wrap(query), context), Lists.<SegmentAnalysis>newArrayList());
+    return runner.run(QueryPlus.wrap(query), context).toList();
   }
 }

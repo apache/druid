@@ -50,7 +50,7 @@ public abstract class SequenceWrapper
    * }
    * </pre>
    */
-  public <RetType> RetType wrap(Supplier<RetType> sequenceProcessing) throws Exception
+  public <RetType> RetType wrap(Supplier<RetType> sequenceProcessing)
   {
     return sequenceProcessing.get();
   }

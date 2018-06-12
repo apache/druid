@@ -26,7 +26,6 @@ import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
@@ -41,7 +40,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -66,7 +64,7 @@ import static io.druid.query.QueryRunnerTestHelper.transformToConstructionFeeder
 public class SearchQueryRunnerWithCaseTest
 {
   @Parameterized.Parameters
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     final SearchQueryConfig[] configs = new SearchQueryConfig[3];
     configs[0] = new SearchQueryConfig();
@@ -237,10 +235,8 @@ public class SearchQueryRunnerWithCaseTest
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
     HashMap<String, List> context = new HashMap<>();
-    Iterable<Result<SearchResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context),
-        Lists.<Result<SearchResultValue>>newArrayList()
-    );
+    Iterable<Result<SearchResultValue>> results =
+        runner.run(QueryPlus.<Result<SearchResultValue>>wrap(searchQuery), context).toList();
 
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());

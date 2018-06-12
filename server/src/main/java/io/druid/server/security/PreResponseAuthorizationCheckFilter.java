@@ -21,8 +21,8 @@ package io.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.QueryInterruptedException;
 import io.druid.server.DruidNode;
 import org.eclipse.jetty.server.Response;
@@ -63,7 +63,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   }
 
   @Override
-  public void init(FilterConfig filterConfig) throws ServletException
+  public void init(FilterConfig filterConfig)
   {
 
   }

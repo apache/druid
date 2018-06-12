@@ -66,7 +66,7 @@ public class BackgroundCachePopulator implements CachePopulator
       final Cache.NamedKey cacheKey
   )
   {
-    final Function<T, CacheType> cacheFn = cacheStrategy.prepareForCache();
+    final Function<T, CacheType> cacheFn = cacheStrategy.prepareForSegmentLevelCache();
     final List<ListenableFuture<CacheType>> cacheFutures = new LinkedList<>();
 
     final Sequence<T> wrappedSequence = Sequences.map(

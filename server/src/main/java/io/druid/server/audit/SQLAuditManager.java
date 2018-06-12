@@ -22,18 +22,16 @@ package io.druid.server.audit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditManager;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
@@ -129,7 +127,7 @@ public class SQLAuditManager implements AuditManager
         new HandleCallback<List<AuditEntry>>()
         {
           @Override
-          public List<AuditEntry> withHandle(Handle handle) throws Exception
+          public List<AuditEntry> withHandle(Handle handle)
           {
             return handle.createQuery(
                 StringUtils.format(
@@ -190,7 +188,7 @@ public class SQLAuditManager implements AuditManager
         new HandleCallback<List<AuditEntry>>()
         {
           @Override
-          public List<AuditEntry> withHandle(Handle handle) throws Exception
+          public List<AuditEntry> withHandle(Handle handle)
           {
             return handle.createQuery(
                 StringUtils.format(
@@ -252,7 +250,7 @@ public class SQLAuditManager implements AuditManager
         new HandleCallback<List<AuditEntry>>()
         {
           @Override
-          public List<AuditEntry> withHandle(Handle handle) throws Exception
+          public List<AuditEntry> withHandle(Handle handle)
           {
             Query<Map<String, Object>> query = handle.createQuery(theQueryString);
             if (key != null) {

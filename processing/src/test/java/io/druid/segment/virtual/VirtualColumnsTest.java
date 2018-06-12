@@ -206,7 +206,7 @@ public class VirtualColumnsTest
   }
 
   @Test
-  public void testGetCacheKey() throws Exception
+  public void testGetCacheKey()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(
@@ -225,7 +225,7 @@ public class VirtualColumnsTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         ImmutableList.<VirtualColumn>of(
@@ -252,7 +252,7 @@ public class VirtualColumnsTest
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper mapper = TestHelper.getJsonMapper();
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final ImmutableList<VirtualColumn> theColumns = ImmutableList.<VirtualColumn>of(
         new ExpressionVirtualColumn("expr", "x + y", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
         new ExpressionVirtualColumn("expr2", "x + z", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
@@ -379,6 +379,12 @@ public class VirtualColumnsTest
         {
           return String.class;
         }
+
+        @Override
+        public boolean isNull()
+        {
+          return selector.isNull();
+        }
       };
 
       return dimensionSpec.decorate(dimensionSelector);
@@ -396,6 +402,12 @@ public class VirtualColumnsTest
         public long getLong()
         {
           return theLong;
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return false;
         }
       };
     }

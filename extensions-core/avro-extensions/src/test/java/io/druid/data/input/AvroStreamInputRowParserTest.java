@@ -31,12 +31,12 @@ import io.druid.data.input.avro.AvroExtensionsModule;
 import io.druid.data.input.avro.AvroParseSpec;
 import io.druid.data.input.avro.SchemaRepoBasedAvroBytesDecoder;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.java.util.common.parsers.JSONPathFieldSpec;
-import io.druid.java.util.common.parsers.JSONPathFieldType;
-import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import io.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
+import io.druid.java.util.common.parsers.JSONPathFieldSpec;
+import io.druid.java.util.common.parsers.JSONPathFieldType;
+import io.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
@@ -206,7 +206,7 @@ public class AvroStreamInputRowParserTest
     );
     Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
     ByteBuffer byteBuffer = ByteBuffer.allocate(4);
-    converter.putSubjectAndId(TOPIC, id, byteBuffer);
+    converter.putSubjectAndId(id, byteBuffer);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     out.write(byteBuffer.array());
     // encode data
@@ -214,7 +214,7 @@ public class AvroStreamInputRowParserTest
     // write avro datum to bytes
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    InputRow inputRow = parser2.parse(ByteBuffer.wrap(out.toByteArray()));
+    InputRow inputRow = parser2.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
 
     assertInputRowCorrect(inputRow, DIMENSIONS);
   }
@@ -247,7 +247,7 @@ public class AvroStreamInputRowParserTest
     );
     Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
     ByteBuffer byteBuffer = ByteBuffer.allocate(4);
-    converter.putSubjectAndId(TOPIC, id, byteBuffer);
+    converter.putSubjectAndId(id, byteBuffer);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     out.write(byteBuffer.array());
     // encode data
@@ -255,7 +255,7 @@ public class AvroStreamInputRowParserTest
     // write avro datum to bytes
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    InputRow inputRow = parser2.parse(ByteBuffer.wrap(out.toByteArray()));
+    InputRow inputRow = parser2.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
 
     assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS);
   }
@@ -321,7 +321,7 @@ public class AvroStreamInputRowParserTest
     assertEquals(SOME_INT_VALUE, inputRow.getMetric("someInt"));
   }
 
-  public static SomeAvroDatum buildSomeAvroDatum() throws IOException
+  public static SomeAvroDatum buildSomeAvroDatum()
   {
     return SomeAvroDatum.newBuilder()
                                    .setTimestamp(DATE_TIME.getMillis())

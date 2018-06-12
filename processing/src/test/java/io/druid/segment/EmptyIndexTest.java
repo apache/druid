@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
@@ -27,14 +28,38 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.Collection;
 
+@RunWith(Parameterized.class)
 public class EmptyIndexTest
 {
+
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
+
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+
+  public EmptyIndexTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+  }
+
   @Test
   public void testEmptyIndex() throws Exception
   {
@@ -57,7 +82,7 @@ public class EmptyIndexTest
           emptyIndex,
           new ConciseBitmapFactory()
       );
-      TestHelper.getTestIndexMergerV9().merge(
+      TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory).merge(
           Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
           true,
           new AggregatorFactory[0],
@@ -65,10 +90,10 @@ public class EmptyIndexTest
           new IndexSpec()
       );
 
-      QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);
+      QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(tmpDir);
 
       Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
-      Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));
+      Assert.assertEquals("getMetricNames", 0, emptyQueryableIndex.getColumnNames().size());
       Assert.assertEquals("getDataInterval", Intervals.of("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
       Assert.assertEquals(
           "getReadOnlyTimestamps",

@@ -45,7 +45,7 @@ import java.util.stream.IntStream;
 public class FileIteratingFirehoseTest
 {
   @Parameters(name = "{0}, {1}")
-  public static Collection<Object[]> constructorFeeder() throws IOException
+  public static Collection<Object[]> constructorFeeder()
   {
     final List<List<String>> inputTexts = ImmutableList.of(
         ImmutableList.of("2000,foo"),
@@ -133,14 +133,14 @@ public class FileIteratingFirehoseTest
     final LineIterator lineIterator = new LineIterator(new Reader()
     {
       @Override
-      public int read(char[] cbuf, int off, int len) throws IOException
+      public int read(char[] cbuf, int off, int len)
       {
         System.arraycopy(LINE_CHARS, 0, cbuf, 0, LINE_CHARS.length);
         return LINE_CHARS.length;
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         throw new RuntimeException("close test for FileIteratingFirehose");
       }
@@ -162,7 +162,7 @@ public class FileIteratingFirehoseTest
     private boolean closed;
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       closed = true;
     }

@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -33,17 +34,23 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
+import io.tesla.aether.guice.RepositorySystemSessionProvider;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.commons.io.FileUtils;
+import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyFilter;
 import org.eclipse.aether.graph.DependencyNode;
+import org.eclipse.aether.repository.Authentication;
+import org.eclipse.aether.repository.Proxy;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
+import org.eclipse.aether.util.repository.AuthenticationBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,6 +61,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Command(
@@ -159,7 +167,7 @@ public class PullDependencies implements Runnable
 
   @Option(
       name = "--no-default-hadoop",
-      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client:2.3.0. If `-h` option is supplied, then default hadoop coordinate will not be downloaded.",
+      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client:2.8.3. If `-h` option is supplied, then default hadoop coordinate will not be downloaded.",
       required = false)
   public boolean noDefaultHadoop = false;
 
@@ -195,6 +203,48 @@ public class PullDependencies implements Runnable
       required = false
   )
   public String defaultVersion = PullDependencies.class.getPackage().getImplementationVersion();
+
+  @Option(
+      name = {"--use-proxy"},
+      title = "Use http/https proxy to pull dependencies.",
+      required = false
+  )
+  public boolean useProxy = false;
+
+  @Option(
+      name = {"--proxy-type"},
+      title = "The proxy type, should be either http or https",
+      required = false
+  )
+  public String proxyType = "https";
+
+  @Option(
+      name = {"--proxy-host"},
+      title = "The proxy host",
+      required = false
+  )
+  public String proxyHost = "";
+
+  @Option(
+      name = {"--proxy-port"},
+      title = "The proxy port",
+      required = false
+  )
+  public int proxyPort = -1;
+
+  @Option(
+      name = {"--proxy-username"},
+      title = "The proxy username",
+      required = false
+  )
+  public String proxyUsername = "";
+
+  @Option(
+      name = {"--proxy-password"},
+      title = "The proxy password",
+      required = false
+  )
+  public String proxyPassword = "";
 
   public PullDependencies()
   {
@@ -411,10 +461,7 @@ public class PullDependencies implements Runnable
     }
 
     if (log.isTraceEnabled() || log.isDebugEnabled()) {
-      return new DefaultTeslaAether(
-          localRepository,
-          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
-      );
+      return createTeslaAether(remoteRepositories);
     }
 
     PrintStream oldOut = System.out;
@@ -424,19 +471,19 @@ public class PullDependencies implements Runnable
               new OutputStream()
               {
                 @Override
-                public void write(int b) throws IOException
+                public void write(int b)
                 {
 
                 }
 
                 @Override
-                public void write(byte[] b) throws IOException
+                public void write(byte[] b)
                 {
 
                 }
 
                 @Override
-                public void write(byte[] b, int off, int len) throws IOException
+                public void write(byte[] b, int off, int len)
                 {
 
                 }
@@ -445,10 +492,7 @@ public class PullDependencies implements Runnable
               StringUtils.UTF8_STRING
           )
       );
-      return new DefaultTeslaAether(
-          localRepository,
-          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
-      );
+      return createTeslaAether(remoteRepositories);
     }
     catch (UnsupportedEncodingException e) {
       // should never happen
@@ -457,6 +501,39 @@ public class PullDependencies implements Runnable
     finally {
       System.setOut(oldOut);
     }
+  }
+
+  private DefaultTeslaAether createTeslaAether(List<Repository> remoteRepositories)
+  {
+    if (!useProxy) {
+      return new DefaultTeslaAether(
+          localRepository,
+          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
+      );
+    }
+
+    if (!StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTP) && !StringUtils.toLowerCase(proxyType).equals(Proxy.TYPE_HTTPS)) {
+      throw new IllegalArgumentException("invalid proxy type: " + proxyType);
+    }
+
+    RepositorySystemSession repositorySystemSession = new RepositorySystemSessionProvider(new File(localRepository)).get();
+    List<RemoteRepository> rl = remoteRepositories.stream().map(r -> {
+      RemoteRepository.Builder builder = new RemoteRepository.Builder(r.getId(), "default", r.getUrl());
+      if (r.getUsername() != null && r.getPassword() != null) {
+        Authentication auth = new AuthenticationBuilder().addUsername(r.getUsername()).addPassword(r.getPassword()).build();
+        builder.setAuthentication(auth);
+      }
+
+      final Authentication proxyAuth;
+      if (Strings.isNullOrEmpty(proxyUsername)) {
+        proxyAuth = null;
+      } else {
+        proxyAuth = new AuthenticationBuilder().addUsername(proxyUsername).addPassword(proxyPassword).build();
+      }
+      builder.setProxy(new Proxy(proxyType, proxyHost, proxyPort, proxyAuth));
+      return builder.build();
+    }).collect(Collectors.toList());
+    return new DefaultTeslaAether(rl, repositorySystemSession);
   }
 
   /**

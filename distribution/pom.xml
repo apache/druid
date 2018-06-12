@@ -29,7 +29,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.11.1-SNAPSHOT</version>
+        <version>0.13.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -110,6 +110,8 @@
                                 <argument>io.druid.extensions:druid-examples</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:simple-client-sslcontext</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-basic-security</argument>
                                 <argument>${druid.distribution.pulldeps.opts}</argument>
                             </arguments>
                         </configuration>
@@ -222,6 +224,8 @@
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
+                                        <argument>io.druid.extensions.contrib:druid-opentsdb-emitter</argument>
+                                        <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-orc-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-parquet-extensions</argument>
@@ -239,6 +243,10 @@
                                         <argument>io.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>io.druid.extensions.contrib:druid-virtual-columns</argument>
+                                        <argument>-c</argument>
+                                        <argument>io.druid.extensions.contrib:materialized-view-maintenance</argument>
+                                        <argument>-c</argument>
+                                        <argument>io.druid.extensions.contrib:materialized-view-selection</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

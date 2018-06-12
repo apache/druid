@@ -22,16 +22,17 @@ package io.druid.sql.calcite.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.druid.segment.TestHelper;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.http.SqlQuery;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class SqlQueryTest
+public class SqlQueryTest extends CalciteTestBase
 {
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final SqlQuery query = new SqlQuery("SELECT 1", SqlQuery.ResultFormat.ARRAY, ImmutableMap.of("useCache", false));
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }

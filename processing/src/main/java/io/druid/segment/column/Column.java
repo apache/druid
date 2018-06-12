@@ -20,6 +20,7 @@
 package io.druid.segment.column;
 
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
 
 /**
  */
@@ -30,7 +31,7 @@ public interface Column
 
   static boolean storeDoubleAsFloat()
   {
-    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "float");
+    String value = System.getProperty(DOUBLE_STORAGE_TYPE_PROPERTY, "double");
     return !StringUtils.toLowerCase(value).equals("double");
   }
 
@@ -43,4 +44,9 @@ public interface Column
   ComplexColumn getComplexColumn();
   BitmapIndex getBitmapIndex();
   SpatialIndex getSpatialIndex();
+
+  /**
+   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
+   */
+  SettableColumnValueSelector makeSettableColumnValueSelector();
 }

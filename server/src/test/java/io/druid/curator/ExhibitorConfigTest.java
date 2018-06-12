@@ -19,20 +19,17 @@
 
 package io.druid.curator;
 
+import io.druid.guice.JsonConfigTesterBase;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Properties;
-
-import io.druid.guice.JsonConfigTesterBase;
 
 public class ExhibitorConfigTest extends JsonConfigTesterBase<ExhibitorConfig>
 {
   @Test
   public void testSerde()
-      throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
   {
     propertyValues.put(getPropertyKey("hosts"), "[\"hostA\",\"hostB\"]");
     propertyValues.put(getPropertyKey("port"), "80");

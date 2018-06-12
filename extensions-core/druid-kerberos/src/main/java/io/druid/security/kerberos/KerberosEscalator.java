@@ -22,20 +22,10 @@ package io.druid.security.kerberos;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Throwables;
-import com.metamx.http.client.HttpClient;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.Escalator;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.eclipse.jetty.client.api.Authentication;
-import org.eclipse.jetty.client.api.ContentResponse;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.util.Attributes;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-
-import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 
 @JsonTypeName("kerberos")
 public class KerberosEscalator implements Escalator
@@ -65,70 +55,11 @@ public class KerberosEscalator implements Escalator
   }
 
   @Override
-  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
-  {
-    baseClient.getAuthenticationStore().addAuthentication(new Authentication()
-    {
-      @Override
-      public boolean matches(String type, URI uri, String realm)
-      {
-        return true;
-      }
-
-      @Override
-      public Result authenticate(
-          final Request request, ContentResponse response, Authentication.HeaderInfo headerInfo, Attributes context
-      )
-      {
-        return new Result()
-        {
-          @Override
-          public URI getURI()
-          {
-            return request.getURI();
-          }
-
-          @Override
-          public void apply(Request request)
-          {
-            try {
-              // No need to set cookies as they are handled by Jetty Http Client itself.
-              URI uri = request.getURI();
-              if (DruidKerberosUtil.needToSendCredentials(baseClient.getCookieStore(), uri)) {
-                log.debug(
-                    "No Auth Cookie found for URI[%s]. Existing Cookies[%s] Authenticating... ",
-                    uri,
-                    baseClient.getCookieStore().getCookies()
-                );
-                final String host = request.getHost();
-                DruidKerberosUtil.authenticateIfRequired(internalClientPrincipal, internalClientKeytab);
-                UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-                String challenge = currentUser.doAs(new PrivilegedExceptionAction<String>()
-                {
-                  @Override
-                  public String run() throws Exception
-                  {
-                    return DruidKerberosUtil.kerberosChallenge(host);
-                  }
-                });
-                request.getHeaders().add(HttpHeaders.Names.AUTHORIZATION, "Negotiate " + challenge);
-              } else {
-                log.debug("Found Auth Cookie found for URI[%s].", uri);
-              }
-            }
-            catch (Throwable e) {
-              Throwables.propagate(e);
-            }
-          }
-        };
-      }
-    });
-    return baseClient;
-  }
-
-  @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    return new AuthenticationResult(internalClientPrincipal, authorizerName, null);
+    // if you found your self asking why the authenticatedBy field is set to null please read this:
+    // https://github.com/druid-io/druid/pull/5706#discussion_r185940889
+    return new AuthenticationResult(internalClientPrincipal, authorizerName, null, null);
   }
+
 }

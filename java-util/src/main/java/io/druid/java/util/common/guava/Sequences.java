@@ -22,7 +22,6 @@ package io.druid.java.util.common.guava;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Lists;
 
 import java.io.Closeable;
 import java.util.Arrays;
@@ -90,11 +89,6 @@ public class Sequences
     return new FilteredSequence<>(sequence, pred);
   }
 
-  public static <T> Sequence<T> limit(final Sequence<T> sequence, final int limit)
-  {
-    return new LimitedSequence<>(sequence, limit);
-  }
-
   public static <T> Sequence<T> withBaggage(final Sequence<T> seq, final Closeable baggage)
   {
     Preconditions.checkNotNull(baggage, "baggage");
@@ -119,7 +113,7 @@ public class Sequences
     return new WrappingSequence<>(seq, wrapper);
   }
 
-  public static <T> Sequence<T> withEffect(final Sequence <T> seq, final Runnable effect, final Executor exec)
+  public static <T> Sequence<T> withEffect(final Sequence<T> seq, final Runnable effect, final Executor exec)
   {
     // Uses YieldingSequenceBase to be able to execute the effect if all elements of the wrapped seq are processed
     // (i. e. it "is done"), but the yielder of the underlying seq throws some exception from close(). This logic could
@@ -140,14 +134,9 @@ public class Sequences
   // This will materialize the entire sequence in memory. Use at your own risk.
   public static <T> Sequence<T> sort(final Sequence<T> sequence, final Comparator<T> comparator)
   {
-    List<T> seqList = Sequences.toList(sequence, Lists.<T>newArrayList());
+    List<T> seqList = sequence.toList();
     Collections.sort(seqList, comparator);
     return simple(seqList);
-  }
-
-  public static <T, ListType extends List<T>> ListType toList(Sequence<T> seq, ListType list)
-  {
-    return seq.accumulate(list, Accumulators.<ListType, T>list());
   }
 
   private static class EmptySequence implements Sequence<Object>

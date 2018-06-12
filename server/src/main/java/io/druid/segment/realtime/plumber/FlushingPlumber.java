@@ -21,16 +21,16 @@ package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
+import io.druid.java.util.common.granularity.Granularity;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -131,7 +131,7 @@ public class FlushingPlumber extends RealtimePlumber
         new Callable<ScheduledExecutors.Signal>()
         {
           @Override
-          public ScheduledExecutors.Signal call() throws Exception
+          public ScheduledExecutors.Signal call()
           {
             log.info("Abandoning segment %s", sink.getSegment().getIdentifier());
             abandonSegment(truncatedTime, sink);

@@ -21,16 +21,15 @@ package io.druid.testing.clients;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.RE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -38,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +59,7 @@ public class CoordinatorResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.coordinator = config.getCoordinatorUrl();
-    this.responseHandler = new StatusResponseHandler(Charsets.UTF_8);
+    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
   }
 
   private String getCoordinatorURL()
@@ -81,7 +81,7 @@ public class CoordinatorResourceTestClient
   }
 
   // return a list of the segment dates for the specified datasource
-  public List<String> getSegmentIntervals(final String dataSource) throws Exception
+  public List<String> getSegmentIntervals(final String dataSource)
   {
     ArrayList<String> segments = null;
     try {

@@ -26,9 +26,6 @@ import io.druid.segment.BaseObjectColumnValueSelector;
 public class ApproximateHistogramFoldingAggregator implements Aggregator
 {
   private final BaseObjectColumnValueSelector<ApproximateHistogram> selector;
-  private final int resolution;
-  private final float lowerLimit;
-  private final float upperLimit;
 
   private ApproximateHistogram histogram;
   private float[] tmpBufferP;
@@ -42,9 +39,6 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   )
   {
     this.selector = selector;
-    this.resolution = resolution;
-    this.lowerLimit = lowerLimit;
-    this.upperLimit = upperLimit;
     this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
 
     tmpBufferP = new float[resolution];
@@ -64,12 +58,6 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
     } else {
       histogram.foldFast(h);
     }
-  }
-
-  @Override
-  public void reset()
-  {
-    this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
   }
 
   @Override

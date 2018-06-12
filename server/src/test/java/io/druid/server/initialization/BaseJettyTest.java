@@ -23,12 +23,12 @@ import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.HttpClientConfig;
-import com.metamx.http.client.HttpClientInit;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.LifecycleUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClientConfig;
+import io.druid.java.util.http.client.HttpClientInit;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -52,6 +52,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -66,6 +67,8 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class BaseJettyTest
 {
+  protected static final String DEFAULT_RESPONSE_CONTENT = "hello";
+
   protected Lifecycle lifecycle;
   protected HttpClient client;
   protected Server server;
@@ -142,7 +145,7 @@ public abstract class BaseJettyTest
       root.addFilter(GuiceFilter.class, "/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root)});
+      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
       server.setHandler(handlerList);
     }
 
@@ -165,33 +168,46 @@ public abstract class BaseJettyTest
       catch (InterruptedException e) {
         //
       }
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
     }
   }
 
   @Path("/default")
   public static class DefaultResource
   {
+
     @DELETE
     @Path("{resource}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delete()
     {
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response get()
     {
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
     }
 
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     public Response post()
     {
-      return Response.ok("hello").build();
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
+    }
+  }
+
+  @Path("/return")
+  public static class DirectlyReturnResource
+  {
+    @POST
+    @Consumes(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response postText(String text)
+    {
+      return Response.ok(text).build();
     }
   }
 
@@ -225,7 +241,7 @@ public abstract class BaseJettyTest
     public static final String SECRET_USER = "bob";
 
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException
+    public void init(FilterConfig filterConfig)
     {
     }
 

@@ -86,4 +86,21 @@ public class BufferArrayGrouperTest
     grouper.init();
     return grouper;
   }
+
+  @Test
+  public void testRequiredBufferCapacity()
+  {
+    int[] cardinalityArray = new int[] {1, 10, Integer.MAX_VALUE - 1};
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {
+        new LongSumAggregatorFactory("sum", "sum")
+    };
+
+    long[] requiredSizes = new long[] {17, 90, 16911433721L};
+
+    for (int i = 0; i < cardinalityArray.length; i++) {
+      Assert.assertEquals(requiredSizes[i], BufferArrayGrouper.requiredBufferCapacity(
+          cardinalityArray[i],
+          aggregatorFactories));
+    }
+  }
 }

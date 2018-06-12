@@ -164,7 +164,7 @@ public class MultiSegmentScanQueryTest
   }
 
   @Parameterized.Parameters(name = "limit={0},batchSize={1}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(0, 1, 3, 7, 10, 20, 1000), Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000));
   }
@@ -193,13 +193,12 @@ public class MultiSegmentScanQueryTest
   public void testMergeRunnersWithLimit()
   {
     ScanQuery query = newBuilder().build();
-    List<ScanResultValue> results = Sequences.toList(
-        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(
-            factory.createRunner(segment0),
-            factory.createRunner(segment1)
-        )).run(QueryPlus.wrap(query), new HashMap<String, Object>()),
-        Lists.<ScanResultValue>newArrayList()
-    );
+    List<ScanResultValue> results = factory
+        .mergeRunners(
+            MoreExecutors.sameThreadExecutor(),
+            ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1)))
+        .run(QueryPlus.wrap(query), new HashMap<>())
+        .toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
       System.out.println(((List) result.getEvents()).size());
@@ -233,10 +232,7 @@ public class MultiSegmentScanQueryTest
         }
     );
     ScanQuery query = newBuilder().build();
-    List<ScanResultValue> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
-        Lists.<ScanResultValue>newArrayList()
-    );
+    List<ScanResultValue> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
       totalCount += ((List) result.getEvents()).size();

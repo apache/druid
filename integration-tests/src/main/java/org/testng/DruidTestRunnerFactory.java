@@ -19,17 +19,16 @@
 
 package org.testng;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.StatusResponseHandler;
-import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.StatusResponseHandler;
+import io.druid.java.util.http.client.response.StatusResponseHolder;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.guice.DruidTestModuleFactory;
 import io.druid.testing.guice.TestClient;
@@ -41,6 +40,7 @@ import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlTest;
 
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class DruidTestRunnerFactory implements ITestRunnerFactory
@@ -87,7 +87,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
       Injector injector = DruidTestModuleFactory.getInjector();
       IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
       HttpClient client = injector.getInstance(Key.get(HttpClient.class, TestClient.class));
-      ;
+
       waitUntilInstanceReady(client, config.getCoordinatorUrl());
       waitUntilInstanceReady(client, config.getIndexerUrl());
       waitUntilInstanceReady(client, config.getBrokerUrl());
@@ -117,12 +117,12 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
 
     public void waitUntilInstanceReady(final HttpClient client, final String host)
     {
-      final StatusResponseHandler handler = new StatusResponseHandler(Charsets.UTF_8);
+      final StatusResponseHandler handler = new StatusResponseHandler(StandardCharsets.UTF_8);
       RetryUtil.retryUntilTrue(
           () -> {
             try {
               StatusResponseHolder response = client.go(
-                  new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status", host))),
+                  new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status/health", host))),
                   handler
               ).get();
 

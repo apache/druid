@@ -50,7 +50,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
@@ -83,9 +82,9 @@ public class GroupByQueryMergeBufferTest
     }
 
     @Override
-    public ReferenceCountingResourceHolder<List<ByteBuffer>> takeBatch(final int maxElements, final long timeout)
+    public List<ReferenceCountingResourceHolder<ByteBuffer>> takeBatch(final int maxElements, final long timeout)
     {
-      final ReferenceCountingResourceHolder<List<ByteBuffer>> holder = super.takeBatch(maxElements, timeout);
+      final List<ReferenceCountingResourceHolder<ByteBuffer>> holder = super.takeBatch(maxElements, timeout);
       final int poolSize = getPoolSize();
       if (minRemainBufferNum > poolSize) {
         minRemainBufferNum = poolSize;
@@ -176,11 +175,11 @@ public class GroupByQueryMergeBufferTest
     );
   }
 
-  private final static TestBlockingPool mergeBufferPool = new TestBlockingPool(
+  private static final TestBlockingPool mergeBufferPool = new TestBlockingPool(
       new Supplier<ByteBuffer>()
       {
         @Override
-        public ByteBuffer get ()
+        public ByteBuffer get()
         {
           return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
         }
@@ -203,7 +202,7 @@ public class GroupByQueryMergeBufferTest
   private QueryRunner<Row> runner;
 
   @Parameters(name = "{0}")
-  public static Collection<Object[]> constructorFeeder() throws IOException
+  public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = Lists.newArrayList();
     for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {

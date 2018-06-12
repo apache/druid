@@ -23,10 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
 import io.druid.client.cache.Cache;
-import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulator;
 import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -38,6 +37,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -93,7 +93,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     }
 
     if (useCache) {
-      final Function cacheFn = strategy.pullFromCache();
+      final Function cacheFn = strategy.pullFromSegmentLevelCache();
       final byte[] cachedResult = cache.get(key);
       if (cachedResult != null) {
         final TypeReference cacheObjectClazz = strategy.getCacheObjectClazz();
@@ -107,7 +107,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
                   {
                     try {
                       if (cachedResult.length == 0) {
-                        return Iterators.emptyIterator();
+                        return Collections.emptyIterator();
                       }
 
                       return mapper.readValues(

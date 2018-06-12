@@ -37,10 +37,7 @@ import java.io.Closeable;
 public interface Aggregator extends Closeable
 {
   void aggregate();
-  /** @deprecated unused, to be removed in Druid 0.12 (or hopefully the whole Aggregator class is removed) */
-  @Deprecated
-  @SuppressWarnings("unused")
-  void reset();
+
   @Nullable
   Object get();
   float getFloat();
@@ -54,6 +51,19 @@ public interface Aggregator extends Closeable
   default double getDouble()
   {
     return (double) getFloat();
+  }
+
+  /**
+   * returns true if aggregator's output type is primitive long/double/float and aggregated value is null,
+   * but when aggregated output type is Object, this method always returns false,
+   * and users are advised to check nullability for the object returned by {@link #get()}
+   * method.
+   * The default implementation always return false to enable smooth backward compatibility,
+   * re-implement if your aggregator is nullable.
+   */
+  default boolean isNull()
+  {
+    return false;
   }
 
   @Override

@@ -165,7 +165,7 @@ public class ConcatSequenceTest
   }
 
   @Test
-  public void testClosingOfSequenceSequenceWhenExceptionThrown() throws Exception
+  public void testClosingOfSequenceSequenceWhenExceptionThrown()
   {
     final AtomicInteger closedCount = new AtomicInteger(0);
     final Sequence<Integer> seq = Sequences.concat(
@@ -279,7 +279,7 @@ public class ConcatSequenceTest
   }
 
   @SuppressWarnings("unchecked")
-  public void testAll(Iterable <List<Integer>> vals) throws IOException
+  public void testAll(Iterable<List<Integer>> vals) throws IOException
   {
     final Iterable<TestSequence<Integer>> theSequences = Iterables.transform(
         vals,

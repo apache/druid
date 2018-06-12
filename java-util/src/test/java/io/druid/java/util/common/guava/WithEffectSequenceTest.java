@@ -23,9 +23,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,31 +36,18 @@ public class WithEffectSequenceTest
     final AtomicInteger effect2 = new AtomicInteger();
     final AtomicInteger counter = new AtomicInteger();
 
-    Sequence<Integer> sequence = Sequences.withEffect(
-        Sequences.withEffect(
-            Sequences.simple(Arrays.asList(1, 2, 3)),
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                effect1.set(counter.incrementAndGet());
-              }
-            },
+    Sequence<Integer> sequence = Sequences
+        .simple(Arrays.asList(1, 2, 3))
+        .withEffect(
+            () -> effect1.set(counter.incrementAndGet()),
             MoreExecutors.sameThreadExecutor()
-        ),
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            effect2.set(counter.incrementAndGet());
-          }
-        },
-        MoreExecutors.sameThreadExecutor()
-    );
+        )
+        .withEffect(
+            () -> effect2.set(counter.incrementAndGet()),
+            MoreExecutors.sameThreadExecutor()
+        );
     // Run sequence via accumulate
-    Sequences.toList(sequence, new ArrayList<Integer>());
+    sequence.toList();
     Assert.assertEquals(1, effect1.get());
     Assert.assertEquals(2, effect2.get());
 
@@ -71,8 +55,8 @@ public class WithEffectSequenceTest
     // implements accumulate() via yielder().
     // "Limiting" a sequence of 3 elements with 4 to let effects be executed. If e. g. limit with 1 or 2, effects are
     // not executed.
-    Sequence<Integer> yieldingSequence = Sequences.limit(sequence, 4);
-    Sequences.toList(yieldingSequence, new ArrayList<Integer>());
+    Sequence<Integer> yieldingSequence = sequence.limit(4);
+    yieldingSequence.toList();
     Assert.assertEquals(3, effect1.get());
     Assert.assertEquals(4, effect2.get());
   }
@@ -81,26 +65,14 @@ public class WithEffectSequenceTest
   public void testEffectExecutedIfWrappedSequenceThrowsExceptionFromClose()
   {
     Sequence<Integer> baseSeq = Sequences.simple(Arrays.asList(1, 2, 3));
-    Sequence<Integer> throwingSeq = Sequences.withBaggage(baseSeq, new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        throw new RuntimeException();
-
-      }
+    Sequence<Integer> throwingSeq = baseSeq.withBaggage(() -> {
+      throw new RuntimeException();
     });
     final AtomicBoolean effectExecuted = new AtomicBoolean();
-    Sequence<Integer> seqWithEffect = Sequences.withEffect(throwingSeq, new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        effectExecuted.set(true);
-      }
-    }, MoreExecutors.sameThreadExecutor());
+    Sequence<Integer> seqWithEffect =
+        throwingSeq.withEffect(() -> effectExecuted.set(true), MoreExecutors.sameThreadExecutor());
     try {
-      Sequences.toList(seqWithEffect, new ArrayList<Integer>());
+      seqWithEffect.toList();
       Assert.fail("expected RuntimeException");
     }
     catch (RuntimeException e) {

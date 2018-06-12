@@ -20,10 +20,10 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -35,7 +35,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 public class Appenderators
@@ -93,25 +92,25 @@ public class Appenderators
         new DataSegmentAnnouncer()
         {
           @Override
-          public void announceSegment(DataSegment segment) throws IOException
+          public void announceSegment(DataSegment segment)
           {
             // Do nothing
           }
 
           @Override
-          public void unannounceSegment(DataSegment segment) throws IOException
+          public void unannounceSegment(DataSegment segment)
           {
             // Do nothing
           }
 
           @Override
-          public void announceSegments(Iterable<DataSegment> segments) throws IOException
+          public void announceSegments(Iterable<DataSegment> segments)
           {
             // Do nothing
           }
 
           @Override
-          public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+          public void unannounceSegments(Iterable<DataSegment> segments)
           {
             // Do nothing
           }

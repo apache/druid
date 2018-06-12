@@ -26,7 +26,6 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
@@ -54,8 +53,8 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
-    return Sequences.toList(queryResult, Lists.<T>newArrayList());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    return queryResult.toList();
   }
 
   public static Row createExpectedRow(final String timestamp, Object... vals)

@@ -24,7 +24,6 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -101,7 +100,7 @@ public class CachingIndexed<T> implements Indexed<T>, Closeable
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     if (cachedValues != null) {
       log.debug("Closing column cache");

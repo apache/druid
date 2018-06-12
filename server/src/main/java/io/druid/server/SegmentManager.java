@@ -22,8 +22,8 @@ package io.druid.server;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.common.guava.SettableSupplier;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.loading.SegmentLoader;
@@ -131,7 +131,7 @@ public class SegmentManager
                       .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getNumSegments()));
   }
 
-  public boolean isSegmentCached(final DataSegment segment) throws SegmentLoadingException
+  public boolean isSegmentCached(final DataSegment segment)
   {
     return segmentLoader.isSegmentLoaded(segment);
   }
@@ -196,12 +196,7 @@ public class SegmentManager
       adapter = segmentLoader.getSegment(segment);
     }
     catch (SegmentLoadingException e) {
-      try {
-        segmentLoader.cleanup(segment);
-      }
-      catch (SegmentLoadingException e1) {
-        e.addSuppressed(e1);
-      }
+      segmentLoader.cleanup(segment);
       throw e;
     }
 
@@ -211,7 +206,7 @@ public class SegmentManager
     return adapter;
   }
 
-  public void dropSegment(final DataSegment segment) throws SegmentLoadingException
+  public void dropSegment(final DataSegment segment)
   {
     final String dataSource = segment.getDataSource();
 

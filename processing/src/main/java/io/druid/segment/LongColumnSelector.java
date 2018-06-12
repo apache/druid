@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import javax.annotation.Nullable;
+
 /**
  * This interface is convenient for implementation of "long-sourcing" {@link ColumnValueSelector}s, it provides default
  * implementations for all {@link ColumnValueSelector}'s methods except {@link #getLong()}.
@@ -28,9 +30,6 @@ package io.druid.segment;
  */
 public interface LongColumnSelector extends ColumnValueSelector<Long>
 {
-  @Override
-  long getLong();
-
   /**
    * @deprecated This method is marked as deprecated in LongColumnSelector to minimize the probability of accidential
    * calling. "Polymorphism" of LongColumnSelector should be used only when operating on {@link ColumnValueSelector}
@@ -62,8 +61,12 @@ public interface LongColumnSelector extends ColumnValueSelector<Long>
    */
   @Deprecated
   @Override
+  @Nullable
   default Long getObject()
   {
+    if (isNull()) {
+      return null;
+    }
     return getLong();
   }
 

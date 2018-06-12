@@ -23,23 +23,23 @@ import com.google.common.base.Supplier;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.CachingIndexed;
+import io.druid.segment.data.ColumnarInts;
+import io.druid.segment.data.ColumnarMultiInts;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
 
 /**
 */
 public class DictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn>
 {
   private final GenericIndexed<String> dictionary;
-  private final Supplier<IndexedInts> singleValuedColumn;
-  private final Supplier<IndexedMultivalue<IndexedInts>> multiValuedColumn;
+  private final Supplier<ColumnarInts> singleValuedColumn;
+  private final Supplier<ColumnarMultiInts> multiValuedColumn;
   private final int lookupCacheSize;
 
   public DictionaryEncodedColumnSupplier(
       GenericIndexed<String> dictionary,
-      Supplier<IndexedInts> singleValuedColumn,
-      Supplier<IndexedMultivalue<IndexedInts>> multiValuedColumn,
+      Supplier<ColumnarInts> singleValuedColumn,
+      Supplier<ColumnarMultiInts> multiValuedColumn,
       int lookupCacheSize
   )
   {

@@ -35,10 +35,10 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryTest
 {
-  private static final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Parameterized.Parameters(name = "descending={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));
   }

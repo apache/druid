@@ -47,6 +47,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -198,10 +199,14 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
 
     return new Firehose()
     {
+      private Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
       {
+        if (nextIterator.hasNext()) {
+          return true;
+        }
         boolean hasMore = false;
         DruidPullRequest earliestPullRequest = null;
 
@@ -252,15 +257,19 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
       @Override
       public InputRow nextRow()
       {
+        if (nextIterator.hasNext()) {
+          return nextIterator.next();
+        }
+
         for (Map.Entry<MessageQueue, ConcurrentSkipListSet<MessageExt>> entry : messageQueueTreeSetMap.entrySet()) {
           if (!entry.getValue().isEmpty()) {
             MessageExt message = entry.getValue().pollFirst();
-            InputRow inputRow = theParser.parse(ByteBuffer.wrap(message.getBody()));
+            nextIterator = theParser.parseBatch(ByteBuffer.wrap(message.getBody())).iterator();
 
             windows
                 .computeIfAbsent(entry.getKey(), k -> new ConcurrentSkipListSet<>())
                 .add(message.getQueueOffset());
-            return inputRow;
+            return nextIterator.next();
           }
         }
 
@@ -301,7 +310,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         defaultMQPullConsumer.shutdown();
         pullMessageService.shutdown(false);

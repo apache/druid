@@ -20,7 +20,6 @@
 package io.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -28,13 +27,11 @@ import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
 import io.druid.benchmark.query.QueryBenchmarkUtil;
 import io.druid.collections.StupidPool;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogHash;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.FinalizeResultsQueryRunner;
@@ -71,6 +68,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -91,7 +89,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 // Benchmark for determining the interface overhead of TopN with multiple type implementations
@@ -107,9 +104,6 @@ public class TopNTypeInterfaceBenchmark
 
   @Param({"750000"})
   private int rowsPerSegment;
-
-  @Param({"basic.A"})
-  private String schemaAndQuery;
 
   @Param({"10"})
   private int threshold;
@@ -130,12 +124,11 @@ public class TopNTypeInterfaceBenchmark
   private TopNQuery longQuery;
   private TopNQuery floatQuery;
 
-  private ExecutorService executorService;
-
   static {
     JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -145,7 +138,7 @@ public class TopNTypeInterfaceBenchmark
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   private static final Map<String, Map<String, TopNQueryBuilder>> SCHEMA_QUERY_MAP = new LinkedHashMap<>();
@@ -242,8 +235,6 @@ public class TopNTypeInterfaceBenchmark
       ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
 
-    executorService = Execs.multiThreaded(numSegments, "TopNThreadPool");
-
     setupQueries();
 
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get("basic");
@@ -291,7 +282,8 @@ public class TopNTypeInterfaceBenchmark
       File indexFile = INDEX_MERGER_V9.persist(
           incIndexes.get(i),
           tmpFile,
-          new IndexSpec()
+          new IndexSpec(),
+          null
       );
 
       QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
@@ -329,13 +321,13 @@ public class TopNTypeInterfaceBenchmark
     );
 
     Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
-    return Sequences.toList(queryResult, Lists.<T>newArrayList());
+    return queryResult.toList();
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringOnly(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringOnly(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -352,7 +344,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringTwice(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringTwice(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -380,7 +372,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringThenLong(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringThenLong(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -408,7 +400,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexStringThenFloat(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexStringThenFloat(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -436,7 +428,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongOnly(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongOnly(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -453,7 +445,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongTwice(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongTwice(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -481,7 +473,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongThenString(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongThenString(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -509,7 +501,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexLongThenFloat(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexLongThenFloat(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -537,7 +529,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatOnly(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatOnly(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -554,7 +546,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatTwice(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatTwice(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -582,7 +574,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatThenString(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatThenString(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
@@ -610,7 +602,7 @@ public class TopNTypeInterfaceBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void querySingleQueryableIndexFloatThenLong(Blackhole blackhole) throws Exception
+  public void querySingleQueryableIndexFloatThenLong(Blackhole blackhole)
   {
     QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,

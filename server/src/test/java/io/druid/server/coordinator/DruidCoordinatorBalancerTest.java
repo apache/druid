@@ -38,7 +38,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -74,7 +73,7 @@ public class DruidCoordinatorBalancerTest
   private BalancerStrategy balancerStrategy;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     coordinator = EasyMock.createMock(DruidCoordinator.class);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
@@ -153,7 +152,7 @@ public class DruidCoordinatorBalancerTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     EasyMock.verify(coordinator);
     EasyMock.verify(druidServer1);
@@ -165,7 +164,7 @@ public class DruidCoordinatorBalancerTest
 
 
   @Test
-  public void testMoveToEmptyServerBalancer() throws IOException
+  public void testMoveToEmptyServerBalancer()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
     mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
@@ -198,7 +197,7 @@ public class DruidCoordinatorBalancerTest
   }
 
   @Test
-  public void testMoveSameSegmentTwice() throws Exception
+  public void testMoveSameSegmentTwice()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
     mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
@@ -222,7 +221,7 @@ public class DruidCoordinatorBalancerTest
     )
         .withBalancerStrategy(predefinedPickOrderStrategy)
         .withDynamicConfigs(
-            new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                 2
             ).build()
         )
@@ -233,7 +232,7 @@ public class DruidCoordinatorBalancerTest
   }
 
   @Test
-  public void testRun1() throws IOException
+  public void testRun1()
   {
     // Mock some servers of different usages
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
@@ -256,7 +255,7 @@ public class DruidCoordinatorBalancerTest
 
 
   @Test
-  public void testRun2() throws IOException
+  public void testRun2()
   {
     // Mock some servers of different usages
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
@@ -304,7 +303,7 @@ public class DruidCoordinatorBalancerTest
         )
         .withAvailableSegments(segments.values())
         .withDynamicConfigs(
-            new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                 MAX_SEGMENTS_TO_MOVE
             ).build()
         )

@@ -30,12 +30,12 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import io.druid.server.security.NoopEscalator;
-import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.table.DruidTable;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import io.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import io.druid.sql.calcite.util.TestServerInventoryView;
@@ -58,7 +58,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-public class DruidSchemaTest
+public class DruidSchemaTest extends CalciteTestBase
 {
   private static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
 
@@ -83,12 +83,10 @@ public class DruidSchemaTest
   @Before
   public void setUp() throws Exception
   {
-    Calcites.setSystemProperties();
-
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
-                                              .indexMerger(TestHelper.getTestIndexMergerV9())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(
@@ -104,7 +102,7 @@ public class DruidSchemaTest
 
     final QueryableIndex index2 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "2"))
-                                              .indexMerger(TestHelper.getTestIndexMergerV9())
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                               .schema(
                                                   new IncrementalIndexSchema.Builder()
                                                       .withMetrics(new LongSumAggregatorFactory("m1", "m1"))

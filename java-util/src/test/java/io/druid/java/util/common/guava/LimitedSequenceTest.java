@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.junit.Assert;
@@ -39,7 +38,7 @@ public class LimitedSequenceTest
     final List<Integer> nums = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     final int threshold = 5;
     SequenceTestHelper.testAll(
-        Sequences.limit(Sequences.simple(nums), threshold),
+        Sequences.simple(nums).limit(threshold),
         Lists.newArrayList(Iterables.limit(nums, threshold))
     );
   }
@@ -51,7 +50,7 @@ public class LimitedSequenceTest
     final int threshold = 2;
 
     SequenceTestHelper.testAll(
-        Sequences.limit(Sequences.simple(nums), threshold),
+        Sequences.simple(nums).limit(threshold),
         Lists.newArrayList(Iterables.limit(nums, threshold))
     );
   }
@@ -63,33 +62,25 @@ public class LimitedSequenceTest
     final int threshold = 1;
 
     SequenceTestHelper.testAll(
-        Sequences.limit(Sequences.simple(nums), threshold),
+        Sequences.simple(nums).limit(threshold),
         Lists.newArrayList(Iterables.limit(nums, threshold))
     );
   }
 
   @Test
-  public void testNoSideEffects() throws Exception
+  public void testNoSideEffects()
   {
     final List<Integer> nums = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     final AtomicLong accumulated = new AtomicLong(0);
-    final Sequence<Integer> seq = Sequences.limit(
-        Sequences.simple(
-            Iterables.transform(
-                nums,
-                new Function<Integer, Integer>()
-                {
-                  @Override
-                  public Integer apply(Integer input)
-                  {
-                    accumulated.addAndGet(input);
-                    return input;
-                  }
-                }
-            )
-        ),
-        5
-    );
+    final Sequence<Integer> seq = Sequences.simple(
+        Iterables.transform(
+            nums,
+            input -> {
+              accumulated.addAndGet(input);
+              return input;
+            }
+        )
+    ).limit(5);
 
     Assert.assertEquals(10, seq.accumulate(0, new IntAdditionAccumulator()).intValue());
     Assert.assertEquals(10, accumulated.get());

@@ -20,18 +20,24 @@
 package io.druid.metadata.storage.mysql;
 
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import io.druid.firehose.sql.MySQLFirehoseDatabaseConnector;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.guice.SQLMetadataStorageDruidModule;
 import io.druid.initialization.DruidModule;
+import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageProvider;
+import io.druid.metadata.MySQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.metadata.SQLMetadataConnector;
 
+import java.util.Collections;
 import java.util.List;
 
 public class MySQLMetadataStorageModule extends SQLMetadataStorageDruidModule implements DruidModule
@@ -46,13 +52,20 @@ public class MySQLMetadataStorageModule extends SQLMetadataStorageDruidModule im
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of();
+    return Collections.singletonList(
+        new SimpleModule()
+            .registerSubtypes(
+                new NamedType(MySQLFirehoseDatabaseConnector.class, "mysql")
+            )
+    );
   }
 
   @Override
   public void configure(Binder binder)
   {
     super.configure(binder);
+
+    JsonConfigProvider.bind(binder, "druid.metadata.mysql.ssl", MySQLConnectorConfig.class);
 
     PolyBind
         .optionBinder(binder, Key.get(MetadataStorageProvider.class))
@@ -71,5 +84,11 @@ public class MySQLMetadataStorageModule extends SQLMetadataStorageDruidModule im
         .addBinding(TYPE)
         .to(MySQLConnector.class)
         .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
+            .addBinding(TYPE)
+            .to(MySQLMetadataStorageActionHandlerFactory.class)
+            .in(LazySingleton.class);
+
   }
 }

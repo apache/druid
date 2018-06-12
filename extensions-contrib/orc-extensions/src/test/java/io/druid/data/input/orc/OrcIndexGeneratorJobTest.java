@@ -45,7 +45,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexIndexableAdapter;
-import io.druid.segment.Rowboat;
+import io.druid.segment.RowIterator;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.DataSegment;
@@ -85,7 +85,7 @@ import java.util.zip.ZipInputStream;
 
 public class OrcIndexGeneratorJobTest
 {
-  static private final AggregatorFactory[] aggs = {
+  private static final AggregatorFactory[] aggs = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
@@ -134,7 +134,8 @@ public class OrcIndexGeneratorJobTest
           new TimestampSpec("timestamp", "yyyyMMddHH", null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null)
       ),
-      "struct<timestamp:string,host:string,visited_num:int>"
+      "struct<timestamp:string,host:string,visited_num:int>",
+      null
   );
 
   private File writeDataToLocalOrcFile(File outputDir, List<String> data) throws IOException
@@ -221,6 +222,7 @@ public class OrcIndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 false,
                 false,
                 false,
@@ -233,6 +235,8 @@ public class OrcIndexGeneratorJobTest
                 null,
                 false,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -251,7 +255,7 @@ public class OrcIndexGeneratorJobTest
 
   private void verifyJob(IndexGeneratorJob job) throws IOException
   {
-    JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
 
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
@@ -306,11 +310,11 @@ public class OrcIndexGeneratorJobTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        for (Rowboat row: adapter.getRows()) {
-          Object[] metrics = row.getMetrics();
-
-          rowCount++;
-          Assert.assertTrue(metrics.length == 2);
+        try (RowIterator rowIt = adapter.getRows()) {
+          while (rowIt.moveToNext()) {
+            rowCount++;
+            Assert.assertEquals(2, rowIt.getPointer().getNumMetrics());
+          }
         }
       }
       Assert.assertEquals(rowCount, data.size());

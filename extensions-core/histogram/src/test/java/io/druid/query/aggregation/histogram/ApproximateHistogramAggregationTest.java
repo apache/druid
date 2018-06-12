@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
@@ -34,7 +33,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -60,7 +58,7 @@ public class ApproximateHistogramAggregationTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
@@ -140,6 +138,6 @@ public class ApproximateHistogramAggregationTest
         query
     );
 
-    return (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
+    return (MapBasedRow) seq.toList().get(0);
   }
 }

@@ -22,15 +22,14 @@ package io.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.Event;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import com.timgroup.statsd.NonBlockingStatsDClient;
 import com.timgroup.statsd.StatsDClient;
 import com.timgroup.statsd.StatsDClientErrorHandler;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -38,10 +37,10 @@ import java.util.Map;
 public class StatsDEmitter implements Emitter
 {
 
-  private final static Logger log = new Logger(StatsDEmitter.class);
-  private final static String DRUID_METRIC_SEPARATOR = "\\/";
-  private final static String STATSD_SEPARATOR = ":|\\|";
-  private final static String BLANK = "\\s+";
+  private static final Logger log = new Logger(StatsDEmitter.class);
+  private static final String DRUID_METRIC_SEPARATOR = "\\/";
+  private static final String STATSD_SEPARATOR = ":|\\|";
+  private static final String BLANK = "\\s+";
 
   static final StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
@@ -127,10 +126,10 @@ public class StatsDEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException {}
+  public void flush() {}
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     statsd.stop();
   }

@@ -31,6 +31,8 @@ import javax.validation.constraints.NotNull;
  */
 public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 {
+  // This default value is kept to take MM restart into consideration just in case it was
+  // restarted right after task assignment.
   @JsonProperty
   @NotNull
   private Period taskAssignmentTimeout = new Period("PT5M");
@@ -98,29 +100,14 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     return maxRetriesBeforeBlacklist;
   }
 
-  public void setMaxRetriesBeforeBlacklist(int maxRetriesBeforeBlacklist)
-  {
-    this.maxRetriesBeforeBlacklist = maxRetriesBeforeBlacklist;
-  }
-
   public Period getWorkerBlackListBackoffTime()
   {
     return workerBlackListBackoffTime;
   }
 
-  public void setWorkerBlackListBackoffTime(Period taskBlackListBackoffTime)
-  {
-    this.workerBlackListBackoffTime = taskBlackListBackoffTime;
-  }
-
   public Period getWorkerBlackListCleanupPeriod()
   {
     return workerBlackListCleanupPeriod;
-  }
-
-  public void setWorkerBlackListCleanupPeriod(Period workerBlackListCleanupPeriod)
-  {
-    this.workerBlackListCleanupPeriod = workerBlackListCleanupPeriod;
   }
 
   public int getMaxPercentageBlacklistWorkers()

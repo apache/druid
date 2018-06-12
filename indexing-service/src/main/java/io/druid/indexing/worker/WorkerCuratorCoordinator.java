@@ -117,7 +117,7 @@ public class WorkerCuratorCoordinator
   }
 
   @LifecycleStop
-  public void stop() throws Exception
+  public void stop()
   {
     log.info("Stopping WorkerCuratorCoordinator for worker[%s]", worker.getHost());
     synchronized (lock) {
@@ -171,7 +171,11 @@ public class WorkerCuratorCoordinator
       curatorFramework.delete().guaranteed().forPath(getTaskPathForId(taskId));
     }
     catch (KeeperException e) {
-      log.warn(e, "Could not delete task path for task[%s]", taskId);
+      log.debug(
+          e,
+          "Could not delete task path for task[%s]. This is not an error if httpRemote taskRunner is being used at overlord.",
+          taskId
+      );
     }
   }
 

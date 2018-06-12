@@ -22,12 +22,9 @@ package io.druid.sql.calcite.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.DateTimes;
-import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.ExprEval;
 import io.druid.math.expr.Parser;
 import io.druid.query.extraction.RegexDimExtractionFn;
-import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.segment.column.ValueType;
 import io.druid.server.security.AuthTestUtils;
 import io.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
@@ -43,6 +40,7 @@ import io.druid.sql.calcite.planner.Calcites;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.planner.PlannerContext;
 import io.druid.sql.calcite.table.RowSignature;
+import io.druid.sql.calcite.util.CalciteTestBase;
 import io.druid.sql.calcite.util.CalciteTests;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
@@ -66,9 +64,9 @@ import org.junit.Test;
 import java.math.BigDecimal;
 import java.util.Map;
 
-public class ExpressionsTest
+public class ExpressionsTest extends CalciteTestBase
 {
-  private static final DateTimeZone LOS_ANGELES = DateTimeZone.forID("America/Los_Angeles");
+  private static final DateTimeZone LOS_ANGELES = DateTimes.inferTzfromString("America/Los_Angeles");
 
   private final PlannerContext plannerContext = PlannerContext.create(
       CalciteTests.createOperatorTable(),
@@ -403,19 +401,7 @@ public class ExpressionsTest
             rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.TIMESTAMP)),
             rexBuilder.makeLiteral("America/Los_Angeles")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn(
-                    null,
-                    null,
-                    null,
-                    new PeriodGranularity(Period.days(1), null, LOS_ANGELES),
-                    true
-                )
-            ),
-            "timestamp_floor(\"t\",'P1D','','America/Los_Angeles')"
-        ),
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D','','America/Los_Angeles')"),
         DateTimes.of("2000-02-02T08:00:00").getMillis()
     );
   }
@@ -431,13 +417,7 @@ public class ExpressionsTest
             inputRef("t"),
             rexBuilder.makeFlag(TimeUnitRange.YEAR)
         ),
-        DruidExpression.of(
-            SimpleExtraction.of(
-                "t",
-                new TimeFormatExtractionFn(null, null, null, Granularities.YEAR, true)
-            ),
-            "timestamp_floor(\"t\",'P1Y','','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1Y','','UTC')"),
         DateTimes.of("2000").getMillis()
     );
   }
@@ -735,10 +715,7 @@ public class ExpressionsTest
             typeFactory.createSqlType(SqlTypeName.DATE),
             inputRef("t")
         ),
-        DruidExpression.of(
-            SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
-            "timestamp_floor(\"t\",'P1D','','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D','','UTC')"),
         DateTimes.of("2000-02-03").getMillis()
     );
 
@@ -779,10 +756,7 @@ public class ExpressionsTest
                 inputRef("t")
             )
         ),
-        DruidExpression.of(
-            SimpleExtraction.of("t", new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)),
-            "timestamp_floor(\"t\",'P1D','','UTC')"
-        ),
+        DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D','','UTC')"),
         DateTimes.of("2000-02-03").getMillis()
     );
   }

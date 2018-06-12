@@ -52,7 +52,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -138,11 +137,6 @@ public class CardinalityAggregatorTest
         public int get(int i)
         {
           return column.get(p)[i];
-        }
-
-        @Override
-        public void close() throws IOException
-        {
         }
 
         @Override
@@ -407,7 +401,7 @@ public class CardinalityAggregatorTest
   }
 
   @Test
-  public void testAggregateRows() throws Exception
+  public void testAggregateRows()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
         "billy",
@@ -424,7 +418,7 @@ public class CardinalityAggregatorTest
   }
 
   @Test
-  public void testAggregateValues() throws Exception
+  public void testAggregateValues()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
         "billy",
@@ -440,7 +434,7 @@ public class CardinalityAggregatorTest
   }
 
   @Test
-  public void testBufferAggregateRows() throws Exception
+  public void testBufferAggregateRows()
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
         dimInfoList.toArray(new ColumnSelectorPlus[] {}),
@@ -462,7 +456,7 @@ public class CardinalityAggregatorTest
   }
 
   @Test
-  public void testBufferAggregateValues() throws Exception
+  public void testBufferAggregateValues()
   {
     CardinalityBufferAggregator agg = new CardinalityBufferAggregator(
         dimInfoList.toArray(new ColumnSelectorPlus[] {}),
@@ -575,7 +569,7 @@ public class CardinalityAggregatorTest
   }
 
   @Test
-  public void testAggregateRowsWithExtraction() throws Exception
+  public void testAggregateRowsWithExtraction()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
         "billy",
@@ -599,7 +593,7 @@ public class CardinalityAggregatorTest
   }
 
   @Test
-  public void testAggregateValuesWithExtraction() throws Exception
+  public void testAggregateValuesWithExtraction()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
         "billy",

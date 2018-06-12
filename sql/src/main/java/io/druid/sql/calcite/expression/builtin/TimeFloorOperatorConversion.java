@@ -21,10 +21,12 @@ package io.druid.sql.calcite.expression.builtin;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
+import io.druid.math.expr.ExprMacroTable;
+import io.druid.query.expression.TimestampFloorExprMacro;
 import io.druid.sql.calcite.expression.DruidExpression;
 import io.druid.sql.calcite.expression.Expressions;
-import io.druid.sql.calcite.expression.ExtractionFns;
 import io.druid.sql.calcite.expression.OperatorConversions;
 import io.druid.sql.calcite.expression.SqlOperatorConversion;
 import io.druid.sql.calcite.planner.Calcites;
@@ -44,6 +46,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class TimeFloorOperatorConversion implements SqlOperatorConversion
@@ -58,26 +61,50 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
 
   public static DruidExpression applyTimestampFloor(
       final DruidExpression input,
-      final PeriodGranularity granularity
+      final PeriodGranularity granularity,
+      final ExprMacroTable macroTable
   )
   {
     Preconditions.checkNotNull(input, "input");
     Preconditions.checkNotNull(granularity, "granularity");
 
-    return input.map(
-        simpleExtraction -> simpleExtraction.cascade(ExtractionFns.fromQueryGranularity(granularity)),
-        expression -> DruidExpression.functionCall(
-            "timestamp_floor",
-            ImmutableList.of(
-                expression,
-                DruidExpression.stringLiteral(granularity.getPeriod().toString()),
-                DruidExpression.numberLiteral(
-                    granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
-                ),
-                DruidExpression.stringLiteral(granularity.getTimeZone().toString())
-            ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
-        )
+    // Collapse floor chains if possible. Useful for constructs like CAST(FLOOR(__time TO QUARTER) AS DATE).
+    if (granularity.getPeriod().equals(Period.days(1))) {
+      final TimestampFloorExprMacro.TimestampFloorExpr floorExpr = Expressions.asTimestampFloorExpr(
+          input,
+          macroTable
+      );
+
+      if (floorExpr != null) {
+        final PeriodGranularity inputGranularity = floorExpr.getGranularity();
+        if (Objects.equals(inputGranularity.getTimeZone(), granularity.getTimeZone())
+            && Objects.equals(inputGranularity.getOrigin(), granularity.getOrigin())
+            && periodIsDayMultiple(inputGranularity.getPeriod())) {
+          return input;
+        }
+      }
+    }
+
+    return DruidExpression.fromFunctionCall(
+        "timestamp_floor",
+        ImmutableList.of(
+            input.getExpression(),
+            DruidExpression.stringLiteral(granularity.getPeriod().toString()),
+            DruidExpression.numberLiteral(
+                granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
+            ),
+            DruidExpression.stringLiteral(granularity.getTimeZone().toString())
+        ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
     );
+  }
+
+  private static boolean periodIsDayMultiple(final Period period)
+  {
+    return period.getMillis() == 0
+           && period.getSeconds() == 0
+           && period.getMinutes() == 0
+           && period.getHours() == 0
+           && (period.getDays() > 0 || period.getWeeks() > 0 || period.getMonths() > 0 || period.getYears() > 0);
   }
 
   @Override
@@ -114,10 +141,10 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
           : null;
       final DateTimeZone timeZone =
           operands.size() > 3 && !RexLiteral.isNullLiteral(operands.get(3))
-          ? DateTimeZone.forID(RexLiteral.stringValue(operands.get(3)))
+          ? DateTimes.inferTzfromString(RexLiteral.stringValue(operands.get(3)))
           : plannerContext.getTimeZone();
       final PeriodGranularity granularity = new PeriodGranularity(period, origin, timeZone);
-      return applyTimestampFloor(druidExpressions.get(0), granularity);
+      return applyTimestampFloor(druidExpressions.get(0), granularity, plannerContext.getExprMacroTable());
     } else {
       // Granularity is dynamic
       return DruidExpression.fromFunctionCall("timestamp_floor", druidExpressions);

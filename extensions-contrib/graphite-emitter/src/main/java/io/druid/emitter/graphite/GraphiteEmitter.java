@@ -23,13 +23,12 @@ import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteSender;
 import com.codahale.metrics.graphite.PickledGraphite;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.emitter.core.Emitter;
-import com.metamx.emitter.core.Event;
-import com.metamx.emitter.service.AlertEvent;
-import com.metamx.emitter.service.ServiceMetricEvent;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.emitter.service.AlertEvent;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.server.log.EmittingRequestLogger;
 
 import java.io.IOException;
@@ -218,7 +217,7 @@ public class GraphiteEmitter implements Emitter
   }
 
   @Override
-  public void flush() throws IOException
+  public void flush()
   {
     if (started.get()) {
       Future future = exec.schedule(new ConsumerRunnable(), 0, TimeUnit.MILLISECONDS);
@@ -236,7 +235,7 @@ public class GraphiteEmitter implements Emitter
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     flush();
     started.set(false);

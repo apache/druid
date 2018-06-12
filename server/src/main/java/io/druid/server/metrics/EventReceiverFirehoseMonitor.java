@@ -22,11 +22,11 @@ package io.druid.server.metrics;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-import com.metamx.metrics.AbstractMonitor;
-import com.metamx.metrics.KeyedDiff;
-import com.metamx.metrics.MonitorUtils;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.metrics.AbstractMonitor;
+import io.druid.java.util.metrics.KeyedDiff;
+import io.druid.java.util.metrics.MonitorUtils;
 import io.druid.query.DruidMetrics;
 
 import java.util.Map;
@@ -48,7 +48,7 @@ public class EventReceiverFirehoseMonitor extends AbstractMonitor
     this.register = eventReceiverFirehoseRegister;
     this.dimensions = MonitorsConfig.extractDimensions(
         props,
-        Lists.newArrayList(DruidMetrics.DATASOURCE, DruidMetrics.TASK_ID)
+        Lists.newArrayList(DruidMetrics.DATASOURCE, DruidMetrics.TASK_ID, DruidMetrics.TASK_TYPE)
     );
   }
 

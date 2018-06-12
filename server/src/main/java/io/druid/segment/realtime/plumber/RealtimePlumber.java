@@ -30,14 +30,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.common.utils.VMUtils;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
@@ -46,9 +43,12 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.concurrent.ScheduledExecutors;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.io.Closer;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -61,9 +61,11 @@ import io.druid.segment.Metadata;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.FireHydrant;
@@ -207,22 +209,25 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
-  public int add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
   {
     long messageTimestamp = row.getTimestampFromEpoch();
     final Sink sink = getSink(messageTimestamp);
     metrics.reportMessageMaxTimestamp(messageTimestamp);
     if (sink == null) {
-      return -1;
+      return Plumber.THROWAWAY;
     }
 
-    final int numRows = sink.add(row);
+    final IncrementalIndexAddResult addResult = sink.add(row, false);
+    if (config.isReportParseExceptions() && addResult.getParseException() != null) {
+      throw addResult.getParseException();
+    }
 
     if (!sink.canAppendRow() || System.currentTimeMillis() > nextFlush) {
       persist(committerSupplier.get());
     }
 
-    return numRows;
+    return addResult;
   }
 
   private Sink getSink(long timestamp)
@@ -251,7 +256,9 @@ public class RealtimePlumber implements Plumber
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
-          config.isReportParseExceptions()
+          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
+          config.isReportParseExceptions(),
+          config.getDedupColumn()
       );
       addSink(retVal);
 
@@ -422,13 +429,13 @@ public class RealtimePlumber implements Plumber
                   closer.register(segmentAndCloseable.rhs);
                 }
 
-
                 mergedFile = indexMerger.mergeQueryableIndex(
                     indexes,
                     schema.getGranularitySpec().isRollup(),
                     schema.getAggregators(),
                     mergedTarget,
-                    config.getIndexSpec()
+                    config.getIndexSpec(),
+                    config.getSegmentWriteOutMediumFactory()
                 );
               }
               catch (Throwable t) {
@@ -446,7 +453,8 @@ public class RealtimePlumber implements Plumber
 
               DataSegment segment = dataSegmentPusher.push(
                   mergedFile,
-                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes))
+                  sink.getSegment().withDimensions(IndexMerger.getMergedDimensionsFromQueryableIndexes(indexes)),
+                  false
               );
               log.info("Inserting [%s] to the metadata store", sink.getSegment().getIdentifier());
               segmentPublisher.publishSegment(segment);
@@ -501,6 +509,7 @@ public class RealtimePlumber implements Plumber
     shuttingDown = true;
 
     for (final Map.Entry<Long, Sink> entry : sinks.entrySet()) {
+      entry.getValue().clearDedupCache();
       persistAndMerge(entry.getKey(), entry.getValue());
     }
 
@@ -724,7 +733,9 @@ public class RealtimePlumber implements Plumber
           config.getShardSpec(),
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
+          TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),
+          config.getDedupColumn(),
           hydrants
       );
       addSink(currSink);
@@ -749,6 +760,7 @@ public class RealtimePlumber implements Plumber
          .addData("interval", sink.getInterval())
          .emit();
     }
+    clearDedupCache();
   }
 
   protected void startPersistThread()
@@ -803,16 +815,33 @@ public class RealtimePlumber implements Plumber
     ScheduledExecutors.scheduleAtFixedRate(scheduledExecutor, initialDelay, rate, threadRenamingCallable);
   }
 
-  private void mergeAndPush()
+  private void clearDedupCache()
+  {
+    long minTimestamp = getAllowedMinTime().getMillis();
+
+    for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
+      final Long intervalStart = entry.getKey();
+      if (intervalStart < minTimestamp) {
+        entry.getValue().clearDedupCache();
+      }
+    }
+  }
+
+  private DateTime getAllowedMinTime()
   {
     final Granularity segmentGranularity = schema.getGranularitySpec().getSegmentGranularity();
     final Period windowPeriod = config.getWindowPeriod();
 
     final long windowMillis = windowPeriod.toStandardDuration().getMillis();
-    log.info("Starting merge and push.");
-    DateTime minTimestampAsDate = segmentGranularity.bucketStart(
+    return segmentGranularity.bucketStart(
         DateTimes.utc(Math.max(windowMillis, rejectionPolicy.getCurrMaxTime().getMillis()) - windowMillis)
     );
+  }
+
+  private void mergeAndPush()
+  {
+    log.info("Starting merge and push.");
+    DateTime minTimestampAsDate = getAllowedMinTime();
     long minTimestamp = minTimestampAsDate.getMillis();
 
     log.info(
@@ -827,6 +856,7 @@ public class RealtimePlumber implements Plumber
       if (intervalStart < minTimestamp) {
         log.info("Adding entry [%s] for merge and push.", entry);
         sinksToPush.add(entry);
+        entry.getValue().clearDedupCache();
       } else {
         log.info(
             "Skipping persist and merge for entry [%s] : Start time [%s] >= [%s] min timestamp required in this run. Segment will be picked up in a future run.",
@@ -942,7 +972,8 @@ public class RealtimePlumber implements Plumber
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            indexSpec
+            indexSpec,
+            config.getSegmentWriteOutMediumFactory()
         );
 
         indexToPersist.swapSegment(

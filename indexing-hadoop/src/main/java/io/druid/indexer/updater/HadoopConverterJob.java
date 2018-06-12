@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
@@ -140,7 +139,7 @@ public class HadoopConverterJob
     return new Path(getJobPath(jobID, workingDirectory), taskAttemptID.toString());
   }
 
-  public static Path getJobClassPathDir(String jobName, Path workingDirectory) throws IOException
+  public static Path getJobClassPathDir(String jobName, Path workingDirectory)
   {
     return new Path(workingDirectory, jobName.replace(":", ""));
   }
@@ -384,18 +383,18 @@ public class HadoopConverterJob
     private static final Logger log = new Logger(ConvertingOutputFormat.class);
 
     @Override
-    public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context) throws IOException, InterruptedException
+    public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context)
     {
       return new RecordWriter<Text, Text>()
       {
         @Override
-        public void write(Text key, Text value) throws IOException, InterruptedException
+        public void write(Text key, Text value)
         {
           // NOOP
         }
 
         @Override
-        public void close(TaskAttemptContext context) throws IOException, InterruptedException
+        public void close(TaskAttemptContext context)
         {
           // NOOP
         }
@@ -403,31 +402,30 @@ public class HadoopConverterJob
     }
 
     @Override
-    public void checkOutputSpecs(JobContext context) throws IOException, InterruptedException
+    public void checkOutputSpecs(JobContext context)
     {
       // NOOP
     }
 
     @Override
     public OutputCommitter getOutputCommitter(final TaskAttemptContext context)
-        throws IOException, InterruptedException
     {
       return new OutputCommitter()
       {
         @Override
-        public void setupJob(JobContext jobContext) throws IOException
+        public void setupJob(JobContext jobContext)
         {
           // NOOP
         }
 
         @Override
-        public void setupTask(TaskAttemptContext taskContext) throws IOException
+        public void setupTask(TaskAttemptContext taskContext)
         {
           // NOOP
         }
 
         @Override
-        public boolean needsTaskCommit(TaskAttemptContext taskContext) throws IOException
+        public boolean needsTaskCommit(TaskAttemptContext taskContext)
         {
           return taskContext.getConfiguration().get(PUBLISHED_SEGMENT_KEY) != null;
         }
@@ -473,7 +471,7 @@ public class HadoopConverterJob
         }
 
         @Override
-        public void abortTask(TaskAttemptContext taskContext) throws IOException
+        public void abortTask(TaskAttemptContext taskContext)
         {
           log.warn("Aborting task. Nothing to clean up.");
         }
@@ -535,7 +533,8 @@ public class HadoopConverterJob
             inDir,
             outDir,
             config.getIndexSpec(),
-            JobHelper.progressIndicatorForContext(context)
+            JobHelper.progressIndicatorForContext(context),
+            null
         );
       }
       catch (Exception e) {
@@ -594,7 +593,7 @@ public class HadoopConverterJob
     }
 
     @Override
-    protected void setup(Context context) throws IOException, InterruptedException
+    protected void setup(Context context)
     {
       final File tmpFile = Files.createTempDir();
       context.getConfiguration().set(TMP_FILE_LOC_KEY, tmpFile.getAbsolutePath());
@@ -603,7 +602,7 @@ public class HadoopConverterJob
     @Override
     protected void cleanup(
         Context context
-    ) throws IOException, InterruptedException
+    ) throws IOException
     {
       final String tmpDirLoc = context.getConfiguration().get(TMP_FILE_LOC_KEY);
       final File tmpDir = Paths.get(tmpDirLoc).toFile();
@@ -616,7 +615,7 @@ public class HadoopConverterJob
   public static class ConfigInputFormat extends InputFormat<String, String>
   {
     @Override
-    public List<InputSplit> getSplits(final JobContext jobContext) throws IOException, InterruptedException
+    public List<InputSplit> getSplits(final JobContext jobContext) throws IOException
     {
       final HadoopDruidConverterConfig config = converterConfigFromConfiguration(jobContext.getConfiguration());
       final List<DataSegment> segments = config.getSegments();
@@ -639,7 +638,7 @@ public class HadoopConverterJob
     @Override
     public RecordReader<String, String> createRecordReader(
         final InputSplit inputSplit, final TaskAttemptContext taskAttemptContext
-    ) throws IOException, InterruptedException
+    )
     {
       return new RecordReader<String, String>()
       {
@@ -647,38 +646,37 @@ public class HadoopConverterJob
 
         @Override
         public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
-            throws IOException, InterruptedException
         {
           // NOOP
         }
 
         @Override
-        public boolean nextKeyValue() throws IOException, InterruptedException
+        public boolean nextKeyValue()
         {
           return !readAnything;
         }
 
         @Override
-        public String getCurrentKey() throws IOException, InterruptedException
+        public String getCurrentKey()
         {
           return "key";
         }
 
         @Override
-        public String getCurrentValue() throws IOException, InterruptedException
+        public String getCurrentValue()
         {
           readAnything = true;
           return "fakeValue";
         }
 
         @Override
-        public float getProgress() throws IOException, InterruptedException
+        public float getProgress()
         {
           return readAnything ? 0.0F : 1.0F;
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
           // NOOP
         }

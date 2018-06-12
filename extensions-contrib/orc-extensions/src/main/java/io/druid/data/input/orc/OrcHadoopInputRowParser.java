@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.InputRow;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
@@ -55,26 +57,39 @@ import java.util.stream.Collectors;
 
 public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
 {
+
+  static final String MAP_CHILD_TAG = "<CHILD>";
+  static final String MAP_PARENT_TAG = "<PARENT>";
+  static final String DEFAULT_MAP_FIELD_NAME_FORMAT = MAP_PARENT_TAG + "_" + MAP_CHILD_TAG;
+
+
   private final ParseSpec parseSpec;
   private final String typeString;
+  private final String mapFieldNameFormat;
+  private final String mapParentFieldNameFormat;
   private final List<String> dimensions;
   private final StructObjectInspector oip;
+
+
 
   @JsonCreator
   public OrcHadoopInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("typeString") String typeString
+      @JsonProperty("typeString") String typeString,
+      @JsonProperty("mapFieldNameFormat") String mapFieldNameFormat
   )
   {
     this.parseSpec = parseSpec;
     this.typeString = typeString == null ? typeStringFromParseSpec(parseSpec) : typeString;
+    this.mapFieldNameFormat = mapFieldNameFormat == null || mapFieldNameFormat.indexOf(MAP_PARENT_TAG) < 0 || mapFieldNameFormat.indexOf(MAP_CHILD_TAG) < 0 ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
+    this.mapParentFieldNameFormat = this.mapFieldNameFormat.replace(MAP_PARENT_TAG, "%s");
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.oip = makeObjectInspector(this.typeString);
   }
 
   @SuppressWarnings("ArgumentParameterSwap")
   @Override
-  public InputRow parse(OrcStruct input)
+  public List<InputRow> parseBatch(OrcStruct input)
   {
     Map<String, Object> map = Maps.newHashMap();
     List<? extends StructField> fields = oip.getAllStructFieldRefs();
@@ -98,6 +113,10 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
               getListObject(listObjectInspector, oip.getStructFieldData(input, field))
           );
           break;
+        case MAP:
+          MapObjectInspector mapObjectInspector = (MapObjectInspector) objectInspector;
+          getMapObject(field.getFieldName(), mapObjectInspector, oip.getStructFieldData(input, field), map);
+          break;
         default:
           break;
       }
@@ -106,7 +125,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
     DateTime dateTime = timestampSpec.extractTimestamp(map);
 
-    return new MapBasedInputRow(dateTime, dimensions, map);
+    return ImmutableList.of(new MapBasedInputRow(dateTime, dimensions, map));
   }
 
   private List getListObject(ListObjectInspector listObjectInspector, Object listObject)
@@ -131,6 +150,29 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     return list;
   }
 
+  private void getMapObject(String parentName, MapObjectInspector mapObjectInspector, Object mapObject, Map<String, Object> parsedMap)
+  {
+    if (mapObjectInspector.getMapSize(mapObject) < 0) {
+      return;
+    }
+    String mapChildFieldNameFormat = StringUtils.format(mapParentFieldNameFormat, parentName).replace(MAP_CHILD_TAG, "%s");
+
+    Map objectMap = mapObjectInspector.getMap(mapObject);
+    PrimitiveObjectInspector key = (PrimitiveObjectInspector) mapObjectInspector.getMapKeyObjectInspector();
+    PrimitiveObjectInspector value = (PrimitiveObjectInspector) mapObjectInspector.getMapValueObjectInspector();
+
+    objectMap.forEach((k, v) -> {
+      String resolvedFieldName = StringUtils.format(mapChildFieldNameFormat, key.getPrimitiveJavaObject(k).toString());
+      parsedMap.put(resolvedFieldName, value.getPrimitiveJavaObject(v));
+    });
+  }
+
+  @JsonProperty
+  public String getMapFieldNameFormat()
+  {
+    return mapFieldNameFormat;
+  }
+
   @Override
   @JsonProperty
   public ParseSpec getParseSpec()
@@ -147,7 +189,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new OrcHadoopInputRowParser(parseSpec, typeString);
+    return new OrcHadoopInputRowParser(parseSpec, typeString, null);
   }
 
   @Override

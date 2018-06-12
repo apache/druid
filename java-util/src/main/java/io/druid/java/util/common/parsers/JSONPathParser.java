@@ -21,9 +21,7 @@ package io.druid.java.util.common.parsers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 
-import java.nio.charset.CharsetEncoder;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +31,6 @@ import java.util.Map;
 public class JSONPathParser implements Parser<String, Object>
 {
   private final ObjectMapper mapper;
-  private final CharsetEncoder enc = Charsets.UTF_8.newEncoder();
   private final ObjectFlattener<JsonNode> flattener;
 
   /**
@@ -67,7 +64,7 @@ public class JSONPathParser implements Parser<String, Object>
    * @return A map of field names and values
    */
   @Override
-  public Map<String, Object> parse(String input)
+  public Map<String, Object> parseToMap(String input)
   {
     try {
       JsonNode document = mapper.readValue(input, JsonNode.class);

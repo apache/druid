@@ -22,8 +22,8 @@ package io.druid.server.coordinator.cost;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.DruidServer;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.coordinator.CachingCostBalancerStrategy;
 import io.druid.server.coordinator.CostBalancerStrategy;
@@ -58,7 +58,7 @@ public class CachingCostBalancerStrategyTest
   private ListeningExecutorService executorService;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     Random random = new Random(0);
     DateTime referenceTime = DateTimes.of("2014-01-01T00:00:00");
@@ -82,13 +82,13 @@ public class CachingCostBalancerStrategyTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     executorService.shutdownNow();
   }
 
   @Test
-  public void decisionTest() throws Exception
+  public void decisionTest()
   {
     CachingCostBalancerStrategy cachingCostBalancerStrategy = createCachingCostBalancerStrategy(
         serverHolderList,

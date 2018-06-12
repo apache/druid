@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.primitives.Longs;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.TestHelper;
 import org.easymock.EasyMock;
@@ -42,7 +41,7 @@ public class LongMinAggregationTest
   public LongMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"longMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    longMinAggFactory = TestHelper.getJsonMapper().readValue(aggSpecJson, LongMinAggregatorFactory.class);
+    longMinAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, LongMinAggregatorFactory.class);
   }
 
   @Before
@@ -67,9 +66,6 @@ public class LongMinAggregationTest
     Assert.assertEquals(values[2], ((Long) agg.get()).longValue());
     Assert.assertEquals(values[2], agg.getLong());
     Assert.assertEquals((float) values[2], agg.getFloat(), 0.0001);
-
-    agg.reset();
-    Assert.assertEquals(Long.MAX_VALUE, agg.getLong());
   }
 
   @Test
@@ -77,7 +73,7 @@ public class LongMinAggregationTest
   {
     LongMinBufferAggregator agg = (LongMinBufferAggregator) longMinAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Longs.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -97,7 +93,7 @@ public class LongMinAggregationTest
   }
 
   @Test
-  public void testEqualsAndHashCode() throws Exception
+  public void testEqualsAndHashCode()
   {
     LongMinAggregatorFactory one = new LongMinAggregatorFactory("name1", "fieldName1");
     LongMinAggregatorFactory oneMore = new LongMinAggregatorFactory("name1", "fieldName1");

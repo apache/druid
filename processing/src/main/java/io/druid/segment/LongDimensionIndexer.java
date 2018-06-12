@@ -21,26 +21,39 @@ package io.druid.segment;
 
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.common.config.NullHandling;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.TimeAndDimsHolder;
+import io.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
+  public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
 
   @Override
-  public Long processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
+  public Long processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToLong(dimValues);
+    Long ret = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
+    // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
+    return ret == null ? DimensionHandlerUtils.ZERO_LONG : ret;
+  }
+
+  @Override
+  public long estimateEncodedKeyComponentSize(Long key)
+  {
+    return Long.BYTES;
   }
 
   @Override
@@ -76,7 +89,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -85,20 +98,29 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
     final int dimIndex = desc.getIndex();
     class IndexerLongColumnSelector implements LongColumnSelector
     {
+
+      @Override
+      public boolean isNull()
+      {
+        final Object[] dims = currEntry.get().getDims();
+        return dimIndex >= dims.length || dims[dimIndex] == null;
+      }
+
       @Override
       public long getLong()
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
-          return 0L;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          assert NullHandling.replaceWithDefault();
+          return 0;
         }
 
         return (Long) dims[dimIndex];
@@ -131,13 +153,13 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public int compareUnsortedEncodedKeyComponents(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return DimensionHandlerUtils.nullToZero(lhs).compareTo(DimensionHandlerUtils.nullToZero(rhs));
+    return LONG_COMPARATOR.compare(lhs, rhs);
   }
 
   @Override
   public boolean checkUnsortedEncodedKeyComponentsEqual(@Nullable Long lhs, @Nullable Long rhs)
   {
-    return DimensionHandlerUtils.nullToZero(lhs).equals(DimensionHandlerUtils.nullToZero(rhs));
+    return Objects.equals(lhs, rhs);
   }
 
   @Override
@@ -153,9 +175,9 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public Long convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(Long key)
+  public ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues)
   {
-    return key;
+    return selectorWithUnsortedValues;
   }
 
   @Override

@@ -37,7 +37,7 @@ import org.junit.Test;
  */
 public class PeriodLoadRuleTest
 {
-  private final static DataSegment.Builder builder = DataSegment.builder()
+  private static final DataSegment.Builder builder = DataSegment.builder()
                                                             .dataSource("test")
                                                             .version(DateTimes.nowUtc().toString())
                                                             .shardSpec(NoneShardSpec.instance());
@@ -79,6 +79,31 @@ public class PeriodLoadRuleTest
                        .build(),
             now
         )
+    );
+  }
+
+  @Test
+  public void testAppliesToPartialOverlap()
+  {
+    DateTime now = DateTimes.of("2012-12-31T01:00:00");
+    PeriodLoadRule rule = new PeriodLoadRule(
+            new Period("P1M"),
+            ImmutableMap.<String, Integer>of("", 0)
+    );
+
+    Assert.assertTrue(
+            rule.appliesTo(
+                    builder.interval(new Interval(now.minusWeeks(1), now.plusWeeks(1))).build(),
+                    now
+            )
+    );
+    Assert.assertTrue(
+            rule.appliesTo(
+                    builder.interval(
+                            new Interval(now.minusMonths(1).minusWeeks(1), now.minusMonths(1).plusWeeks(1))
+                    ).build(),
+                    now
+            )
     );
   }
 

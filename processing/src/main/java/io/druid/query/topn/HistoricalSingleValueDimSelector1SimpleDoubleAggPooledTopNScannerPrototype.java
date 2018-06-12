@@ -34,6 +34,19 @@ public class HistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopNScannerPr
         SimpleDoubleBufferAggregator
     >
 {
+  /**
+   * Any changes to this method should be coordinated with {@link TopNUtils}, {@link
+   * PooledTopNAlgorithm#computeSpecializedScanAndAggregateImplementations} and downstream methods.
+   *
+   * It should be checked with a tool like https://github.com/AdoptOpenJDK/jitwatch that C2 compiler output for this
+   * method doesn't have any method calls in the while loop, i. e. all method calls are inlined. To be able to see
+   * assembly of this method in JITWatch and other similar tools, {@link
+   * PooledTopNAlgorithm#specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN} should be turned off.
+   * Note that in this case the benchmark should be "naturally monomorphic", i. e. execute this method always with the
+   * same runtime shape.
+   *
+   * If the while loop contains not inlined method calls, it should be considered as a performance bug.
+   */
   @Override
   public long scanAndAggregate(
       SingleValueHistoricalDimensionSelector dimensionSelector,

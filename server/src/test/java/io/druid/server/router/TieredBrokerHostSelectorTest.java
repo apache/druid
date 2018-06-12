@@ -69,7 +69,7 @@ public class TieredBrokerHostSelectorTest
   private DiscoveryDruidNode node3;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
 
@@ -107,7 +107,7 @@ public class TieredBrokerHostSelectorTest
     };
 
     EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER))
-            .andReturn(druidNodeDiscovery);;
+            .andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscoveryProvider);
 
@@ -141,7 +141,7 @@ public class TieredBrokerHostSelectorTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     brokerSelector.stop();
 
@@ -149,7 +149,7 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
-  public void testBasicSelect() throws Exception
+  public void testBasicSelect()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
@@ -173,7 +173,7 @@ public class TieredBrokerHostSelectorTest
 
 
   @Test
-  public void testBasicSelect2() throws Exception
+  public void testBasicSelect2()
   {
     Pair<String, Server> p = brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
@@ -189,7 +189,7 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
-  public void testSelectMatchesNothing() throws Exception
+  public void testSelectMatchesNothing()
   {
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
@@ -204,7 +204,7 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
-  public void testSelectMultiInterval() throws Exception
+  public void testSelectMultiInterval()
   {
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
@@ -225,7 +225,7 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
-  public void testSelectMultiInterval2() throws Exception
+  public void testSelectMultiInterval2()
   {
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
@@ -246,7 +246,7 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
-  public void testPrioritySelect() throws Exception
+  public void testPrioritySelect()
   {
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
@@ -269,7 +269,7 @@ public class TieredBrokerHostSelectorTest
   }
 
   @Test
-  public void testPrioritySelect2() throws Exception
+  public void testPrioritySelect2()
   {
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()

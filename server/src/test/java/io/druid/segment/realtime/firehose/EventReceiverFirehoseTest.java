@@ -21,7 +21,6 @@ package io.druid.segment.realtime.firehose;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
@@ -29,6 +28,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import io.druid.server.security.AllowAllAuthenticator;
@@ -70,7 +70,7 @@ public class EventReceiverFirehoseTest
   private HttpServletRequest req;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     req = EasyMock.createMock(HttpServletRequest.class);
     eventReceiverFirehoseFactory = new EventReceiverFirehoseFactory(
@@ -144,6 +144,7 @@ public class EventReceiverFirehoseTest
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -211,7 +212,7 @@ public class EventReceiverFirehoseTest
   }
 
   @Test(expected = ISE.class)
-  public void testDuplicateRegistering() throws IOException
+  public void testDuplicateRegistering()
   {
     EventReceiverFirehoseFactory eventReceiverFirehoseFactory2 = new EventReceiverFirehoseFactory(
         SERVICE_NAME,
@@ -246,6 +247,7 @@ public class EventReceiverFirehoseTest
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -265,6 +267,7 @@ public class EventReceiverFirehoseTest
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();
@@ -403,6 +406,7 @@ public class EventReceiverFirehoseTest
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
             .anyTimes();

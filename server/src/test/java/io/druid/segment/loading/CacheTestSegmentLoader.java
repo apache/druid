@@ -25,11 +25,9 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.timeline.DataSegment;
-
 import org.joda.time.Interval;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -42,14 +40,14 @@ public class CacheTestSegmentLoader implements SegmentLoader
   private final Set<DataSegment> segmentsInTrash = new HashSet<>();
 
   @Override
-  public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException
+  public boolean isSegmentLoaded(DataSegment segment)
   {
     Map<String, Object> loadSpec = segment.getLoadSpec();
     return new File(MapUtils.getString(loadSpec, "cacheDir")).exists();
   }
 
   @Override
-  public Segment getSegment(final DataSegment segment) throws SegmentLoadingException
+  public Segment getSegment(final DataSegment segment)
   {
     return new AbstractSegment()
     {
@@ -78,20 +76,20 @@ public class CacheTestSegmentLoader implements SegmentLoader
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
       }
     };
   }
 
   @Override
-  public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException
+  public File getSegmentFiles(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void cleanup(DataSegment segment) throws SegmentLoadingException
+  public void cleanup(DataSegment segment)
   {
     segmentsInTrash.add(segment);
   }

@@ -19,7 +19,6 @@
 
 package io.druid.segment.realtime.firehose;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.collections.spatial.search.RadiusBound;
@@ -48,16 +47,24 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import io.druid.segment.transform.TransformSpec;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import io.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class IngestSegmentFirehoseTest
 {
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
@@ -88,11 +95,26 @@ public class IngestSegmentFirehoseTest
       new HyperUniquesAggregatorFactory("unique_hosts", "unique_hosts")
   );
 
+  @Parameterized.Parameters
+  public static Collection<?> constructorFeeder()
+  {
+    return ImmutableList.of(
+        new Object[] {TmpFileSegmentWriteOutMediumFactory.instance()},
+        new Object[] {OffHeapMemorySegmentWriteOutMediumFactory.instance()}
+    );
+  }
+
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  private IndexIO indexIO = TestHelper.getTestIndexIO();
-  private IndexMerger indexMerger = TestHelper.getTestIndexMergerV9();
+  private final IndexIO indexIO;
+  private final IndexMerger indexMerger;
+
+  public IngestSegmentFirehoseTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
+    indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
+  }
 
   @Test
   public void testReadFromIndexAndWriteAnotherIndex() throws Exception
@@ -190,7 +212,7 @@ public class IngestSegmentFirehoseTest
             false,
             0
         ),
-        Charsets.UTF_8.toString()
+        StandardCharsets.UTF_8.toString()
     );
 
     try (
@@ -207,7 +229,7 @@ public class IngestSegmentFirehoseTest
       for (String line : rows) {
         index.add(parser.parse(line));
       }
-      indexMerger.persist(index, segmentDir, new IndexSpec());
+      indexMerger.persist(index, segmentDir, new IndexSpec(), null);
     }
   }
 }

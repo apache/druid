@@ -28,8 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.indexer.TaskState;
 import io.druid.indexing.common.IndexingServiceCondition;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestRealtimeTask;
@@ -41,8 +40,9 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -105,11 +105,11 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(workerCompletedTask(result));
 
     Assert.assertEquals(task.getId(), result.get().getId());
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
   }
 
   @Test
-  public void testStartWithNoWorker() throws Exception
+  public void testStartWithNoWorker()
   {
     makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
   }
@@ -131,7 +131,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(workerCompletedTask(result));
 
     Assert.assertEquals(task.getId(), result.get().getId());
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
   }
 
   @Test
@@ -152,7 +152,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(workerCompletedTask(result));
 
     Assert.assertEquals(task.getId(), result.get().getId());
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
   }
 
   @Test
@@ -314,28 +314,47 @@ public class RemoteTaskRunnerTest
 
     TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-    Assert.assertEquals(status.getStatusCode(), TaskStatus.Status.FAILED);
+    Assert.assertEquals(status.getStatusCode(), TaskState.FAILED);
   }
 
   @Test
   public void testBootstrap() throws Exception
   {
-    cf.create()
-      .creatingParentsIfNeeded()
-      .withMode(CreateMode.EPHEMERAL)
-      .forPath(joiner.join(statusPath, "first"), jsonMapper.writeValueAsBytes(TaskStatus.running("first")));
-    cf.create()
-      .creatingParentsIfNeeded()
-      .withMode(CreateMode.EPHEMERAL)
-      .forPath(joiner.join(statusPath, "second"), jsonMapper.writeValueAsBytes(TaskStatus.running("second")));
+    Period timeoutPeriod = Period.millis(1000);
+    makeWorker();
 
-    doSetup();
+    RemoteTaskRunnerConfig rtrConfig = new TestRemoteTaskRunnerConfig(timeoutPeriod);
+    rtrConfig.setMaxPercentageBlacklistWorkers(100);
 
-    final Set<String> existingTasks = Sets.newHashSet();
-    for (ImmutableWorkerInfo workerInfo : remoteTaskRunner.getWorkers()) {
-      existingTasks.addAll(workerInfo.getRunningTasks());
-    }
-    Assert.assertEquals("existingTasks", ImmutableSet.of("first", "second"), existingTasks);
+    makeRemoteTaskRunner(rtrConfig);
+
+    TestRealtimeTask task1 = new TestRealtimeTask(
+        "first",
+        new TaskResource("first", 1),
+        "foo",
+        TaskStatus.running("first"),
+        jsonMapper);
+    remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+
+    TestRealtimeTask task = new TestRealtimeTask(
+        "second",
+        new TaskResource("task", 2),
+        "foo",
+        TaskStatus.running("task"),
+        jsonMapper);
+    remoteTaskRunner.run(task);
+    
+    TestRealtimeTask task2 = new TestRealtimeTask(
+        "second",
+        new TaskResource("second", 2),
+        "foo",
+        TaskStatus.running("second"),
+        jsonMapper);
+    remoteTaskRunner.run(task2);
+    Assert.assertTrue(taskAnnounced(task2.getId()));
+    mockWorkerRunningTask(task2);
 
     final Set<String> runningTasks = Sets.newHashSet(
         Iterables.transform(
@@ -356,18 +375,19 @@ public class RemoteTaskRunnerTest
   @Test
   public void testRunWithTaskComplete() throws Exception
   {
-    cf.create()
-      .creatingParentsIfNeeded()
-      .withMode(CreateMode.EPHEMERAL)
-      .forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(TaskStatus.success(task.getId())));
-
     doSetup();
+    TestRealtimeTask task1 = new TestRealtimeTask(
+        "testTask",
+        new TaskResource("testTask", 2),
+        "foo",
+        TaskStatus.success("testTask"),
+        jsonMapper);
+    remoteTaskRunner.run(task1);
+    Assert.assertTrue(taskAnnounced(task1.getId()));
+    mockWorkerRunningTask(task1);
+    mockWorkerCompleteSuccessfulTask(task1);
 
-    ListenableFuture<TaskStatus> future = remoteTaskRunner.run(task);
-
-    TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, remoteTaskRunner.run(task1).get().getStatusCode());
   }
 
   @Test
@@ -385,7 +405,7 @@ public class RemoteTaskRunnerTest
 
     TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-    Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
+    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
     RemoteTaskRunnerConfig config = remoteTaskRunner.getRemoteTaskRunnerConfig();
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -421,10 +441,37 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteSuccessfulTask(task);
     Assert.assertTrue(workerCompletedTask(result));
     Assert.assertEquals(task.getId(), result.get().getId());
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
 
     // Confirm RTR thinks the worker is disabled.
     Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getWorker().getVersion());
+  }
+
+  @Test
+  public void testRestartRemoteTaskRunner() throws Exception
+  {
+    doSetup();
+    remoteTaskRunner.run(task);
+
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+    Assert.assertTrue(workerRunningTask(task.getId()));
+
+    remoteTaskRunner.stop();
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
+    final RemoteTaskRunnerWorkItem newWorkItem = remoteTaskRunner
+        .getKnownTasks()
+        .stream()
+        .filter(workItem -> workItem.getTaskId().equals(task.getId()))
+        .findFirst()
+        .orElse(null);
+    final ListenableFuture<TaskStatus> result = newWorkItem.getResult();
+
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+
+    Assert.assertEquals(task.getId(), result.get().getId());
+    Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
   }
 
   private void doSetup() throws Exception
@@ -433,7 +480,7 @@ public class RemoteTaskRunnerTest
     makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
   }
 
-  private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
+  private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config)
   {
     remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(config);
   }
@@ -550,6 +597,24 @@ public class RemoteTaskRunnerTest
   }
 
   @Test
+  public void testFindLazyWorkerNotRunningAnyTaskButWithZeroMaxWorkers() throws Exception
+  {
+    doSetup();
+    Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
+        new Predicate<ImmutableWorkerInfo>()
+        {
+          @Override
+          public boolean apply(ImmutableWorkerInfo input)
+          {
+            return true;
+          }
+        }, 0
+    );
+    Assert.assertEquals(0, lazyworkers.size());
+    Assert.assertEquals(0, remoteTaskRunner.getLazyWorkers().size());
+  }
+
+  @Test
   public void testWorkerZKReconnect() throws Exception
   {
     makeWorker();
@@ -595,18 +660,18 @@ public class RemoteTaskRunnerTest
 
     mockWorkerCompleteSuccessfulTask(task);
     TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
-    Assert.assertEquals(status.getStatusCode(), TaskStatus.Status.SUCCESS);
-    Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
+    Assert.assertEquals(status.getStatusCode(), TaskState.SUCCESS);
+    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
   }
 
   @Test
-  public void testSortByInsertionTime() throws Exception
+  public void testSortByInsertionTime()
   {
-    RemoteTaskRunnerWorkItem item1 = new RemoteTaskRunnerWorkItem("b", null, null)
+    RemoteTaskRunnerWorkItem item1 = new RemoteTaskRunnerWorkItem("b", "t", null, null, "ds_test")
         .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:03Z"));
-    RemoteTaskRunnerWorkItem item2 = new RemoteTaskRunnerWorkItem("a", null, null)
+    RemoteTaskRunnerWorkItem item2 = new RemoteTaskRunnerWorkItem("a", "t", null, null, "ds_test")
         .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:02Z"));
-    RemoteTaskRunnerWorkItem item3 = new RemoteTaskRunnerWorkItem("c", null, null)
+    RemoteTaskRunnerWorkItem item3 = new RemoteTaskRunnerWorkItem("c", "t", null, null, "ds_test")
         .withQueueInsertionTime(DateTimes.of("2015-01-01T00:00:01Z"));
     ArrayList<RemoteTaskRunnerWorkItem> workItems = Lists.newArrayList(item1, item2, item3);
     RemoteTaskRunner.sortByInsertionTime(workItems);

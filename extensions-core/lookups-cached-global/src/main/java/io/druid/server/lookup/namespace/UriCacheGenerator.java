@@ -134,28 +134,14 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
           catch (NumberFormatException ex) {
             log.debug(ex, "Failed to get last modified timestamp. Assuming no timestamp");
           }
-          final ByteSource source;
-          if (CompressionUtils.isGz(uriPath)) {
-            // Simple gzip stream
-            log.debug("Loading gz");
-            source = new ByteSource()
+          final ByteSource source = new ByteSource()
+          {
+            @Override
+            public InputStream openStream() throws IOException
             {
-              @Override
-              public InputStream openStream() throws IOException
-              {
-                return CompressionUtils.gzipInputStream(puller.getInputStream(uri));
-              }
-            };
-          } else {
-            source = new ByteSource()
-            {
-              @Override
-              public InputStream openStream() throws IOException
-              {
-                return puller.getInputStream(uri);
-              }
-            };
-          }
+              return CompressionUtils.decompress(puller.getInputStream(uri), uri.getPath());
+            }
+          };
 
           final CacheScheduler.VersionedCache versionedCache = scheduler.createVersionedCache(entryId, version);
           try {

@@ -27,8 +27,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.inject.Provider;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.MonitorScheduler;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.discovery.DataNodeService;
@@ -90,6 +90,7 @@ public class TaskToolbox
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final IndexMergerV9 indexMergerV9;
+  private final TaskReportFileWriter taskReportFileWriter;
 
   private final DruidNodeAnnouncer druidNodeAnnouncer;
   private final DruidNode druidNode;
@@ -120,7 +121,8 @@ public class TaskToolbox
       DruidNodeAnnouncer druidNodeAnnouncer,
       DruidNode druidNode,
       LookupNodeService lookupNodeService,
-      DataNodeService dataNodeService
+      DataNodeService dataNodeService,
+      TaskReportFileWriter taskReportFileWriter
   )
   {
     this.config = config;
@@ -147,6 +149,8 @@ public class TaskToolbox
     this.druidNode = druidNode;
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
+    this.taskReportFileWriter = taskReportFileWriter;
+    this.taskReportFileWriter.setObjectMapper(this.objectMapper);
   }
 
   public TaskConfig getConfig()
@@ -302,5 +306,10 @@ public class TaskToolbox
   public DruidNode getDruidNode()
   {
     return druidNode;
+  }
+
+  public TaskReportFileWriter getTaskReportFileWriter()
+  {
+    return taskReportFileWriter;
   }
 }

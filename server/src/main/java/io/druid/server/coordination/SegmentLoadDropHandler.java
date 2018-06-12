@@ -35,7 +35,7 @@ import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
@@ -73,7 +73,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentLoadDropHandler.class);
 
-  private final Object lock = new Object();
+  // Synchronizes removals from segmentsToDelete
+  private final Object segmentDeleteLock = new Object();
+
+  // Synchronizes start/stop of this object.
+  private final Object startStopLock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final SegmentLoaderConfig config;
@@ -137,7 +141,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @LifecycleStart
   public void start() throws IOException
   {
-    synchronized (lock) {
+    synchronized (startStopLock) {
       if (started) {
         return;
       }
@@ -159,7 +163,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @LifecycleStop
   public void stop()
   {
-    synchronized (lock) {
+    synchronized (startStopLock) {
       if (!started) {
         return;
       }
@@ -296,7 +300,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
            things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
            cost of acquiring lock by doing the "contains" check outside the synchronized block.
          */
-        synchronized (lock) {
+        synchronized (segmentDeleteLock) {
           segmentsToDelete.remove(segment);
         }
       }
@@ -376,12 +380,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
         if (failedSegments.size() > 0) {
           log.makeAlert("%,d errors seen while loading segments", failedSegments.size())
-             .addData("failedSegments", failedSegments);
+             .addData("failedSegments", failedSegments)
+             .emit();
         }
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        log.makeAlert(e, "LoadingInterrupted");
+        log.makeAlert(e, "LoadingInterrupted").emit();
       }
 
       backgroundSegmentAnnouncer.finishAnnouncing();
@@ -422,7 +427,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         public void run()
         {
           try {
-            synchronized (lock) {
+            synchronized (segmentDeleteLock) {
               if (segmentsToDelete.remove(segment)) {
                 segmentManager.dropSegment(segment);
 
@@ -752,8 +757,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     private final STATE state;
     private final String failureCause;
 
-    public final static Status SUCCESS = new Status(STATE.SUCCESS, null);
-    public final static Status PENDING = new Status(STATE.PENDING, null);
+    public static final Status SUCCESS = new Status(STATE.SUCCESS, null);
+    public static final Status PENDING = new Status(STATE.PENDING, null);
 
     @JsonCreator
     Status(

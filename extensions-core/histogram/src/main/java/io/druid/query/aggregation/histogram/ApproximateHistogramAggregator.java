@@ -42,9 +42,6 @@ public class ApproximateHistogramAggregator implements Aggregator
   }
 
   private final BaseFloatColumnValueSelector selector;
-  private final int resolution;
-  private final float lowerLimit;
-  private final float upperLimit;
 
   private ApproximateHistogram histogram;
 
@@ -56,9 +53,6 @@ public class ApproximateHistogramAggregator implements Aggregator
   )
   {
     this.selector = selector;
-    this.resolution = resolution;
-    this.lowerLimit = lowerLimit;
-    this.upperLimit = upperLimit;
     this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
   }
 
@@ -66,12 +60,6 @@ public class ApproximateHistogramAggregator implements Aggregator
   public void aggregate()
   {
     histogram.offer(selector.getFloat());
-  }
-
-  @Override
-  public void reset()
-  {
-    this.histogram = new ApproximateHistogram(resolution, lowerLimit, upperLimit);
   }
 
   @Override

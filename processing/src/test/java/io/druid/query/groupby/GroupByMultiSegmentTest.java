@@ -32,7 +32,6 @@ import io.druid.collections.BlockingPool;
 import io.druid.collections.DefaultBlockingPool;
 import io.druid.collections.NonBlockingPool;
 import io.druid.collections.StupidPool;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
@@ -41,9 +40,9 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentQueryRunner;
@@ -76,6 +75,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -113,6 +113,7 @@ public class GroupByMultiSegmentTest
     );
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -122,7 +123,7 @@ public class GroupByMultiSegmentTest
           }
         }
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
 
@@ -172,7 +173,8 @@ public class GroupByMultiSegmentTest
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        new IndexSpec()
+        new IndexSpec(),
+        null
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
 
@@ -193,7 +195,8 @@ public class GroupByMultiSegmentTest
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        new IndexSpec()
+        new IndexSpec(),
+        null
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
 
@@ -302,7 +305,7 @@ public class GroupByMultiSegmentTest
   }
 
   @Test
-  public void testHavingAndNoLimitPushDown() throws Exception
+  public void testHavingAndNoLimitPushDown()
   {
     QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
     QueryRunner<Row> theRunner = new FinalizeResultsQueryRunner<>(
@@ -338,7 +341,7 @@ public class GroupByMultiSegmentTest
         .build();
 
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
-    List<Row> results = Sequences.toList(queryResult, Lists.<Row>newArrayList());
+    List<Row> results = queryResult.toList();
 
     Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
         "1970-01-01T00:00:00.000Z",

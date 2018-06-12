@@ -19,10 +19,22 @@
 
 package io.druid.data.input.impl.prefetch;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
 interface ObjectOpenFunction<T>
 {
   InputStream open(T object) throws IOException;
+
+  default InputStream open(T object, long start) throws IOException
+  {
+    return open(object);
+  }
+
+  default InputStream open(T object, File outFile) throws IOException
+  {
+    return open(object);
+  }
+
 }

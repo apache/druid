@@ -19,10 +19,10 @@
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.emitter.statsd.DimensionConverter;
 import io.druid.emitter.statsd.StatsDMetric;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
 public class DimensionConverterTest
 {
   @Test
-  public void testConvert() throws Exception
+  public void testConvert()
   {
     DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()

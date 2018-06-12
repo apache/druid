@@ -22,8 +22,6 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.indexing.IndexingService;
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
@@ -38,6 +36,8 @@ import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
@@ -125,7 +125,7 @@ public class TaskMaster
               new Lifecycle.Handler()
               {
                 @Override
-                public void start() throws Exception
+                public void start()
                 {
                   serviceAnnouncer.announce(node);
                 }

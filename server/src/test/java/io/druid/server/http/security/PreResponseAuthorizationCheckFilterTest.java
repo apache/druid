@@ -20,8 +20,8 @@
 package io.druid.server.http.security;
 
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.ISE;
 import io.druid.server.security.AllowAllAuthenticator;
@@ -50,7 +50,7 @@ public class PreResponseAuthorizationCheckFilterTest
   @Test
   public void testValidRequest() throws Exception
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null, null);
 
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
@@ -103,7 +103,7 @@ public class PreResponseAuthorizationCheckFilterTest
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Request did not have an authorization check performed.");
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null, null);
 
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);
@@ -138,7 +138,7 @@ public class PreResponseAuthorizationCheckFilterTest
   public void testMissingAuthorizationCheckWithError() throws Exception
   {
     EmittingLogger.registerEmitter(EasyMock.createNiceMock(ServiceEmitter.class));
-    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("so-very-valid", "so-very-valid", null, null);
 
     HttpServletRequest req = EasyMock.createStrictMock(HttpServletRequest.class);
     HttpServletResponse resp = EasyMock.createStrictMock(HttpServletResponse.class);

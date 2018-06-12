@@ -121,6 +121,7 @@ public class JettyHttpClientModule implements Module
       httpClient.setMaxConnectionsPerDestination(config.getNumConnections());
       httpClient.setMaxRequestsQueuedPerDestination(config.getNumRequestsQueued());
       httpClient.setConnectTimeout(CLIENT_CONNECT_TIMEOUT);
+      httpClient.setRequestBufferSize(config.getRequestBuffersize());
       final QueuedThreadPool pool = new QueuedThreadPool(config.getNumMaxThreads());
       pool.setName(JettyHttpClientModule.class.getSimpleName() + "-threadPool-" + pool.hashCode());
       httpClient.setExecutor(pool);
@@ -132,7 +133,7 @@ public class JettyHttpClientModule implements Module
             new Lifecycle.Handler()
             {
               @Override
-              public void start() throws Exception
+              public void start()
               {
               }
 

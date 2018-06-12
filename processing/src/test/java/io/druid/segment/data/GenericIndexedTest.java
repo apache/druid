@@ -36,7 +36,7 @@ import java.util.Map;
 public class GenericIndexedTest
 {
   @Test(expected = UnsupportedOperationException.class)
-  public void testNotSortedNoIndexOf() throws Exception
+  public void testNotSortedNoIndexOf()
   {
     GenericIndexed.fromArray(new String[]{"a", "c", "b"}, GenericIndexed.STRING_STRATEGY).indexOf("a");
   }
@@ -52,7 +52,7 @@ public class GenericIndexedTest
   }
 
   @Test
-  public void testSanity() throws Exception
+  public void testSanity()
   {
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"};
     Indexed<String> indexed = GenericIndexed.fromArray(strings, GenericIndexed.STRING_STRATEGY);
@@ -125,7 +125,7 @@ public class GenericIndexedTest
   {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final WritableByteChannel channel = Channels.newChannel(baos);
-    indexed.writeToChannel(channel);
+    indexed.writeTo(channel, null);
     channel.close();
 
     final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());

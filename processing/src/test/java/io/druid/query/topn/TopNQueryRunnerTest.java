@@ -19,7 +19,6 @@
 
 package io.druid.query.topn;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -37,7 +36,6 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.query.BySegmentResultValue;
@@ -99,8 +97,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,7 +112,7 @@ import java.util.stream.Collectors;
 public class TopNQueryRunnerTest
 {
   @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
     List<Object[]> parameters = new ArrayList<>();
@@ -139,7 +135,7 @@ public class TopNQueryRunnerTest
     return parameters;
   }
 
-  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners() throws IOException
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();
     retVal.addAll(
@@ -1310,58 +1306,36 @@ public class TopNQueryRunnerTest
         query,
         specialContext
     );
-    List<Result<BySegmentTopNResultValue>> resultList = Sequences.toList(
-        Sequences.map(
-            results,
-            new Function<Result<TopNResultValue>, Result<BySegmentTopNResultValue>>()
-            {
-              @Nullable
-              @Override
-              public Result<BySegmentTopNResultValue> apply(
-                  Result<TopNResultValue> input
-              )
-              {
-                // Stupid type erasure
-                Object val = input.getValue();
-                if (val instanceof BySegmentResultValue) {
-                  BySegmentResultValue bySegVal = (BySegmentResultValue) val;
-                  List<?> results = bySegVal.getResults();
-                  return new Result<BySegmentTopNResultValue>(
-                      input.getTimestamp(),
-                      new BySegmentTopNResultValue(
-                          Lists.transform(
-                              results,
-                              new Function<Object, Result<TopNResultValue>>()
-                              {
-                                @Nullable
-                                @Override
-                                public Result<TopNResultValue> apply(@Nullable Object input)
-                                {
-                                  if (Preconditions.checkNotNull(input) instanceof Result) {
-                                    Result result = (Result) input;
-                                    Object resVal = result.getValue();
-                                    if (resVal instanceof TopNResultValue) {
-                                      return new Result<TopNResultValue>(
-                                          result.getTimestamp(),
-                                          (TopNResultValue) resVal
-                                      );
-                                    }
-                                  }
-                                  throw new IAE("Bad input: [%s]", input);
-                                }
-                              }
-                          ),
-                          bySegVal.getSegmentId(),
-                          bySegVal.getInterval()
-                      )
-                  );
-                }
-                throw new ISE("Bad type");
-              }
-            }
-        ),
-        Lists.<Result<BySegmentTopNResultValue>>newArrayList()
-    );
+    List<Result<BySegmentTopNResultValue>> resultList = results
+        .map((Result<TopNResultValue> input) -> {
+          // Stupid type erasure
+          Object val = input.getValue();
+          if (val instanceof BySegmentResultValue) {
+            BySegmentResultValue bySegVal = (BySegmentResultValue) val;
+            return new Result<>(
+                input.getTimestamp(),
+                new BySegmentTopNResultValue(
+                    Lists.transform(
+                        bySegVal.getResults(),
+                        res -> {
+                          if (Preconditions.checkNotNull(res) instanceof Result) {
+                            Result theResult = (Result) res;
+                            Object resVal = theResult.getValue();
+                            if (resVal instanceof TopNResultValue) {
+                              return new Result<>(theResult.getTimestamp(), (TopNResultValue) resVal);
+                            }
+                          }
+                          throw new IAE("Bad input: [%s]", res);
+                        }
+                    ),
+                    bySegVal.getSegmentId(),
+                    bySegVal.getInterval()
+                )
+            );
+          }
+          throw new ISE("Bad type");
+        })
+        .toList();
     Result<BySegmentTopNResultValue> result = resultList.get(0);
     TestHelper.assertExpectedResults(expectedResults, result.getValue().getResults());
   }
@@ -1795,21 +1769,20 @@ public class TopNQueryRunnerTest
         .build();
 
     assertExpectedResults(
-        Sequences.toList(
-            runWithMerge(
-                new TopNQueryBuilder()
-                    .dataSource(QueryRunnerTestHelper.dataSource)
-                    .granularity(QueryRunnerTestHelper.allGran)
-                    .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-                    .dimension(QueryRunnerTestHelper.marketDimension)
-                    .metric(QueryRunnerTestHelper.indexMetric)
-                    .threshold(4)
-                    .intervals(QueryRunnerTestHelper.firstToThird)
-                    .aggregators(commonAggregators)
-                    .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                    .build()
-            ), Lists.<Result<TopNResultValue>>newArrayList()
-        ), query
+        runWithMerge(
+            new TopNQueryBuilder()
+                .dataSource(QueryRunnerTestHelper.dataSource)
+                .granularity(QueryRunnerTestHelper.allGran)
+                .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine")
+                .dimension(QueryRunnerTestHelper.marketDimension)
+                .metric(QueryRunnerTestHelper.indexMetric)
+                .threshold(4)
+                .intervals(QueryRunnerTestHelper.firstToThird)
+                .aggregators(commonAggregators)
+                .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                .build()
+        ).toList(),
+        query
     );
   }
 
@@ -1829,21 +1802,25 @@ public class TopNQueryRunnerTest
         .build();
 
     assertExpectedResults(
-        Sequences.toList(
-            runWithMerge(
-                new TopNQueryBuilder()
-                    .dataSource(QueryRunnerTestHelper.dataSource)
-                    .granularity(QueryRunnerTestHelper.allGran)
-                    .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine", "automotive", "business")
-                    .dimension(QueryRunnerTestHelper.qualityDimension)
-                    .metric(QueryRunnerTestHelper.indexMetric)
-                    .threshold(4)
-                    .intervals(QueryRunnerTestHelper.firstToThird)
-                    .aggregators(commonAggregators)
-                    .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
-                    .build()
-            ), Lists.<Result<TopNResultValue>>newArrayList()
-        ), query
+        runWithMerge(
+            new TopNQueryBuilder()
+                .dataSource(QueryRunnerTestHelper.dataSource)
+                .granularity(QueryRunnerTestHelper.allGran)
+                .filters(
+                    QueryRunnerTestHelper.qualityDimension,
+                    "mezzanine",
+                    "automotive",
+                    "business"
+                )
+                .dimension(QueryRunnerTestHelper.qualityDimension)
+                .metric(QueryRunnerTestHelper.indexMetric)
+                .threshold(4)
+                .intervals(QueryRunnerTestHelper.firstToThird)
+                .aggregators(commonAggregators)
+                .postAggregators(Arrays.asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                .build()
+        ).toList(),
+        query
     );
   }
 
@@ -2334,7 +2311,7 @@ public class TopNQueryRunnerTest
 
 
   @Test
-  public void testTopNDimExtractionToOne() throws IOException
+  public void testTopNDimExtractionToOne()
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -2369,10 +2346,7 @@ public class TopNQueryRunnerTest
             )
         )
     );
-    List<Result<TopNResultValue>> list = Sequences.toList(
-        runWithMerge(query),
-        new ArrayList<Result<TopNResultValue>>()
-    );
+    List<Result<TopNResultValue>> list = runWithMerge(query).toList();
     Assert.assertEquals(list.size(), 1);
     Assert.assertEquals("Didn't merge results", list.get(0).getValue().getValue().size(), 1);
     TestHelper.assertExpectedResults(expectedResults, list, "Failed to match");
@@ -3793,7 +3767,7 @@ public class TopNQueryRunnerTest
         )
     );
     Sequence<Result<TopNResultValue>> results = runWithMerge(query);
-    for (Result<TopNResultValue> result : Sequences.toList(results, new ArrayList<Result<TopNResultValue>>())) {
+    for (Result<TopNResultValue> result : results.toList()) {
       Assert.assertEquals(result.getValue(), result.getValue()); // TODO: fix this test
     }
   }
@@ -5604,5 +5578,37 @@ public class TopNQueryRunnerTest
         )
     );
     assertExpectedResults(expectedResults, query);
+  }
+
+  /**
+   * Regression test for https://github.com/druid-io/druid/issues/5132
+   */
+  @Test
+  public void testTopNWithNonBitmapFilter()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .filters(new BoundDimFilter(
+            Column.TIME_COLUMN_NAME,
+            "0",
+            String.valueOf(Long.MAX_VALUE),
+            true,
+            true,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ))
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("count")
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.firstToThird)
+        .aggregators(
+            Collections.singletonList(new DoubleSumAggregatorFactory("count", "qualityDouble"))
+        )
+        .build();
+
+    // Don't check results, just the fact that the query could complete
+    Assert.assertNotNull(runWithMerge(query).toList());
   }
 }

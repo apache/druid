@@ -117,9 +117,7 @@ public class TimeBoundaryQueryQueryToolChest
       {
         TimeBoundaryQuery query = (TimeBoundaryQuery) input.getQuery();
         return Sequences.simple(
-            query.mergeResults(
-                Sequences.toList(baseRunner.run(input, context), Lists.<Result<TimeBoundaryResultValue>>newArrayList())
-            )
+            query.mergeResults(baseRunner.run(input, context).toList())
         );
       }
     };
@@ -173,7 +171,7 @@ public class TimeBoundaryQueryQueryToolChest
       }
 
       @Override
-      public Function<Result<TimeBoundaryResultValue>, Object> prepareForCache()
+      public Function<Result<TimeBoundaryResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<TimeBoundaryResultValue>, Object>()
         {
@@ -186,7 +184,7 @@ public class TimeBoundaryQueryQueryToolChest
       }
 
       @Override
-      public Function<Object, Result<TimeBoundaryResultValue>> pullFromCache()
+      public Function<Object, Result<TimeBoundaryResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<TimeBoundaryResultValue>>()
         {

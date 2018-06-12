@@ -23,9 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.StringUtils;
+import io.druid.segment.TestHelper;
 import io.druid.storage.hdfs.HdfsDataSegmentFinder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -53,7 +54,7 @@ import java.util.Set;
 public class HdfsDataSegmentFinderTest
 {
 
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
+  private static final ObjectMapper mapper = TestHelper.makeJsonMapper();
   private static final String DESCRIPTOR_JSON = "descriptor.json";
   private static final String INDEX_ZIP = "index.zip";
   private static final DataSegment SEGMENT_1 = DataSegment
@@ -278,18 +279,28 @@ public class HdfsDataSegmentFinderTest
     hdfsDataSegmentFinder.findSegments(dataSourceDir.toString(), false);
   }
 
-  @Test(expected = SegmentLoadingException.class)
-  public void testFindSegmentsFail2() throws SegmentLoadingException
+  @Test
+  public void testPreferNewestSegment() throws Exception
   {
-    // will fail to desierialize descriptor.json because DefaultObjectMapper doesn't recognize NumberedShardSpec
-    final HdfsDataSegmentFinder hdfsDataSegmentFinder = new HdfsDataSegmentFinder(conf, new DefaultObjectMapper());
-    try {
-      hdfsDataSegmentFinder.findSegments(dataSourceDir.toString(), false);
-    }
-    catch (SegmentLoadingException e) {
-      Assert.assertTrue(e.getCause() instanceof IOException);
-      throw e;
-    }
+    dataSourceDir = new Path(new Path(uriBase), "/usr/replicaDataSource");
+    descriptor1 = new Path(dataSourceDir, StringUtils.format("interval1/v1/%d_%s_%s", 0, "older", DESCRIPTOR_JSON));
+    descriptor2 = new Path(dataSourceDir, StringUtils.format("interval1/v1/%d_%s_%s", 0, "newer", DESCRIPTOR_JSON));
+    indexZip1 = new Path(descriptor1.getParent(), StringUtils.format("%d_%s_%s", 0, "older", INDEX_ZIP));
+    indexZip2 = new Path(descriptor2.getParent(), StringUtils.format("%d_%s_%s", 0, "newer", INDEX_ZIP));
+
+    mapper.writeValue(fs.create(descriptor1), SEGMENT_1);
+    mapper.writeValue(fs.create(descriptor2), SEGMENT_1);
+
+    create(indexZip1);
+    Thread.sleep(1000);
+    create(indexZip2);
+
+    final Set<DataSegment> segments = new HdfsDataSegmentFinder(conf, mapper).findSegments(
+        dataSourceDir.toString(), false
+    );
+
+    Assert.assertEquals(1, segments.size());
+    Assert.assertEquals(indexZip2.toUri().getPath(), segments.iterator().next().getLoadSpec().get("path"));
   }
 
   private String getDescriptorPath(DataSegment segment)

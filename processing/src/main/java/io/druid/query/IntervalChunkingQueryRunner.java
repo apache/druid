@@ -21,7 +21,7 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.FunctionalIterable;

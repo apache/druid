@@ -23,7 +23,10 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.io.Files;
+import io.druid.common.aws.AWSClientConfig;
 import io.druid.common.aws.AWSCredentialsConfig;
+import io.druid.common.aws.AWSEndpointConfig;
+import io.druid.common.aws.AWSProxyConfig;
 import io.druid.guice.AWSModule;
 import io.druid.metadata.DefaultPasswordProvider;
 import org.easymock.EasyMock;
@@ -41,6 +44,9 @@ import static org.junit.Assert.assertTrue;
 
 public class TestAWSCredentialsProvider
 {
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
   private final AWSModule awsModule = new AWSModule();
   private final S3StorageDruidModule s3Module = new S3StorageDruidModule();
 
@@ -58,11 +64,14 @@ public class TestAWSCredentialsProvider
     assertEquals(credentials.getAWSSecretKey(), "secretKeySample");
 
     // try to create
-    s3Module.getRestS3Service(provider);
+    s3Module.getAmazonS3Client(
+        provider,
+        new AWSProxyConfig(),
+        new AWSEndpointConfig(),
+        new AWSClientConfig(),
+        new S3StorageConfig(new NoopServerSideEncryption())
+    );
   }
-
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
 
   @Test
   public void testWithFileSessionCredentials() throws IOException
@@ -86,6 +95,12 @@ public class TestAWSCredentialsProvider
     assertEquals(sessionCredentials.getSessionToken(), "sessionTokenSample");
 
     // try to create
-    s3Module.getRestS3Service(provider);
+    s3Module.getAmazonS3Client(
+        provider,
+        new AWSProxyConfig(),
+        new AWSEndpointConfig(),
+        new AWSClientConfig(),
+        new S3StorageConfig(new NoopServerSideEncryption())
+    );
   }
 }

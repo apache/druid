@@ -35,7 +35,6 @@ import io.druid.java.util.common.parsers.JSONPathSpec;
 import io.druid.js.JavaScriptConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.io.BytesWritable;
-import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -59,7 +58,7 @@ public class ThriftInputRowParserTest
   private ParseSpec parseSpec;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     parseSpec = new JSONParseSpec(new TimestampSpec("date", "auto", null),
                                   new DimensionsSpec(Lists.<DimensionSchema>newArrayList(
@@ -146,17 +145,17 @@ public class ThriftInputRowParserTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
     expectedException.expectMessage("JavaScript is disabled");
 
-    parser.parse(ByteBuffer.allocate(1));
+    parser.parseBatch(ByteBuffer.allocate(1)).get(0);
   }
 
-  public void serializationAndTest(ThriftInputRowParser parser, byte[] bytes) throws TException
+  public void serializationAndTest(ThriftInputRowParser parser, byte[] bytes)
   {
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
-    InputRow row1 = parser.parse(buffer);
+    InputRow row1 = parser.parseBatch(buffer).get(0);
     assertTrue(row1.getDimension("title").get(0).equals("title"));
 
-    InputRow row2 = parser.parse(new BytesWritable(bytes));
+    InputRow row2 = parser.parseBatch(new BytesWritable(bytes)).get(0);
     assertTrue(row2.getDimension("lastName").get(0).equals("last"));
   }
 }

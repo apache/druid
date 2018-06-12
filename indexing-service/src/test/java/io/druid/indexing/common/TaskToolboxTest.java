@@ -21,14 +21,15 @@ package io.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.metrics.MonitorScheduler;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
@@ -114,7 +115,8 @@ public class TaskToolboxTest
         null,
         null,
         null,
-        null
+        null,
+        new NoopTestTaskFileWriter()
     );
   }
 
@@ -192,13 +194,13 @@ public class TaskToolboxTest
   }
 
   @Test
-  public void testGetCache() throws Exception
+  public void testGetCache()
   {
     Assert.assertEquals(mockCache, taskToolbox.build(task).getCache());
   }
 
   @Test
-  public void testGetCacheConfig() throws Exception
+  public void testGetCacheConfig()
   {
     Assert.assertEquals(mockCacheConfig, taskToolbox.build(task).getCacheConfig());
   }

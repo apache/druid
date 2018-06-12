@@ -21,16 +21,16 @@ package io.druid.server.security;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopEscalator.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "noop", value = NoopEscalator.class),
-})
 /**
  * This interface provides methods needed for escalating internal system requests with priveleged authentication
  * credentials. Each Escalator is associated with a specific authentication scheme, like Authenticators.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NoopEscalator.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "noop", value = NoopEscalator.class),
+})
 public interface Escalator
 {
   /**
@@ -47,19 +47,8 @@ public interface Escalator
   HttpClient createEscalatedClient(HttpClient baseClient);
 
   /**
-   * Return a client that sends requests with the format/information necessary to authenticate successfully
-   * against this Authenticator's authentication scheme using the identity of the internal system user.
-   * <p>
-   * This HTTP client is used by the Druid Router node.
-   *
-   * @param baseClient Base Jetty HttpClient
-   *
-   * @return Jetty HttpClient that sends requests with the credentials of the internal system user
-   */
-  org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient);
-
-  /**
    * @return an AuthenticationResult representing the identity of the internal system user.
    */
   AuthenticationResult createEscalatedAuthenticationResult();
+
 }

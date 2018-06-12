@@ -20,13 +20,12 @@
 package io.druid.query.groupby.having;
 
 import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import io.druid.data.input.Row;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.java.util.common.ISE;
+import io.druid.query.aggregation.AggregatorFactory;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -46,18 +45,29 @@ class HavingSpecMetricComparator
         metricValueObj = aggregators.get(aggregationName).finalizeComputation(metricValueObj);
       }
 
-      if (metricValueObj instanceof Long) {
-        long l = ((Long) metricValueObj).longValue();
-        return Longs.compare(l, value.longValue());
-      } else if (metricValueObj instanceof Float) {
-        float l = ((Float) metricValueObj).floatValue();
-        return Floats.compare(l, value.floatValue());
-      } else if (metricValueObj instanceof Double) {
-        double l = ((Double) metricValueObj).longValue();
-        return Doubles.compare(l, value.doubleValue());
-      } else if (metricValueObj instanceof Integer) {
-        int l = ((Integer) metricValueObj).intValue();
-        return Ints.compare(l, value.intValue());
+      if (metricValueObj instanceof Long || metricValueObj instanceof Integer) {
+        // Cast int metrics to longs, it's fine since longs can represent all int values.
+        long n = ((Number) metricValueObj).longValue();
+
+        if (value instanceof Long || value instanceof Integer) {
+          return Longs.compare(n, value.longValue());
+        } else if (value instanceof Double || value instanceof Float) {
+          // Invert the comparison since we're providing n, value backwards.
+          return -compareDoubleToLong(value.doubleValue(), n);
+        } else {
+          throw new ISE("Number was[%s]?!?", value.getClass().getName());
+        }
+      } else if (metricValueObj instanceof Double || metricValueObj instanceof Float) {
+        // Cast floats to doubles, it's fine since doubles can represent all float values.
+        double n = ((Number) metricValueObj).doubleValue();
+
+        if (value instanceof Long || value instanceof Integer) {
+          return compareDoubleToLong(n, value.longValue());
+        } else if (value instanceof Double || value instanceof Float) {
+          return Doubles.compare(n, value.doubleValue());
+        } else {
+          throw new ISE("Number was[%s]?!?", value.getClass().getName());
+        }
       } else if (metricValueObj instanceof String) {
         String metricValueStr = (String) metricValueObj;
         if (LONG_PAT.matcher(metricValueStr).matches()) {
@@ -73,5 +83,12 @@ class HavingSpecMetricComparator
     } else {
       return Double.compare(0, value.doubleValue());
     }
+  }
+
+  private static int compareDoubleToLong(final double a, final long b)
+  {
+    // Use BigDecimal when comparing integers vs floating points, a convenient way to handle all cases (like
+    // fractional values, values out of range of max long/max int) without worrying about them ourselves.
+    return BigDecimal.valueOf(a).compareTo(BigDecimal.valueOf(b));
   }
 }

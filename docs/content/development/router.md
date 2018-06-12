@@ -76,6 +76,8 @@ The router module uses several of the default modules in [Configuration](../conf
 |`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
 |`druid.router.strategies`|An ordered JSON array of objects.|All custom strategies to use for routing.|[{"type":"timeBoundary"},{"type":"priority"}]|
 |`druid.router.avatica.balancer.type`|String representing an AvaticaConnectionBalancer name|Class to use for balancing Avatica queries across brokers|rendezvousHash|
+|`druid.router.http.maxRequestBufferSize`|Maximum size of the buffer used to write requests when forwarding them to the broker. This should be set to atleast the maxHeaderSize allowed on the broker|8 * 1024|
+
 
 Router Strategies
 -----------------
@@ -180,3 +182,41 @@ Returns the dimensions of the datasource.
 * `/druid/v2/datasources/{dataSourceName}/metrics`
 
 Returns the metrics of the datasource.
+
+Router as Management Proxy
+--------------------------
+
+The router can be configured to forward requests to the active coordinator or overlord node. This may be useful for
+setting up a highly available cluster in situations where the HTTP redirect mechanism of the inactive -> active
+coordinator/overlord does not function correctly (servers are behind a load balancer, the hostname used in the redirect
+is only resolvable internally, etc.).
+
+### Enabling the Management Proxy
+
+To enable this functionality, set the following in the router's runtime.properties:
+
+```
+druid.router.managementProxy.enabled=true
+```
+
+### Routing
+
+The management proxy supports implicit and explicit routes. Implicit routes are those where the destination can be
+determined from the original request path based on Druid API path conventions. For the coordinator the convention is
+`/druid/coordinator/*` and for the overlord the convention is `/druid/indexer/*`. These are convenient because they mean
+that using the management proxy does not require modifying the API request other than issuing the request to the router
+instead of the coordinator or overlord. Most Druid API requests can be routed implicitly.
+
+Explicit routes are those where the request to the router contains a path prefix indicating which node the request
+should be routed to. For the coordinator this prefix is `/proxy/coordinator` and for the overlord it is `/proxy/overlord`.
+This is required for API calls with an ambiguous destination. For example, the `/status` API is present on all Druid
+nodes, so explicit routing needs to be used to indicate the proxy destination.
+
+This is summarized in the table below:
+
+|Request Route|Destination|Rewritten Route|Example|
+|-------------|-----------|---------------|-------|
+|`/druid/coordinator/*`|Coordinator|`/druid/coordinator/*`|`router:8888/druid/coordinator/v1/datasources` -> `coordinator:8081/druid/coordinator/v1/datasources`|
+|`/druid/indexer/*`|Overlord|`/druid/indexer/*`|`router:8888/druid/indexer/v1/task` -> `overlord:8090/druid/indexer/v1/task`|
+|`/proxy/coordinator/*`|Coordinator|`/*`|`router:8888/proxy/coordinator/status` -> `coordinator:8081/status`|
+|`/proxy/overlord/*`|Overlord|`/*`|`router:8888/proxy/overlord/druid/indexer/v1/isLeader` -> `overlord:8090/druid/indexer/v1/isLeader`|

@@ -78,6 +78,7 @@
       <property name="allowEmptyMethods" value="true"/>
       <property name="allowEmptyLambdas" value="true"/>
       <property name="allowEmptyTypes" value="true"/>
+      <property name="ignoreEnhancedForColon" value="false"/>
     </module>
     <module name="ParenPad"/>
     <module name="SingleSpaceSeparator"/>
@@ -93,11 +94,20 @@
       <property name="tokens" value="DOT"/>
       <property name="allowLineBreaks" value="false"/>
     </module>
+    <module name="GenericWhitespace"/>
 
     <module name="Indentation">
       <property name="basicOffset" value="2"/>
       <property name="caseIndent" value="2"/>
     </module>
+
+    <module name="MethodParamPad">
+      <property name="allowLineBreaks" value="true"/>
+    </module>
+    <module name="OneStatementPerLine"/>
+    <module name="EmptyStatement"/>
+
+    <module name="ModifierOrder" />
 
     <module name="Regexp">
       <property name="format" value="com\.google\.common\.io\.Closer"/>
@@ -153,6 +163,13 @@
       <property name="format" value="com\.metamx\.common\.logger"/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Use io.druid.java.util.common.logger.Logger instead"/>
+    </module>
+
+    <module name="Regexp">
+      <!-- Couldn't check this in forbidden-apis, because javac replaces compile-time constants without refs. -->
+      <property name="format" value="(Shorts|Chars|Ints|Longs|Floats|Doubles)\.BYTES"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use java.lang.Primitive.BYTES instead."/>
     </module>
   </module>
 </module>

@@ -20,11 +20,13 @@
 package io.druid.sql.calcite.planner;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.server.security.Access;
@@ -32,7 +34,6 @@ import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.server.security.AuthorizationUtils;
 import io.druid.server.security.AuthorizerMapper;
-import io.druid.server.security.Escalator;
 import io.druid.server.security.ForbiddenException;
 import io.druid.sql.calcite.rel.DruidConvention;
 import io.druid.sql.calcite.rel.DruidRel;
@@ -61,6 +62,7 @@ import org.apache.calcite.tools.RelConversionException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -72,33 +74,44 @@ public class DruidPlanner implements Closeable
   private final Planner planner;
   private final PlannerContext plannerContext;
   private final AuthorizerMapper authorizerMapper;
-  private final Escalator escalator;
 
-  public DruidPlanner(
+  DruidPlanner(
       final Planner planner,
       final PlannerContext plannerContext,
-      final AuthorizerMapper authorizerMapper,
-      final Escalator escalator
+      final AuthorizerMapper authorizerMapper
   )
   {
     this.planner = planner;
     this.plannerContext = plannerContext;
     this.authorizerMapper = authorizerMapper;
-    this.escalator = escalator;
-  }
-
-  public PlannerResult plan(final String sql) throws SqlParseException, ValidationException, RelConversionException
-  {
-    AuthenticationResult authenticationResult = escalator.createEscalatedAuthenticationResult();
-    return plan(sql, null, authenticationResult);
   }
 
   public PlannerResult plan(
       final String sql,
-      final HttpServletRequest request,
+      final HttpServletRequest request
+  ) throws SqlParseException, ValidationException, RelConversionException, ForbiddenException
+  {
+    return plan(sql, Preconditions.checkNotNull(request, "request"), null);
+  }
+
+  public PlannerResult plan(
+      final String sql,
       final AuthenticationResult authenticationResult
   ) throws SqlParseException, ValidationException, RelConversionException, ForbiddenException
   {
+    return plan(sql, null, Preconditions.checkNotNull(authenticationResult, "authenticationResult"));
+  }
+
+  private PlannerResult plan(
+      final String sql,
+      @Nullable final HttpServletRequest request,
+      @Nullable final AuthenticationResult authenticationResult
+  ) throws SqlParseException, ValidationException, RelConversionException, ForbiddenException
+  {
+    if (authenticationResult != null && request != null) {
+      throw new ISE("Cannot specify both 'request' and 'authenticationResult'");
+    }
+
     SqlExplain explain = null;
     SqlNode parsed = planner.parse(sql);
     if (parsed.getKind() == SqlKind.EXPLAIN) {
@@ -137,8 +150,8 @@ public class DruidPlanner implements Closeable
   private PlannerResult planWithDruidConvention(
       final SqlExplain explain,
       final RelRoot root,
-      final HttpServletRequest request,
-      final AuthenticationResult authenticationResult
+      @Nullable final HttpServletRequest request,
+      @Nullable final AuthenticationResult authenticationResult
   ) throws RelConversionException, ForbiddenException
   {
     final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
@@ -321,7 +334,7 @@ public class DruidPlanner implements Closeable
     return new PlannerResult(
         resultsSupplier,
         typeFactory.createStructType(
-            ImmutableList.of(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
+            ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
             ImmutableList.of("PLAN")
         )
     );

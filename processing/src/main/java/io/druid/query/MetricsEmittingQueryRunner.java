@@ -19,7 +19,8 @@
 
 package io.druid.query;
 
-import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
@@ -39,6 +40,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   private final long creationTimeNs;
   private final ObjLongConsumer<? super QueryMetrics<?>> reportMetric;
   private final Consumer<QueryMetrics<?>> applyCustomDimensions;
+  private static final Logger log = new Logger(MetricsEmittingQueryRunner.class);
 
   private MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
@@ -117,7 +119,13 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
             if (creationTimeNs > 0) {
               queryMetrics.reportWaitTime(startTimeNs - creationTimeNs);
             }
-            queryMetrics.emit(emitter);
+            try {
+              queryMetrics.emit(emitter);
+            }
+            catch (Exception e) {
+              // Query should not fail, because of emitter failure. Swallowing the exception.
+              log.error("Failure while trying to emit [%s] with stacktrace [%s]", emitter.toString(), e);
+            }
           }
         }
     );

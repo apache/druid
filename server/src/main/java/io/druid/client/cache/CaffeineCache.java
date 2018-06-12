@@ -25,12 +25,9 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Chars;
-import com.google.common.primitives.Ints;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
-
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -46,6 +43,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
 {
   private static final Logger log = new Logger(CaffeineCache.class);
   private static final int FIXED_COST = 8; // Minimum cost in "weight" per entry;
+  private static final int MAX_DEFAULT_BYTES = 1024 * 1024 * 1024;
   private static final LZ4Factory LZ4_FACTORY = LZ4Factory.fastestInstance();
   private static final LZ4FastDecompressor LZ4_DECOMPRESSOR = LZ4_FACTORY.fastDecompressor();
   private static final LZ4Compressor LZ4_COMPRESSOR = LZ4_FACTORY.fastCompressor();
@@ -53,7 +51,6 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   private final Cache<NamedKey, byte[]> cache;
   private final AtomicReference<CacheStats> priorStats = new AtomicReference<>(CacheStats.empty());
   private final CaffeineCacheConfig config;
-
 
   public static CaffeineCache create(final CaffeineCacheConfig config)
   {
@@ -69,14 +66,16 @@ public class CaffeineCache implements io.druid.client.cache.Cache
           .expireAfterAccess(config.getExpireAfter(), TimeUnit.MILLISECONDS);
     }
     if (config.getSizeInBytes() >= 0) {
-      builder
-          .maximumWeight(config.getSizeInBytes())
-          .weigher((NamedKey key, byte[] value) -> value.length
-                                                   + key.key.length
-                                                   + key.namespace.length() * Chars.BYTES
-                                                   + FIXED_COST);
+      builder.maximumWeight(config.getSizeInBytes());
+    } else {
+      builder.maximumWeight(Math.min(MAX_DEFAULT_BYTES, Runtime.getRuntime().maxMemory() / 10));
     }
-    builder.executor(executor);
+    builder
+        .weigher((NamedKey key, byte[] value) -> value.length
+                                                 + key.key.length
+                                                 + key.namespace.length() * Character.BYTES
+                                                 + FIXED_COST)
+        .executor(executor);
     return new CaffeineCache(builder.build(), config);
   }
 
@@ -176,7 +175,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
     }
     final int decompressedLen = ByteBuffer.wrap(bytes).getInt();
     final byte[] out = new byte[decompressedLen];
-    LZ4_DECOMPRESSOR.decompress(bytes, Ints.BYTES, out, 0, out.length);
+    LZ4_DECOMPRESSOR.decompress(bytes, Integer.BYTES, out, 0, out.length);
     return out;
   }
 
@@ -185,7 +184,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
     final int len = LZ4_COMPRESSOR.maxCompressedLength(value.length);
     final byte[] out = new byte[len];
     final int compressedSize = LZ4_COMPRESSOR.compress(value, 0, value.length, out, 0);
-    return ByteBuffer.allocate(compressedSize + Ints.BYTES)
+    return ByteBuffer.allocate(compressedSize + Integer.BYTES)
                      .putInt(value.length)
                      .put(out, 0, compressedSize)
                      .array();

@@ -20,7 +20,7 @@
 package io.druid.indexing.overlord.helpers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.druid.TestUtil;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,7 +38,7 @@ public class TaskLogAutoCleanerConfigTest
                   + "  \"durationToRetain\": 30\n"
                   + "}";
 
-    ObjectMapper mapper = TestUtil.MAPPER;
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TaskLogAutoCleanerConfig config = mapper.readValue(
         mapper.writeValueAsString(
@@ -60,7 +60,7 @@ public class TaskLogAutoCleanerConfigTest
   {
     String json = "{}";
 
-    ObjectMapper mapper = TestUtil.MAPPER;
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TaskLogAutoCleanerConfig config = mapper.readValue(
         mapper.writeValueAsString(

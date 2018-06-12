@@ -19,8 +19,11 @@
 
 package io.druid.storage.google;
 
+import com.google.api.client.http.HttpResponseException;
 import com.google.inject.Inject;
 import io.druid.java.util.common.MapUtils;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -52,16 +55,43 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
     final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf("/")) + "/descriptor.json";
 
     try {
-      storage.delete(bucket, indexPath);
-      storage.delete(bucket, descriptorPath);
+      deleteIfPresent(bucket, indexPath);
+      deleteIfPresent(bucket, descriptorPath);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e.getMessage());
     }
   }
 
+  private void deleteIfPresent(String bucket, String path) throws IOException
+  {
+    try {
+      RetryUtils.retry(
+          (RetryUtils.Task<Void>) () -> {
+            storage.delete(bucket, path);
+            return null;
+          },
+          GoogleUtils::isRetryable,
+          1,
+          5
+      );
+    }
+    catch (HttpResponseException e) {
+      if (e.getStatusCode() != 404) {
+        throw e;
+      }
+      LOG.debug("Already deleted: [%s] [%s]", bucket, path);
+    }
+    catch (IOException ioe) {
+      throw ioe;
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to delete [%s] [%s]", bucket, path);
+    }
+  }
+
   @Override
-  public void killAll() throws IOException
+  public void killAll()
   {
     throw new UnsupportedOperationException("not implemented");
   }

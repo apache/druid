@@ -56,7 +56,7 @@ public class ForegroundCachePopulator implements CachePopulator
       final Cache.NamedKey cacheKey
   )
   {
-    final Function<T, CacheType> cacheFn = cacheStrategy.prepareForCache();
+    final Function<T, CacheType> cacheFn = cacheStrategy.prepareForSegmentLevelCache();
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     final AtomicBoolean tooBig = new AtomicBoolean(false);
     final JsonGenerator jsonGenerator;

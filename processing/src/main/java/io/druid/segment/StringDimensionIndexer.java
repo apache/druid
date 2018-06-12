@@ -21,11 +21,11 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Comparators;
@@ -40,7 +40,8 @@ import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.TimeAndDimsHolder;
+import io.druid.segment.incremental.IncrementalIndexRow;
+import io.druid.segment.incremental.IncrementalIndexRowHolder;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -54,17 +55,26 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.Function;
 
 public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], String>
 {
-  private static final Function<Object, String> STRING_TRANSFORMER = o -> o != null ? o.toString() : null;
-  private static final int[] EMPTY_INT_ARRAY = new int[]{};
+
+  private static String emptytoNullIfNeeded(Object o)
+  {
+    return o != null
+           ? NullHandling.emptyToNullIfNeeded(o.toString())
+           : null;
+  }
+
+  private static final int ABSENT_VALUE_ID = -1;
 
   private static class DimensionDictionary
   {
+    @Nullable
     private String minValue = null;
+    @Nullable
     private String maxValue = null;
+    private int idForNull = ABSENT_VALUE_ID;
 
     private final Object2IntMap<String> valueToId = new Object2IntOpenHashMap<>();
 
@@ -80,37 +90,50 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     public int getId(String value)
     {
       synchronized (lock) {
-        return valueToId.getInt(Strings.nullToEmpty(value));
+        if (value == null) {
+          return idForNull;
+        }
+        return valueToId.getInt(value);
       }
     }
 
     public String getValue(int id)
     {
       synchronized (lock) {
-        return Strings.emptyToNull(idToValue.get(id));
+        if (id == idForNull) {
+          return null;
+        }
+        return idToValue.get(id);
       }
     }
 
     public int size()
     {
       synchronized (lock) {
-        return valueToId.size();
+        // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
+        return idToValue.size();
       }
     }
 
-    public int add(String originalValue)
+    public int add(@Nullable String originalValue)
     {
-      String value = Strings.nullToEmpty(originalValue);
       synchronized (lock) {
-        int prev = valueToId.getInt(value);
+        if (originalValue == null) {
+          if (idForNull == ABSENT_VALUE_ID) {
+            idForNull = size();
+            idToValue.add(null);
+          }
+          return idForNull;
+        }
+        int prev = valueToId.getInt(originalValue);
         if (prev >= 0) {
           return prev;
         }
         final int index = size();
-        valueToId.put(value, index);
-        idToValue.add(value);
-        minValue = minValue == null || minValue.compareTo(value) > 0 ? value : minValue;
-        maxValue = maxValue == null || maxValue.compareTo(value) < 0 ? value : maxValue;
+        valueToId.put(originalValue, index);
+        idToValue.add(originalValue);
+        minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
+        maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
         return index;
       }
     }
@@ -145,15 +168,16 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     public SortedDimensionDictionary(List<String> idToValue, int length)
     {
-      Object2IntSortedMap<String> sortedMap = new Object2IntRBTreeMap<>();
+      Object2IntSortedMap<String> sortedMap = new Object2IntRBTreeMap<>(Comparators.naturalNullsFirst());
       for (int id = 0; id < length; id++) {
-        sortedMap.put(idToValue.get(id), id);
+        String value = idToValue.get(id);
+        sortedMap.put(value, id);
       }
       this.sortedVals = Lists.newArrayList(sortedMap.keySet());
       this.idToIndex = new int[length];
       this.indexToId = new int[length];
       int index = 0;
-      for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext();) {
+      for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
         int id = iterator.nextInt();
         idToIndex[id] = index;
         indexToId[index] = id;
@@ -173,40 +197,44 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     public String getValueFromSortedId(int index)
     {
-      return Strings.emptyToNull(sortedVals.get(index));
+      return sortedVals.get(index);
     }
   }
 
   private final DimensionDictionary dimLookup;
   private final MultiValueHandling multiValueHandling;
+  private final boolean hasBitmapIndexes;
   private SortedDimensionDictionary sortedLookup;
+  private boolean hasMultipleValues = false;
 
-  public StringDimensionIndexer(MultiValueHandling multiValueHandling)
+  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
   {
     this.dimLookup = new DimensionDictionary();
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
+    this.hasBitmapIndexes = hasBitmapIndexes;
   }
 
   @Override
-  public int[] processRowValsToUnsortedEncodedKeyComponent(Object dimValues)
+  public int[] processRowValsToUnsortedEncodedKeyComponent(Object dimValues, boolean reportParseExceptions)
   {
     final int[] encodedDimensionValues;
     final int oldDictSize = dimLookup.size();
 
     if (dimValues == null) {
-      dimLookup.add(null);
-      encodedDimensionValues = null;
+      final int nullId = dimLookup.getId(null);
+      encodedDimensionValues = nullId == ABSENT_VALUE_ID ? new int[]{dimLookup.add(null)} : new int[]{nullId};
     } else if (dimValues instanceof List) {
       List<Object> dimValuesList = (List) dimValues;
       if (dimValuesList.isEmpty()) {
         dimLookup.add(null);
-        encodedDimensionValues = EMPTY_INT_ARRAY;
+        encodedDimensionValues = IntArrays.EMPTY_ARRAY;
       } else if (dimValuesList.size() == 1) {
-        encodedDimensionValues = new int[]{dimLookup.add(STRING_TRANSFORMER.apply(dimValuesList.get(0)))};
+        encodedDimensionValues = new int[]{dimLookup.add(emptytoNullIfNeeded(dimValuesList.get(0)))};
       } else {
+        hasMultipleValues = true;
         final String[] dimensionValues = new String[dimValuesList.size()];
         for (int i = 0; i < dimValuesList.size(); i++) {
-          dimensionValues[i] = STRING_TRANSFORMER.apply(dimValuesList.get(i));
+          dimensionValues[i] = emptytoNullIfNeeded(dimValuesList.get(i));
         }
         if (multiValueHandling.needSorting()) {
           // Sort multival row by their unencoded values first.
@@ -231,7 +259,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
         encodedDimensionValues = pos == retVal.length ? retVal : Arrays.copyOf(retVal, pos);
       }
     } else {
-      encodedDimensionValues = new int[]{dimLookup.add(STRING_TRANSFORMER.apply(dimValues))};
+      encodedDimensionValues = new int[]{dimLookup.add(emptytoNullIfNeeded(dimValues))};
     }
 
     // If dictionary size has changed, the sorted lookup is no longer valid.
@@ -240,6 +268,20 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     }
 
     return encodedDimensionValues;
+  }
+
+  @Override
+  public long estimateEncodedKeyComponentSize(int[] key)
+  {
+    // string length is being accounted for each time they are referenced, based on dimension handler interface,
+    // even though they are stored just once. It may overestimate the size by a bit, but we wanted to leave
+    // more buffer to be safe
+    long estimatedSize = key.length * Integer.BYTES;
+    estimatedSize += Arrays.stream(key)
+                           .filter(element -> dimLookup.getValue(element) != null)
+                           .mapToLong(element -> dimLookup.getValue(element).length() * Character.BYTES)
+                           .sum();
+    return estimatedSize;
   }
 
   public Integer getSortedEncodedValueFromUnsorted(Integer unsortedIntermediateValue)
@@ -280,7 +322,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       public int indexOf(String value)
       {
         int id = getEncodedValue(value, false);
-        return id < 0 ? -1 : getSortedEncodedValueFromUnsorted(id);
+        return id < 0 ? ABSENT_VALUE_ID : getSortedEncodedValueFromUnsorted(id);
       }
 
       @Override
@@ -355,7 +397,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public DimensionSelector makeDimensionSelector(
       final DimensionSpec spec,
-      final TimeAndDimsHolder currEntry,
+      final IncrementalIndexRowHolder currEntry,
       final IncrementalIndex.DimensionDesc desc
   )
   {
@@ -366,6 +408,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     class IndexerDimensionSelector implements DimensionSelector, IdLookup
     {
+      private final ArrayBasedIndexedInts indexedInts = new ArrayBasedIndexedInts();
       private int[] nullIdIntArray;
 
       @Override
@@ -385,18 +428,23 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
         // usually due to currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
         if (indices == null || indices.length == 0) {
-          final int nullId = getEncodedValue(null, false);
-          if (nullId > -1) {
-            if (nullIdIntArray == null) {
-              nullIdIntArray = new int[] {nullId};
-            }
-            row = nullIdIntArray;
-            rowSize = 1;
-          } else {
-            // doesn't contain nullId, then empty array is used
-            // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
+          if (hasMultipleValues) {
             row = IntArrays.EMPTY_ARRAY;
             rowSize = 0;
+          } else {
+            final int nullId = getEncodedValue(null, false);
+            if (nullId > -1) {
+              if (nullIdIntArray == null) {
+                nullIdIntArray = new int[]{nullId};
+              }
+              row = nullIdIntArray;
+              rowSize = 1;
+            } else {
+              // doesn't contain nullId, then empty array is used
+              // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
+              row = IntArrays.EMPTY_ARRAY;
+              rowSize = 0;
+            }
           }
         }
 
@@ -405,7 +453,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           rowSize = indices.length;
         }
 
-        return ArrayBasedIndexedInts.of(row, rowSize);
+        indexedInts.setValues(row, rowSize);
+        return indexedInts;
       }
 
       @Override
@@ -447,7 +496,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             return BooleanValueMatcher.of(false);
           }
         } else {
-          // Employ precomputed BitSet optimization
+          // Employ caching BitSet optimization
           return makeValueMatcher(Predicates.equalTo(value));
         }
       }
@@ -455,8 +504,11 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
       {
-        final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(this, predicate);
+        final BitSet checkedIds = new BitSet(maxId);
+        final BitSet matchingIds = new BitSet(maxId);
         final boolean matchNull = predicate.apply(null);
+
+        // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
         {
           @Override
@@ -473,8 +525,17 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             }
 
             for (int id : dimsInt) {
-              if (predicateMatchingValueIds.get(id)) {
-                return true;
+              if (checkedIds.get(id)) {
+                if (matchingIds.get(id)) {
+                  return true;
+                }
+              } else {
+                final boolean matches = predicate.apply(lookupName(id));
+                checkedIds.set(id);
+                if (matches) {
+                  matchingIds.set(id);
+                  return true;
+                }
               }
             }
             return false;
@@ -533,7 +594,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public Object getObject()
       {
-        IncrementalIndex.TimeAndDims key = currEntry.get();
+        IncrementalIndexRow key = currEntry.get();
         if (key == null) {
           return null;
         }
@@ -567,7 +628,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -581,22 +642,20 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       return null;
     }
     if (key.length == 1) {
-      String val = getActualValue(key[0], false);
-      val = Strings.nullToEmpty(val);
-      return val;
+      return getActualValue(key[0], false);
     } else {
       if (asList) {
         List<Comparable> rowVals = new ArrayList<>(key.length);
         for (int id : key) {
           String val = getActualValue(id, false);
-          rowVals.add(Strings.nullToEmpty(val));
+          rowVals.add(NullHandling.nullToEmptyIfNeeded(val));
         }
         return rowVals;
       } else {
         String[] rowArray = new String[key.length];
         for (int i = 0; i < key.length; i++) {
           String val = getActualValue(key[i], false);
-          rowArray[i] = Strings.nullToEmpty(val);
+          rowArray[i] = NullHandling.nullToEmptyIfNeeded(val);
         }
         return rowArray;
       }
@@ -604,14 +663,87 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public int[] convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(int[] key)
+  public ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues)
   {
-    int[] sortedDimVals = new int[key.length];
-    for (int i = 0; i < key.length; ++i) {
-      // The encoded values in the TimeAndDims key are not sorted based on their final unencoded values, so need this lookup.
-      sortedDimVals[i] = getSortedEncodedValueFromUnsorted(key[i]);
+    DimensionSelector dimSelectorWithUnsortedValues = (DimensionSelector) selectorWithUnsortedValues;
+    class SortedDimensionSelector implements DimensionSelector, IndexedInts
+    {
+      @Override
+      public int size()
+      {
+        return dimSelectorWithUnsortedValues.getRow().size();
+      }
+
+      @Override
+      public int get(int index)
+      {
+        return sortedLookup().getSortedIdFromUnsortedId(dimSelectorWithUnsortedValues.getRow().get(index));
+      }
+
+      @Override
+      public IndexedInts getRow()
+      {
+        return this;
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(@Nullable String value)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public int getValueCardinality()
+      {
+        return dimSelectorWithUnsortedValues.getValueCardinality();
+      }
+
+      @Nullable
+      @Override
+      public String lookupName(int id)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public boolean nameLookupPossibleInAdvance()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Nullable
+      @Override
+      public IdLookup idLookup()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("dimSelectorWithUnsortedValues", dimSelectorWithUnsortedValues);
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        return dimSelectorWithUnsortedValues.getObject();
+      }
+
+      @Override
+      public Class classOfObject()
+      {
+        return dimSelectorWithUnsortedValues.classOfObject();
+      }
     }
-    return sortedDimVals;
+    return new SortedDimensionSelector();
   }
 
   @Override
@@ -619,6 +751,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       int[] key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
   )
   {
+    if (!hasBitmapIndexes) {
+      throw new UnsupportedOperationException("This column does not include bitmap indexes");
+    }
+
     for (int dimValIdx : key) {
       if (bitmapIndexes[dimValIdx] == null) {
         bitmapIndexes[dimValIdx] = factory.makeEmptyMutableBitmap();

@@ -30,6 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.OverlordProxyServlet;
 import io.druid.server.http.RedirectFilter;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.AuthConfig;
@@ -71,12 +72,16 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
   private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
+  private final AuthConfig authConfig;
+  private final ServerConfig serverConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties)
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, AuthConfig authConfig, ServerConfig serverConfig)
   {
     this.config = config;
     this.beOverlord = CliCoordinator.isOverlord(properties);
+    this.authConfig = authConfig;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -117,12 +122,18 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
+
+    if (beOverlord) {
+      AuthenticationUtils.addNoopAuthorizationFilters(root, CliOverlord.UNSECURED_PATHS);
+    }
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
-    JettyServerInitUtils.addExtensionFilters(root, injector);
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
+    JettyServerInitUtils.addExtensionFilters(root, injector);
 
     // Check that requests were authorized before sending responses
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
@@ -131,8 +142,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
         jsonMapper
     );
 
-    // /status should not redirect, so add first
+    // add some paths not to be redirected to leader.
     root.addFilter(GuiceFilter.class, "/status/*", null);
+    root.addFilter(GuiceFilter.class, "/druid-internal/*", null);
 
     // redirect anything other than status to the current lead
     root.addFilter(new FilterHolder(injector.getInstance(RedirectFilter.class)), "/*", null);
@@ -144,6 +156,8 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     if (beOverlord) {
       root.addFilter(GuiceFilter.class, "/druid/indexer/*", null);
     }
+    root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
+
     // this will be removed in the next major release
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
@@ -155,7 +169,11 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     handlerList.setHandlers(
         new Handler[]{
             JettyServerInitUtils.getJettyRequestLogHandler(),
-            JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+            JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                root,
+                serverConfig.getInflateBufferSize(),
+                serverConfig.getCompressionLevel()
+            )
         }
     );
 

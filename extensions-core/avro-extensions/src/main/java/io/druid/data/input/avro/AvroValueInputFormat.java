@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
 import java.io.IOException;
 
+@SuppressWarnings("unused") // This class should be specified and used via hadoop ioConfig, see avro.md
 public class AvroValueInputFormat extends FileInputFormat<NullWritable, GenericRecord>
 {
   private static final Logger log = new Logger(AvroValueInputFormat.class);
@@ -46,7 +47,7 @@ public class AvroValueInputFormat extends FileInputFormat<NullWritable, GenericR
   @Override
   public RecordReader<NullWritable, GenericRecord> createRecordReader(
       InputSplit split, TaskAttemptContext context
-  ) throws IOException, InterruptedException
+  ) throws IOException
   {
     Schema readerSchema = AvroJob.getInputValueSchema(context.getConfiguration());
 

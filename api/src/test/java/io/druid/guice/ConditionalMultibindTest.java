@@ -51,7 +51,7 @@ public class ConditionalMultibindTest
   private Properties props;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     props = new Properties();
   }
@@ -312,7 +312,7 @@ public class ConditionalMultibindTest
     Assert.assertEquals(ImmutableSet.of(zoo1, zoo2), actualZooSet);
   }
 
-  static abstract class Animal
+  abstract static class Animal
   {
     private final String type;
 

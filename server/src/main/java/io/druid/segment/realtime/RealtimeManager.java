@@ -29,16 +29,16 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
@@ -49,6 +49,7 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentSpec;
+import io.druid.segment.incremental.IncrementalIndexAddResult;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
@@ -113,7 +114,7 @@ public class RealtimeManager implements QuerySegmentWalker
   }
 
   @LifecycleStart
-  public void start() throws IOException
+  public void start()
   {
     serverAnnouncer.announce();
 
@@ -249,15 +250,10 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    private FirehoseV2 initFirehoseV2(Object metaData)
+    private FirehoseV2 initFirehoseV2(Object metaData) throws IOException
     {
-      try {
-        log.info("Calling the FireDepartment and getting a FirehoseV2.");
-        return fireDepartment.connect(metaData);
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+      log.info("Calling the FireDepartment and getting a FirehoseV2.");
+      return fireDepartment.connect(metaData);
     }
 
     private void initPlumber()
@@ -305,10 +301,6 @@ public class RealtimeManager implements QuerySegmentWalker
             closer.register(() -> plumber.finishJob());
           }
         }
-        catch (InterruptedException e) {
-          log.warn("Interrupted while running a firehose");
-          throw closer.rethrow(e);
-        }
         catch (Exception e) {
           log.makeAlert(
               e,
@@ -332,7 +324,7 @@ public class RealtimeManager implements QuerySegmentWalker
       }
     }
 
-    private boolean runFirehoseV2(FirehoseV2 firehose) throws Exception
+    private boolean runFirehoseV2(FirehoseV2 firehose)
     {
       firehose.start();
 
@@ -344,14 +336,17 @@ public class RealtimeManager implements QuerySegmentWalker
           return false;
         }
         InputRow inputRow = null;
-        int numRows = 0;
         try {
           inputRow = firehose.currRow();
           if (inputRow != null) {
-            numRows = plumber.add(inputRow, committerSupplier);
-            if (numRows < 0) {
+            IncrementalIndexAddResult addResult = plumber.add(inputRow, committerSupplier);
+            int numRows = addResult.getRowCount();
+            if (numRows == -2) {
+              metrics.incrementDedup();
+              log.debug("Throwing away duplicate event[%s]", inputRow);
+            } else if (numRows < 0) {
               metrics.incrementThrownAway();
-              log.debug("Throwing away event[%s]", inputRow);
+              log.debug("Throwing away event[%s] due to %s", inputRow, addResult.getReasonOfNotAdded());
             } else {
               metrics.incrementProcessed();
             }
@@ -362,7 +357,8 @@ public class RealtimeManager implements QuerySegmentWalker
         }
         catch (Exception e) {
           log.makeAlert(e, "Unknown exception, Ignoring and continuing.")
-             .addData("inputRow", inputRow);
+             .addData("inputRow", inputRow)
+             .emit();
         }
 
         try {

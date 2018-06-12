@@ -21,13 +21,10 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 
 /**
  */
@@ -37,20 +34,16 @@ import java.nio.channels.WritableByteChannel;
     @JsonSubTypes.Type(name = "float", value = FloatGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "long", value = LongGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "double", value = DoubleGenericColumnPartSerde.class),
-    @JsonSubTypes.Type(name = "stringDictionary", value = DictionaryEncodedColumnPartSerde.class)
+    @JsonSubTypes.Type(name = "stringDictionary", value = DictionaryEncodedColumnPartSerde.class),
+    @JsonSubTypes.Type(name = "floatV2", value = FloatGenericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "longV2", value = LongGenericColumnPartSerdeV2.class),
+    @JsonSubTypes.Type(name = "doubleV2", value = DoubleGenericColumnPartSerdeV2.class),
 })
 public interface ColumnPartSerde
 {
   Serializer getSerializer();
 
   Deserializer getDeserializer();
-
-  interface Serializer
-  {
-    long numBytes();
-
-    void write(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
-  }
 
   interface Deserializer
   {

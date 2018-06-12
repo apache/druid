@@ -61,6 +61,7 @@ public class GranularityPathSpecTest
       null,
       null,
       null,
+      null,
       false,
       false,
       false,
@@ -73,6 +74,8 @@ public class GranularityPathSpecTest
       null,
       false,
       false,
+      null,
+      null,
       null
   );
 

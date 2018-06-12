@@ -19,7 +19,6 @@
 
 package io.druid.indexer;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -30,12 +29,12 @@ import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +49,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testGranularitySpec() throws JsonProcessingException
+  public void testGranularitySpec()
   {
     final HadoopIngestionSpec schema;
 
@@ -118,7 +117,7 @@ public class HadoopIngestionSpecTest
 
     Assert.assertEquals(
         "getSegmentGranularity",
-        new PeriodGranularity(new Period("PT1H"), null, DateTimeZone.forID("America/Los_Angeles")),
+        new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzfromString("America/Los_Angeles")),
         granularitySpec.getSegmentGranularity()
     );
   }
@@ -220,7 +219,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testDbUpdaterJobSpec() throws Exception
+  public void testDbUpdaterJobSpec()
   {
     final HadoopIngestionSpec schema;
 
@@ -286,7 +285,7 @@ public class HadoopIngestionSpecTest
   }
 
   @Test
-  public void testUniqueId() throws Exception
+  public void testUniqueId()
   {
     final HadoopIngestionSpec schema = jsonReadWriteRead(
         "{\"uniqueId\" : \"test_unique_id\"}",

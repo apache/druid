@@ -83,6 +83,16 @@ public class SQLMetadataRuleManagerTest
   }
 
   @Test
+  public void testMultipleStopAndStart()
+  {
+    // Simulate successive losing and getting the coordinator leadership
+    ruleManager.start();
+    ruleManager.stop();
+    ruleManager.start();
+    ruleManager.stop();
+  }
+
+  @Test
   public void testRuleInsert()
   {
     List<Rule> rules = Arrays.<Rule>asList(
@@ -200,7 +210,7 @@ public class SQLMetadataRuleManagerTest
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                   .execute();

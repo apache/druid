@@ -27,13 +27,10 @@ import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Chars;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.common.utils.IntArrayUtils;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -89,7 +86,7 @@ import java.util.stream.IntStream;
 public class RowBasedGrouperHelper
 {
   // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
-  private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
+  private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Long.BYTES * 5 + Integer.BYTES;
 
   private static final int SINGLE_THREAD_CONCURRENCY_HINT = -1;
   private static final int UNKNOWN_THREAD_PRIORITY = -1;
@@ -140,7 +137,7 @@ public class RowBasedGrouperHelper
       final Map<String, ValueType> rawInputRowSignature,
       final GroupByQueryConfig config,
       final Supplier<ByteBuffer> bufferSupplier,
-      final Supplier<ResourceHolder<ByteBuffer>> combineBufferSupplier,
+      @Nullable final ReferenceCountingResourceHolder<ByteBuffer> combineBufferHolder,
       final int concurrencyHint,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
@@ -219,7 +216,7 @@ public class RowBasedGrouperHelper
       grouper = new ConcurrentGrouper<>(
           querySpecificConfig,
           bufferSupplier,
-          combineBufferSupplier,
+          combineBufferHolder,
           keySerdeFactory,
           combineKeySerdeFactory,
           columnSelectorFactory,
@@ -939,7 +936,7 @@ public class RowBasedGrouperHelper
 
   static long estimateStringKeySize(String key)
   {
-    return (long) key.length() * Chars.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
+    return (long) key.length() * Character.BYTES + ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY;
   }
 
   private static class RowBasedKeySerde implements Grouper.KeySerde<RowBasedGrouperHelper.RowBasedKey>
@@ -999,7 +996,7 @@ public class RowBasedGrouperHelper
       this.serdeHelpers = makeSerdeHelpers(limitSpec != null, enableRuntimeDictionaryGeneration);
       this.serdeHelperComparators = new BufferComparator[serdeHelpers.length];
       Arrays.setAll(serdeHelperComparators, i -> serdeHelpers[i].getBufferComparator());
-      this.keySize = (includeTimestamp ? Longs.BYTES : 0) + getTotalKeySize();
+      this.keySize = (includeTimestamp ? Long.BYTES : 0) + getTotalKeySize();
       this.keyBuffer = ByteBuffer.allocate(keySize);
 
       if (!enableRuntimeDictionaryGeneration) {
@@ -1083,7 +1080,7 @@ public class RowBasedGrouperHelper
       if (includeTimestamp) {
         key = new Comparable[dimCount + 1];
         key[0] = buffer.getLong(position);
-        dimsPosition = position + Longs.BYTES;
+        dimsPosition = position + Long.BYTES;
         dimStart = 1;
       } else {
         key = new Comparable[dimCount];
@@ -1202,7 +1199,7 @@ public class RowBasedGrouperHelper
             final RowBasedKeySerdeHelper serdeHelper;
             final StringComparator stringComparator = orderSpec.getDimensionComparator();
             final String typeName = aggregatorFactories[aggIndex].getTypeName();
-            final int aggOffset = aggregatorOffsets[aggIndex] - Ints.BYTES;
+            final int aggOffset = aggregatorOffsets[aggIndex] - Integer.BYTES;
 
             aggCount++;
 
@@ -1459,7 +1456,7 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Ints.BYTES;
+        return Integer.BYTES;
       }
 
       @Override
@@ -1578,7 +1575,7 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Longs.BYTES;
+        return Long.BYTES;
       }
 
       @Override
@@ -1629,7 +1626,7 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Floats.BYTES;
+        return Float.BYTES;
       }
 
       @Override
@@ -1681,7 +1678,7 @@ public class RowBasedGrouperHelper
       @Override
       public int getKeyBufferValueSize()
       {
-        return Doubles.BYTES;
+        return Double.BYTES;
       }
 
       @Override
@@ -1717,8 +1714,8 @@ public class RowBasedGrouperHelper
       final int cmp = comparator.compare(
           lhsBuffer,
           rhsBuffer,
-          lhsPosition + Longs.BYTES,
-          rhsPosition + Longs.BYTES
+          lhsPosition + Long.BYTES,
+          rhsPosition + Long.BYTES
       );
       if (cmp != 0) {
         return cmp;
@@ -1744,15 +1741,15 @@ public class RowBasedGrouperHelper
         cmp = serdeHelperComparators[i].compare(
             rhsBuffer,
             lhsBuffer,
-            rhsPosition + Longs.BYTES,
-            lhsPosition + Longs.BYTES
+            rhsPosition + Long.BYTES,
+            lhsPosition + Long.BYTES
         );
       } else {
         cmp = serdeHelperComparators[i].compare(
             lhsBuffer,
             rhsBuffer,
-            lhsPosition + Longs.BYTES,
-            rhsPosition + Longs.BYTES
+            lhsPosition + Long.BYTES,
+            rhsPosition + Long.BYTES
         );
       }
       if (cmp != 0) {

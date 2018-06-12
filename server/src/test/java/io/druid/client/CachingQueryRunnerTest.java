@@ -26,11 +26,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.cache.BackgroundCachePopulator;
 import io.druid.client.cache.Cache;
-import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheStats;
 import io.druid.client.cache.ForegroundCachePopulator;
 import io.druid.client.cache.MapCache;
@@ -43,6 +42,7 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.SequenceWrapper;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -71,7 +71,6 @@ import org.junit.runners.Parameterized;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -85,7 +84,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CachingQueryRunnerTest
 {
   @Parameterized.Parameters(name = "numBackgroundThreads={0}")
-  public static Iterable<Object[]> constructorFeeder() throws IOException
+  public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(5, 1, 0));
   }
@@ -215,7 +214,7 @@ public class CachingQueryRunnerTest
           }
 
           @Override
-          public void after(boolean isDone, Throwable thrown) throws Exception
+          public void after(boolean isDone, Throwable thrown)
           {
             closable.close();
           }
@@ -317,7 +316,7 @@ public class CachingQueryRunnerTest
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
 
-    ArrayList results = Sequences.toList(res, new ArrayList());
+    List results = res.toList();
     Assert.assertTrue(closable.isClosed());
     Assert.assertEquals(expectedRes.toString(), results.toString());
 
@@ -327,7 +326,7 @@ public class CachingQueryRunnerTest
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 
-    Function<Object, Result> fn = cacheStrategy.pullFromCache();
+    Function<Object, Result> fn = cacheStrategy.pullFromSegmentLevelCache();
     List<Result> cacheResults = Lists.newArrayList(
         Iterators.transform(
             objectMapper.readValues(
@@ -344,7 +343,7 @@ public class CachingQueryRunnerTest
       List<Result> expectedResults,
       Query query,
       QueryToolChest toolchest
-  ) throws Exception
+  ) throws IOException
   {
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     String segmentIdentifier = "segment";
@@ -358,7 +357,7 @@ public class CachingQueryRunnerTest
     );
 
     Cache cache = MapCache.create(1024 * 1024);
-    cache.put(cacheKey, toByteArray(Iterables.transform(expectedResults, cacheStrategy.prepareForCache())));
+    cache.put(cacheKey, toByteArray(Iterables.transform(expectedResults, cacheStrategy.prepareForSegmentLevelCache())));
 
     CachingQueryRunner runner = new CachingQueryRunner(
         segmentIdentifier,
@@ -393,7 +392,7 @@ public class CachingQueryRunnerTest
 
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    List<Result> results = Sequences.toList(runner.run(QueryPlus.wrap(query), context), new ArrayList());
+    List<Result> results = runner.run(QueryPlus.wrap(query), context).toList();
     Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 
@@ -461,7 +460,7 @@ public class CachingQueryRunnerTest
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       Assert.assertFalse(closed.get());
       Assert.assertTrue(closed.compareAndSet(false, true));

@@ -19,25 +19,20 @@
 
 package io.druid.storage.google;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.FileUtils;
-import io.druid.java.util.common.MapUtils;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
-import io.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Map;
 
-public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
+public class GoogleDataSegmentPuller implements URIDataPuller
 {
   private static final Logger LOG = new Logger(GoogleDataSegmentPuller.class);
 
@@ -49,29 +44,19 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
     this.storage = storage;
   }
 
-  @Override
-  public void getSegmentFiles(final DataSegment segment, final File outDir) throws SegmentLoadingException
-  {
-    final Map<String, Object> loadSpec = segment.getLoadSpec();
-    final String bucket = MapUtils.getString(loadSpec, "bucket");
-    final String path = MapUtils.getString(loadSpec, "path");
-
-    getSegmentFiles(bucket, path, outDir);
-  }
-
-  public FileUtils.FileCopyResult getSegmentFiles(final String bucket, final String path, File outDir)
+  FileUtils.FileCopyResult getSegmentFiles(final String bucket, final String path, File outDir)
       throws SegmentLoadingException
   {
     LOG.info("Pulling index at bucket[%s] path[%s] to outDir[%s]", bucket, path, outDir.getAbsolutePath());
 
     try {
-      prepareOutDir(outDir);
+      org.apache.commons.io.FileUtils.forceMkdir(outDir);
 
       final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,
-          GoogleUtils.GOOGLE_RETRY,
+          GoogleUtils::isRetryable,
           false
       );
       LOG.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
@@ -89,12 +74,6 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
       }
       throw new SegmentLoadingException(e, e.getMessage());
     }
-  }
-
-  @VisibleForTesting
-  void prepareOutDir(final File outDir) throws IOException
-  {
-    org.apache.commons.io.FileUtils.forceMkdir(outDir);
   }
 
   @Override
@@ -128,7 +107,7 @@ public class GoogleDataSegmentPuller implements DataSegmentPuller, URIDataPuller
         if (e == null) {
           return false;
         }
-        if (GoogleUtils.GOOGLE_RETRY.apply(e)) {
+        if (GoogleUtils.isRetryable(e)) {
           return true;
         }
         // Look all the way down the cause chain, just in case something wraps it deep.

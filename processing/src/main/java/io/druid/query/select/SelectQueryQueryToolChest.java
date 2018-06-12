@@ -243,7 +243,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       }
 
       @Override
-      public Function<Result<SelectResultValue>, Object> prepareForCache()
+      public Function<Result<SelectResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
         return new Function<Result<SelectResultValue>, Object>()
         {
@@ -272,7 +272,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
       }
 
       @Override
-      public Function<Object, Result<SelectResultValue>> pullFromCache()
+      public Function<Object, Result<SelectResultValue>> pullFromCache(boolean isResultLevelCache)
       {
         return new Function<Object, Result<SelectResultValue>>()
         {
@@ -306,7 +306,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
               for (int idx = 0; idx < dimOutputNames.size(); idx++) {
                 if (!cachedOutputNames.get(idx).equals(dimOutputNames.get(idx))) {
                   // rename outputName in the EventHolder
-                  for (EventHolder eventHolder: eventHolders) {
+                  for (EventHolder eventHolder : eventHolders) {
                     Object obj = eventHolder.getEvent().remove(cachedOutputNames.get(idx));
                     if (obj != null) {
                       eventHolder.getEvent().put(dimOutputNames.get(idx), obj);

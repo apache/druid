@@ -20,11 +20,13 @@
 package io.druid.emitter.ambari.metrics;
 
 import com.google.common.collect.Maps;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.annotations.UsedByJUnitParamsRunner;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -33,17 +35,18 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+
 
 @RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedDruidToTimelineEventConverterTest
 {
-  final private String prefix = "druid";
-  final private WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter = new WhiteListBasedDruidToTimelineEventConverter(
-      prefix,
-      "druid",
-      null,
-      new DefaultObjectMapper()
-  );
+  private final String prefix = "druid";
+  private final WhiteListBasedDruidToTimelineEventConverter defaultWhiteListBasedDruidToTimelineEventConverter =
+      new WhiteListBasedDruidToTimelineEventConverter(prefix, "druid", null, new DefaultObjectMapper());
   private ServiceMetricEvent event;
   private final DateTime createdTime = DateTimes.nowUtc();
   private final String hostname = "testHost:8080";
@@ -106,6 +109,38 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
     Assert.assertEquals(expectedPath, path);
   }
 
+  @Test
+  public void testWhiteListedStringArrayDimension() throws IOException
+  {
+    File mapFile = File.createTempFile("testing-" + System.nanoTime(), ".json");
+    mapFile.deleteOnExit();
+
+    try (OutputStream outputStream = new FileOutputStream(mapFile)) {
+      IOUtils.copyLarge(
+          getClass().getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
+          outputStream
+      );
+    }
+
+    WhiteListBasedDruidToTimelineEventConverter converter = new WhiteListBasedDruidToTimelineEventConverter(
+        prefix,
+        "druid",
+        mapFile.getAbsolutePath(),
+        new DefaultObjectMapper()
+    );
+
+    ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+        .setDimension("gcName", new String[] {"g1"})
+        .build(createdTime, "jvm/gc/cpu", 10)
+        .build(serviceName, hostname);
+
+    TimelineMetric metric = converter.druidEventToTimelineMetric(event);
+
+    Assert.assertNotNull(metric);
+    Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", metric.getMetricName());
+  }
+
+  @UsedByJUnitParamsRunner
   private Object[] parametersForTestGetName()
   {
     return new Object[]{

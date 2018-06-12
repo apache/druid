@@ -30,7 +30,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DirectDruidClient;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.Json;
@@ -39,6 +38,7 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Yielder;
 import io.druid.java.util.common.guava.Yielders;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.GenericQueryMetricsFactory;
 import io.druid.query.Query;
 import io.druid.query.QueryContexts;
@@ -46,8 +46,8 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.server.metrics.QueryCountStatsProvider;
 import io.druid.server.security.Access;
 import io.druid.server.security.AuthConfig;
-import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.AuthorizationUtils;
+import io.druid.server.security.AuthorizerMapper;
 import io.druid.server.security.ForbiddenException;
 import org.joda.time.DateTime;
 
@@ -203,7 +203,7 @@ public class QueryResource implements QueryCountStatsProvider
                 new StreamingOutput()
                 {
                   @Override
-                  public void write(OutputStream outputStream) throws IOException, WebApplicationException
+                  public void write(OutputStream outputStream) throws WebApplicationException
                   {
                     Exception e = null;
 

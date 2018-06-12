@@ -33,12 +33,14 @@ import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.LimitRequestsFilter;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -60,11 +62,14 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
   private final ServerConfig serverConfig;
 
+  private final AuthConfig authConfig;
+
   @Inject
-  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig)
+  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig, AuthConfig authConfig)
   {
     this.extensionHandlers = ImmutableList.copyOf(extensionHandlers);
     this.serverConfig = serverConfig;
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -95,9 +100,12 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 
@@ -111,13 +119,28 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    final Handler[] handlers = new Handler[extensionHandlers.size() + 2];
-    handlers[0] = JettyServerInitUtils.getJettyRequestLogHandler();
-    handlers[handlers.length - 1] = JettyServerInitUtils.wrapWithDefaultGzipHandler(root);
-    for (int i = 0; i < extensionHandlers.size(); i++) {
-      handlers[i + 1] = extensionHandlers.get(i);
+    // Do not change the order of the handlers that have already been added
+    for (Handler handler : server.getHandlers()) {
+      handlerList.addHandler(handler);
     }
-    handlerList.setHandlers(handlers);
-    server.setHandler(handlerList);
+
+    handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
+
+    // Add all extension handlers
+    for (Handler handler : extensionHandlers) {
+      handlerList.addHandler(handler);
+    }
+
+    // Add Gzip handler at the very end
+    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
+        root,
+        serverConfig.getInflateBufferSize(),
+        serverConfig.getCompressionLevel()
+    ));
+
+    final StatisticsHandler statisticsHandler = new StatisticsHandler();
+    statisticsHandler.setHandler(handlerList);
+
+    server.setHandler(statisticsHandler);
   }
 }

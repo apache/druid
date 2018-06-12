@@ -41,7 +41,8 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -106,7 +107,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
   public Firehose connect(
       final InputRowParser<Pair<DateTime, ChannelPrivMsg>> firehoseParser,
       final File temporaryDirectory
-  ) throws IOException
+  )
   {
     final IRCApi irc = new IRCApiImpl(false);
     final LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>> queue = new LinkedBlockingQueue<Pair<DateTime, ChannelPrivMsg>>();
@@ -187,27 +188,33 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
     return new Firehose()
     {
       InputRow nextRow = null;
+      Iterator<InputRow> nextIterator = Collections.emptyIterator();
 
       @Override
       public boolean hasMore()
       {
         try {
           while (true) {
-            Pair<DateTime, ChannelPrivMsg> nextMsg = queue.poll(100, TimeUnit.MILLISECONDS);
             if (closed) {
               return false;
             }
-            if (nextMsg == null) {
-              continue;
-            }
-            try {
-              nextRow = firehoseParser.parse(nextMsg);
+
+            if (nextIterator.hasNext()) {
+              nextRow = nextIterator.next();
               if (nextRow != null) {
                 return true;
               }
-            }
-            catch (IllegalArgumentException iae) {
-              log.debug("ignoring invalid message in channel [%s]", nextMsg.rhs.getChannelName());
+            } else {
+              Pair<DateTime, ChannelPrivMsg> nextMsg = queue.poll(100, TimeUnit.MILLISECONDS);
+              if (nextMsg == null) {
+                continue;
+              }
+              try {
+                nextIterator = firehoseParser.parseBatch(nextMsg).iterator();
+              }
+              catch (IllegalArgumentException iae) {
+                log.debug("ignoring invalid message in channel [%s]", nextMsg.rhs.getChannelName());
+              }
             }
           }
         }
@@ -238,7 +245,7 @@ public class IrcFirehoseFactory implements FirehoseFactory<InputRowParser<Pair<D
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         try {
           log.info("disconnecting from irc server [%s]", host);

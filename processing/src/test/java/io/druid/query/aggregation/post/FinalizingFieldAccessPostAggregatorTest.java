@@ -27,7 +27,6 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -114,7 +113,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void testComparatorsWithFinalizing() throws Exception
+  public void testComparatorsWithFinalizing()
   {
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
@@ -151,7 +150,7 @@ public class FinalizingFieldAccessPostAggregatorTest
   }
 
   @Test
-  public void testComparatorsWithFinalizingAndComparatorNull() throws Exception
+  public void testComparatorsWithFinalizingAndComparatorNull()
   {
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
@@ -234,7 +233,7 @@ public class FinalizingFieldAccessPostAggregatorTest
         query
     );
 
-    MapBasedRow row = (MapBasedRow) Sequences.toList(seq, Lists.newArrayList()).get(0);
+    MapBasedRow row = (MapBasedRow) seq.toList().get(0);
     Assert.assertEquals(3.0, row.getMetric("hll_market").floatValue(), 0.1);
     Assert.assertEquals(9.0, row.getMetric("hll_quality").floatValue(), 0.1);
     Assert.assertEquals(12.0, row.getMetric("uniq_add").floatValue(), 0.1);

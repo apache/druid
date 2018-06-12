@@ -26,7 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -37,6 +37,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -190,7 +191,7 @@ public class ExecutorLifecycle
 
               final File statusFileParent = statusFile.getParentFile();
               if (statusFileParent != null) {
-                statusFileParent.mkdirs();
+                FileUtils.forceMkdir(statusFileParent);
               }
               jsonMapper.writeValue(statusFile, taskStatus);
 

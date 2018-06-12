@@ -22,7 +22,7 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.guice.annotations.EscalatedGlobal;
 import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;

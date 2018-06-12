@@ -27,6 +27,8 @@ import com.google.inject.multibindings.MapBinder;
 import io.druid.cli.QueryJettyServerInitializer;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.coordinator.CoordinatorClient;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.metadata.MetadataSegmentPublisher;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.realtime.FireDepartment;
@@ -65,6 +67,19 @@ public class RealtimeModule implements Module
     );
     publisherBinder.addBinding("noop").to(NoopSegmentPublisher.class).in(LazySingleton.class);
     publisherBinder.addBinding("metadata").to(MetadataSegmentPublisher.class).in(LazySingleton.class);
+
+    PolyBind.createChoice(
+        binder,
+        "druid.realtime.rowIngestionMeters.type",
+        Key.get(RowIngestionMetersFactory.class),
+        Key.get(DropwizardRowIngestionMetersFactory.class)
+    );
+    final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+        binder, Key.get(RowIngestionMetersFactory.class)
+    );
+    rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                           .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+    binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
     PolyBind.createChoice(
         binder,

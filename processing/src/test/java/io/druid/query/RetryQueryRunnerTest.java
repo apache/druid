@@ -66,7 +66,7 @@ public class RetryQueryRunnerTest
     }
   }
 
-  private final ObjectMapper jsonMapper = TestHelper.getJsonMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                       .dataSource(QueryRunnerTestHelper.dataSource)
@@ -86,7 +86,7 @@ public class RetryQueryRunnerTest
 
 
   @Test
-  public void testRunWithMissingSegments() throws Exception
+  public void testRunWithMissingSegments()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
@@ -119,10 +119,7 @@ public class RetryQueryRunnerTest
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
@@ -133,7 +130,7 @@ public class RetryQueryRunnerTest
 
 
   @Test
-  public void testRetry() throws Exception
+  public void testRetry()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
@@ -171,10 +168,7 @@ public class RetryQueryRunnerTest
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
@@ -184,7 +178,7 @@ public class RetryQueryRunnerTest
   }
 
   @Test
-  public void testRetryMultiple() throws Exception
+  public void testRetryMultiple()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
@@ -222,10 +216,7 @@ public class RetryQueryRunnerTest
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue("Should return a list with one element", ((List) actualResults).size() == 1);
     Assert.assertTrue(
@@ -235,7 +226,7 @@ public class RetryQueryRunnerTest
   }
 
   @Test(expected = SegmentMissingException.class)
-  public void testException() throws Exception
+  public void testException()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
@@ -258,10 +249,7 @@ public class RetryQueryRunnerTest
         jsonMapper
     );
 
-    Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
@@ -270,7 +258,7 @@ public class RetryQueryRunnerTest
   }
 
   @Test
-  public void testNoDuplicateRetry() throws Exception
+  public void testNoDuplicateRetry()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
@@ -344,10 +332,7 @@ public class RetryQueryRunnerTest
         jsonMapper
     );
 
-    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        Lists.<Result<TimeseriesResultValue>>newArrayList()
-    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query), context).toList();
 
     Assert.assertTrue("Should return a list with 3 elements", ((List) actualResults).size() == 3);
     Assert.assertTrue(

@@ -29,8 +29,6 @@ import com.google.inject.Module;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
@@ -40,6 +38,8 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -222,7 +222,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
-  public void testFindCurrentLeader() throws Exception
+  public void testFindCurrentLeader()
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(

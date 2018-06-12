@@ -46,7 +46,7 @@ Very large clusters should consider selecting larger servers.
 
 We recommend running your favorite Linux distribution. You will also need:
 
-  * Java 8 or better
+  * Java 8
 
 Your OS package manager should be able to help for both Java. If your Ubuntu-based OS
 does not have a recent enough version of Java, WebUpd8 offers [packages for those
@@ -291,9 +291,9 @@ rsync -az druid-#{DRUIDVERSION}/ COORDINATION_SERVER:druid-#{DRUIDVERSION}/
 Log on to your coordination server and install Zookeeper:
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz -o zookeeper-3.4.10.tar.gz
-tar -xzf zookeeper-3.4.10.tar.gz
-cd zookeeper-3.4.10
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz -o zookeeper-3.4.11.tar.gz
+tar -xzf zookeeper-3.4.11.tar.gz
+cd zookeeper-3.4.11
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 ```

@@ -27,7 +27,6 @@ import io.druid.benchmark.datagen.SegmentGenerator;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -58,7 +57,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -81,7 +79,7 @@ public class ExpressionAggregationBenchmark
   private ByteBuffer aggregationBuffer = ByteBuffer.allocate(Double.BYTES);
 
   @Setup(Level.Trial)
-  public void setup() throws Exception
+  public void setup()
   {
     final BenchmarkSchemaInfo schemaInfo = new BenchmarkSchemaInfo(
         ImmutableList.of(
@@ -133,21 +131,21 @@ public class ExpressionAggregationBenchmark
   }
 
   @Benchmark
-  public void queryUsingJavaScript(Blackhole blackhole) throws Exception
+  public void queryUsingJavaScript(Blackhole blackhole)
   {
     final Double result = compute(javaScriptAggregatorFactory::factorizeBuffered);
     blackhole.consume(result);
   }
 
   @Benchmark
-  public void queryUsingExpression(Blackhole blackhole) throws Exception
+  public void queryUsingExpression(Blackhole blackhole)
   {
     final Double result = compute(expressionAggregatorFactory::factorizeBuffered);
     blackhole.consume(result);
   }
 
   @Benchmark
-  public void queryUsingNative(Blackhole blackhole) throws Exception
+  public void queryUsingNative(Blackhole blackhole)
   {
     final Double result = compute(
         columnSelectorFactory ->
@@ -172,25 +170,21 @@ public class ExpressionAggregationBenchmark
         null
     );
 
-    final List<Double> results = Sequences.toList(
-        Sequences.map(
-            cursors,
-            cursor -> {
-              final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
-              bufferAggregator.init(aggregationBuffer, 0);
+    final List<Double> results = cursors
+        .map(cursor -> {
+          final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
+          bufferAggregator.init(aggregationBuffer, 0);
 
-              while (!cursor.isDone()) {
-                bufferAggregator.aggregate(aggregationBuffer, 0);
-                cursor.advance();
-              }
+          while (!cursor.isDone()) {
+            bufferAggregator.aggregate(aggregationBuffer, 0);
+            cursor.advance();
+          }
 
-              final Double dbl = (Double) bufferAggregator.get(aggregationBuffer, 0);
-              bufferAggregator.close();
-              return dbl;
-            }
-        ),
-        new ArrayList<>()
-    );
+          final Double dbl = (Double) bufferAggregator.get(aggregationBuffer, 0);
+          bufferAggregator.close();
+          return dbl;
+        })
+        .toList();
 
     return Iterables.getOnlyElement(results);
   }

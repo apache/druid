@@ -20,6 +20,7 @@
 package io.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -55,7 +56,12 @@ public class FunctionTest
   public void testConcat()
   {
     assertExpr("concat(x,' ',y)", "foo 2");
-    assertExpr("concat(x,' ',nonexistent,' ',y)", "foo  2");
+    if (NullHandling.replaceWithDefault()) {
+      assertExpr("concat(x,' ',nonexistent,' ',y)", "foo  2");
+    } else {
+      assertExpr("concat(x,' ',nonexistent,' ',y)", null);
+    }
+
     assertExpr("concat(z)", "3.1");
     assertExpr("concat()", null);
   }
@@ -109,5 +115,19 @@ public class FunctionTest
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(expression, expectedResult, expr.eval(bindings).value());
+  }
+
+  @Test
+  public void testIsNull()
+  {
+    assertExpr("isnull(null)", 1L);
+    assertExpr("isnull('abc')", 0L);
+  }
+
+  @Test
+  public void testIsNotNull()
+  {
+    assertExpr("notnull(null)", 0L);
+    assertExpr("notnull('abc')", 1L);
   }
 }

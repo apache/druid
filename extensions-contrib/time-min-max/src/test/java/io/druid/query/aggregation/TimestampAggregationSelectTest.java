@@ -19,16 +19,13 @@
 
 package io.druid.query.aggregation;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Result;
 import io.druid.query.select.SelectResultValue;
 import io.druid.segment.ColumnSelectorFactory;
@@ -43,6 +40,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.zip.ZipFile;
@@ -92,7 +90,7 @@ public class TimestampAggregationSelectTest
   }
 
   @Before
-  public void setup() throws Exception
+  public void setup()
   {
     helper = AggregationTestHelper.createSelectQueryAggregationTestHelper(
         new TimestampMinMaxModule().getJacksonModules(),
@@ -149,10 +147,10 @@ public class TimestampAggregationSelectTest
         0,
         Granularities.MONTH,
         100,
-        Resources.toString(Resources.getResource("select.json"), Charsets.UTF_8)
+        Resources.toString(Resources.getResource("select.json"), StandardCharsets.UTF_8)
     );
 
-    Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(Sequences.toList(seq, Lists.newArrayList()));
+    Result<SelectResultValue> result = (Result<SelectResultValue>) Iterables.getOnlyElement(seq.toList());
     Assert.assertEquals(36, result.getValue().getEvents().size());
     Assert.assertEquals(expected, result.getValue().getEvents().get(0).getEvent().get(aggField));
   }

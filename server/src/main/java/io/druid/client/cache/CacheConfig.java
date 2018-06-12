@@ -28,14 +28,20 @@ import java.util.List;
 
 public class CacheConfig
 {
-  public static final String USE_CACHE = "useCache";
   public static final String POPULATE_CACHE = "populateCache";
-
+  // The defaults defined here for cache related parameters are different from the QueryContext defaults due to legacy reasons.
+  // They should be made the same at some point in the future.
   @JsonProperty
   private boolean useCache = false;
 
   @JsonProperty
   private boolean populateCache = false;
+
+  @JsonProperty
+  private boolean useResultLevelCache = false;
+
+  @JsonProperty
+  private boolean populateResultLevelCache = false;
 
   @JsonProperty
   @Min(0)
@@ -49,7 +55,10 @@ public class CacheConfig
   private int maxEntrySize = -1;
 
   @JsonProperty
-  private List<String> unCacheable = ImmutableList.of(Query.GROUP_BY, Query.SELECT);
+  private List<String> unCacheable = ImmutableList.of(Query.SELECT);
+
+  @JsonProperty
+  private int resultLevelCacheLimit = Integer.MAX_VALUE;
 
   public boolean isPopulateCache()
   {
@@ -59,6 +68,16 @@ public class CacheConfig
   public boolean isUseCache()
   {
     return useCache;
+  }
+
+  public boolean isPopulateResultLevelCache()
+  {
+    return populateResultLevelCache;
+  }
+
+  public boolean isUseResultLevelCache()
+  {
+    return useResultLevelCache;
   }
 
   public int getNumBackgroundThreads()
@@ -74,6 +93,11 @@ public class CacheConfig
   public int getMaxEntrySize()
   {
     return maxEntrySize;
+  }
+
+  public int getResultLevelCacheLimit()
+  {
+    return resultLevelCacheLimit;
   }
 
   public boolean isQueryCacheable(Query query)

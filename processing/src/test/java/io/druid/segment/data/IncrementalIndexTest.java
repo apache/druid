@@ -39,7 +39,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryPlus;
@@ -74,14 +73,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -114,7 +111,7 @@ public class IncrementalIndexTest
   }
 
   @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     return Arrays.asList(
         new Object[][]{
@@ -480,10 +477,7 @@ public class IncrementalIndexTest
     );
 
 
-    List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()),
-        new LinkedList<Result<TimeseriesResultValue>>()
-    );
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<String, Object>()).toList();
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
     boolean isRollup = index.isRollup();
     Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
@@ -697,10 +691,7 @@ public class IncrementalIndexTest
                                   .aggregators(queryAggregatorFactories)
                                   .build();
     Map<String, Object> context = new HashMap<String, Object>();
-    List<Result<TimeseriesResultValue>> results = Sequences.toList(
-        runner.run(QueryPlus.wrap(query), context),
-        new LinkedList<Result<TimeseriesResultValue>>()
-    );
+    List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
     boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {
       Assert.assertEquals(

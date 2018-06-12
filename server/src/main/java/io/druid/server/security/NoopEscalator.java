@@ -19,18 +19,21 @@
 
 package io.druid.server.security;
 
-import com.metamx.http.client.HttpClient;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import io.druid.java.util.http.client.HttpClient;
 
 public class NoopEscalator implements Escalator
 {
-  @Override
-  public HttpClient createEscalatedClient(HttpClient baseClient)
+  private static final NoopEscalator INSTANCE = new NoopEscalator();
+
+  @JsonCreator
+  public static NoopEscalator getInstance()
   {
-    return baseClient;
+    return INSTANCE;
   }
 
   @Override
-  public org.eclipse.jetty.client.HttpClient createEscalatedJettyClient(org.eclipse.jetty.client.HttpClient baseClient)
+  public HttpClient createEscalatedClient(HttpClient baseClient)
   {
     return baseClient;
   }
@@ -39,5 +42,24 @@ public class NoopEscalator implements Escalator
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
     return AllowAllAuthenticator.ALLOW_ALL_RESULT;
+  }
+
+  @Override
+  public boolean equals(final Object obj)
+  {
+    //noinspection ObjectEquality
+    return obj.getClass() == getClass();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NoopEscalator{}";
   }
 }

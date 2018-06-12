@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class CostBalancerStrategyBenchmark
 {
-  private final static DateTime t0 = DateTimes.of("2016-01-01T01:00:00Z");
+  private static final DateTime t0 = DateTimes.of("2016-01-01T01:00:00Z");
 
   private List<DataSegment> segments;
   private DataSegment segment;
@@ -83,7 +83,7 @@ public class CostBalancerStrategyBenchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Fork(1)
-  public double measureCostStrategySingle() throws InterruptedException
+  public double measureCostStrategySingle()
   {
     double totalCost = 0;
     for (DataSegment s : segments) {
@@ -96,7 +96,7 @@ public class CostBalancerStrategyBenchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   @Fork(1)
-  public double measureIntervalPenalty() throws InterruptedException
+  public double measureIntervalPenalty()
   {
     return CostBalancerStrategy.intervalCost(x1, y0, y1);
   }

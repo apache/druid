@@ -36,11 +36,15 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   int CARDINALITY_UNKNOWN = -1;
 
   /**
-   * Gets all values for the row inside of an IntBuffer.  I.e. one possible implementation could be
+   * Returns the indexed values at the current position in this DimensionSelector.
    *
-   * return IntBuffer.wrap(lookupExpansion(get());
-   *
-   * @return all values for the row as an IntBuffer
+   * IMPORTANT. The returned {@link IndexedInts} object could generally be reused inside the implementation of
+   * DimensionSelector, i. e. this method could always return the same object for the same selector. Users
+   * of this API, such as {@link io.druid.query.aggregation.Aggregator#aggregate()}, {@link
+   * io.druid.query.aggregation.BufferAggregator#aggregate}, {@link io.druid.query.aggregation.AggregateCombiner#reset},
+   * {@link io.druid.query.aggregation.AggregateCombiner#fold} should be prepared for that and not storing the object
+   * returned from this method in their state, assuming that the object will remain unchanged even when the position of
+   * the selector changes. This may not be the case.
    */
   @CalledFromHotLoop
   IndexedInts getRow();
@@ -145,6 +149,13 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
     return 0L;
   }
 
+  @Deprecated
+  @Override
+  default boolean isNull()
+  {
+    return false;
+  }
+
   /**
    * Converts the current result of {@link #getRow()} into null, if the row is empty, a String, if the row has size 1,
    * or a String[] array, if the row has size > 1, using {@link #lookupName(int)}.
@@ -156,16 +167,17 @@ public interface DimensionSelector extends ColumnValueSelector, HotLoopCallee
   default Object defaultGetObject()
   {
     IndexedInts row = getRow();
-    if (row.size() == 0) {
+    int rowSize = row.size();
+    if (rowSize == 0) {
       return null;
-    }
-    if (row.size() == 1) {
+    } else if (rowSize == 1) {
       return lookupName(row.get(0));
+    } else {
+      final String[] strings = new String[rowSize];
+      for (int i = 0; i < rowSize; i++) {
+        strings[i] = lookupName(row.get(i));
+      }
+      return strings;
     }
-    final String[] strings = new String[row.size()];
-    for (int i = 0; i < row.size(); i++) {
-      strings[i] = lookupName(row.get(i));
-    }
-    return strings;
   }
 }

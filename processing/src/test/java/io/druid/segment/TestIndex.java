@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
@@ -52,11 +51,13 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.serde.ComplexMetrics;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -135,8 +136,9 @@ public class TestIndex
   };
   private static final IndexSpec indexSpec = new IndexSpec();
 
-  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9();
-  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+  private static final IndexMerger INDEX_MERGER =
+      TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
@@ -225,8 +227,8 @@ public class TestIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec);
-        INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec);
+        INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec, null);
+        INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec, null);
 
         mergedRealtime = INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
@@ -234,7 +236,8 @@ public class TestIndex
                 true,
                 METRIC_AGGS,
                 mergedFile,
-                indexSpec
+                indexSpec,
+                null
             )
         );
 
@@ -258,7 +261,7 @@ public class TestIndex
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
-    CharSource stream = Resources.asByteSource(resource).asCharSource(Charsets.UTF_8);
+    CharSource stream = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
     return makeRealtimeIndex(stream, rollup);
   }
 
@@ -362,7 +365,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      INDEX_MERGER.persist(index, someTmpFile, indexSpec);
+      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

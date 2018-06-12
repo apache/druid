@@ -30,13 +30,13 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.java.util.common.parsers.ParseException;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.filter.DimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndexStorageAdapter;
@@ -126,7 +126,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   }
 
   @Override
-  public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws IOException, ParseException
+  public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws ParseException
   {
     log.info("Connecting firehose: dataSource[%s], interval[%s]", dataSource, interval);
 

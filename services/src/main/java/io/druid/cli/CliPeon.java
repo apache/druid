@@ -54,6 +54,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
+import io.druid.indexing.common.TaskReportFileWriter;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.RemoteTaskActionClientFactory;
@@ -61,12 +62,14 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
-import io.druid.indexing.overlord.ThreadPoolTaskRunner;
+import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -113,8 +116,17 @@ import java.util.Set;
 )
 public class CliPeon extends GuiceRunnable
 {
-  @Arguments(description = "task.json status.json", required = true)
+  @Arguments(description = "task.json status.json report.json", required = true)
   public List<String> taskAndStatusFile;
+
+  // path to store the task's stdout log
+  private String taskLogPath;
+
+  // path to store the task's TaskStatus
+  private String taskStatusPath;
+
+  // path to store the task's TaskReport objects
+  private String taskReportPath;
 
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String nodeType = "indexer-executor";
@@ -141,9 +153,26 @@ public class CliPeon extends GuiceRunnable
           @Override
           public void configure(Binder binder)
           {
+            taskLogPath = taskAndStatusFile.get(0);
+            taskStatusPath = taskAndStatusFile.get(1);
+            taskReportPath = taskAndStatusFile.get(2);
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                 .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             PolyBind.createChoice(
                 binder,
@@ -183,13 +212,19 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, ExecutorLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
-                    .setTaskFile(new File(taskAndStatusFile.get(0)))
-                    .setStatusFile(new File(taskAndStatusFile.get(1)))
+                    .setTaskFile(new File(taskLogPath))
+                    .setStatusFile(new File(taskStatusPath))
             );
 
-            binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
+            binder.bind(TaskReportFileWriter.class).toInstance(
+                new TaskReportFileWriter(
+                    new File(taskReportPath)
+                )
+            );
+
+            binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
             binder.install(new CacheModule());

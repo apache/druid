@@ -40,7 +40,7 @@ public class HistogramAggregatorTest
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper objectMapper = TestHelper.getJsonMapper();
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     String json0 = "{\"type\": \"histogram\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
     HistogramAggregatorFactory agg0 = objectMapper.readValue(json0, HistogramAggregatorFactory.class);
     Assert.assertEquals(ImmutableList.of(), agg0.getBreaks());
@@ -53,7 +53,7 @@ public class HistogramAggregatorTest
   }
 
   @Test
-  public void testAggregate() throws Exception
+  public void testAggregate()
   {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};
@@ -100,7 +100,7 @@ public class HistogramAggregatorTest
   }
 
   @Test
-  public void testBufferAggregate() throws Exception
+  public void testBufferAggregate()
   {
     final float[] values = {0.55f, 0.27f, -0.3f, -.1f, -0.8f, -.7f, -.5f, 0.25f, 0.1f, 2f, -3f};
     final float[] breaks = {-1f, -0.5f, 0.0f, 0.5f, 1f};

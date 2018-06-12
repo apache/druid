@@ -68,21 +68,26 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   {
     final DimensionSelector dimSelector = (DimensionSelector) selector;
     final IndexedInts row = dimSelector.getRow();
-    final int[] newIds = new int[row.size()];
-
-    for (int i = 0; i < row.size(); i++) {
+    ArrayBasedIndexedInts newRow = (ArrayBasedIndexedInts) valuess[columnIndex];
+    if (newRow == null) {
+      newRow = new ArrayBasedIndexedInts();
+      valuess[columnIndex] = newRow;
+    }
+    int rowSize = row.size();
+    newRow.ensureSize(rowSize);
+    for (int i = 0; i < rowSize; i++) {
       final String value = dimSelector.lookupName(row.get(i));
       final int dictId = reverseDictionary.getInt(value);
       if (dictId < 0) {
         dictionary.add(value);
         reverseDictionary.put(value, nextId);
-        newIds[i] = nextId;
+        newRow.setValue(i, nextId);
         nextId++;
       } else {
-        newIds[i] = dictId;
+        newRow.setValue(i, dictId);
       }
     }
-    valuess[columnIndex] = ArrayBasedIndexedInts.of(newIds);
+    newRow.setSize(rowSize);
   }
 
   @Override

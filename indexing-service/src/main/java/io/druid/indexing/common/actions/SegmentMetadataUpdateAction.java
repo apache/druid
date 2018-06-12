@@ -24,15 +24,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.CriticalAction;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -65,7 +65,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   @Override
   public Void perform(
       Task task, TaskActionToolbox toolbox
-  ) throws IOException
+  )
   {
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
@@ -95,9 +95,8 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
     }
 
     // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-        .setDimension(DruidMetrics.TASK_TYPE, task.getType());
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
     for (DataSegment segment : segments) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());

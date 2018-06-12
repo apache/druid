@@ -43,7 +43,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -109,6 +108,7 @@ public class JobHelperTest
                 null,
                 null,
                 null,
+                null,
                 false,
                 false,
                 false,
@@ -127,6 +127,8 @@ public class JobHelperTest
                 null,
                 false,
                 false,
+                null,
+                null,
                 null
             )
         )
@@ -134,7 +136,7 @@ public class JobHelperTest
   }
 
   @Test
-  public void testEnsurePathsAddsProperties() throws Exception
+  public void testEnsurePathsAddsProperties()
   {
     HadoopDruidIndexerConfigSpy hadoopDruidIndexerConfigSpy = new HadoopDruidIndexerConfigSpy(config);
     JobHelper.ensurePaths(hadoopDruidIndexerConfigSpy);
@@ -179,17 +181,15 @@ public class JobHelperTest
   private static class HadoopDruidIndexerConfigSpy extends HadoopDruidIndexerConfig
   {
 
-    private HadoopDruidIndexerConfig delegate;
     private Map<String, String> jobProperties = new HashMap<String, String>();
 
     public HadoopDruidIndexerConfigSpy(HadoopDruidIndexerConfig delegate)
     {
       super(delegate.getSchema());
-      this.delegate = delegate;
     }
 
     @Override
-    public Job addInputPaths(Job job) throws IOException
+    public Job addInputPaths(Job job)
     {
       Configuration configuration = job.getConfiguration();
       for (Map.Entry<String, String> en : configuration) {

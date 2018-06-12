@@ -30,7 +30,7 @@ import java.util.Map;
 public class JSONLowercaseParseSpecTest
 {
   @Test
-  public void testLowercasing() throws Exception
+  public void testLowercasing()
   {
     JSONLowercaseParseSpec spec = new JSONLowercaseParseSpec(
         new TimestampSpec(
@@ -45,7 +45,7 @@ public class JSONLowercaseParseSpecTest
         )
     );
     Parser parser = spec.makeParser();
-    Map<String, Object> event = parser.parse("{\"timestamp\":\"2015-01-01\",\"A\":\"foo\"}");
+    Map<String, Object> event = parser.parseToMap("{\"timestamp\":\"2015-01-01\",\"A\":\"foo\"}");
     Assert.assertEquals("foo", event.get("a"));
   }
 }

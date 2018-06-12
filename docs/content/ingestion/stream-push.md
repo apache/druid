@@ -135,6 +135,13 @@ Under normal operation, these risks are minimal. But if you need absolute 100% f
 historical data, we recommend a [hybrid batch/streaming](../tutorials/ingestion.html#hybrid-batch-streaming)
 architecture.
 
+### Deployment Notes
+
+Stream ingestion may generate a large number of small segments because it's difficult to optimize the segment size at
+ingestion time. The number of segments will increase over time, and this might cuase the query performance issue. 
+
+Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).
+
 ## Documentation
 
 Tranquility documentation be found [here](https://github.com/druid-io/tranquility/blob/master/README.md).

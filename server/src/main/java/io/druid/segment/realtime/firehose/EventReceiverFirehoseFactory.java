@@ -32,8 +32,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CountingInputStream;
-import com.metamx.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -41,6 +39,8 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import io.druid.server.security.Access;
@@ -123,7 +123,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
   public Firehose connect(
       InputRowParser<Map<String, Object>> firehoseParser,
       File temporaryDirectory
-  ) throws IOException
+  )
   {
     log.info("Connecting firehose: %s", serviceName);
     final EventReceiverFirehose firehose = new EventReceiverFirehose(firehoseParser);
@@ -228,7 +228,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       final List<InputRow> rows = Lists.newArrayList();
       for (final Map<String, Object> event : events) {
         // Might throw an exception. We'd like that to happen now, instead of while adding to the row buffer.
-        rows.add(parser.parse(event));
+        rows.addAll(parser.parseBatch(event));
       }
 
       try {
@@ -317,7 +317,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       if (!closed) {
         log.info("Firehose closing.");
@@ -378,19 +378,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         DateTime shutoffAt = shutoffTime == null ? DateTimes.nowUtc() : DateTimes.of(shutoffTime);
         log.info("Setting Firehose shutoffTime to %s", shutoffTime);
         exec.schedule(
-            new Runnable()
-            {
-              @Override
-              public void run()
-              {
-                try {
-                  close();
-                }
-                catch (IOException e) {
-                  log.warn(e, "Failed to close delegate firehose, ignoring.");
-                }
-              }
-            },
+            this::close,
             shutoffAt.getMillis() - System.currentTimeMillis(),
             TimeUnit.MILLISECONDS
         );

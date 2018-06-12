@@ -19,12 +19,12 @@
 
 package io.druid.indexing.common.actions;
 
-import com.metamx.emitter.EmittingLogger;
+import io.druid.indexing.common.task.IndexTaskUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.java.util.common.ISE;
-
-import java.io.IOException;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
@@ -42,14 +42,16 @@ public class LocalTaskActionClient implements TaskActionClient
   }
 
   @Override
-  public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+  public <RetType> RetType submit(TaskAction<RetType> taskAction)
   {
     log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
 
     if (taskAction.isAudited()) {
       // Add audit log
       try {
+        final long auditLogStartTime = System.currentTimeMillis();
         storage.addAuditLog(task, taskAction);
+        emitTimerMetric("task/action/log/time", System.currentTimeMillis() - auditLogStartTime);
       }
       catch (Exception e) {
         final String actionClass = taskAction.getClass().getName();
@@ -61,6 +63,16 @@ public class LocalTaskActionClient implements TaskActionClient
       }
     }
 
-    return taskAction.perform(task, toolbox);
+    final long performStartTime = System.currentTimeMillis();
+    final RetType result = taskAction.perform(task, toolbox);
+    emitTimerMetric("task/action/run/time", System.currentTimeMillis() - performStartTime);
+    return result;
+  }
+
+  private void emitTimerMetric(final String metric, final long time)
+  {
+    final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent.builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    toolbox.getEmitter().emit(metricBuilder.build(metric, Math.max(0, time)));
   }
 }

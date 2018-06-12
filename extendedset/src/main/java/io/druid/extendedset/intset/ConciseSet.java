@@ -20,23 +20,14 @@
 package io.druid.extendedset.intset;
 
 
-import io.druid.java.util.common.StringUtils;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.ConcurrentModificationException;
-import java.util.Formatter;
-import java.util.List;
-import java.util.Locale;
 import java.util.NoSuchElementException;
-import java.util.SortedSet;
 
 /**
  * This is CONCISE: COmpressed 'N' Composable Integer SEt.
@@ -286,25 +277,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   }
 
   /**
-   * Gets the position of the flipped bit within a sequence word. If the
-   * sequence has no set/unset bit, returns -1.
-   * <p/>
-   * Note that the parameter <i>must</i> a sequence word, otherwise the
-   * result is meaningless.
-   *
-   * @param word sequence word to check
-   *
-   * @return the position of the set bit, from 0 to 31. If the sequence has no
-   * set/unset bit, returns -1.
-   */
-  private static int getFlippedBit(int word)
-  {
-    // get bits from 30 to 26
-    // NOTE: "-1" is required since 00000 represents no bits and 00001 the LSB bit set
-    return ((word >>> 25) & 0x0000001F) - 1;
-  }
-
-  /**
    * Gets the number of set bits within the literal word
    *
    * @param word literal word
@@ -340,23 +312,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   private static boolean containsOnlyOneBit(int literal)
   {
     return (literal & (literal - 1)) == 0;
-  }
-
-  /**
-   * Generates the 32-bit binary representation of a given word (debug only)
-   *
-   * @param word word to represent
-   *
-   * @return 32-character string that represents the given word
-   */
-  private static String toBinaryString(int word)
-  {
-    String lsb = Integer.toBinaryString(word);
-    StringBuilder pad = new StringBuilder();
-    for (int i = lsb.length(); i < 32; i++) {
-      pad.append('0');
-    }
-    return pad.append(lsb).toString();
   }
 
   /**
@@ -422,17 +377,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
     return isZeroSequence(word)
            ? (ConciseSetUtils.ALL_ZEROS_LITERAL | literal)
            : (ConciseSetUtils.ALL_ONES_LITERAL & ~literal);
-  }
-
-  /**
-   * Clears bits from MSB (excluded, since it indicates the word type) to the
-   * specified bit (excluded). Last word is supposed to be a literal one.
-   *
-   * @param lastSetBit leftmost bit to preserve
-   */
-  private void clearBitsAfterInLastWord(int lastSetBit)
-  {
-    words[lastWordIndex] &= ConciseSetUtils.ALL_ZEROS_LITERAL | (0xFFFFFFFF >>> (31 - lastSetBit));
   }
 
   /**
@@ -794,89 +738,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @SuppressWarnings("NonShortCircuitBooleanExpression")
-  @Override
-  public int intersectionSize(IntSet o)
-  {
-    // special cases
-    if (isEmpty() || o == null || o.isEmpty()) {
-      return 0;
-    }
-    if (this == o) {
-      return size();
-    }
-
-    final ConciseSet other = convert(o);
-
-    // check whether the first operator starts with a sequence that
-    // completely "covers" the second operator
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      if (isZeroSequence(this.words[0])) {
-        return 0;
-      }
-      return other.size();
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      if (isZeroSequence(other.words[0])) {
-        return 0;
-      }
-      return this.size();
-    }
-
-    int res = 0;
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
-            res += maxLiteralLengthMultiplication(minCount);
-          }
-          if (!thisItr.prepareNext(minCount) | /* NOT || */ !otherItr.prepareNext(minCount)) {
-            break;
-          }
-        } else {
-          res += getLiteralBitCount(thisItr.toLiteral() & otherItr.word);
-          thisItr.word--;
-          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
-            break;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        res += getLiteralBitCount(thisItr.word & otherItr.toLiteral());
-        otherItr.word--;
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
-          break;
-        }
-      } else {
-        res += getLiteralBitCount(thisItr.word & otherItr.word);
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
-          break;
-        }
-      }
-    }
-
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  public ByteBuffer toByteBuffer()
-  {
-    ByteBuffer buffer = ByteBuffer.allocate((lastWordIndex + 1) * 4);
-    buffer.asIntBuffer().put(Arrays.copyOf(words, lastWordIndex + 1));
-    return buffer;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
   public int[] getWords()
   {
     if (words == null) {
@@ -888,153 +749,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
-  public int get(int i)
-  {
-    if (i < 0) {
-      throw new IndexOutOfBoundsException();
-    }
-
-    // initialize data
-    int firstSetBitInWord = 0;
-    int position = i;
-    int setBitsInCurrentWord = 0;
-    for (int j = 0; j <= lastWordIndex; j++) {
-      int w = words[j];
-      if (isLiteral(w)) {
-        // number of bits in the current word
-        setBitsInCurrentWord = getLiteralBitCount(w);
-
-        // check if the desired bit is in the current word
-        if (position < setBitsInCurrentWord) {
-          int currSetBitInWord = -1;
-          for (; position >= 0; position--) {
-            currSetBitInWord = Integer.numberOfTrailingZeros(w & (0xFFFFFFFF << (currSetBitInWord + 1)));
-          }
-          return firstSetBitInWord + currSetBitInWord;
-        }
-
-        // skip the 31-bit block
-        firstSetBitInWord += ConciseSetUtils.MAX_LITERAL_LENGTH;
-      } else {
-        // number of involved bits (31 * blocks)
-        int sequenceLength = maxLiteralLengthMultiplication(getSequenceCount(w) + 1);
-
-        // check the sequence type
-        if (isOneSequence(w)) {
-          if (simulateWAH || isSequenceWithNoBits(w)) {
-            setBitsInCurrentWord = sequenceLength;
-            if (position < setBitsInCurrentWord) {
-              return firstSetBitInWord + position;
-            }
-          } else {
-            setBitsInCurrentWord = sequenceLength - 1;
-            if (position < setBitsInCurrentWord) {
-              // check whether the desired set bit is after the
-              // flipped bit (or after the first block)
-              return firstSetBitInWord + position + (position < getFlippedBit(w) ? 0 : 1);
-            }
-          }
-        } else {
-          if (simulateWAH || isSequenceWithNoBits(w)) {
-            setBitsInCurrentWord = 0;
-          } else {
-            setBitsInCurrentWord = 1;
-            if (position == 0) {
-              return firstSetBitInWord + getFlippedBit(w);
-            }
-          }
-        }
-
-        // skip the 31-bit blocks
-        firstSetBitInWord += sequenceLength;
-      }
-
-      // update the number of found set bits
-      position -= setBitsInCurrentWord;
-    }
-
-    throw new IndexOutOfBoundsException(Integer.toString(i));
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int indexOf(int e)
-  {
-    if (e < 0) {
-      throw new IllegalArgumentException("positive integer expected: " + Integer.toString(e));
-    }
-    if (isEmpty()) {
-      return -1;
-    }
-
-    // returned value
-    int index = 0;
-
-    int blockIndex = maxLiteralLengthDivision(e);
-    int bitPosition = maxLiteralLengthModulus(e);
-    for (int i = 0; i <= lastWordIndex && blockIndex >= 0; i++) {
-      int w = words[i];
-      if (isLiteral(w)) {
-        // check if the current literal word is the "right" one
-        if (blockIndex == 0) {
-          if ((w & (1 << bitPosition)) == 0) {
-            return -1;
-          }
-          return index + Integer.bitCount(w & ~(0xFFFFFFFF << bitPosition));
-        }
-        blockIndex--;
-        index += getLiteralBitCount(w);
-      } else {
-        if (simulateWAH) {
-          if (isOneSequence(w) && blockIndex <= getSequenceCount(w)) {
-            return index + maxLiteralLengthMultiplication(blockIndex) + bitPosition;
-          }
-        } else {
-          // if we are at the beginning of a sequence, and it is
-          // a set bit, the bit already exists
-          if (blockIndex == 0) {
-            int l = getLiteral(w);
-            if ((l & (1 << bitPosition)) == 0) {
-              return -1;
-            }
-            return index + Integer.bitCount(l & ~(0xFFFFFFFF << bitPosition));
-          }
-
-          // if we are in the middle of a sequence of 1's, the bit already exist
-          if (blockIndex > 0
-              && blockIndex <= getSequenceCount(w)
-              && isOneSequence(w)) {
-            return index + maxLiteralLengthMultiplication(blockIndex) + bitPosition - (isSequenceWithNoBits(w) ? 0 : 1);
-          }
-        }
-
-        // next word
-        int blocks = getSequenceCount(w) + 1;
-        blockIndex -= blocks;
-        if (isZeroSequence(w)) {
-          if (!simulateWAH && !isSequenceWithNoBits(w)) {
-            index++;
-          }
-        } else {
-          index += maxLiteralLengthMultiplication(blocks);
-          if (!simulateWAH && !isSequenceWithNoBits(w)) {
-            index--;
-          }
-        }
-      }
-    }
-
-    // not found
-    return -1;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   public ConciseSet intersection(IntSet other)
   {
     if (isEmpty() || other == null || other.isEmpty()) {
@@ -1044,123 +758,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
       return clone();
     }
     return performOperation(convert(other), Operator.AND);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConciseSet union(IntSet other)
-  {
-    if (other == null || other.isEmpty() || other == this) {
-      return clone();
-    }
-    return performOperation(convert(other), Operator.OR);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConciseSet difference(IntSet other)
-  {
-    if (other == this) {
-      return empty();
-    }
-    if (other == null || other.isEmpty()) {
-      return clone();
-    }
-    return performOperation(convert(other), Operator.ANDNOT);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConciseSet symmetricDifference(IntSet other)
-  {
-    if (other == this) {
-      return empty();
-    }
-    if (other == null || other.isEmpty()) {
-      return clone();
-    }
-    return performOperation(convert(other), Operator.XOR);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConciseSet complemented()
-  {
-    ConciseSet cloned = clone();
-    cloned.complement();
-    return cloned;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void complement()
-  {
-
-    if (isEmpty()) {
-      return;
-    }
-
-    if (last == ConciseSetUtils.MIN_ALLOWED_SET_BIT) {
-      clear();
-      return;
-    }
-
-    // update size
-    if (size >= 0) {
-      size = last - size + 1;
-    }
-
-    // complement each word
-    for (int i = 0; i <= lastWordIndex; i++) {
-      int w = words[i];
-      if (isLiteral(w)) {
-        // negate the bits and set the most significant bit to 1
-        words[i] = ConciseSetUtils.ALL_ZEROS_LITERAL | ~w;
-      } else {
-        // switch the sequence type
-        words[i] ^= ConciseSetUtils.SEQUENCE_BIT;
-      }
-    }
-
-    // do not complement after the last element
-    if (isLiteral(words[lastWordIndex])) {
-      clearBitsAfterInLastWord(maxLiteralLengthModulus(last));
-    }
-
-    // remove trailing zeros
-    trimZeros();
-    if (isEmpty()) {
-      return;
-    }
-
-    // calculate the maximal element
-    last = 0;
-    int w = 0;
-    for (int i = 0; i <= lastWordIndex; i++) {
-      w = words[i];
-      if (isLiteral(w)) {
-        last += ConciseSetUtils.MAX_LITERAL_LENGTH;
-      } else {
-        last += maxLiteralLengthMultiplication(getSequenceCount(w) + 1);
-      }
-    }
-
-    // manage the last word (that must be a literal or a sequence of 1's)
-    if (isLiteral(w)) {
-      last -= Integer.numberOfLeadingZeros(getLiteralBits(w));
-    } else {
-      last--;
-    }
   }
 
   /**
@@ -1220,22 +817,9 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
   public void clear()
   {
     reset();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public int last()
-  {
-    if (isEmpty()) {
-      throw new NoSuchElementException();
-    }
-    return last;
   }
 
   /**
@@ -1261,7 +845,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
   public ConciseSet convert(int... a)
   {
     ConciseSet res = empty();
@@ -1269,30 +852,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
       a = Arrays.copyOf(a, a.length);
       Arrays.sort(a);
       for (int i : a) {
-        if (res.last != i) {
-          res.add(i);
-        }
-      }
-    }
-    return res;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConciseSet convert(Collection<Integer> c)
-  {
-    ConciseSet res = empty();
-    Collection<Integer> sorted;
-    if (c != null) {
-      if (c instanceof SortedSet<?> && ((SortedSet<?>) c).comparator() == null) {
-        sorted = c;
-      } else {
-        sorted = new ArrayList<Integer>(c);
-        Collections.sort((List<Integer>) sorted);
-      }
-      for (int i : sorted) {
         if (res.last != i) {
           res.add(i);
         }
@@ -1340,7 +899,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
   public boolean add(int e)
   {
 
@@ -1436,7 +994,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
   public boolean remove(int o)
   {
 
@@ -1533,7 +1090,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
   public boolean contains(int o)
   {
     if (isEmpty() || o > last || o < 0) {
@@ -1588,261 +1144,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
    * {@inheritDoc}
    */
   @Override
-  public boolean containsAll(IntSet c)
-  {
-    if (c == null || c.isEmpty() || c == this) {
-      return true;
-    }
-    if (isEmpty()) {
-      return false;
-    }
-
-    final ConciseSet other = convert(c);
-    if (other.last > last) {
-      return false;
-    }
-    if (size >= 0 && other.size > size) {
-      return false;
-    }
-    if (other.size == 1) {
-      return contains(other.last);
-    }
-
-    // check whether the first operator starts with a sequence that
-    // completely "covers" the second operator
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      return !isZeroSequence(this.words[0]);
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      return false;
-    }
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word) == 0
-              && (ConciseSetUtils.SEQUENCE_BIT & otherItr.word) != 0) {
-            return false;
-          }
-          if (!otherItr.prepareNext(minCount)) {
-            return true;
-          }
-          if (!thisItr.prepareNext(minCount)) {
-            return false;
-          }
-        } else {
-          if ((thisItr.toLiteral() & otherItr.word) != otherItr.word) {
-            return false;
-          }
-          thisItr.word--;
-          if (!otherItr.prepareNext()) {
-            return true;
-          }
-          if (!thisItr.prepareNext(1)) {
-            return false;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        int o = otherItr.toLiteral();
-        if ((thisItr.word & otherItr.toLiteral()) != o) {
-          return false;
-        }
-        otherItr.word--;
-        if (!otherItr.prepareNext(1)) {
-          return true;
-        }
-        if (!thisItr.prepareNext()) {
-          return false;
-        }
-      } else {
-        if ((thisItr.word & otherItr.word) != otherItr.word) {
-          return false;
-        }
-        if (!otherItr.prepareNext()) {
-          return true;
-        }
-        if (!thisItr.prepareNext()) {
-          return false;
-        }
-      }
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean containsAny(IntSet c)
-  {
-    if (c == null || c.isEmpty() || c == this) {
-      return true;
-    }
-    if (isEmpty()) {
-      return false;
-    }
-
-    final ConciseSet other = convert(c);
-    if (other.size == 1) {
-      return contains(other.last);
-    }
-
-    // disjoint sets
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      return !isZeroSequence(this.words[0]);
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      return !isZeroSequence(other.words[0]);
-    }
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
-            return true;
-          }
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(minCount) |  /* NOT || */ !otherItr.prepareNext(minCount)) {
-            return false;
-          }
-        } else {
-          if ((thisItr.toLiteral() & otherItr.word) != ConciseSetUtils.ALL_ZEROS_LITERAL) {
-            return true;
-          }
-          thisItr.word--;
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
-            return false;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        if ((thisItr.word & otherItr.toLiteral()) != ConciseSetUtils.ALL_ZEROS_LITERAL) {
-          return true;
-        }
-        otherItr.word--;
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
-          return false;
-        }
-      } else {
-        if ((thisItr.word & otherItr.word) != ConciseSetUtils.ALL_ZEROS_LITERAL) {
-          return true;
-        }
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
-          return false;
-        }
-      }
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean containsAtLeast(IntSet c, int minElements)
-  {
-    if (minElements < 1) {
-      throw new IllegalArgumentException();
-    }
-    if ((size >= 0 && size < minElements) || c == null || c.isEmpty() || isEmpty()) {
-      return false;
-    }
-    if (this == c) {
-      return size() >= minElements;
-    }
-
-    // convert the other set in order to perform a more complex intersection
-    ConciseSet other = convert(c);
-    if (other.size >= 0 && other.size < minElements) {
-      return false;
-    }
-    if (minElements == 1 && other.size == 1) {
-      return contains(other.last);
-    }
-    if (minElements == 1 && size == 1) {
-      return other.contains(last);
-    }
-
-    // disjoint sets
-    if (isSequenceWithNoBits(this.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(this.words[0]) + 1) > other.last) {
-      return !isZeroSequence(this.words[0]);
-    }
-    if (isSequenceWithNoBits(other.words[0])
-        && maxLiteralLengthMultiplication(getSequenceCount(other.words[0]) + 1) > this.last) {
-      return !isZeroSequence(other.words[0]);
-    }
-
-    // resulting size
-    int res = 0;
-
-    // scan "this" and "other"
-    WordIterator thisItr = new WordIterator();
-    WordIterator otherItr = other.new WordIterator();
-    while (true) {
-      if (!thisItr.isLiteral) {
-        if (!otherItr.isLiteral) {
-          int minCount = Math.min(thisItr.count, otherItr.count);
-          if ((ConciseSetUtils.SEQUENCE_BIT & thisItr.word & otherItr.word) != 0) {
-            res += maxLiteralLengthMultiplication(minCount);
-            if (res >= minElements) {
-              return true;
-            }
-          }
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(minCount) |  /* NOT || */ !otherItr.prepareNext(minCount)) {
-            return false;
-          }
-        } else {
-          res += getLiteralBitCount(thisItr.toLiteral() & otherItr.word);
-          if (res >= minElements) {
-            return true;
-          }
-          thisItr.word--;
-          //noinspection NonShortCircuitBooleanExpression
-          if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
-            return false;
-          }
-        }
-      } else if (!otherItr.isLiteral) {
-        res += getLiteralBitCount(thisItr.word & otherItr.toLiteral());
-        if (res >= minElements) {
-          return true;
-        }
-        otherItr.word--;
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
-          return false;
-        }
-      } else {
-        res += getLiteralBitCount(thisItr.word & otherItr.word);
-        if (res >= minElements) {
-          return true;
-        }
-        //noinspection NonShortCircuitBooleanExpression
-        if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
-          return false;
-        }
-      }
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   public boolean isEmpty()
   {
     return words == null;
@@ -1851,37 +1152,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
-  public boolean retainAll(IntSet c)
-  {
-
-    if (isEmpty() || c == this) {
-      return false;
-    }
-    if (c == null || c.isEmpty()) {
-      clear();
-      return true;
-    }
-
-    ConciseSet other = convert(c);
-    if (other.size == 1) {
-      if (contains(other.last)) {
-        if (size == 1) {
-          return false;
-        }
-        return replaceWith(convert(other.last));
-      }
-      clear();
-      return true;
-    }
-
-    return replaceWith(performOperation(other, Operator.AND));
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   public boolean addAll(IntSet c)
   {
     if (c == null || c.isEmpty() || this == c) {
@@ -1894,29 +1164,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
     }
 
     return replaceWith(performOperation(convert(c), Operator.OR));
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean removeAll(IntSet c)
-  {
-
-    if (c == null || c.isEmpty() || isEmpty()) {
-      return false;
-    }
-    if (c == this) {
-      clear();
-      return true;
-    }
-
-    ConciseSet other = convert(c);
-    if (other.size == 1) {
-      return remove(other.last);
-    }
-
-    return replaceWith(performOperation(convert(c), Operator.ANDNOT));
   }
 
   /**
@@ -1951,7 +1198,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
   /**
    * {@inheritDoc}
    */
-  @Override
   public ConciseSet empty()
   {
     return new ConciseSet(simulateWAH);
@@ -2130,166 +1376,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
       }
     }
     return thisIndex >= 0 ? 1 : (otherIndex >= 0 ? -1 : 0);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void clear(int from, int to)
-  {
-    ConciseSet toRemove = empty();
-    toRemove.fill(from, to);
-    this.removeAll(toRemove);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void fill(int from, int to)
-  {
-    ConciseSet toAdd = empty();
-    toAdd.add(to);
-    toAdd.complement();
-    toAdd.add(to);
-
-    ConciseSet toRemove = empty();
-    toRemove.add(from);
-    toRemove.complement();
-
-    toAdd.removeAll(toRemove);
-
-    this.addAll(toAdd);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void flip(int e)
-  {
-    if (!add(e)) {
-      remove(e);
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public double bitmapCompressionRatio()
-  {
-    if (isEmpty()) {
-      return 0D;
-    }
-    return (lastWordIndex + 1) / Math.ceil((1 + last) / 32D);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public double collectionCompressionRatio()
-  {
-    if (isEmpty()) {
-      return 0D;
-    }
-    return (double) (lastWordIndex + 1) / size();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public String debugInfo()
-  {
-    final StringBuilder s = new StringBuilder("INTERNAL REPRESENTATION:\n");
-    final Formatter f = new Formatter(s, Locale.ENGLISH);
-
-    if (isEmpty()) {
-      return s.append("null\n").toString();
-    }
-
-    f.format("Elements: %s\n", toString());
-
-    // elements
-    int firstBitInWord = 0;
-    for (int i = 0; i <= lastWordIndex; i++) {
-      // raw representation of words[i]
-      f.format("words[%d] = ", i);
-      String ws = toBinaryString(words[i]);
-      if (isLiteral(words[i])) {
-        s.append(ws.substring(0, 1));
-        s.append("--");
-        s.append(ws.substring(1));
-      } else {
-        s.append(ws.substring(0, 2));
-        s.append('-');
-        if (simulateWAH) {
-          s.append("xxxxx");
-        } else {
-          s.append(ws.substring(2, 7));
-        }
-        s.append('-');
-        s.append(ws.substring(7));
-      }
-      s.append(" --> ");
-
-      // decode words[i]
-      if (isLiteral(words[i])) {
-        // literal
-        s.append("literal: ");
-        s.append(toBinaryString(words[i]).substring(1));
-        f.format(" ---> [from %d to %d] ", firstBitInWord, firstBitInWord + ConciseSetUtils.MAX_LITERAL_LENGTH - 1);
-        firstBitInWord += ConciseSetUtils.MAX_LITERAL_LENGTH;
-      } else {
-        // sequence
-        if (isOneSequence(words[i])) {
-          s.append('1');
-        } else {
-          s.append('0');
-        }
-        s.append(" block: ");
-        s.append(toBinaryString(getLiteralBits(getLiteral(words[i]))).substring(1));
-        if (!simulateWAH) {
-          s.append(" (bit=");
-          int bit = (words[i] & 0x3E000000) >>> 25;
-          if (bit == 0) {
-            s.append("none");
-          } else {
-            s.append(StringUtils.format("%4d", bit - 1));
-          }
-          s.append(')');
-        }
-        int count = getSequenceCount(words[i]);
-        f.format(
-            " followed by %d blocks (%d bits)",
-            getSequenceCount(words[i]),
-            maxLiteralLengthMultiplication(count)
-        );
-        f.format(
-            " ---> [from %d to %d] ",
-            firstBitInWord,
-            firstBitInWord + (count + 1) * ConciseSetUtils.MAX_LITERAL_LENGTH - 1
-        );
-        firstBitInWord += (count + 1) * ConciseSetUtils.MAX_LITERAL_LENGTH;
-      }
-      s.append('\n');
-    }
-
-    // object attributes
-    f.format("simulateWAH: %b\n", simulateWAH);
-    f.format("last: %d\n", last);
-    f.format("size: %s\n", (size == -1 ? "invalid" : Integer.toString(size)));
-    f.format("words.length: %d\n", words.length);
-    f.format("lastWordIndex: %d\n", lastWordIndex);
-
-    // compression
-    f.format("bitmap compression: %.2f%%\n", 100D * bitmapCompressionRatio());
-    f.format("collection compression: %.2f%%\n", 100D * collectionCompressionRatio());
-
-    return s.toString();
   }
 
   /**
@@ -2982,12 +2068,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
     }
 
     @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void skipAllBefore(int element)
     {
       while (true) {
@@ -3075,12 +2155,6 @@ public class ConciseSet extends AbstractIntSet implements Serializable
         previousWord();
       }
       return exp.previous();
-    }
-
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException();
     }
 
     @Override

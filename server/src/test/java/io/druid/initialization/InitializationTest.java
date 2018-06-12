@@ -61,7 +61,7 @@ public class InitializationTest
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void test01InitialModulesEmpty() throws Exception
+  public void test01InitialModulesEmpty()
   {
     Initialization.clearLoadedImplementations();
     Assert.assertEquals(
@@ -72,7 +72,7 @@ public class InitializationTest
   }
 
   @Test
-  public void test02MakeStartupInjector() throws Exception
+  public void test02MakeStartupInjector()
   {
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Assert.assertNotNull(startupInjector);
@@ -130,7 +130,7 @@ public class InitializationTest
   }
 
   @Test
-  public void test05MakeInjectorWithModules() throws Exception
+  public void test05MakeInjectorWithModules()
   {
     Injector startupInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(
@@ -160,7 +160,7 @@ public class InitializationTest
     a_jar.createNewFile();
     b_jar.createNewFile();
     c_jar.createNewFile();
-    final URLClassLoader loader = Initialization.getClassLoaderForExtension(some_extension_dir);
+    final URLClassLoader loader = Initialization.getClassLoaderForExtension(some_extension_dir, false);
     final URL[] expectedURLs = new URL[]{a_jar.toURI().toURL(), b_jar.toURI().toURL(), c_jar.toURI().toURL()};
     final URL[] actualURLs = loader.getURLs();
     Arrays.sort(
@@ -451,8 +451,8 @@ public class InitializationTest
     Assert.assertTrue(jar1.createNewFile());
     Assert.assertTrue(jar2.createNewFile());
 
-    final ClassLoader classLoader1 = Initialization.getClassLoaderForExtension(extension1);
-    final ClassLoader classLoader2 = Initialization.getClassLoaderForExtension(extension2);
+    final ClassLoader classLoader1 = Initialization.getClassLoaderForExtension(extension1, false);
+    final ClassLoader classLoader2 = Initialization.getClassLoaderForExtension(extension2, false);
 
     Assert.assertArrayEquals(new URL[]{jar1.toURL()}, ((URLClassLoader) classLoader1).getURLs());
     Assert.assertArrayEquals(new URL[]{jar2.toURL()}, ((URLClassLoader) classLoader2).getURLs());

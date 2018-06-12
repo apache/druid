@@ -29,13 +29,7 @@ public interface GenericColumn extends BaseColumn, HotLoopCallee
   int length();
 
   @CalledFromHotLoop
-  float getFloatSingleValueRow(int rowNum);
-
-  @CalledFromHotLoop
   long getLongSingleValueRow(int rowNum);
-
-  @CalledFromHotLoop
-  double getDoubleSingleValueRow(int rowNum);
 
   @Override
   void close();

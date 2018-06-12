@@ -27,7 +27,7 @@
     <parent>
         <groupId>io.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.11.1-SNAPSHOT</version>
+        <version>0.13.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -43,6 +43,12 @@
             <artifactId>druid-common</artifactId>
             <version>${project.parent.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.druid</groupId>
+          <artifactId>java-util</artifactId>
+          <version>${project.parent.version}</version>
+          <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -136,24 +142,10 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.metamx</groupId>
-            <artifactId>java-util</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-aws</artifactId>
           <version>${hadoop.compile.version}</version>
-          <exclusions>
-            <exclusion>
-              <groupId>com.amazonaws</groupId>
-              <artifactId>aws-java-sdk</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-        <dependency>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-s3</artifactId>
+          <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -173,6 +165,13 @@
           <version>${project.parent.version}</version>
           <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>io.druid</groupId>
+        <artifactId>druid-processing</artifactId>
+        <version>${project.parent.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs</artifactId>

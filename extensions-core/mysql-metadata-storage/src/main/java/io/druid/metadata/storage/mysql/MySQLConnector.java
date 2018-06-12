@@ -19,11 +19,11 @@
 
 package io.druid.metadata.storage.mysql;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
-
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -34,8 +34,9 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.util.BooleanMapper;
+import org.skife.jdbi.v2.util.StringMapper;
 
+import java.io.File;
 import java.sql.SQLException;
 
 public class MySQLConnector extends SQLMetadataConnector
@@ -48,7 +49,11 @@ public class MySQLConnector extends SQLMetadataConnector
   private final DBI dbi;
 
   @Inject
-  public MySQLConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
+  public MySQLConnector(
+      Supplier<MetadataStorageConnectorConfig> config,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      MySQLConnectorConfig connectorConfig
+  )
   {
     super(config, dbTables);
 
@@ -57,6 +62,68 @@ public class MySQLConnector extends SQLMetadataConnector
     // so we need to help JDBC find the driver
     datasource.setDriverClassLoader(getClass().getClassLoader());
     datasource.setDriverClassName("com.mysql.jdbc.Driver");
+    datasource.addConnectionProperty("useSSL", String.valueOf(connectorConfig.isUseSSL()));
+    if (connectorConfig.isUseSSL()) {
+      log.info("SSL is enabled on this MySQL connection. ");
+
+      datasource.addConnectionProperty(
+          "verifyServerCertificate",
+          String.valueOf(connectorConfig.isVerifyServerCertificate())
+      );
+      if (connectorConfig.isVerifyServerCertificate()) {
+        log.info("Server certificate verification is enabled. ");
+
+        if (connectorConfig.getTrustCertificateKeyStoreUrl() != null) {
+          datasource.addConnectionProperty(
+              "trustCertificateKeyStoreUrl",
+              new File(connectorConfig.getTrustCertificateKeyStoreUrl()).toURI().toString()
+          );
+        }
+        if (connectorConfig.getTrustCertificateKeyStoreType() != null) {
+          datasource.addConnectionProperty(
+              "trustCertificateKeyStoreType",
+              connectorConfig.getTrustCertificateKeyStoreType()
+          );
+        }
+        if (connectorConfig.getTrustCertificateKeyStorePassword() == null) {
+          log.warn(
+              "Trust store password is empty. Ensure that the trust store has been configured with an empty password.");
+        } else {
+          datasource.addConnectionProperty(
+              "trustCertificateKeyStorePassword",
+              connectorConfig.getTrustCertificateKeyStorePassword()
+          );
+        }
+      }
+      if (connectorConfig.getClientCertificateKeyStoreUrl() != null) {
+        datasource.addConnectionProperty(
+            "clientCertificateKeyStoreUrl",
+            new File(connectorConfig.getClientCertificateKeyStoreUrl()).toURI().toString()
+        );
+      }
+      if (connectorConfig.getClientCertificateKeyStoreType() != null) {
+        datasource.addConnectionProperty(
+            "clientCertificateKeyStoreType",
+            connectorConfig.getClientCertificateKeyStoreType()
+        );
+      }
+      if (connectorConfig.getClientCertificateKeyStorePassword() != null) {
+        datasource.addConnectionProperty(
+            "clientCertificateKeyStorePassword",
+            connectorConfig.getClientCertificateKeyStorePassword()
+        );
+      }
+      Joiner joiner = Joiner.on(",").skipNulls();
+      if (connectorConfig.getEnabledSSLCipherSuites() != null) {
+        datasource.addConnectionProperty(
+            "enabledSSLCipherSuites",
+            joiner.join(connectorConfig.getEnabledSSLCipherSuites())
+        );
+      }
+      if (connectorConfig.getEnabledTLSProtocols() != null) {
+        datasource.addConnectionProperty("enabledTLSProtocols", joiner.join(connectorConfig.getEnabledTLSProtocols()));
+      }
+    }
 
     // use double-quotes for quoting columns, so we can write SQL that works with most databases
     datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
@@ -95,17 +162,19 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   public boolean tableExists(Handle handle, String tableName)
   {
-    // ensure database defaults to utf8, otherwise bail
-    boolean isUtf8 = handle
-                         .createQuery("SELECT @@character_set_database = 'utf8'")
-                         .map(BooleanMapper.FIRST)
-                         .first();
+    String databaseCharset = handle
+        .createQuery("SELECT @@character_set_database")
+        .map(StringMapper.FIRST)
+        .first();
 
-    if (!isUtf8) {
+    if (!databaseCharset.matches("utf8.*")) {
       throw new ISE(
-          "Database default character set is not UTF-8." + System.lineSeparator()
-          + "  Druid requires its MySQL database to be created using UTF-8 as default character set."
+          "Druid requires its MySQL database to be created with an UTF8 charset, found `%1$s`. "
+          + "The recommended charset is `utf8mb4`.",
+          databaseCharset
       );
+    } else if (!"utf8mb4".equals(databaseCharset)) {
+      log.warn("The current database charset `%1$s` does not match the recommended charset `utf8mb4`", databaseCharset);
     }
 
     return !handle.createQuery("SHOW tables LIKE :tableName")
@@ -128,13 +197,13 @@ public class MySQLConnector extends SQLMetadataConnector
       final String valueColumn,
       final String key,
       final byte[] value
-  ) throws Exception
+  )
   {
     return getDBI().withHandle(
         new HandleCallback<Void>()
         {
           @Override
-          public Void withHandle(Handle handle) throws Exception
+          public Void withHandle(Handle handle)
           {
             handle.createStatement(
                 StringUtils.format(

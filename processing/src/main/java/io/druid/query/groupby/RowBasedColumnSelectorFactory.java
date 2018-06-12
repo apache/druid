@@ -20,9 +20,9 @@
 package io.druid.query.groupby;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.Row;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -30,6 +30,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
@@ -203,11 +204,14 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
     } else {
       return new DimensionSelector()
       {
+        private final RangeIndexedInts indexedInts = new RangeIndexedInts();
+
         @Override
         public IndexedInts getRow()
         {
           final List<String> dimensionValues = row.get().getDimension(dimension);
-          return RangeIndexedInts.create(dimensionValues != null ? dimensionValues.size() : 0);
+          indexedInts.setSize(dimensionValues != null ? dimensionValues.size() : 0);
+          return indexedInts;
         }
 
         @Override
@@ -225,7 +229,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(Strings.emptyToNull(dimensionValue), value)) {
+                  if (Objects.equals(NullHandling.emptyToNullIfNeeded(dimensionValue), value)) {
                     return true;
                   }
                 }
@@ -250,7 +254,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (Objects.equals(extractionFn.apply(Strings.emptyToNull(dimensionValue)), value)) {
+                  if (Objects.equals(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)), value)) {
                     return true;
                   }
                 }
@@ -283,7 +287,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(Strings.emptyToNull(dimensionValue))) {
+                  if (predicate.apply(NullHandling.emptyToNullIfNeeded(dimensionValue))) {
                     return true;
                   }
                 }
@@ -309,7 +313,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
                 }
 
                 for (String dimensionValue : dimensionValues) {
-                  if (predicate.apply(extractionFn.apply(Strings.emptyToNull(dimensionValue)))) {
+                  if (predicate.apply(extractionFn.apply(NullHandling.emptyToNullIfNeeded(dimensionValue)))) {
                     return true;
                   }
                 }
@@ -335,7 +339,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         @Override
         public String lookupName(int id)
         {
-          final String value = Strings.emptyToNull(row.get().getDimension(dimension).get(id));
+          final String value = NullHandling.emptyToNullIfNeeded(row.get().getDimension(dimension).get(id));
           return extractionFn == null ? value : extractionFn.apply(value);
         }
 
@@ -395,6 +399,13 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
+        public boolean isNull()
+        {
+          // Time column never has null values
+          return false;
+        }
+
+        @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("row", row);
@@ -405,21 +416,33 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       return new ColumnValueSelector()
       {
         @Override
+        public boolean isNull()
+        {
+          return row.get().getRaw(columnName) == null;
+        }
+
+        @Override
         public double getDouble()
         {
-          return row.get().getMetric(columnName).doubleValue();
+          Number metric = row.get().getMetric(columnName);
+          assert NullHandling.replaceWithDefault() || metric != null;
+          return DimensionHandlerUtils.nullToZero(metric).doubleValue();
         }
 
         @Override
         public float getFloat()
         {
-          return row.get().getMetric(columnName).floatValue();
+          Number metric = row.get().getMetric(columnName);
+          assert NullHandling.replaceWithDefault() || metric != null;
+          return DimensionHandlerUtils.nullToZero(metric).floatValue();
         }
 
         @Override
         public long getLong()
         {
-          return row.get().getMetric(columnName).longValue();
+          Number metric = row.get().getMetric(columnName);
+          assert NullHandling.replaceWithDefault() || metric != null;
+          return DimensionHandlerUtils.nullToZero(metric).longValue();
         }
 
         @Nullable

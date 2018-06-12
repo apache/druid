@@ -20,15 +20,12 @@
 package io.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Iterators;
-import com.google.common.primitives.Ints;
-import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.java.util.common.CloseableIterators;
 import io.druid.java.util.common.IAE;
+import io.druid.java.util.common.parsers.CloseableIterator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
@@ -102,7 +99,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       int hashTableSize = ByteBufferHashTable.calculateTableArenaSizeWithPerBucketAdditionalSize(
           buffer.capacity(),
           bucketSize,
-          Ints.BYTES
+          Integer.BYTES
       );
 
       hashTableBuffer = buffer.duplicate();
@@ -117,7 +114,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
       this.offsetList = new ByteBufferIntList(
           offsetListBuffer,
-          offsetListBuffer.capacity() / Ints.BYTES
+          offsetListBuffer.capacity() / Integer.BYTES
       );
 
       this.hashTable = new ByteBufferHashTable(
@@ -172,7 +169,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     if (!initialized) {
       // it's possible for iterator() to be called before initialization when
       // a nested groupBy's subquery has an empty result set (see testEmptySubquery() in GroupByQueryRunnerTest)
-      return CloseableIterators.withEmptyBaggage(Iterators.<Entry<KeyType>>emptyIterator());
+      return CloseableIterators.withEmptyBaggage(Collections.<Entry<KeyType>>emptyIterator());
     }
 
     if (sorted) {
@@ -252,7 +249,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
           // do nothing
         }
@@ -290,7 +287,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
         }
 
         @Override
-        public void close() throws IOException
+        public void close()
         {
           // do nothing
         }

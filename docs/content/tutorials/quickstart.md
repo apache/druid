@@ -10,7 +10,7 @@ In this quickstart, we will download Druid, set up it up on a single machine, lo
 
 You will need:
 
-  * Java 8 or higher
+  * Java 8
   * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
   * 8G of RAM
   * 2 vCPUs
@@ -50,9 +50,9 @@ Druid currently has a dependency on [Apache ZooKeeper](http://zookeeper.apache.o
 need to download and run Zookeeper.
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz -o zookeeper-3.4.10.tar.gz
-tar -xzf zookeeper-3.4.10.tar.gz
-cd zookeeper-3.4.10
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz -o zookeeper-3.4.11.tar.gz
+tar -xzf zookeeper-3.4.11.tar.gz
+cd zookeeper-3.4.11
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 ```

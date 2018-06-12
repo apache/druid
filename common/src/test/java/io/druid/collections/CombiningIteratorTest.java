@@ -20,9 +20,7 @@
 package io.druid.collections;
 
 import com.google.common.collect.PeekingIterator;
-
 import io.druid.java.util.common.guava.nary.BinaryFn;
-
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -110,7 +108,7 @@ public class CombiningIteratorTest
   }
 
   @Test(expected = NoSuchElementException.class)
-  public void testExceptionInNext() throws Exception
+  public void testExceptionInNext()
   {
     boolean expected = false;
     EasyMock.expect(peekIterator.hasNext()).andReturn(expected);
@@ -120,7 +118,7 @@ public class CombiningIteratorTest
   }
 
   @Test(expected = UnsupportedOperationException.class)
-  public void testRemove() throws Exception
+  public void testRemove()
   {
     testingIterator.remove();
   }

@@ -132,14 +132,6 @@ public class SerializerUtilsTest
   }
 
   @Test
-  public void testWriteStrings() throws IOException
-  {
-    serializerUtils.writeStrings(outStream, strings);
-    byte[] actuals = outStream.toByteArray();
-    Assert.assertArrayEquals(stringsByte, actuals);
-  }
-
-  @Test
   public void testChannelWritelong() throws IOException
   {
     final int index = 0;
@@ -204,7 +196,7 @@ public class SerializerUtilsTest
   }
 
   @Test 
-  public void testByteBufferReadStrings() throws IOException
+  public void testByteBufferReadStrings()
   {
     ByteBuffer buffer = ByteBuffer.allocate(stringsByte.length);
     buffer.put(stringsByte);

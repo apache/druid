@@ -22,7 +22,7 @@ package io.druid.client;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import com.metamx.http.client.HttpClient;
+import io.druid.java.util.http.client.HttpClient;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.guice.annotations.EscalatedClient;
 import io.druid.guice.annotations.Smile;
@@ -60,7 +60,7 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
     return new HttpServerInventoryView(
         smileMapper, httpClient,
         druidNodeDiscoveryProvider,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
+        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysFalse(),
         config
     );
   }

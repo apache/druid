@@ -27,10 +27,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.curator.CuratorTestBase;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.query.TableDataSource;
+import io.druid.segment.TestHelper;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordination.ServerType;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -66,7 +66,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
   public CoordinatorServerViewTest()
   {
-    jsonMapper = new DefaultObjectMapper();
+    jsonMapper = TestHelper.makeJsonMapper();
     zkPathsConfig = new ZkPathsConfig();
     inventoryPath = zkPathsConfig.getLiveSegmentsPath();
   }

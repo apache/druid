@@ -34,7 +34,6 @@ import io.druid.data.input.Row;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
-import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -80,7 +79,7 @@ public class SketchAggregationTest
   }
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = Lists.newArrayList();
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
@@ -102,7 +101,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
@@ -143,7 +142,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(5, results.size());
     Assert.assertEquals(
         ImmutableList.of(
@@ -227,7 +226,7 @@ public class SketchAggregationTest
   }
 
   @Test
-  public void testSketchMergeFinalization() throws Exception
+  public void testSketchMergeFinalization()
   {
     SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(128).build());
 
@@ -278,6 +277,14 @@ public class SketchAggregationTest
             2
         )
     );
+    
+    assertPostAggregatorSerde(
+        new SketchEstimatePostAggregator(
+            "name",
+            new SketchConstantPostAggregator("name", "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI="),
+            null
+        )
+    );
   }
 
   @Test
@@ -291,6 +298,18 @@ public class SketchAggregationTest
             Lists.<PostAggregator>newArrayList(
                 new FieldAccessPostAggregator("name1", "fieldName1"),
                 new FieldAccessPostAggregator("name2", "fieldName2")
+            )
+        )
+    );
+    
+    assertPostAggregatorSerde(
+        new SketchSetPostAggregator(
+            "name",
+            "INTERSECT",
+            null,
+            Lists.<PostAggregator>newArrayList(
+                new FieldAccessPostAggregator("name1", "fieldName1"),
+                new SketchConstantPostAggregator("name2", "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=")
             )
         )
     );
@@ -341,7 +360,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("retention_test_data_group_by_query.json")
     );
 
-    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    List<Row> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         ImmutableList.of(
@@ -420,7 +439,7 @@ public class SketchAggregationTest
     );
   }
 
-  public final static String readFileFromClasspathAsString(String fileName) throws IOException
+  public static final String readFileFromClasspathAsString(String fileName) throws IOException
   {
     return Files.asCharSource(
         new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),

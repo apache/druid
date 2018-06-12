@@ -28,7 +28,6 @@ import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.LoadSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 
 
 public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSegmentArchiver
@@ -40,7 +39,7 @@ public class S3DataSegmentArchiver extends S3DataSegmentMover implements DataSeg
   @Inject
   public S3DataSegmentArchiver(
       @Json ObjectMapper mapper,
-      RestS3Service s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentArchiverConfig archiveConfig,
       S3DataSegmentPusherConfig restoreConfig
   )

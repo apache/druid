@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import javax.annotation.Nullable;
+
 /**
  * This interface is convenient for implementation of "double-sourcing" {@link ColumnValueSelector}s, it provides
  * default implementations for all {@link ColumnValueSelector}'s methods except {@link #getDouble()}.
@@ -28,9 +30,6 @@ package io.druid.segment;
  */
 public interface DoubleColumnSelector extends ColumnValueSelector<Double>
 {
-  @Override
-  double getDouble();
-
   /**
    * @deprecated This method is marked as deprecated in DoubleColumnSelector to minimize the probability of accidential
    * calling. "Polymorphism" of DoubleColumnSelector should be used only when operating on {@link ColumnValueSelector}
@@ -62,8 +61,12 @@ public interface DoubleColumnSelector extends ColumnValueSelector<Double>
    */
   @Deprecated
   @Override
+  @Nullable
   default Double getObject()
   {
+    if (isNull()) {
+      return null;
+    }
     return getDouble();
   }
 

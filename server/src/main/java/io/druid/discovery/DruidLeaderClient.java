@@ -19,13 +19,8 @@
 
 package io.druid.discovery;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.FullResponseHandler;
-import com.metamx.http.client.response.FullResponseHolder;
 import io.druid.client.selector.Server;
 import io.druid.concurrent.LifecycleLock;
 import io.druid.curator.discovery.ServerDiscoverySelector;
@@ -36,6 +31,11 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHandler;
+import io.druid.java.util.http.client.response.FullResponseHolder;
+import io.druid.java.util.http.client.response.HttpResponseHandler;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -44,6 +44,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -127,10 +128,18 @@ public class DruidLeaderClient
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
   }
 
+  public FullResponseHolder go(Request request) throws IOException, InterruptedException
+  {
+    return go(request, new FullResponseHandler(StandardCharsets.UTF_8));
+  }
+
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
-  public FullResponseHolder go(Request request) throws IOException, InterruptedException
+  public FullResponseHolder go(
+      Request request,
+      HttpResponseHandler<FullResponseHolder, FullResponseHolder> responseHandler
+  ) throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     for (int counter = 0; counter < MAX_RETRIES; counter++) {
@@ -139,7 +148,7 @@ public class DruidLeaderClient
 
       try {
         try {
-          fullResponseHolder = httpClient.go(request, new FullResponseHandler(Charsets.UTF_8)).get();
+          fullResponseHolder = httpClient.go(request, responseHandler).get();
         }
         catch (ExecutionException e) {
           // Unwrap IOExceptions and ChannelExceptions, re-throw others

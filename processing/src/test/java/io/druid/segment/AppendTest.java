@@ -59,6 +59,7 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNResultValue;
+import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -111,12 +112,13 @@ public class AppendTest
   private Segment segment3;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
+    SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     // (1, 2) cover overlapping segments of the form
     // |------|
     //     |--------|
-    QueryableIndex appendedIndex = SchemalessIndexTest.getAppendedIncrementalIndex(
+    QueryableIndex appendedIndex = schemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.1", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.2", METRIC_AGGS)
@@ -131,7 +133,7 @@ public class AppendTest
     // (3, 4) cover overlapping segments of the form
     // |------------|
     //     |-----|
-    QueryableIndex append2 = SchemalessIndexTest.getAppendedIncrementalIndex(
+    QueryableIndex append2 = schemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.3", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("append.json.4", METRIC_AGGS)
@@ -147,7 +149,7 @@ public class AppendTest
     // |-------------|
     //   |---|
     //          |---|
-    QueryableIndex append3 = SchemalessIndexTest.getAppendedIncrementalIndex(
+    QueryableIndex append3 = schemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
             new Pair<String, AggregatorFactory[]>("append.json.5", METRIC_AGGS),
             new Pair<String, AggregatorFactory[]>("append.json.6", METRIC_AGGS),

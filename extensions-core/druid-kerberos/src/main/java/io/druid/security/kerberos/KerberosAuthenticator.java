@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.StringUtils;
@@ -41,6 +43,8 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.http.HttpHeader;
 import sun.security.krb5.EncryptedData;
 import sun.security.krb5.EncryptionKey;
 import sun.security.krb5.internal.APReq;
@@ -72,18 +76,25 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.security.Principal;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 
 @JsonTypeName("kerberos")
 public class KerberosAuthenticator implements Authenticator
@@ -91,40 +102,44 @@ public class KerberosAuthenticator implements Authenticator
   private static final Logger log = new Logger(KerberosAuthenticator.class);
   private static final Pattern HADOOP_AUTH_COOKIE_REGEX = Pattern.compile(".*p=(\\S+)&t=.*");
   public static final List<String> DEFAULT_EXCLUDED_PATHS = Collections.emptyList();
+  public static final String SIGNED_TOKEN_ATTRIBUTE = "signedToken";
 
   private final DruidNode node;
   private final String serverPrincipal;
   private final String serverKeytab;
-  private final String internalClientPrincipal;
-  private final String internalClientKeytab;
   private final String authToLocal;
   private final List<String> excludedPaths;
   private final String cookieSignatureSecret;
   private final String authorizerName;
+  private final String name;
   private LoginContext loginContext;
 
   @JsonCreator
   public KerberosAuthenticator(
       @JsonProperty("serverPrincipal") String serverPrincipal,
       @JsonProperty("serverKeytab") String serverKeytab,
-      @JsonProperty("internalClientPrincipal") String internalClientPrincipal,
-      @JsonProperty("internalClientKeytab") String internalClientKeytab,
       @JsonProperty("authToLocal") String authToLocal,
       @JsonProperty("excludedPaths") List<String> excludedPaths,
       @JsonProperty("cookieSignatureSecret") String cookieSignatureSecret,
       @JsonProperty("authorizerName") String authorizerName,
+      @JsonProperty("name") String name,
       @JacksonInject @Self DruidNode node
   )
   {
     this.node = node;
-    this.serverPrincipal = serverPrincipal;
     this.serverKeytab = serverKeytab;
-    this.internalClientPrincipal = internalClientPrincipal;
-    this.internalClientKeytab = internalClientKeytab;
     this.authToLocal = authToLocal == null ? "DEFAULT" : authToLocal;
     this.excludedPaths = excludedPaths == null ? DEFAULT_EXCLUDED_PATHS : excludedPaths;
     this.cookieSignatureSecret = cookieSignatureSecret;
     this.authorizerName = authorizerName;
+    this.name = Preconditions.checkNotNull(name);
+
+    try {
+      this.serverPrincipal = SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost());
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -156,7 +171,7 @@ public class KerberosAuthenticator implements Authenticator
           SignerSecretProvider signerSecretProvider = new SignerSecretProvider()
           {
             @Override
-            public void init(Properties config, ServletContext servletContext, long tokenValidity) throws Exception
+            public void init(Properties config, ServletContext servletContext, long tokenValidity)
             {
 
             }
@@ -182,7 +197,7 @@ public class KerberosAuthenticator implements Authenticator
 
       // Copied from hadoop-auth's AuthenticationFilter, to allow us to change error response handling in doFilterSuper
       @Override
-      protected AuthenticationToken getToken(HttpServletRequest request) throws IOException, AuthenticationException
+      protected AuthenticationToken getToken(HttpServletRequest request) throws AuthenticationException
       {
         AuthenticationToken token = null;
         String tokenStr = null;
@@ -259,7 +274,7 @@ public class KerberosAuthenticator implements Authenticator
           if (clientPrincipal != null) {
             request.setAttribute(
                 AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                new AuthenticationResult(clientPrincipal, authorizerName, null)
+                new AuthenticationResult(clientPrincipal, authorizerName, name, null)
             );
           }
         }
@@ -330,10 +345,29 @@ public class KerberosAuthenticator implements Authenticator
               };
               if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
                 String signedToken = mySigner.sign(token.toString());
-                createAuthCookie(httpResponse, signedToken, getCookieDomain(),
-                                 getCookiePath(), token.getExpires(), isHttps
+                tokenToAuthCookie(
+                    httpResponse,
+                    signedToken,
+                    getCookieDomain(),
+                    getCookiePath(),
+                    token.getExpires(),
+                    !token.isExpired() && token.getExpires() > 0,
+                    isHttps
                 );
+                request.setAttribute(SIGNED_TOKEN_ATTRIBUTE, tokenToCookieString(
+                    signedToken,
+                    getCookieDomain(),
+                    getCookiePath(),
+                    token.getExpires(),
+                    !token.isExpired() && token.getExpires() > 0,
+                    isHttps
+                ));
               }
+              // Since this request is validated also set DRUID_AUTHENTICATION_RESULT
+              request.setAttribute(
+                  AuthConfig.DRUID_AUTHENTICATION_RESULT,
+                  new AuthenticationResult(token.getName(), authorizerName, name, null)
+              );
               doFilter(filterChain, httpRequest, httpResponse);
             }
           } else {
@@ -345,15 +379,21 @@ public class KerberosAuthenticator implements Authenticator
           errCode = HttpServletResponse.SC_FORBIDDEN;
           authenticationEx = ex;
           if (log.isDebugEnabled()) {
-            log.debug("Authentication exception: " + ex.getMessage(), ex);
+            log.debug(ex, "Authentication exception: " + ex.getMessage());
           } else {
             log.warn("Authentication exception: " + ex.getMessage());
           }
         }
         if (unauthorizedResponse) {
           if (!httpResponse.isCommitted()) {
-            createAuthCookie(httpResponse, "", getCookieDomain(),
-                             getCookiePath(), 0, isHttps
+            tokenToAuthCookie(
+                httpResponse,
+                "",
+                getCookieDomain(),
+                getCookiePath(),
+                0,
+                false,
+                isHttps
             );
             // If response code is 401. Then WWW-Authenticate Header should be
             // present.. reset to 403 if not found..
@@ -388,20 +428,12 @@ public class KerberosAuthenticator implements Authenticator
   public Map<String, String> getInitParameters()
   {
     Map<String, String> params = new HashMap<String, String>();
-    try {
-      params.put(
-          "kerberos.principal",
-          SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost())
-      );
-      params.put("kerberos.keytab", serverKeytab);
-      params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
-      params.put("kerberos.name.rules", authToLocal);
-      if (cookieSignatureSecret != null) {
-        params.put("signature.secret", cookieSignatureSecret);
-      }
-    }
-    catch (IOException e) {
-      Throwables.propagate(e);
+    params.put("kerberos.principal", serverPrincipal);
+    params.put("kerberos.keytab", serverKeytab);
+    params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
+    params.put("kerberos.name.rules", authToLocal);
+    if (cookieSignatureSecret != null) {
+      params.put("signature.secret", cookieSignatureSecret);
     }
     return params;
   }
@@ -440,6 +472,22 @@ public class KerberosAuthenticator implements Authenticator
     return false;
   }
 
+  @Override
+  public void decorateProxyRequest(
+      HttpServletRequest clientRequest, HttpServletResponse proxyResponse, Request proxyRequest
+  )
+  {
+    Object cookieToken = clientRequest.getAttribute(SIGNED_TOKEN_ATTRIBUTE);
+    if (cookieToken != null && cookieToken instanceof String) {
+      log.debug("Found cookie token will attache it to proxyRequest as cookie");
+      String authResult = (String) cookieToken;
+      String existingCookies = proxyRequest.getCookies()
+                                           .stream()
+                                           .map(HttpCookie::toString)
+                                           .collect(Collectors.joining(";"));
+      proxyRequest.header(HttpHeader.COOKIE, Joiner.on(";").join(authResult, existingCookies));
+    }
+  }
 
   /**
    * Kerberos context configuration for the JDK GSS library. Copied from hadoop-auth's KerberosAuthenticationHandler.
@@ -533,8 +581,8 @@ public class KerberosAuthenticator implements Authenticator
             for (Object cred : serverCreds) {
               if (cred instanceof KeyTab) {
                 KeyTab serverKeyTab = (KeyTab) cred;
-                KerberosPrincipal serverPrincipal = new KerberosPrincipal(this.serverPrincipal);
-                KerberosKey[] serverKeys = serverKeyTab.getKeys(serverPrincipal);
+                KerberosPrincipal kerberosPrincipal = new KerberosPrincipal(serverPrincipal);
+                KerberosKey[] serverKeys = serverKeyTab.getKeys(kerberosPrincipal);
                 for (KerberosKey key : serverKeys) {
                   if (key.getKeyType() == eType) {
                     finalKey = new EncryptionKey(key.getKeyType(), key.getEncoded());
@@ -573,12 +621,10 @@ public class KerberosAuthenticator implements Authenticator
 
   private void initializeKerberosLogin() throws ServletException
   {
-    String principal;
     String keytab;
 
     try {
-      principal = SecurityUtil.getServerPrincipal(serverPrincipal, node.getHost());
-      if (principal == null || principal.trim().length() == 0) {
+      if (serverPrincipal == null || serverPrincipal.trim().length() == 0) {
         throw new ServletException("Principal not defined in configuration");
       }
       keytab = serverKeytab;
@@ -590,19 +636,86 @@ public class KerberosAuthenticator implements Authenticator
       }
 
       Set<Principal> principals = new HashSet<Principal>();
-      principals.add(new KerberosPrincipal(principal));
+      principals.add(new KerberosPrincipal(serverPrincipal));
       Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
 
-      DruidKerberosConfiguration kerberosConfiguration = new DruidKerberosConfiguration(keytab, principal);
+      DruidKerberosConfiguration kerberosConfiguration = new DruidKerberosConfiguration(keytab, serverPrincipal);
 
-      log.info("Login using keytab " + keytab + ", for principal " + principal);
+      log.info("Login using keytab " + keytab + ", for principal " + serverPrincipal);
       loginContext = new LoginContext("", subject, null, kerberosConfiguration);
       loginContext.login();
 
-      log.info("Initialized, principal %s from keytab %s", principal, keytab);
+      log.info("Initialized, principal %s from keytab %s", serverPrincipal, keytab);
     }
     catch (Exception ex) {
       throw new ServletException(ex);
     }
+  }
+
+
+  /**
+   * Creates the Hadoop authentication HTTP cookie.
+   *
+   * @param resp the response object.
+   * @param token authentication token for the cookie.
+   * @param domain the cookie domain.
+   * @param path the cookie path.
+   * @param expires UNIX timestamp that indicates the expire date of the
+   *                cookie. It has no effect if its value &lt; 0.
+   * @param isSecure is the cookie secure?
+   * @param isCookiePersistent whether the cookie is persistent or not.
+   *the following code copy/past from Hadoop 3.0.0 copied to avoid compilation issue due to new signature,
+   *                           org.apache.hadoop.security.authentication.server.AuthenticationFilter#createAuthCookie
+   *                           (
+   *                           javax.servlet.http.HttpServletResponse,
+   *                           java.lang.String,
+   *                           java.lang.String,
+   *                           java.lang.String,
+   *                           long, boolean, boolean)
+   */
+  private static void tokenToAuthCookie(
+      HttpServletResponse resp, String token,
+      String domain, String path, long expires,
+      boolean isCookiePersistent,
+      boolean isSecure
+  )
+  {
+    resp.addHeader("Set-Cookie", tokenToCookieString(token, domain, path, expires, isCookiePersistent, isSecure));
+  }
+
+  private static String tokenToCookieString(
+      String token,
+      String domain, String path, long expires,
+      boolean isCookiePersistent,
+      boolean isSecure
+  )
+  {
+    StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE)
+        .append("=");
+    if (token != null && token.length() > 0) {
+      sb.append("\"").append(token).append("\"");
+    }
+
+    if (path != null) {
+      sb.append("; Path=").append(path);
+    }
+
+    if (domain != null) {
+      sb.append("; Domain=").append(domain);
+    }
+
+    if (expires >= 0 && isCookiePersistent) {
+      Date date = new Date(expires);
+      SimpleDateFormat df = new SimpleDateFormat("EEE, dd-MMM-yyyy HH:mm:ss zzz", Locale.ENGLISH);
+      df.setTimeZone(TimeZone.getTimeZone("GMT"));
+      sb.append("; Expires=").append(df.format(date));
+    }
+
+    if (isSecure) {
+      sb.append("; Secure");
+    }
+
+    sb.append("; HttpOnly");
+    return sb.toString();
   }
 }

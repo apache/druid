@@ -20,7 +20,7 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.metamx.emitter.EmittingLogger;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.StringUtils;
 import io.druid.server.coordinator.BalancerSegmentHolder;
@@ -99,7 +99,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     if (!currentlyMovingSegments.get(tier).isEmpty()) {
       reduceLifetimes(tier);
-      log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.size());
+      log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.get(tier).size());
       return;
     }
 

@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import io.druid.java.util.common.Pair;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -41,9 +42,17 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @throws IOException
    */
-  List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
-      throws IOException;
+  List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval);
 
+  /**
+   * Get all used segments and the created_date of these segments in a given datasource and interval
+   * 
+   * @param dataSource The datasource to query
+   * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive, end is exclusive
+   * @return The DataSegments and the related created_date of segments which include data in the requested interval
+   */
+  List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval);
+  
   /**
    * Get all segments which may include any data in the interval and are flagged as used.
    *
@@ -54,8 +63,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @throws IOException
    */
-  List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
-      throws IOException;
+  List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals);
 
   /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
@@ -76,14 +84,14 @@ public interface IndexerMetadataStorageCoordinator
    * <p/>
    * Note that a segment sequence may include segments with a variety of different intervals and versions.
    *
-   * @param dataSource        dataSource for which to allocate a segment
-   * @param sequenceName      name of the group of ingestion tasks producing a segment series
-   * @param previousSegmentId previous segment in the series; may be null or empty, meaning this is the first segment
-   * @param interval          interval for which to allocate a segment
-   * @param maxVersion        use this version if we have no better version to use. The returned segment identifier may
-   *                          have a version lower than this one, but will not have one higher.
-   * @param skipSegmentLineageCheck if false, perform lineage validation using previousSegmentId for this sequence.
-   *                              Should be set to false if replica tasks would index events in same order
+   * @param dataSource              dataSource for which to allocate a segment
+   * @param sequenceName            name of the group of ingestion tasks producing a segment series
+   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first segment
+   * @param interval                interval for which to allocate a segment
+   * @param maxVersion              use this version if we have no better version to use. The returned segment identifier may
+   *                                have a version lower than this one, but will not have one higher.
+   * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
+   *                                Should be set to false if replica tasks would index events in same order
    *
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
@@ -94,7 +102,18 @@ public interface IndexerMetadataStorageCoordinator
       Interval interval,
       String maxVersion,
       boolean skipSegmentLineageCheck
-  ) throws IOException;
+  );
+
+  /**
+   * Delete pending segments created in the given interval for the given dataSource from the pending segments table.
+   * The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
+   *
+   * @param dataSource     dataSource
+   * @param deleteInterval interval to check the {@code created_date} of pendingSegments
+   *
+   * @return number of deleted pending segments
+   */
+  int deletePendingSegments(String dataSource, Interval deleteInterval);
 
   /**
    * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
@@ -121,12 +140,16 @@ public interface IndexerMetadataStorageCoordinator
       DataSourceMetadata endMetadata
   ) throws IOException;
 
+  /**
+   * Read dataSource metadata. Returns null if there is no metadata.
+   */
   DataSourceMetadata getDataSourceMetadata(String dataSource);
 
   /**
    * Removes entry for 'dataSource' from the dataSource metadata table.
    *
-   * @param dataSource  identifier
+   * @param dataSource identifier
+   *
    * @return true if the entry was deleted, false otherwise
    */
   boolean deleteDataSourceMetadata(String dataSource);
@@ -134,15 +157,26 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Resets dataSourceMetadata entry for 'dataSource' to the one supplied.
    *
-   * @param dataSource  identifier
+   * @param dataSource         identifier
    * @param dataSourceMetadata value to set
+   *
    * @return true if the entry was reset, false otherwise
    */
   boolean resetDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata) throws IOException;
 
-  void updateSegmentMetadata(Set<DataSegment> segments) throws IOException;
+  /**
+   * Insert dataSourceMetadata entry for 'dataSource'.
+   *
+   * @param dataSource         identifier
+   * @param dataSourceMetadata value to set
+   *
+   * @return true if the entry was inserted, false otherwise
+   */
+  boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata dataSourceMetadata);
+  
+  void updateSegmentMetadata(Set<DataSegment> segments);
 
-  void deleteSegments(Set<DataSegment> segments) throws IOException;
+  void deleteSegments(Set<DataSegment> segments);
 
   /**
    * Get all segments which include ONLY data within the given interval and are not flagged as used.

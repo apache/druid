@@ -38,6 +38,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
 {
   private static final Logger log = new Logger(HadoopDruidDetermineConfigurationJob.class);
   private final HadoopDruidIndexerConfig config;
+  private Jobby job;
 
   @Inject
   public HadoopDruidDetermineConfigurationJob(
@@ -50,12 +51,11 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
   @Override
   public boolean run()
   {
-    List<Jobby> jobs = Lists.newArrayList();
-
     JobHelper.ensurePaths(config);
 
     if (config.isDeterminingPartitions()) {
-      jobs.add(config.getPartitionsSpec().getPartitionJob(config));
+      job = config.getPartitionsSpec().getPartitionJob(config);
+      return JobHelper.runSingleJob(job, config);
     } else {
       int shardsPerInterval = config.getPartitionsSpec().getNumShards();
       Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap();
@@ -86,10 +86,27 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
         }
       }
       config.setShardSpecs(shardSpecs);
+      return true;
     }
-
-    return JobHelper.runJobs(jobs, config);
-
   }
 
+  @Override
+  public Map<String, Object> getStats()
+  {
+    if (job == null) {
+      return null;
+    }
+
+    return job.getStats();
+  }
+
+  @Override
+  public String getErrorMessage()
+  {
+    if (job == null) {
+      return null;
+    }
+
+    return job.getErrorMessage();
+  }
 }

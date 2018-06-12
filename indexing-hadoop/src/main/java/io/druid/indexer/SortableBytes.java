@@ -93,12 +93,12 @@ public class SortableBytes
     );
   }
 
-  public static void useSortableBytesAsMapOutputKey(Job job)
+  public static void useSortableBytesAsMapOutputKey(Job job, Class<? extends Partitioner> partitionerClass)
   {
     job.setMapOutputKeyClass(BytesWritable.class);
     job.setGroupingComparatorClass(SortableBytesGroupingComparator.class);
     job.setSortComparatorClass(SortableBytesSortingComparator.class);
-    job.setPartitionerClass(SortableBytesPartitioner.class);
+    job.setPartitionerClass(partitionerClass);
   }
 
   public static class SortableBytesGroupingComparator extends WritableComparator
@@ -151,18 +151,6 @@ public class SortableBytes
       }
 
       return retVal;
-    }
-  }
-
-  public static class SortableBytesPartitioner extends Partitioner<BytesWritable, Object>
-  {
-    @Override
-    public int getPartition(BytesWritable bytesWritable, Object o, int numPartitions)
-    {
-      final byte[] bytes = bytesWritable.getBytes();
-      int length = ByteBuffer.wrap(bytes).getInt();
-
-      return (ByteBuffer.wrap(bytes, 4, length).hashCode() & Integer.MAX_VALUE) % numPartitions;
     }
   }
 }

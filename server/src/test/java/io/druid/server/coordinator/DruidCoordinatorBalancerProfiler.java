@@ -24,11 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -61,7 +61,7 @@ public class DruidCoordinatorBalancerProfiler
   List<Rule> rules = ImmutableList.<Rule>of(loadRule);
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     coordinator = EasyMock.createMock(DruidCoordinator.class);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
@@ -154,7 +154,7 @@ public class DruidCoordinatorBalancerProfiler
                                 )
                                 .withAvailableSegments(segmentMap.values())
                                 .withDynamicConfigs(
-                                    new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+                                    CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
                                     ).withReplicantLifetime(500)
                                                                      .withReplicationThrottleLimit(5)
@@ -252,7 +252,7 @@ public class DruidCoordinatorBalancerProfiler
                                 )
                                 .withAvailableSegments(segments.values())
                                 .withDynamicConfigs(
-                                    new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+                                    CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )

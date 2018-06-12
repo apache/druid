@@ -19,12 +19,12 @@
 
 package io.druid.storage.google;
 
-import com.google.common.collect.ImmutableMap;
-import io.druid.java.util.common.FileUtils;
-import io.druid.java.util.common.Intervals;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import io.druid.segment.loading.SegmentLoadingException;
-import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.NoneShardSpec;
+import org.apache.commons.io.FileUtils;
+import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Test;
 
@@ -34,23 +34,11 @@ import java.nio.file.Files;
 
 import static org.easymock.EasyMock.expect;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class GoogleDataSegmentPullerTest extends EasyMockSupport
 {
   private static final String bucket = "bucket";
   private static final String path = "/path/to/storage/index.zip";
-  private static final DataSegment dataSegment = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.<String, Object>of("bucket", bucket, "path", path),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
 
   @Test(expected = SegmentLoadingException.class)
   public void testDeleteOutputDirectoryWhenErrorIsRaisedPullingSegmentFiles()
@@ -59,8 +47,12 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
     final File outDir = Files.createTempDirectory("druid").toFile();
     try {
       GoogleStorage storage = createMock(GoogleStorage.class);
-
-      expect(storage.get(bucket, path)).andThrow(new IOException(""));
+      final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+          JacksonFactory.getDefaultInstance(),
+          300,
+          "test"
+      );
+      expect(storage.get(EasyMock.eq(bucket), EasyMock.eq(path))).andThrow(exception);
 
       replayAll();
 
@@ -72,48 +64,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
       verifyAll();
     }
     finally {
-      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
-    }
-  }
-
-  @Test
-  public void getSegmentFilesTest() throws SegmentLoadingException, IOException
-  {
-    final File outDir = new File("");
-    try {
-      final FileUtils.FileCopyResult result = createMock(FileUtils.FileCopyResult.class);
-      GoogleStorage storage = createMock(GoogleStorage.class);
-      GoogleDataSegmentPuller puller = createMockBuilder(GoogleDataSegmentPuller.class).withConstructor(
-          storage
-      ).addMockedMethod("getSegmentFiles", String.class, String.class, File.class).createMock();
-
-      expect(puller.getSegmentFiles(bucket, path, outDir)).andReturn(result);
-
-      replayAll();
-
-      puller.getSegmentFiles(dataSegment, outDir);
-
-      verifyAll();
-    }
-    finally {
-      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
-    }
-  }
-
-  @Test
-  public void prepareOutDirTest() throws IOException
-  {
-    GoogleStorage storage = createMock(GoogleStorage.class);
-    File outDir = Files.createTempDirectory("druid").toFile();
-
-    try {
-      GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
-      puller.prepareOutDir(outDir);
-
-      assertTrue(outDir.exists());
-    }
-    finally {
-      org.apache.commons.io.FileUtils.deleteDirectory(outDir);
+      FileUtils.deleteDirectory(outDir);
     }
   }
 }

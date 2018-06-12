@@ -25,6 +25,7 @@ import io.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 
@@ -67,7 +68,7 @@ public interface FirehoseFactory<T extends InputRowParser>
    * @param parser             an input row parser
    * @param temporaryDirectory a directory where temporary files are stored
    */
-  default Firehose connect(T parser, File temporaryDirectory) throws IOException, ParseException
+  default Firehose connect(T parser, @Nullable File temporaryDirectory) throws IOException, ParseException
   {
     return connect(parser);
   }

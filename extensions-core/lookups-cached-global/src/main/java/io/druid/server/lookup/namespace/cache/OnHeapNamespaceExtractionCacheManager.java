@@ -19,13 +19,12 @@
 
 package io.druid.server.lookup.namespace.cache;
 
-import com.google.common.primitives.Chars;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.lang.ref.WeakReference;
@@ -131,6 +130,6 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
       }
     }
     serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/numEntries", numEntries));
-    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", size * Chars.BYTES));
+    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", size * Character.BYTES));
   }
 }

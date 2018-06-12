@@ -38,8 +38,9 @@ import kafka.message.InvalidMessageException;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -69,7 +70,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
   }
 
   @Override
-  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory) throws IOException
+  public Firehose connect(final InputRowParser<ByteBuffer> firehoseParser, File temporaryDirectory)
   {
     Set<String> newDimExclus = Sets.union(
         firehoseParser.getParseSpec().getDimensionsSpec().getDimensionExclusions(),
@@ -106,10 +107,12 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
 
     return new Firehose()
     {
+      Iterator<InputRow> nextIterator = Collections.emptyIterator();
+
       @Override
       public boolean hasMore()
       {
-        return iter.hasNext();
+        return nextIterator.hasNext() || iter.hasNext();
       }
 
       @Nullable
@@ -117,13 +120,16 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
       public InputRow nextRow()
       {
         try {
-          final byte[] message = iter.next().message();
+          if (!nextIterator.hasNext()) {
+            final byte[] message = iter.next().message();
 
-          if (message == null) {
-            return null;
+            if (message == null) {
+              return null;
+            }
+            nextIterator = theParser.parseBatch(ByteBuffer.wrap(message)).iterator();
           }
 
-          return theParser.parse(ByteBuffer.wrap(message));
+          return nextIterator.next();
 
         }
         catch (InvalidMessageException e) {
@@ -158,7 +164,7 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         connector.shutdown();
       }

@@ -21,7 +21,6 @@ package io.druid.segment.column;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -29,8 +28,9 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.CachingIndexed;
+import io.druid.segment.data.ColumnarInts;
+import io.druid.segment.data.ColumnarMultiInts;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.ReadableOffset;
 import io.druid.segment.data.SingleIndexedInt;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -45,19 +45,25 @@ import java.util.BitSet;
 */
 public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
-  private final IndexedInts column;
-  private final IndexedMultivalue<IndexedInts> multiValueColumn;
+  private final ColumnarInts column;
+  private final ColumnarMultiInts multiValueColumn;
   private final CachingIndexed<String> cachedLookups;
 
   public SimpleDictionaryEncodedColumn(
-      IndexedInts singleValueColumn,
-      IndexedMultivalue<IndexedInts> multiValueColumn,
+      ColumnarInts singleValueColumn,
+      ColumnarMultiInts multiValueColumn,
       CachingIndexed<String> cachedLookups
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
     this.cachedLookups = cachedLookups;
+  }
+
+  @Override
+  public Class<String> getClazz()
+  {
+    return String.class;
   }
 
   @Override
@@ -85,10 +91,10 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   }
 
   @Override
+  @Nullable
   public String lookupName(int id)
   {
-    //Empty to Null will ensure that null and empty are equivalent for extraction function
-    return Strings.emptyToNull(cachedLookups.get(id));
+    return cachedLookups.get(id);
   }
 
   @Override
@@ -202,10 +208,13 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
       class SingleValueQueryableDimensionSelector extends QueryableDimensionSelector
           implements SingleValueHistoricalDimensionSelector
       {
+        private final SingleIndexedInt row = new SingleIndexedInt();
+
         @Override
         public IndexedInts getRow()
         {
-          return SingleIndexedInt.of(getRowValue());
+          row.setValue(getRowValue());
+          return row;
         }
 
         public int getRowValue()
@@ -216,7 +225,8 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public IndexedInts getRow(int offset)
         {
-          return SingleIndexedInt.of(getRowValue(offset));
+          row.setValue(getRowValue(offset));
+          return row;
         }
 
         @Override
@@ -249,7 +259,7 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
               return BooleanValueMatcher.of(false);
             }
           } else {
-            // Employ precomputed BitSet optimization
+            // Employ caching BitSet optimization
             return makeValueMatcher(Predicates.equalTo(value));
           }
         }
@@ -257,16 +267,27 @@ public class SimpleDictionaryEncodedColumn implements DictionaryEncodedColumn<St
         @Override
         public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
         {
-          final BitSet predicateMatchingValueIds = DimensionSelectorUtils.makePredicateMatchingSet(
-              this,
-              predicate
-          );
+          final BitSet checkedIds = new BitSet(getCardinality());
+          final BitSet matchingIds = new BitSet(getCardinality());
+
+          // Lazy matcher; only check an id if matches() is called.
           return new ValueMatcher()
           {
             @Override
             public boolean matches()
             {
-              return predicateMatchingValueIds.get(getRowValue());
+              final int id = getRowValue();
+
+              if (checkedIds.get(id)) {
+                return matchingIds.get(id);
+              } else {
+                final boolean matches = predicate.apply(lookupName(id));
+                checkedIds.set(id);
+                if (matches) {
+                  matchingIds.set(id);
+                }
+                return matches;
+              }
             }
 
             @Override

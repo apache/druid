@@ -21,10 +21,10 @@ package io.druid.server.lookup.namespace.cache;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -156,14 +156,14 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
         .asyncWriteEnable()
         .mmapFileEnable()
         .commitFileSyncDisable()
-        .cacheSize(10_000_000)
+        .cacheSize(config.getNumBufferedEntries())
         .make();
     try {
       lifecycle.addMaybeStartHandler(
           new Lifecycle.Handler()
           {
             @Override
-            public void start() throws Exception
+            public void start()
             {
               // NOOP
             }

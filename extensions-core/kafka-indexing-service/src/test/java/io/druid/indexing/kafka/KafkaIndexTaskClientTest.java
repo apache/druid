@@ -27,17 +27,17 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.http.client.HttpClient;
-import com.metamx.http.client.Request;
-import com.metamx.http.client.response.FullResponseHandler;
-import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.http.client.HttpClient;
+import io.druid.java.util.http.client.Request;
+import io.druid.java.util.http.client.response.FullResponseHandler;
+import io.druid.java.util.http.client.response.FullResponseHolder;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMockSupport;
@@ -50,11 +50,12 @@ import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,9 @@ import static org.easymock.EasyMock.reset;
 @RunWith(Parameterized.class)
 public class KafkaIndexTaskClientTest extends EasyMockSupport
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private static final ObjectMapper objectMapper = new DefaultObjectMapper();
   private static final String TEST_ID = "test-id";
   private static final List<String> TEST_IDS = Lists.newArrayList("test-id1", "test-id2", "test-id3", "test-id4");
@@ -99,7 +103,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     httpClient = createMock(HttpClient.class);
     taskInfoProvider = createMock(TaskInfoProvider.class);
@@ -123,13 +127,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     client.close();
   }
 
   @Test
-  public void testNoTaskLocation() throws Exception
+  public void testNoTaskLocation()
   {
     reset(taskInfoProvider);
     expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(TaskLocation.unknown()).anyTimes();
@@ -150,9 +154,12 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = KafkaIndexTaskClient.TaskNotRunnableException.class)
-  public void testTaskNotRunnableException() throws Exception
+  @Test
+  public void testTaskNotRunnableException()
   {
+    expectedException.expect(KafkaIndexTaskClient.TaskNotRunnableException.class);
+    expectedException.expectMessage("Aborting request because task [test-id] is not runnable");
+
     reset(taskInfoProvider);
     expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
                                                      .anyTimes();
@@ -163,9 +170,12 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = RuntimeException.class)
-  public void testInternalServerError() throws Exception
+  @Test
+  public void testInternalServerError()
   {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("io.druid.java.util.common.IOE: Received status [500]");
+
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).times(2);
     expect(
         httpClient.go(
@@ -182,9 +192,12 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = IAE.class)
-  public void testBadRequest() throws Exception
+  @Test
+  public void testBadRequest()
   {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Received 400 Bad Request with body:");
+
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).times(2);
     expect(responseHolder.getContent()).andReturn("");
     expect(
@@ -203,7 +216,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testTaskLocationMismatch() throws Exception
+  public void testTaskLocationMismatch()
   {
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
                                       .andReturn(HttpResponseStatus.OK);
@@ -294,9 +307,12 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertEquals(10, (long) results.get(1));
   }
 
-  @Test(expected = RuntimeException.class)
-  public void testGetCurrentOffsetsWithExhaustedRetries() throws Exception
+  @Test
+  public void testGetCurrentOffsetsWithExhaustedRetries()
   {
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("io.druid.java.util.common.IOE: Received status [404]");
+
     client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
 
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
@@ -993,7 +1009,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     @Override
-    void checkConnection(String host, int port) throws IOException
+    void checkConnection(String host, int port)
     {
     }
   }

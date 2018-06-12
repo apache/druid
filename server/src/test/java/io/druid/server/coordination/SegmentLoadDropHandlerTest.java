@@ -26,11 +26,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.IndexIO;
+import io.druid.segment.TestHelper;
 import io.druid.segment.loading.CacheTestSegmentLoader;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.server.SegmentManager;
@@ -63,7 +63,7 @@ public class SegmentLoadDropHandlerTest
 
   private static final Logger log = new Logger(ZkCoordinatorTest.class);
 
-  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
       "dummyServer",
       "dummyHost",
@@ -84,7 +84,7 @@ public class SegmentLoadDropHandlerTest
   private List<Runnable> scheduledRunnable;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     try {
       infoDir = new File(File.createTempFile("blah", "blah2").getParent(), "ZkCoordinatorTest");
@@ -117,21 +117,21 @@ public class SegmentLoadDropHandlerTest
     announcer = new DataSegmentAnnouncer()
     {
       @Override
-      public void announceSegment(DataSegment segment) throws IOException
+      public void announceSegment(DataSegment segment)
       {
         segmentsAnnouncedByMe.add(segment);
         announceCount.incrementAndGet();
       }
 
       @Override
-      public void unannounceSegment(DataSegment segment) throws IOException
+      public void unannounceSegment(DataSegment segment)
       {
         segmentsAnnouncedByMe.remove(segment);
         announceCount.decrementAndGet();
       }
 
       @Override
-      public void announceSegments(Iterable<DataSegment> segments) throws IOException
+      public void announceSegments(Iterable<DataSegment> segments)
       {
         for (DataSegment segment : segments) {
           segmentsAnnouncedByMe.add(segment);
@@ -140,7 +140,7 @@ public class SegmentLoadDropHandlerTest
       }
 
       @Override
-      public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
+      public void unannounceSegments(Iterable<DataSegment> segments)
       {
         for (DataSegment segment : segments) {
           segmentsAnnouncedByMe.remove(segment);
@@ -339,7 +339,7 @@ public class SegmentLoadDropHandlerTest
     );
   }
 
-  private void writeSegmentToCache(final DataSegment segment) throws IOException
+  private void writeSegmentToCache(final DataSegment segment)
   {
     if (!infoDir.exists()) {
       infoDir.mkdir();
@@ -359,7 +359,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertTrue(segmentInfoCacheFile.exists());
   }
 
-  private void deleteSegmentFromCache(final DataSegment segment) throws IOException
+  private void deleteSegmentFromCache(final DataSegment segment)
   {
     File segmentInfoCacheFile = new File(
         infoDir,

@@ -38,7 +38,6 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -144,7 +143,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   public SegmentIdentifier perform(
       final Task task,
       final TaskActionToolbox toolbox
-  ) throws IOException
+  )
   {
     int attempt = 0;
     while (true) {
@@ -166,13 +165,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       );
 
       final SegmentIdentifier identifier = usedSegmentsForRow.isEmpty() ?
-                                           tryAllocateFirstSegment(toolbox, task, rowInterval, skipSegmentLineageCheck) :
+                                           tryAllocateFirstSegment(toolbox, task, rowInterval) :
                                            tryAllocateSubsequentSegment(
                                                toolbox,
                                                task,
                                                rowInterval,
-                                               usedSegmentsForRow.iterator().next(),
-                                               skipSegmentLineageCheck
+                                               usedSegmentsForRow.iterator().next()
                                            );
       if (identifier != null) {
         return identifier;
@@ -212,12 +210,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     }
   }
 
-  private SegmentIdentifier tryAllocateFirstSegment(
-      TaskActionToolbox toolbox,
-      Task task,
-      Interval rowInterval,
-      boolean skipSegmentLineageCheck
-  ) throws IOException
+  private SegmentIdentifier tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
     // segment granularity. Try that first, and then progressively smaller ones if it fails.
@@ -227,7 +220,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
                                                    .collect(Collectors.toList());
     for (Interval tryInterval : tryIntervals) {
       if (tryInterval.contains(rowInterval)) {
-        final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false, skipSegmentLineageCheck);
+        final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
         if (identifier != null) {
           return identifier;
         }
@@ -240,9 +233,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       TaskActionToolbox toolbox,
       Task task,
       Interval rowInterval,
-      DataSegment usedSegment,
-      boolean skipSegmentLineageCheck
-  ) throws IOException
+      DataSegment usedSegment
+  )
   {
     // Existing segment(s) exist for this row; use the interval of the first one.
     if (!usedSegment.getInterval().contains(rowInterval)) {
@@ -251,7 +243,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     } else {
       // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier
       // debugging.
-      return tryAllocate(toolbox, task, usedSegment.getInterval(), rowInterval, true, skipSegmentLineageCheck);
+      return tryAllocate(toolbox, task, usedSegment.getInterval(), rowInterval, true);
     }
   }
 
@@ -260,9 +252,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
       Task task,
       Interval tryInterval,
       Interval rowInterval,
-      boolean logOnFail,
-      boolean skipSegmentLineageCheck
-  ) throws IOException
+      boolean logOnFail
+  )
   {
     log.debug(
         "Trying to allocate pending segment for rowInterval[%s], segmentInterval[%s].",

@@ -125,8 +125,6 @@ public class JavaScriptAggregatorTest
         )
     );
 
-    agg.reset();
-
     double val = 10.;
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
@@ -199,7 +197,6 @@ public class JavaScriptAggregatorTest
 
     final double val = 0;
 
-    agg.reset();
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
@@ -229,8 +226,6 @@ public class JavaScriptAggregatorTest
             scriptDoubleSum.get("fnCombine")
         )
     );
-
-    agg.reset();
 
     double val = 0.;
     Assert.assertEquals(val, agg.get());
@@ -291,7 +286,7 @@ public class JavaScriptAggregatorTest
     Assert.assertTrue(false);
   }
 
-  public static void main(String... args) throws Exception
+  public static void main(String... args)
   {
     final JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector(
         new double[]{42.12d, 9d});

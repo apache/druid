@@ -19,23 +19,25 @@
 
 package io.druid.timeline;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.jackson.JacksonUtils;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.ShardSpec;
 import io.druid.timeline.partition.ShardSpecLookup;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -48,8 +50,8 @@ import java.util.Set;
  */
 public class DataSegmentTest
 {
-  private final static ObjectMapper mapper = new TestObjectMapper();
-  private final static int TEST_VERSION = 0x7;
+  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final int TEST_VERSION = 0x7;
 
   private static ShardSpec getShardSpec(final int partitionNum)
   {
@@ -80,11 +82,19 @@ public class DataSegmentTest
       }
 
       @Override
-      public Map<String, Range<String>> getDomain()
+      public Map<String, RangeSet<String>> getDomain()
       {
         return ImmutableMap.of();
       }
     };
+  }
+
+  @Before
+  public void setUp()
+  {
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    mapper.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -207,7 +217,7 @@ public class DataSegmentTest
   }
 
   @Test
-  public void testBucketMonthComparator() throws Exception
+  public void testBucketMonthComparator()
   {
     DataSegment[] sortedOrder = {
         makeDataSegment("test1", "2011-01-01/2011-01-02", "a"),

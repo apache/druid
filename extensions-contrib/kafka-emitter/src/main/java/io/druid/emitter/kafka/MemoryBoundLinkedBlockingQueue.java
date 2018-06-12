@@ -61,16 +61,6 @@ public class MemoryBoundLinkedBlockingQueue<T>
     return ret;
   }
 
-  public long getAvailableBuffer()
-  {
-    return memoryBound - currentMemory.get();
-  }
-
-  public int size()
-  {
-    return queue.size();
-  }
-
   public static class ObjectContainer<T>
   {
     private T data;

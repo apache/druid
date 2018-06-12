@@ -52,8 +52,7 @@ public class Avro1124SubjectAndIdConverter implements SubjectAndIdConverter<Stri
     return new Pair<>(topic, payload.getInt());
   }
 
-  @Override
-  public void putSubjectAndId(String subject, Integer id, ByteBuffer payload)
+  public void putSubjectAndId(Integer id, ByteBuffer payload)
   {
     payload.putInt(id);
   }

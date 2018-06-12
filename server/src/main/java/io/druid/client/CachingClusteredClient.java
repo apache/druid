@@ -21,12 +21,10 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -35,10 +33,9 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
-import com.metamx.emitter.EmittingLogger;
 import io.druid.client.cache.Cache;
-import io.druid.client.cache.CachePopulator;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.CachePopulator;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.guice.annotations.Smile;
@@ -50,6 +47,7 @@ import io.druid.java.util.common.guava.BaseSequence;
 import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
@@ -77,6 +75,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -248,7 +247,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
-      @Nullable TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
+      @Nullable
+      TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
       if (timeline == null) {
         return Sequences.empty();
       }
@@ -258,10 +258,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<ServerToSegment> segments = computeSegmentsToQuery(timeline);
-      @Nullable final byte[] queryCacheKey = computeQueryCacheKey();
+      @Nullable
+      final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
-        @Nullable final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
-        @Nullable final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
+        @Nullable
+        final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+        @Nullable
+        final String currentEtag = computeCurrentEtag(segments, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
           return Sequences.empty();
         }
@@ -372,7 +375,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           hasOnlyHistoricalSegments = false;
           break;
         }
-        hasher.putString(p.getServer().getSegment().getIdentifier(), Charsets.UTF_8);
+        hasher.putString(p.getServer().getSegment().getIdentifier(), StandardCharsets.UTF_8);
       }
 
       if (hasOnlyHistoricalSegments) {
@@ -490,7 +493,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return;
       }
 
-      final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache();
+      final Function<Object, T> pullFromCacheFunction = strategy.pullFromSegmentLevelCache();
       final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
       for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
         final byte[] cachedResult = cachedResultPair.rhs;
@@ -502,7 +505,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
               {
                 try {
                   if (cachedResult.length == 0) {
-                    return Iterators.emptyIterator();
+                    return Collections.emptyIterator();
                   }
 
                   return objectMapper.readValues(
