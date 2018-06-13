@@ -65,7 +65,7 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return DoubleMaxAggregator.combineValues(lhs, rhs);
+    return FloatMaxAggregator.combineValues(lhs, rhs);
   }
 
   @Override
