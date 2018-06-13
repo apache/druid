@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
-import io.druid.segment.BaseFloatColumnValueSelector;
+import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Collections;
@@ -32,14 +32,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
+public abstract class SimpleLongAggregatorFactory extends AggregatorFactory
 {
   protected final String name;
   protected final String fieldName;
   protected final String expression;
   protected final ExprMacroTable macroTable;
 
-  public SimpleFloatAggregatorFactory(
+  public SimpleLongAggregatorFactory(
       ExprMacroTable macroTable,
       String name,
       final String fieldName,
@@ -57,9 +57,9 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
     );
   }
 
-  BaseFloatColumnValueSelector getFloatColumnSelector(ColumnSelectorFactory metricFactory, float nullValue)
+  BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory, long nullValue)
   {
-    return AggregatorUtil.makeColumnValueSelectorWithFloatDefault(
+    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
         metricFactory,
         macroTable,
         fieldName,
@@ -71,29 +71,25 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    // handle "NaN" / "Infinity" values serialized as strings in JSON
-    if (object instanceof String) {
-      return Float.parseFloat((String) object);
-    }
     return object;
   }
 
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "long";
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    return Float.BYTES;
+    return Long.BYTES;
   }
 
   @Override
   public Comparator getComparator()
   {
-    return FloatSumAggregator.COMPARATOR;
+    return LongSumAggregator.COMPARATOR;
   }
 
   @Override
@@ -136,7 +132,7 @@ public abstract class SimpleFloatAggregatorFactory extends AggregatorFactory
       return false;
     }
 
-    SimpleFloatAggregatorFactory that = (SimpleFloatAggregatorFactory) o;
+    SimpleLongAggregatorFactory that = (SimpleLongAggregatorFactory) o;
 
     if (!Objects.equals(fieldName, that.fieldName)) {
       return false;

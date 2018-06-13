@@ -19,66 +19,27 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.BaseLongColumnValueSelector;
+import io.druid.segment.ColumnValueSelector;
 
-/**
- */
-public class LongMaxAggregator implements Aggregator
+final class LongMinAggregateCombiner extends LongAggregateCombiner
 {
-  static long combineValues(Object lhs, Object rhs)
+  private long min;
+
+  @Override
+  public void reset(ColumnValueSelector selector)
   {
-    return Math.max(((Number) lhs).longValue(), ((Number) rhs).longValue());
-  }
-
-  private final BaseLongColumnValueSelector selector;
-
-  private long max;
-
-  public LongMaxAggregator(BaseLongColumnValueSelector selector)
-  {
-    this.selector = selector;
-    this.max = Long.MIN_VALUE;
+    min = selector.getLong();
   }
 
   @Override
-  public void aggregate()
+  public void fold(ColumnValueSelector selector)
   {
-    max = Math.max(max, selector.getLong());
-  }
-
-  @Override
-  public Object get()
-  {
-    return max;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return (float) max;
+    min = Math.min(min, selector.getLong());
   }
 
   @Override
   public long getLong()
   {
-    return max;
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return (double) max;
-  }
-
-  @Override
-  public Aggregator clone()
-  {
-    return new LongMaxAggregator(selector);
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
+    return min;
   }
 }
