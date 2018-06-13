@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
@@ -163,7 +164,7 @@ public class DirectDruidClientTest
     serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
-
+    query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
     Sequence s1 = client1.run(QueryPlus.wrap(query), defaultContext);
     Assert.assertTrue(capturedRequest.hasCaptured());
     Assert.assertEquals(url, capturedRequest.getValue().getUrl());
@@ -267,6 +268,7 @@ public class DirectDruidClientTest
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
+    query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
     Sequence results = client1.run(QueryPlus.wrap(query), defaultContext);
     Assert.assertEquals(HttpMethod.DELETE, capturedRequest.getValue().getMethod());
@@ -338,6 +340,7 @@ public class DirectDruidClientTest
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, dataSegment);
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
+    query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
     interruptionFuture.set(
         new ByteArrayInputStream(
             StringUtils.toUtf8("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}")

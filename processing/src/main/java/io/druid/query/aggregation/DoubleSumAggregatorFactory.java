@@ -27,23 +27,22 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
  */
 public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
 {
-
   @JsonCreator
   public DoubleSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
+      @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("expression") String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    super(macroTable, fieldName, name, expression);
+    super(macroTable, name, fieldName, expression);
   }
 
   public DoubleSumAggregatorFactory(String name, String fieldName)
@@ -84,7 +83,7 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.asList(new DoubleSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
+    return Collections.singletonList(new DoubleSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override

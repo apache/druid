@@ -132,7 +132,7 @@ public class StaticGoogleBlobStoreFirehoseFactory extends PrefetchableTextFilesF
   @Override
   protected Predicate<Throwable> getRetryCondition()
   {
-    return GoogleUtils.GOOGLE_RETRY;
+    return GoogleUtils::isRetryable;
   }
 }
 

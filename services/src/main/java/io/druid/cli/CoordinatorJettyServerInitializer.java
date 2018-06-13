@@ -30,6 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.OverlordProxyServlet;
 import io.druid.server.http.RedirectFilter;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.AuthConfig;
@@ -72,13 +73,15 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
   private final AuthConfig authConfig;
+  private final ServerConfig serverConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, AuthConfig authConfig)
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, AuthConfig authConfig, ServerConfig serverConfig)
   {
     this.config = config;
     this.beOverlord = CliCoordinator.isOverlord(properties);
     this.authConfig = authConfig;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -166,7 +169,11 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     handlerList.setHandlers(
         new Handler[]{
             JettyServerInitUtils.getJettyRequestLogHandler(),
-            JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+            JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                root,
+                serverConfig.getInflateBufferSize(),
+                serverConfig.getCompressionLevel()
+            )
         }
     );
 

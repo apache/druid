@@ -56,7 +56,7 @@ public class GoogleDataSegmentPuller implements URIDataPuller
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
           byteSource,
           outDir,
-          GoogleUtils.GOOGLE_RETRY,
+          GoogleUtils::isRetryable,
           false
       );
       LOG.info("Loaded %d bytes from [%s] to [%s]", result.size(), path, outDir.getAbsolutePath());
@@ -107,7 +107,7 @@ public class GoogleDataSegmentPuller implements URIDataPuller
         if (e == null) {
           return false;
         }
-        if (GoogleUtils.GOOGLE_RETRY.apply(e)) {
+        if (GoogleUtils.isRetryable(e)) {
           return true;
         }
         // Look all the way down the cause chain, just in case something wraps it deep.

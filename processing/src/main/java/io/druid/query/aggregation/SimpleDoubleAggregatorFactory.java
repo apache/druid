@@ -43,14 +43,14 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
 
   public SimpleDoubleAggregatorFactory(
       ExprMacroTable macroTable,
-      String fieldName,
       String name,
+      final String fieldName,
       String expression
   )
   {
     this.macroTable = macroTable;
-    this.fieldName = fieldName;
     this.name = name;
+    this.fieldName = fieldName;
     this.expression = expression;
     this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -97,6 +97,36 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public Comparator getComparator()
+  {
+    return DoubleSumAggregator.COMPARATOR;
+  }
+
+  @Override
+  public Object finalizeComputation(Object object)
+  {
+    return object;
+  }
+
+  @Override
+  public List<String> requiredFields()
+  {
+    return fieldName != null
+           ? Collections.singletonList(fieldName)
+           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
+      return getCombiningFactory();
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
+  }
+
+  @Override
   public int hashCode()
   {
     return Objects.hash(fieldName, expression, name);
@@ -123,38 +153,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
     if (!Objects.equals(name, that.name)) {
       return false;
     }
-
     return true;
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return DoubleSumAggregator.COMPARATOR;
-  }
-
-  @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    return fieldName != null
-           ? Collections.singletonList(fieldName)
-           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
-  }
-
-  @Override
-  public Object finalizeComputation(Object object)
-  {
-    return object;
   }
 
   @Override
@@ -175,5 +174,4 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
   {
     return expression;
   }
-
 }

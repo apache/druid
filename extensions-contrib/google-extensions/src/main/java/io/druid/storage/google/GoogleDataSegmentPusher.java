@@ -20,7 +20,7 @@
 package io.druid.storage.google;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.http.InputStreamContent;
+import com.google.api.client.http.FileContent;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -28,6 +28,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.RE;
+import io.druid.java.util.common.RetryUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.SegmentUtils;
@@ -35,7 +37,6 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -97,13 +98,23 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
       throws IOException
   {
     LOG.info("Inserting [%s] to [%s]", file, path);
-
-    FileInputStream fileSteam = new FileInputStream(file);
-
-    InputStreamContent mediaContent = new InputStreamContent(contentType, fileSteam);
-    mediaContent.setLength(file.length());
-
-    storage.insert(config.getBucket(), path, mediaContent);
+    try {
+      RetryUtils.retry(
+          (RetryUtils.Task<Void>) () -> {
+            storage.insert(config.getBucket(), path, new FileContent(contentType, file));
+            return null;
+          },
+          GoogleUtils::isRetryable,
+          1,
+          5
+      );
+    }
+    catch (IOException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to upload [%s] to [%s]", file, path);
+    }
   }
 
   @Override

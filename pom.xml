@@ -67,7 +67,7 @@
         <fastutil.version>8.1.0</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
-        <jetty.version>9.3.19.v20170502</jetty.version>
+        <jetty.version>9.4.10.v20180503</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <!-- jackson 2.7.x causes injection error and 2.8.x can't be used because avatica is using 2.6.3 -->
         <jackson.version>2.6.7</jackson.version>
@@ -147,6 +147,8 @@
         <module>extensions-contrib/kafka-emitter</module>
         <module>extensions-contrib/redis-cache</module>
         <module>extensions-contrib/opentsdb-emitter</module>
+        <module>extensions-contrib/materialized-view-maintenance</module>
+        <module>extensions-contrib/materialized-view-selection</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>

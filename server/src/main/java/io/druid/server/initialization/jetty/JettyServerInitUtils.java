@@ -22,9 +22,7 @@ package io.druid.server.initialization.jetty;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
-
 import io.druid.java.util.common.ISE;
-
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
@@ -38,11 +36,13 @@ public class JettyServerInitUtils
 {
   private static final String[] GZIP_METHODS = new String[]{HttpMethod.GET, HttpMethod.POST};
 
-  public static GzipHandler wrapWithDefaultGzipHandler(final Handler handler)
+  public static GzipHandler wrapWithDefaultGzipHandler(final Handler handler, int inflateBufferSize, int compressionLevel)
   {
     GzipHandler gzipHandler = new GzipHandler();
     gzipHandler.setMinGzipSize(0);
     gzipHandler.setIncludedMethods(GZIP_METHODS);
+    gzipHandler.setInflateBufferSize(inflateBufferSize);
+    gzipHandler.setCompressionLevel(compressionLevel);
 
     // We don't actually have any precomputed .gz resources, and checking for them inside jars is expensive.
     gzipHandler.setCheckGzExists(false);

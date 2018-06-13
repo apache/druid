@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class LongMinBufferAggregator extends LongBufferAggregator
+public class LongMinBufferAggregator extends SimpleLongBufferAggregator
 {
 
   LongMinBufferAggregator(BaseLongColumnValueSelector selector)
