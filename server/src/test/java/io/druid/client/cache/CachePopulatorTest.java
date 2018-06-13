@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.jackson.JacksonUtils;
@@ -38,7 +37,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class CachePopulatorTest
@@ -51,9 +49,7 @@ public class CachePopulatorTest
   @After
   public void tearDown()
   {
-    if (!exec.isShutdown()) {
-      exec.shutdownNow();
-    }
+    exec.shutdownNow();
   }
 
   @Test
@@ -86,7 +82,7 @@ public class CachePopulatorTest
     Assert.assertEquals(1, stats.snapshot().getNumOversized());
   }
 
-  @Test
+  @Test(timeout = 60000L)
   public void testBackgroundPopulator() throws InterruptedException
   {
     final CachePopulator populator = new BackgroundCachePopulator(exec, objectMapper, stats, -1);
@@ -94,10 +90,9 @@ public class CachePopulatorTest
 
     Assert.assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
 
-    // Shutdown executor to ensure background updates have happened.
-    exec.shutdown();
-    if (!exec.awaitTermination(30, TimeUnit.SECONDS)) {
-      throw new ISE("Timed out while waiting for executor to shutdown.");
+    // Wait for background updates to happen.
+    while (cache.getStats().getNumEntries() < 1) {
+      Thread.sleep(100);
     }
 
     Assert.assertEquals(strings, readFromCache(makeKey(1)));
@@ -106,7 +101,7 @@ public class CachePopulatorTest
     Assert.assertEquals(0, stats.snapshot().getNumOversized());
   }
 
-  @Test
+  @Test(timeout = 60000L)
   public void testBackgroundPopulatorMaxEntrySize() throws InterruptedException
   {
     final CachePopulator populator = new BackgroundCachePopulator(exec, objectMapper, stats, 30);
@@ -116,10 +111,9 @@ public class CachePopulatorTest
     Assert.assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
     Assert.assertEquals(strings2, wrapAndReturn(populator, makeKey(2), strings2));
 
-    // Shutdown executor to ensure background updates have happened.
-    exec.shutdown();
-    if (!exec.awaitTermination(30, TimeUnit.SECONDS)) {
-      throw new ISE("Timed out while waiting for executor to shutdown.");
+    // Wait for background updates to happen.
+    while (cache.getStats().getNumEntries() < 1 || stats.snapshot().getNumOversized() < 1) {
+      Thread.sleep(100);
     }
 
     Assert.assertEquals(strings, readFromCache(makeKey(1)));
