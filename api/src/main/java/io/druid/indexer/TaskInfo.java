@@ -25,22 +25,17 @@ import org.joda.time.DateTime;
  */
 public class TaskInfo
 {
-  private String id;
-  private DateTime createdTime;
-  private TaskState state;
-  private String dataSource;
+  private final String id;
+  private final DateTime createdTime;
+  private final TaskState state;
+  private final String dataSource;
 
-  private TaskInfo(String id, DateTime createdTime, TaskState state, String datasource)
+  public TaskInfo(String id, DateTime createdTime, TaskState state, String datasource)
   {
     this.id = id;
     this.createdTime = createdTime;
     this.state = state;
     this.dataSource = datasource;
-  }
-
-  private TaskInfo()
-  {
-
   }
 
   public String getId()
@@ -62,54 +57,6 @@ public class TaskInfo
   {
     return dataSource;
   }
-
-  public static class TaskInfoBuilder
-  {
-    private String id;
-    private DateTime createdTime;
-    private TaskState state;
-    private String dataSource;
-
-    public TaskInfo.TaskInfoBuilder withId(String id)
-    {
-      this.id = id;
-      return this;
-    }
-
-    public TaskInfo.TaskInfoBuilder withCreatedTime(DateTime getCreatedTime)
-    {
-      this.createdTime = getCreatedTime;
-      return this;
-    }
-
-    public TaskInfo.TaskInfoBuilder withState(TaskState state)
-    {
-      this.state = state;
-      return this;
-    }
-
-    public TaskInfo.TaskInfoBuilder withDatasource(String datasource)
-    {
-      this.dataSource = datasource;
-      return this;
-    }
-
-    public TaskInfo build()
-    {
-      TaskInfo taskInfo = new TaskInfo();
-      taskInfo.id = this.id;
-      taskInfo.createdTime = this.createdTime;
-      taskInfo.state = this.state;
-      taskInfo.dataSource = this.dataSource;
-      return taskInfo;
-    }
-
-    public TaskInfo build(String id, DateTime createdTime, TaskState state, String datasource)
-    {
-      return new TaskInfo(id, createdTime, state, datasource);
-    }
-  }
-
 }
 
 

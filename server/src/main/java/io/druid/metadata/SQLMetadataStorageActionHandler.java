@@ -358,7 +358,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return getConnector().retryWithHandle(
         handle -> {
           final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, maxNumStatuses);
-          return query.map(new TaskMapper()).list();
+          return query.map(new TaskInfoMapper(getJsonMapper(), getStatusType())).list();
         }
     );
   }
@@ -370,28 +370,39 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         handle -> {
           return handle.createQuery(
               StringUtils.format(
-                  "SELECT id, status_payload, datasource, created_date FROM %s WHERE active = TRUE ORDER BY created_date",
+                  "SELECT id, status_payload, payload, datasource, created_date FROM %s WHERE active = TRUE ORDER BY created_date",
                   entryTable
               )
-          ).map(new TaskMapper()).list();
+          ).map(new TaskInfoMapper(getJsonMapper(), getStatusType())).list();
         }
     );
   }
 
-  class TaskMapper implements ResultSetMapper
+  static class TaskInfoMapper implements ResultSetMapper
   {
+    ObjectMapper jsonMapper;
+    TypeReference statusType;
+
+    public TaskInfoMapper(ObjectMapper jsonMapper, TypeReference statusType)
+    {
+      this.jsonMapper = jsonMapper;
+      this.statusType = statusType;
+    }
+
     @Override
     public TaskInfo map(int index, ResultSet resultSet, StatementContext context) throws SQLException
     {
       TaskInfo taskInfo = null;
       try {
-        TaskStatus status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
-        taskInfo = new TaskInfo.TaskInfoBuilder()
-            .withId(resultSet.getString("id"))
-            .withCreatedTime(DateTimes.of(resultSet.getString("created_date")))
-            .withState(status.getStatusCode())
-            .withDatasource(resultSet.getString(
-                "datasource")).build();
+        TaskStatus status = jsonMapper.readValue(resultSet.getBytes("status_payload"), statusType);
+        taskInfo = new TaskInfo(
+            resultSet.getString("id"),
+            DateTimes.of(
+                resultSet.getString("created_date")),
+            status.getStatusCode(),
+            resultSet.getString(
+                "datasource")
+        );
       }
       catch (IOException e) {
         throw new SQLException(e);

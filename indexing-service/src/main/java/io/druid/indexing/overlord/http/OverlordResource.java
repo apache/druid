@@ -76,6 +76,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -120,8 +121,8 @@ public class OverlordResource
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   //in memory cache for task info indexed by task id
-  private Map<String, TaskInfo> taskInfoCache = new ConcurrentHashMap<>();
-  private Map<String, Task> completeTaskCache = new ConcurrentHashMap<>();
+  private final Map<String, TaskInfo> taskInfoCache = new ConcurrentHashMap<>();
+  private final Map<String, Task> completeTaskCache = new ConcurrentHashMap<>();
 
 
   @Inject
@@ -429,22 +430,10 @@ public class OverlordResource
   {
     private final String taskType;
     private final String dataSource;
-    private TaskState taskState;
-    private RunnerTaskState runnerTaskState;
-    private DateTime createdTime;
-    private DateTime queueInsertionTime;
-
-    AnyTask(
-        String taskId,
-        String taskType,
-        ListenableFuture<TaskStatus> result,
-        String dataSource
-    )
-    {
-      super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
-      this.taskType = taskType;
-      this.dataSource = dataSource;
-    }
+    private final TaskState taskState;
+    private final RunnerTaskState runnerTaskState;
+    private final DateTime createdTime;
+    private final DateTime queueInsertionTime;
 
     AnyTask(
         String taskId,
@@ -611,35 +600,34 @@ public class OverlordResource
         workItem.getDataSource(),
         null
     );
-    final List<Task> allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
-    final List<TaskInfo> allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
-    for (TaskInfo t : allActiveTaskInfo) {
-      taskInfoCache.putIfAbsent(t.getId(), t);
+    //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
+    if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
+      final List<TaskStatusPlus> completedTasks = getCompletedTasks(interval, maxCompletedTasks);
+      finalTaskList.addAll(completedTasks);
+    }
+    final List<TaskInfo> allActiveTaskInfo;
+    List<Task> allActiveTasks = new ArrayList<>();
+    if (state == null || !"complete".equals(StringUtils.toLowerCase(state))) {
+      allActiveTasks = taskStorageQueryAdapter.getActiveTasks();
+      allActiveTaskInfo = taskStorageQueryAdapter.getActiveTaskInfo();
+      for (TaskInfo t : allActiveTaskInfo) {
+        taskInfoCache.putIfAbsent(t.getId(), t);
+      }
     }
     if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> waitingWorkItems = filterActiveTasks(req, RunnerTaskState.WAITING, allActiveTasks);
       List<TaskStatusPlus> transformedWaitingList = Lists.transform(waitingWorkItems, transformFunc);
-      final List<TaskStatusPlus> waitingTasks = Lists.newArrayList();
-      waitingTasks.addAll(transformedWaitingList);
-      finalTaskList.addAll(waitingTasks);
+      finalTaskList.addAll(transformedWaitingList);
     }
     if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> pendingWorkItems = filterActiveTasks(req, RunnerTaskState.PENDING, allActiveTasks);
       List<TaskStatusPlus> transformedPendingList = Lists.transform(pendingWorkItems, transformFunc);
-      final List<TaskStatusPlus> pendingTasks = Lists.newArrayList();
-      pendingTasks.addAll(transformedPendingList);
-      finalTaskList.addAll(pendingTasks);
+      finalTaskList.addAll(transformedPendingList);
     }
     if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
       final List<AnyTask> runningWorkItems = filterActiveTasks(req, RunnerTaskState.RUNNING, allActiveTasks);
       List<TaskStatusPlus> transformedRunningList = Lists.transform(runningWorkItems, transformFunc);
-      final List<TaskStatusPlus> runningTasks = Lists.newArrayList();
-      runningTasks.addAll(transformedRunningList);
-      finalTaskList.addAll(runningTasks);
-    }
-    if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
-      final List<TaskStatusPlus> completedTasks = getCompletedTasks(interval, maxCompletedTasks);
-      finalTaskList.addAll(completedTasks);
+      finalTaskList.addAll(transformedRunningList);
     }
     final List<TaskStatusPlus> authorizedList = securedTaskStatusPlus(
         finalTaskList,
@@ -700,7 +688,6 @@ public class OverlordResource
 
   private List<AnyTask> filterActiveTasks(HttpServletRequest req, RunnerTaskState state, List<Task> allActiveTasks)
   {
-
     final List<AnyTask> allTasks = Lists.newArrayList();
     for (final Task task : allActiveTasks) {
       allTasks.add(
@@ -724,16 +711,16 @@ public class OverlordResource
       );
     }
     TaskRunner runner = taskRunnerOpt.get();
-    Collection<? extends TaskRunnerWorkItem> runnersKnownTasks = runner.getKnownTasks();
-    List<String> runnerKnownTaskIds = runnersKnownTasks.stream()
-                                                       .map(TaskRunnerWorkItem::getTaskId)
-                                                       .collect(Collectors.toList());
-
     // the order of tasks below is waiting, pending, running to prevent
     // skipping a task, it's the order in which tasks will change state
-    // if they do while this is code is executing, so task might be
-    // counted twice
+    // if they do while this is code is executing, so a task might be
+    // counted twice but never skipped
     if (RunnerTaskState.WAITING.equals(state)) {
+      Collection<? extends TaskRunnerWorkItem> runnersKnownTasks = runner.getKnownTasks();
+      Set<String> runnerKnownTaskIds = runnersKnownTasks
+          .stream()
+          .map(TaskRunnerWorkItem::getTaskId)
+          .collect(Collectors.toSet());
       final List<AnyTask> waitingTasks = Lists.newArrayList();
       for (TaskRunnerWorkItem task : allTasks) {
         if (!runnerKnownTaskIds.contains(task.getTaskId())) {
@@ -750,10 +737,10 @@ public class OverlordResource
 
     if (RunnerTaskState.PENDING.equals(state)) {
       Collection<? extends TaskRunnerWorkItem> knownPendingTasks = runner.getPendingTasks();
-      List<String> pendingTaskIds = knownPendingTasks
+      Set<String> pendingTaskIds = knownPendingTasks
           .stream()
           .map(TaskRunnerWorkItem::getTaskId)
-          .collect(Collectors.toList());
+          .collect(Collectors.toSet());
       Map<String, TaskRunnerWorkItem> workItemIdMap = knownPendingTasks
           .stream()
           .collect(Collectors.toMap(
@@ -777,10 +764,10 @@ public class OverlordResource
 
     if (RunnerTaskState.RUNNING.equals(state)) {
       Collection<? extends TaskRunnerWorkItem> knownRunningTasks = runner.getRunningTasks();
-      List<String> runningTaskIds = knownRunningTasks
+      Set<String> runningTaskIds = knownRunningTasks
           .stream()
           .map(TaskRunnerWorkItem::getTaskId)
-          .collect(Collectors.toList());
+          .collect(Collectors.toSet());
       Map<String, TaskRunnerWorkItem> workItemIdMap = knownRunningTasks
           .stream()
           .collect(Collectors.toMap(
@@ -791,7 +778,6 @@ public class OverlordResource
       final List<AnyTask> runningTasks = Lists.newArrayList();
       for (TaskRunnerWorkItem task : allTasks) {
         if (runningTaskIds.contains(task.getTaskId())) {
-
           runningTasks.add(((AnyTask) task).withTaskState(
               TaskState.RUNNING,
               RunnerTaskState.RUNNING,
@@ -1046,13 +1032,13 @@ public class OverlordResource
   }
 
   private List<TaskStatusPlus> securedTaskStatusPlus(
-      List<TaskStatusPlus> collectionToFilter, String dataSource,
+      List<TaskStatusPlus> collectionToFilter,
+      @Nullable String dataSource,
       HttpServletRequest req
   )
   {
     Function<TaskStatusPlus, Iterable<ResourceAction>> raGenerator = taskStatusPlus -> {
       final String taskId = taskStatusPlus.getId();
-      //final Optional<Task> optionalTask = taskStorageQueryAdapter.getTask(taskId);
       TaskInfo taskInfo = taskInfoCache.get(taskId);
       if (taskInfo == null) {
         throw new WebApplicationException(

@@ -790,7 +790,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     {
       return task.getDataSource();
     }
-
   }
 
   private static class ProcessHolder
