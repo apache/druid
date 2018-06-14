@@ -26,6 +26,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
+import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.junit.Assert;
 import org.junit.Before;
@@ -271,6 +272,20 @@ public class CompressionUtilsTest
       ByteStreams.copy(new FileInputStream(testFile), out);
     }
     try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(xzFile), xzFile.getName())) {
+      assertGoodDataStream(inputStream);
+    }
+  }
+
+  @Test
+  public void testDecompressSnappy() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testDecompressSnappy");
+    final File snappyFile = new File(tmpDir, testFile.getName() + ".sz");
+    Assert.assertFalse(snappyFile.exists());
+    try (final OutputStream out = new FramedSnappyCompressorOutputStream(new FileOutputStream(snappyFile))) {
+      ByteStreams.copy(new FileInputStream(testFile), out);
+    }
+    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(snappyFile), snappyFile.getName())) {
       assertGoodDataStream(inputStream);
     }
   }
