@@ -526,7 +526,6 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-
     return getTasks("running", null, null, null, taskType, req);
   }
 
@@ -941,14 +940,19 @@ public class OverlordResource
       dataSourceFilter = collectionToFilter
           .stream()
           .filter(task -> task.getDataSource().equals(dataSource))
-          .filter(task -> task.getType() != null)
+          .collect(Collectors.toList());
+    }
+    List<TaskStatusPlus> typeFilter = dataSourceFilter;
+    if (type != null) {
+      typeFilter = dataSourceFilter
+          .stream()
           .filter(task -> task.getType().equals(type))
           .collect(Collectors.toList());
     }
     return Lists.newArrayList(
         AuthorizationUtils.filterAuthorizedResources(
             req,
-            dataSourceFilter,
+            typeFilter,
             raGenerator,
             authorizerMapper
         )
