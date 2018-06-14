@@ -29,8 +29,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import io.druid.indexer.TaskInfo;
-import io.druid.indexing.common.TaskLock;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
@@ -215,11 +215,10 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo> getActiveTaskInfo()
+  public List<TaskInfo<Task>> getActiveTaskInfo()
   {
     return ImmutableList.copyOf(
-        handler
-            .getActiveTaskInfo()
+        handler.getActiveTaskInfo()
     );
   }
 
@@ -239,29 +238,13 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo> getRecentlyFinishedTaskInfo(
+  public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
       @Nullable Duration duration
   )
   {
     return ImmutableList.copyOf(
-        handler
-            .getCompletedTaskInfo(
-                DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
-                maxTaskStatuses
-            )
-    );
-  }
-
-  @Override
-  public List<Task> getRecentlyFinishedTasks(
-      @Nullable Integer maxTaskStatuses,
-      @Nullable Duration duration
-  )
-  {
-    return ImmutableList.copyOf(
-        handler
-            .getCompletedTasks(
+        handler.getCompletedTaskInfo(
                 DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
                 maxTaskStatuses
             )

@@ -23,19 +23,21 @@ import org.joda.time.DateTime;
 /**
  * This class is used to store task info from runner query and cache in OverlordResource
  */
-public class TaskInfo
+public class TaskInfo<EntryType>
 {
   private final String id;
   private final DateTime createdTime;
-  private final TaskState state;
+  private final TaskStatus status;
   private final String dataSource;
+  private final EntryType task;
 
-  public TaskInfo(String id, DateTime createdTime, TaskState state, String datasource)
+  public TaskInfo(String id, DateTime createdTime, TaskStatus status, String dataSource, EntryType task)
   {
     this.id = id;
     this.createdTime = createdTime;
-    this.state = state;
-    this.dataSource = datasource;
+    this.status = status;
+    this.dataSource = dataSource;
+    this.task = task;
   }
 
   public String getId()
@@ -48,15 +50,19 @@ public class TaskInfo
     return createdTime;
   }
 
-  public TaskState getState()
+  public TaskStatus getStatus()
   {
-    return state;
+    return status;
   }
 
   public String getDataSource()
   {
     return dataSource;
   }
-}
 
+  public EntryType getTask()
+  {
+    return task;
+  }
+}
 

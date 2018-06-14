@@ -325,46 +325,18 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<EntryType> getCompletedTasks(DateTime timestamp, @Nullable Integer max)
-  {
-    return getConnector().retryWithHandle(
-        handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, max);
-
-          return query
-              .map(
-                  (ResultSetMapper<EntryType>) (index, r, ctx) -> {
-                    try {
-                      return getJsonMapper().readValue(
-                          r.getBytes("payload"),
-                          getEntryType()
-                      );
-                    }
-                    catch (IOException e) {
-                      log.makeAlert(e, "Failed to parse payload")
-                         .addData("entry", r.getString("id"))
-                         .emit();
-                      throw new SQLException(e);
-                    }
-                  }
-              ).list();
-        }
-    );
-  }
-
-  @Override
-  public List<TaskInfo> getCompletedTaskInfo(DateTime timestamp, @Nullable Integer maxNumStatuses)
+  public List<TaskInfo<EntryType>> getCompletedTaskInfo(DateTime timestamp, @Nullable Integer maxNumStatuses)
   {
     return getConnector().retryWithHandle(
         handle -> {
           final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, maxNumStatuses);
-          return query.map(new TaskInfoMapper(getJsonMapper(), getStatusType())).list();
+          return query.map(new TaskInfoMapper()).list();
         }
     );
   }
 
   @Override
-  public List<TaskInfo> getActiveTaskInfo()
+  public List<TaskInfo<EntryType>> getActiveTaskInfo()
   {
     return getConnector().retryWithHandle(
         handle -> {
@@ -373,35 +345,25 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                   "SELECT id, status_payload, payload, datasource, created_date FROM %s WHERE active = TRUE ORDER BY created_date",
                   entryTable
               )
-          ).map(new TaskInfoMapper(getJsonMapper(), getStatusType())).list();
+          ).map(new TaskInfoMapper()).list();
         }
     );
   }
 
-  static class TaskInfoMapper implements ResultSetMapper
+  class TaskInfoMapper implements ResultSetMapper
   {
-    ObjectMapper jsonMapper;
-    TypeReference statusType;
-
-    public TaskInfoMapper(ObjectMapper jsonMapper, TypeReference statusType)
-    {
-      this.jsonMapper = jsonMapper;
-      this.statusType = statusType;
-    }
-
     @Override
-    public TaskInfo map(int index, ResultSet resultSet, StatementContext context) throws SQLException
+    public TaskInfo<EntryType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
     {
-      TaskInfo taskInfo = null;
+      final TaskInfo taskInfo;
       try {
-        TaskStatus status = jsonMapper.readValue(resultSet.getBytes("status_payload"), statusType);
+        TaskStatus status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
         taskInfo = new TaskInfo(
             resultSet.getString("id"),
-            DateTimes.of(
-                resultSet.getString("created_date")),
-            status.getStatusCode(),
-            resultSet.getString(
-                "datasource")
+            DateTimes.of(resultSet.getString("created_date")),
+            status,
+            resultSet.getString("datasource"),
+            getJsonMapper().readValue(resultSet.getBytes("payload"), getEntryType())
         );
       }
       catch (IOException e) {

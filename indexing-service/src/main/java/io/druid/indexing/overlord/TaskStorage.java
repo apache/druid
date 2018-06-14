@@ -129,7 +129,7 @@ public interface TaskStorage
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo> getActiveTaskInfo();
+  List<TaskInfo<Task>> getActiveTaskInfo();
 
   /**
    * Returns up to {@code maxTaskStatuses} statuses of recently finished tasks as stored in the storage facility. No
@@ -150,18 +150,7 @@ public interface TaskStorage
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo> getRecentlyFinishedTaskInfo(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
-
-  /**
-   * Returns up to {@code maxCompletedTasks} recently finished tasks as stored in the storage facility. No particular order
-   * is guaranteed, but implementations are encouraged to return tasks in ascending order of creation.
-   *
-   * @param maxCompletedTasks maxCompletedTasks
-   * @param duration duration
-   *
-   * @return list of recently finished tasks
-   */
-  List<Task> getRecentlyFinishedTasks(@Nullable Integer maxCompletedTasks, @Nullable Duration duration);
+  List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
 
   @Nullable
   Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);

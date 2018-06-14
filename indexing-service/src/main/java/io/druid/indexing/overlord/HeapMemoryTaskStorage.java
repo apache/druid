@@ -29,7 +29,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import io.druid.indexer.TaskInfo;
-import io.druid.indexer.TaskState;
 import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.actions.TaskAction;
@@ -171,19 +170,20 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo> getActiveTaskInfo()
+  public List<TaskInfo<Task>> getActiveTaskInfo()
   {
     giant.lock();
 
     try {
-      final ImmutableList.Builder<TaskInfo> listBuilder = ImmutableList.builder();
+      final ImmutableList.Builder<TaskInfo<Task>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : tasks.values()) {
         if (taskStuff.getStatus().isRunnable()) {
           TaskInfo t = new TaskInfo(
               taskStuff.getTask().getId(),
               taskStuff.getCreatedDate(),
-              TaskState.RUNNING,
-              taskStuff.getDataSource()
+              taskStuff.getStatus(),
+              taskStuff.getDataSource(),
+              taskStuff.getTask()
           );
           listBuilder.add(t);
         }
@@ -225,52 +225,24 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskInfo> getRecentlyFinishedTaskInfo(
+  public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses, @Nullable Duration duration
   )
   {
     giant.lock();
 
     try {
-      final ImmutableList.Builder<TaskInfo> listBuilder = ImmutableList.builder();
+      final ImmutableList.Builder<TaskInfo<Task>> listBuilder = ImmutableList.builder();
       for (final TaskStuff taskStuff : tasks.values()) {
         String id = taskStuff.getTask().getId();
-        TaskStatus status = taskStuff.getStatus();
-        TaskState state;
-        if (status.isSuccess()) {
-          state = TaskState.SUCCESS;
-        } else if (status.isFailure()) {
-          state = TaskState.FAILED;
-        } else {
-          state = null;
-        }
         TaskInfo t = new TaskInfo(
             id,
             taskStuff.getCreatedDate(),
-            state,
-            taskStuff.getDataSource()
+            taskStuff.getStatus(),
+            taskStuff.getDataSource(),
+            taskStuff.getTask()
         );
         listBuilder.add(t);
-      }
-      return listBuilder.build();
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  @Override
-  public List<Task> getRecentlyFinishedTasks(
-      @Nullable Integer maxCompletedTasks, @Nullable Duration duration
-  )
-  {
-    giant.lock();
-    try {
-      final ImmutableList.Builder<Task> listBuilder = ImmutableList.builder();
-      for (final TaskStuff taskStuff : tasks.values()) {
-        if (taskStuff.getStatus().isComplete()) {
-          listBuilder.add(taskStuff.getTask());
-        }
       }
       return listBuilder.build();
     }
