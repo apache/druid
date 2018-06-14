@@ -350,15 +350,15 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
-  class TaskInfoMapper implements ResultSetMapper
+  class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType>>
   {
     @Override
     public TaskInfo<EntryType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
     {
-      final TaskInfo taskInfo;
+      final TaskInfo<EntryType> taskInfo;
       try {
         TaskStatus status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
-        taskInfo = new TaskInfo(
+        taskInfo = new TaskInfo<>(
             resultSet.getString("id"),
             DateTimes.of(resultSet.getString("created_date")),
             status,

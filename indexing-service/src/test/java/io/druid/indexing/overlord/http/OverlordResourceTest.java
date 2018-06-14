@@ -19,11 +19,9 @@
 
 package io.druid.indexing.overlord.http;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.indexer.TaskInfo;
 import io.druid.indexer.TaskLocation;
@@ -313,19 +311,6 @@ public class OverlordResourceTest
   {
     expectAuthorizationTokenCheck();
     //completed tasks
-    List<String> tasksIds = ImmutableList.of("id_5", "id_6", "id_7");
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(null, null)).andStubReturn(
-        Lists.transform(
-            tasksIds,
-            new Function<String, TaskStatus>()
-            {
-              @Override
-              public TaskStatus apply(String input)
-              {
-                return TaskStatus.success(input);
-              }
-            }
-        ));
     EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(
@@ -416,20 +401,6 @@ public class OverlordResourceTest
   {
     expectAuthorizationTokenCheck();
     //completed tasks
-    List<String> tasksIds = ImmutableList.of("id_5", "id_6", "id_7");
-
-    EasyMock.expect(taskStorageQueryAdapter.getRecentlyFinishedTaskStatuses(null, null)).andStubReturn(
-        Lists.transform(
-            tasksIds,
-            new Function<String, TaskStatus>()
-            {
-              @Override
-              public TaskStatus apply(String input)
-              {
-                return TaskStatus.success(input);
-              }
-            }
-        ));
     EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null)).andStubReturn(
         ImmutableList.of(
             new TaskInfo(

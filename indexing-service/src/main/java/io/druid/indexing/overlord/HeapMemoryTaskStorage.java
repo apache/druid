@@ -196,35 +196,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration)
-  {
-    giant.lock();
-
-    try {
-      final Ordering<TaskStuff> createdDateDesc = new Ordering<TaskStuff>()
-      {
-        @Override
-        public int compare(TaskStuff a, TaskStuff b)
-        {
-          return a.getCreatedDate().compareTo(b.getCreatedDate());
-        }
-      }.reverse();
-
-      return maxTaskStatuses == null ?
-             getRecentlyFinishedTaskStatusesSince(
-                 System.currentTimeMillis() - (duration == null
-                                               ? config.getRecentlyFinishedThreshold().getMillis()
-                                               : duration.getMillis()),
-                 createdDateDesc
-             ) :
-             getNRecentlyFinishedTaskStatuses(maxTaskStatuses, createdDateDesc);
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  @Override
   public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses, @Nullable Duration duration
   )

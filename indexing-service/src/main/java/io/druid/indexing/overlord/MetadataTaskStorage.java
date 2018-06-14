@@ -52,7 +52,6 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
@@ -219,21 +218,6 @@ public class MetadataTaskStorage implements TaskStorage
   {
     return ImmutableList.copyOf(
         handler.getActiveTaskInfo()
-    );
-  }
-
-  @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration)
-  {
-    return ImmutableList.copyOf(
-        handler
-            .getInactiveStatusesSince(
-                DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
-                maxTaskStatuses
-            )
-            .stream()
-            .filter(TaskStatus::isComplete)
-            .collect(Collectors.toList())
     );
   }
 

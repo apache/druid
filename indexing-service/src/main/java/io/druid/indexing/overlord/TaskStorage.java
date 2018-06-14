@@ -132,15 +132,6 @@ public interface TaskStorage
   List<TaskInfo<Task>> getActiveTaskInfo();
 
   /**
-   * Returns up to {@code maxTaskStatuses} statuses of recently finished tasks as stored in the storage facility. No
-   * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
-   * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
-   *
-   * @return list of recently finished tasks
-   */
-  List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
-
-  /**
    * Returns up to {@code maxTaskStatuses} {@link TaskInfo} objects of recently finished tasks as stored in the storage facility. No
    * particular order is guaranteed, but implementations are encouraged to return tasks in descending order of creation.
    * No particular standard of "recent" is guaranteed, and in fact, this method is permitted to simply return nothing.
