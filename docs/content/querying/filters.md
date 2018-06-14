@@ -434,9 +434,9 @@ Filtering on a range of values, `10 <= myFloatColumn < 20`:
   "type": "bound",
   "dimension": "myFloatColumn",
   "ordering": "numeric",
-  "lowerBound": "10",
+  "lower": "10",
   "lowerStrict": false,
-  "upperBound": "20",
+  "upper": "20",
   "upperStrict": true
 }
 ```
