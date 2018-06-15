@@ -68,7 +68,8 @@ public class Filters
       ValueType.STRING,
       ValueType.LONG,
       ValueType.FLOAT,
-      ValueType.DOUBLE
+      ValueType.DOUBLE,
+      ValueType.COMPLEX
   );
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
