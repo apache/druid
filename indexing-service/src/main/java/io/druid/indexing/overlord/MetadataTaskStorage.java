@@ -231,7 +231,8 @@ public class MetadataTaskStorage implements TaskStorage
     return ImmutableList.copyOf(
         handler.getCompletedTaskInfo(
             DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
-            maxTaskStatuses, datasource
+            maxTaskStatuses,
+            datasource
         )
     );
   }

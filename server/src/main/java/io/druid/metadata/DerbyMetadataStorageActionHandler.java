@@ -49,7 +49,6 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
       Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String datasource
   )
   {
-    final String whereStmt = getWhereClause(datasource);
     String sql = StringUtils.format(
         "SELECT "
         + "  id, "
@@ -60,7 +59,7 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
         + "FROM "
         + "  %s "
         + "WHERE "
-        + whereStmt
+        + getWhereClauseForInactiveStatusesSinceQuery(datasource)
         + "ORDER BY created_date DESC",
         getEntryTable()
     );
@@ -79,7 +78,7 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
     return query;
   }
 
-  private String getWhereClause(@Nullable String datasource)
+  private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
   {
     String sql = StringUtils.format("active = FALSE AND created_date >= :start ");
     if (datasource != null) {

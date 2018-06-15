@@ -598,7 +598,8 @@ public class OverlordResource
         duration = theInterval.toDuration();
       }
       final List<TaskInfo<Task>> taskInfoList = taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(
-          maxCompletedTasks, duration, dataSource);
+          maxCompletedTasks, duration, dataSource
+      );
       final List<TaskStatusPlus> completedTasks = Lists.transform(taskInfoList, completeTaskTransformFunc);
       finalTaskList.addAll(completedTasks);
     }
