@@ -141,7 +141,11 @@ public interface TaskStorage
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(@Nullable Integer maxTaskStatuses, @Nullable Duration duration);
+  List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration duration,
+      @Nullable String datasource
+  );
 
   @Nullable
   Pair<DateTime, String> getCreatedDateTimeAndDataSource(String taskId);

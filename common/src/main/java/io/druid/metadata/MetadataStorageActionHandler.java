@@ -109,7 +109,11 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    *
    * @return list of {@link TaskInfo}
    */
-  List<TaskInfo<EntryType>> getCompletedTaskInfo(DateTime timestamp, @Nullable Integer maxNumStatuses);
+  List<TaskInfo<EntryType>> getCompletedTaskInfo(
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String datasource
+  );
 
   /**
    * Return {@link TaskInfo} objects for all active entries

@@ -224,14 +224,15 @@ public class MetadataTaskStorage implements TaskStorage
   @Override
   public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
       @Nullable Integer maxTaskStatuses,
-      @Nullable Duration duration
+      @Nullable Duration duration,
+      @Nullable String datasource
   )
   {
     return ImmutableList.copyOf(
         handler.getCompletedTaskInfo(
-                DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
-                maxTaskStatuses
-            )
+            DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+            maxTaskStatuses, datasource
+        )
     );
   }
 

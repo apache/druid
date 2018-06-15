@@ -197,7 +197,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
   @Override
   public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
-      @Nullable Integer maxTaskStatuses, @Nullable Duration duration
+      @Nullable Integer maxTaskStatuses, @Nullable Duration duration, @Nullable String datasource
   )
   {
     giant.lock();

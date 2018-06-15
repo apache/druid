@@ -301,7 +301,12 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     return getConnector().retryWithHandle(
         handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, maxNumStatuses);
+          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
+              handle,
+              timestamp,
+              maxNumStatuses,
+              null
+          );
 
           return query
               .map(
@@ -325,11 +330,20 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public List<TaskInfo<EntryType>> getCompletedTaskInfo(DateTime timestamp, @Nullable Integer maxNumStatuses)
+  public List<TaskInfo<EntryType>> getCompletedTaskInfo(
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String datasource
+  )
   {
     return getConnector().retryWithHandle(
         handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, maxNumStatuses);
+          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
+              handle,
+              timestamp,
+              maxNumStatuses,
+              datasource
+          );
           return query.map(new TaskInfoMapper()).list();
         }
     );
@@ -376,7 +390,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   protected abstract Query<Map<String, Object>> createInactiveStatusesSinceQuery(
       Handle handle,
       DateTime timestamp,
-      @Nullable Integer maxNumStatuses
+      @Nullable Integer maxNumStatuses,
+      @Nullable String datasource
   );
 
   @Override
