@@ -561,6 +561,26 @@ public class OverlordResource
                        .entity("Bad state query param passed : " + state).entity(ImmutableList.of()).build();
       }
     }
+    // early authorization check if datasource != null
+    // fail fast if user not authorized to access datasource
+    if (dataSource != null) {
+      final ResourceAction resourceAction = new ResourceAction(
+          new Resource(dataSource, ResourceType.DATASOURCE),
+          Action.READ
+      );
+      Access authResult = AuthorizationUtils.authorizeResourceAction(
+          req,
+          resourceAction,
+          authorizerMapper
+      );
+      if (!authResult.isAllowed()) {
+        throw new WebApplicationException(
+            Response.status(Response.Status.FORBIDDEN)
+                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
+                    .build()
+        );
+      }
+    }
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();
     Function<AnyTask, TaskStatusPlus> activeTaskTransformFunc = workItem -> new TaskStatusPlus(
         workItem.getTaskId(),
@@ -927,24 +947,21 @@ public class OverlordResource
           )
       );
     };
-    List<TaskStatusPlus> dataSourceFilter = collectionToFilter;
-    if (dataSource != null) {
-      dataSourceFilter = collectionToFilter
-          .stream()
-          .filter(task -> task.getDataSource().equals(dataSource))
-          .collect(Collectors.toList());
-    }
-    List<TaskStatusPlus> typeFilter = dataSourceFilter;
+    List<TaskStatusPlus> optionalTypeFilteredList = collectionToFilter;
     if (type != null) {
-      typeFilter = dataSourceFilter
+      optionalTypeFilteredList = collectionToFilter
           .stream()
           .filter(task -> task.getType().equals(type))
           .collect(Collectors.toList());
     }
+    if (dataSource != null) {
+      //skip auth check here, as it's already done in getTasks
+      return optionalTypeFilteredList;
+    }
     return Lists.newArrayList(
         AuthorizationUtils.filterAuthorizedResources(
             req,
-            typeFilter,
+            optionalTypeFilteredList,
             raGenerator,
             authorizerMapper
         )
