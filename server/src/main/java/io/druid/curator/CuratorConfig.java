@@ -19,10 +19,13 @@
 
 package io.druid.curator;
 
+import javax.validation.constraints.Min;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
-import javax.validation.constraints.Min;
+import io.druid.metadata.DefaultPasswordProvider;
+import io.druid.metadata.PasswordProvider;
 
 /**
  */
@@ -40,6 +43,15 @@ public class CuratorConfig
 
   @JsonProperty("acl")
   private boolean enableAcl = false;
+
+  @JsonProperty("user")
+  private String zkUser;
+
+  @JsonProperty("pwd")
+  private PasswordProvider zkPwd = new DefaultPasswordProvider("");
+
+  @JsonProperty("authScheme")
+  private String authScheme = "digest";
 
   public String getZkHosts()
   {
@@ -82,4 +94,20 @@ public class CuratorConfig
     Preconditions.checkNotNull(enableAcl, "enableAcl");
     this.enableAcl = enableAcl;
   }
+
+  public String getZkUser()
+  {
+    return zkUser;
+  }
+
+  public String getZkPwd()
+  {
+    return zkPwd.getPassword();
+  }
+
+  public String getAuthScheme()
+  {
+    return authScheme;
+  }
+
 }
