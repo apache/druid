@@ -203,8 +203,39 @@ public class HeapMemoryTaskStorage implements TaskStorage
     giant.lock();
 
     try {
+      final Ordering<TaskStuff> createdDateDesc = new Ordering<TaskStuff>()
+      {
+        @Override
+        public int compare(TaskStuff a, TaskStuff b)
+        {
+          return a.getCreatedDate().compareTo(b.getCreatedDate());
+        }
+      }.reverse();
+
+      return maxTaskStatuses == null ?
+             getRecentlyFinishedTaskInfoSince(
+                 DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+                 createdDateDesc
+             ) :
+             getNRecentlyFinishedTaskInfo(maxTaskStatuses, createdDateDesc);
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  private List<TaskInfo<Task>> getRecentlyFinishedTaskInfoSince(DateTime start, Ordering<TaskStuff> createdDateDesc)
+  {
+    giant.lock();
+
+    try {
+      List<TaskStuff> list = createdDateDesc
+          .sortedCopy(tasks.values())
+          .stream()
+          .filter(taskStuff -> taskStuff.getStatus().isComplete())
+          .collect(Collectors.toList());
       final ImmutableList.Builder<TaskInfo<Task>> listBuilder = ImmutableList.builder();
-      for (final TaskStuff taskStuff : tasks.values()) {
+      for (final TaskStuff taskStuff : list) {
         String id = taskStuff.getTask().getId();
         TaskInfo t = new TaskInfo(
             id,
@@ -222,34 +253,29 @@ public class HeapMemoryTaskStorage implements TaskStorage
     }
   }
 
-  private List<TaskStatus> getRecentlyFinishedTaskStatusesSince(long start, Ordering<TaskStuff> createdDateDesc)
+  private List<TaskInfo<Task>> getNRecentlyFinishedTaskInfo(int n, Ordering<TaskStuff> createdDateDesc)
   {
     giant.lock();
 
     try {
-      return createdDateDesc
-          .sortedCopy(tasks.values())
-          .stream()
-          .filter(taskStuff -> taskStuff.getStatus().isComplete() && taskStuff.getCreatedDate().getMillis() > start)
-          .map(TaskStuff::getStatus)
-          .collect(Collectors.toList());
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  private List<TaskStatus> getNRecentlyFinishedTaskStatuses(int n, Ordering<TaskStuff> createdDateDesc)
-  {
-    giant.lock();
-
-    try {
-      return createdDateDesc
+      List<TaskStuff> list = createdDateDesc
           .sortedCopy(tasks.values())
           .stream()
           .limit(n)
-          .map(TaskStuff::getStatus)
           .collect(Collectors.toList());
+      final ImmutableList.Builder<TaskInfo<Task>> listBuilder = ImmutableList.builder();
+      for (final TaskStuff taskStuff : list) {
+        String id = taskStuff.getTask().getId();
+        TaskInfo t = new TaskInfo(
+            id,
+            taskStuff.getCreatedDate(),
+            taskStuff.getStatus(),
+            taskStuff.getDataSource(),
+            taskStuff.getTask()
+        );
+        listBuilder.add(t);
+      }
+      return listBuilder.build();
     }
     finally {
       giant.unlock();

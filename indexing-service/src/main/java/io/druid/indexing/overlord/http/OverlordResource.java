@@ -429,6 +429,7 @@ public class OverlordResource
     private final RunnerTaskState runnerTaskState;
     private final DateTime createdTime;
     private final DateTime queueInsertionTime;
+    private final TaskLocation taskLocation;
 
     AnyTask(
         String taskId,
@@ -438,7 +439,8 @@ public class OverlordResource
         TaskState state,
         RunnerTaskState runnerState,
         DateTime createdTime,
-        DateTime queueInsertionTime
+        DateTime queueInsertionTime,
+        TaskLocation taskLocation
     )
     {
       super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
@@ -448,12 +450,13 @@ public class OverlordResource
       this.runnerTaskState = runnerState;
       this.createdTime = createdTime;
       this.queueInsertionTime = queueInsertionTime;
+      this.taskLocation = taskLocation;
     }
 
     @Override
     public TaskLocation getLocation()
     {
-      return TaskLocation.unknown();
+      return taskLocation;
     }
 
     @Override
@@ -494,7 +497,8 @@ public class OverlordResource
         TaskState newTaskState,
         RunnerTaskState runnerState,
         DateTime createdTime,
-        DateTime queueInsertionTime
+        DateTime queueInsertionTime,
+        TaskLocation taskLocation
     )
     {
       return new AnyTask(
@@ -505,7 +509,8 @@ public class OverlordResource
           newTaskState,
           runnerState,
           createdTime,
-          queueInsertionTime
+          queueInsertionTime,
+          taskLocation
       );
     }
   }
@@ -638,7 +643,8 @@ public class OverlordResource
                 null,
                 null,
                 DateTimes.EPOCH,
-                DateTimes.EPOCH
+                DateTimes.EPOCH,
+                TaskLocation.unknown()
             ));
       }
     }
@@ -672,7 +678,6 @@ public class OverlordResource
       List<TaskInfo<Task>> allActiveTaskInfo
   )
   {
-
     //divide active tasks into 3 lists : running, pending, waiting
     Optional<TaskRunner> taskRunnerOpt = taskMaster.getTaskRunner();
     if (!taskRunnerOpt.isPresent()) {
@@ -698,7 +703,8 @@ public class OverlordResource
               TaskState.RUNNING,
               RunnerTaskState.WAITING,
               task.getCreatedTime(),
-              task.getQueueInsertionTime()
+              task.getQueueInsertionTime(),
+              task.getLocation()
           ));
         }
       }
@@ -725,7 +731,8 @@ public class OverlordResource
               TaskState.RUNNING,
               RunnerTaskState.PENDING,
               workItemIdMap.get(task.getTaskId()).getCreatedTime(),
-              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime()
+              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime(),
+              workItemIdMap.get(task.getTaskId()).getLocation()
           ));
         }
       }
@@ -752,7 +759,8 @@ public class OverlordResource
               TaskState.RUNNING,
               RunnerTaskState.RUNNING,
               workItemIdMap.get(task.getTaskId()).getCreatedTime(),
-              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime()
+              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime(),
+              workItemIdMap.get(task.getTaskId()).getLocation()
           ));
         }
       }
