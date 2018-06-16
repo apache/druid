@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
+import io.druid.java.util.common.CompressionUtils;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.FileUtils;
 import io.druid.java.util.common.IAE;
@@ -43,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -676,9 +678,21 @@ public class JobHelper
       final Path zip,
       final Configuration configuration,
       final File outDir,
-      final Progressable progressable
+      final Progressable progressable,
+      final RetryPolicy retryPolicy
   ) throws IOException
   {
+    final RetryPolicy effectiveRetryPolicy;
+    if (retryPolicy == null) {
+      effectiveRetryPolicy = RetryPolicies.exponentialBackoffRetry(
+          NUM_RETRIES,
+          SECONDS_BETWEEN_RETRIES,
+          TimeUnit.SECONDS
+      );
+    } else {
+      effectiveRetryPolicy = retryPolicy;
+    }
+
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
         DataPusher.class, new DataPusher()
         {
@@ -693,13 +707,11 @@ public class JobHelper
               try (ZipInputStream in = new ZipInputStream(fileSystem.open(zip, 1 << 13))) {
                 for (ZipEntry entry = in.getNextEntry(); entry != null; entry = in.getNextEntry()) {
                   final String fileName = entry.getName();
-                  try (final OutputStream out = new BufferedOutputStream(
-                      new FileOutputStream(
-                          outDir.getAbsolutePath()
-                          + File.separator
-                          + fileName
-                      ), 1 << 13
-                  )) {
+                  final String outputPath = new File(outDir, fileName).getAbsolutePath();
+
+                  CompressionUtils.validateZipOutputFile(zip.getName(), new File(outputPath), outDir);
+
+                  try (final OutputStream out = new BufferedOutputStream(new FileOutputStream(outputPath))) {
                     for (int len = in.read(buffer); len >= 0; len = in.read(buffer)) {
                       progressable.progress();
                       if (len == 0) {
@@ -721,7 +733,7 @@ public class JobHelper
             }
           }
         },
-        RetryPolicies.exponentialBackoffRetry(NUM_RETRIES, SECONDS_BETWEEN_RETRIES, TimeUnit.SECONDS)
+        effectiveRetryPolicy
     );
     return zipPusher.push();
   }

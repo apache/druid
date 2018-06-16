@@ -46,8 +46,9 @@ public class PartialDruidQuery
   private final Sort selectSort;
   private final Aggregate aggregate;
   private final Filter havingFilter;
-  private final Project postProject;
+  private final Project aggregateProject;
   private final Sort sort;
+  private final Project sortProject;
 
   public enum Stage
   {
@@ -57,8 +58,9 @@ public class PartialDruidQuery
     SELECT_SORT,
     AGGREGATE,
     HAVING_FILTER,
-    POST_PROJECT,
-    SORT
+    AGGREGATE_PROJECT,
+    SORT,
+    SORT_PROJECT
   }
 
   public PartialDruidQuery(
@@ -67,9 +69,10 @@ public class PartialDruidQuery
       final Project selectProject,
       final Sort selectSort,
       final Aggregate aggregate,
-      final Project postProject,
+      final Project aggregateProject,
       final Filter havingFilter,
-      final Sort sort
+      final Sort sort,
+      final Project sortProject
   )
   {
     this.scan = Preconditions.checkNotNull(scan, "scan");
@@ -77,14 +80,15 @@ public class PartialDruidQuery
     this.selectProject = selectProject;
     this.selectSort = selectSort;
     this.aggregate = aggregate;
-    this.postProject = postProject;
+    this.aggregateProject = aggregateProject;
     this.havingFilter = havingFilter;
     this.sort = sort;
+    this.sortProject = sortProject;
   }
 
   public static PartialDruidQuery create(final RelNode scanRel)
   {
-    return new PartialDruidQuery(scanRel, null, null, null, null, null, null, null);
+    return new PartialDruidQuery(scanRel, null, null, null, null, null, null, null, null);
   }
 
   public RelNode getScan()
@@ -117,14 +121,19 @@ public class PartialDruidQuery
     return havingFilter;
   }
 
-  public Project getPostProject()
+  public Project getAggregateProject()
   {
-    return postProject;
+    return aggregateProject;
   }
 
   public Sort getSort()
   {
     return sort;
+  }
+
+  public Project getSortProject()
+  {
+    return sortProject;
   }
 
   public PartialDruidQuery withWhereFilter(final Filter newWhereFilter)
@@ -136,9 +145,10 @@ public class PartialDruidQuery
         selectProject,
         selectSort,
         aggregate,
-        postProject,
+        aggregateProject,
         havingFilter,
-        sort
+        sort,
+        sortProject
     );
   }
 
@@ -151,9 +161,10 @@ public class PartialDruidQuery
         newSelectProject,
         selectSort,
         aggregate,
-        postProject,
+        aggregateProject,
         havingFilter,
-        sort
+        sort,
+        sortProject
     );
   }
 
@@ -166,9 +177,10 @@ public class PartialDruidQuery
         selectProject,
         newSelectSort,
         aggregate,
-        postProject,
+        aggregateProject,
         havingFilter,
-        sort
+        sort,
+        sortProject
     );
   }
 
@@ -181,9 +193,10 @@ public class PartialDruidQuery
         selectProject,
         selectSort,
         newAggregate,
-        postProject,
+        aggregateProject,
         havingFilter,
-        sort
+        sort,
+        sortProject
     );
   }
 
@@ -196,24 +209,26 @@ public class PartialDruidQuery
         selectProject,
         selectSort,
         aggregate,
-        postProject,
+        aggregateProject,
         newHavingFilter,
-        sort
+        sort,
+        sortProject
     );
   }
 
-  public PartialDruidQuery withPostProject(final Project newPostProject)
+  public PartialDruidQuery withAggregateProject(final Project newAggregateProject)
   {
-    validateStage(Stage.POST_PROJECT);
+    validateStage(Stage.AGGREGATE_PROJECT);
     return new PartialDruidQuery(
         scan,
         whereFilter,
         selectProject,
         selectSort,
         aggregate,
-        newPostProject,
+        newAggregateProject,
         havingFilter,
-        sort
+        sort,
+        sortProject
     );
   }
 
@@ -226,9 +241,26 @@ public class PartialDruidQuery
         selectProject,
         selectSort,
         aggregate,
-        postProject,
+        aggregateProject,
         havingFilter,
-        newSort
+        newSort,
+        sortProject
+    );
+  }
+
+  public PartialDruidQuery withSortProject(final Project newSortProject)
+  {
+    validateStage(Stage.SORT_PROJECT);
+    return new PartialDruidQuery(
+        scan,
+        whereFilter,
+        selectProject,
+        selectSort,
+        aggregate,
+        aggregateProject,
+        havingFilter,
+        sort,
+        newSortProject
     );
   }
 
@@ -265,6 +297,9 @@ public class PartialDruidQuery
     } else if (stage.compareTo(Stage.AGGREGATE) >= 0 && selectSort != null) {
       // Cannot do any aggregations after a select + sort.
       return false;
+    } else if (stage.compareTo(Stage.SORT) > 0 && sort == null) {
+      // Cannot add sort project without a sort
+      return false;
     } else {
       // Looks good.
       return true;
@@ -277,12 +312,15 @@ public class PartialDruidQuery
    *
    * @return stage
    */
+  @SuppressWarnings("VariableNotUsedInsideIf")
   public Stage stage()
   {
-    if (sort != null) {
+    if (sortProject != null) {
+      return Stage.SORT_PROJECT;
+    } else if (sort != null) {
       return Stage.SORT;
-    } else if (postProject != null) {
-      return Stage.POST_PROJECT;
+    } else if (aggregateProject != null) {
+      return Stage.AGGREGATE_PROJECT;
     } else if (havingFilter != null) {
       return Stage.HAVING_FILTER;
     } else if (aggregate != null) {
@@ -308,10 +346,12 @@ public class PartialDruidQuery
     final Stage currentStage = stage();
 
     switch (currentStage) {
+      case SORT_PROJECT:
+        return sortProject;
       case SORT:
         return sort;
-      case POST_PROJECT:
-        return postProject;
+      case AGGREGATE_PROJECT:
+        return aggregateProject;
       case HAVING_FILTER:
         return havingFilter;
       case AGGREGATE:
@@ -352,14 +392,25 @@ public class PartialDruidQuery
            Objects.equals(selectSort, that.selectSort) &&
            Objects.equals(aggregate, that.aggregate) &&
            Objects.equals(havingFilter, that.havingFilter) &&
-           Objects.equals(postProject, that.postProject) &&
-           Objects.equals(sort, that.sort);
+           Objects.equals(aggregateProject, that.aggregateProject) &&
+           Objects.equals(sort, that.sort) &&
+           Objects.equals(sortProject, that.sortProject);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(scan, whereFilter, selectProject, selectSort, aggregate, havingFilter, postProject, sort);
+    return Objects.hash(
+        scan,
+        whereFilter,
+        selectProject,
+        selectSort,
+        aggregate,
+        havingFilter,
+        aggregateProject,
+        sort,
+        sortProject
+    );
   }
 
   @Override
@@ -372,8 +423,9 @@ public class PartialDruidQuery
            ", selectSort=" + selectSort +
            ", aggregate=" + aggregate +
            ", havingFilter=" + havingFilter +
-           ", postProject=" + postProject +
+           ", aggregateProject=" + aggregateProject +
            ", sort=" + sort +
+           ", sortProject=" + sortProject +
            '}';
   }
 }

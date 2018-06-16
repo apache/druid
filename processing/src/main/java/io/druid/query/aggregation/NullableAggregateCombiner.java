@@ -19,7 +19,6 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.guice.annotations.ExtensionPoint;
 import io.druid.guice.annotations.PublicApi;
 import io.druid.segment.BaseNullableColumnValueSelector;
 import io.druid.segment.ColumnValueSelector;
@@ -104,7 +103,7 @@ public final class NullableAggregateCombiner<T> implements AggregateCombiner<T>
 
   @Nullable
   @Override
-  public Object getObject()
+  public T getObject()
   {
     return isNullResult ? null : delegate.getObject();
   }

@@ -36,7 +36,6 @@ import java.util.List;
  */
 public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
 {
-
   @JsonCreator
   public DoubleMaxAggregatorFactory(
       @JsonProperty("name") String name,
@@ -45,7 +44,7 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    super(macroTable, fieldName, name, expression);
+    super(macroTable, name, fieldName, expression);
   }
 
   public DoubleMaxAggregatorFactory(String name, String fieldName)
@@ -99,17 +98,10 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
     return new DoubleMaxAggregatorFactory(name, name, null, macroTable);
   }
 
-
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(new DoubleMaxAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @Override
-  public Object finalizeComputation(Object object)
-  {
-    return object;
   }
 
   @Override

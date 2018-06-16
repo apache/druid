@@ -29,7 +29,7 @@ import io.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -39,7 +39,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @JsonCreator
   public FloatSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
+      @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("expression") String expression,
       @JacksonInject ExprMacroTable macroTable
   )
@@ -55,7 +55,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   protected BaseFloatColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    return makeColumnValueSelectorWithFloatDefault(
+    return getFloatColumnSelector(
         metricFactory,
         0.0f
     );
@@ -98,30 +98,10 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
     return new FloatSumAggregatorFactory(name, name, null, macroTable);
   }
 
-
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.asList(new FloatSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
+    return Collections.singletonList(new FloatSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override

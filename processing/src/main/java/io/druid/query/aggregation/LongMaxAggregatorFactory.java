@@ -22,31 +22,20 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.math.expr.Parser;
 import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 /**
  */
-public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLongColumnValueSelector>
+public class LongMaxAggregatorFactory extends SimpleLongAggregatorFactory
 {
-  private final String name;
-  private final String fieldName;
-  private final String expression;
-  private final ExprMacroTable macroTable;
-
   @JsonCreator
   public LongMaxAggregatorFactory(
       @JsonProperty("name") String name,
@@ -55,16 +44,7 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLong
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkArgument(
-        fieldName == null ^ expression == null,
-        "Must have a valid, non-null fieldName or expression"
-    );
-
-    this.name = name;
-    this.fieldName = fieldName;
-    this.expression = expression;
-    this.macroTable = macroTable;
+    super(macroTable, name, fieldName, expression);
   }
 
   public LongMaxAggregatorFactory(String name, String fieldName)
@@ -75,11 +55,8 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLong
   @Override
   protected BaseLongColumnValueSelector selector(ColumnSelectorFactory metricFactory)
   {
-    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+    return getLongColumnSelector(
         metricFactory,
-        macroTable,
-        fieldName,
-        expression,
         Long.MIN_VALUE
     );
   }
@@ -94,12 +71,6 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLong
   protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
   {
     return new LongMaxBufferAggregator(selector);
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return LongMaxAggregator.COMPARATOR;
   }
 
   @Override
@@ -118,28 +89,7 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLong
   @Override
   public AggregateCombiner makeAggregateCombiner2()
   {
-    return new LongAggregateCombiner()
-    {
-      private long max;
-
-      @Override
-      public void reset(ColumnValueSelector selector)
-      {
-        max = selector.getLong();
-      }
-
-      @Override
-      public void fold(ColumnValueSelector selector)
-      {
-        max = Math.max(max, selector.getLong());
-      }
-
-      @Override
-      public long getLong()
-      {
-        return max;
-      }
-    };
+    return new LongMaxAggregateCombiner();
   }
 
   @Override
@@ -149,59 +99,9 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLong
   }
 
   @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
-  }
-
-  @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongMaxAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @Override
-  public Object deserialize(Object object)
-  {
-    return object;
-  }
-
-  @Override
-  @Nullable
-  public Object finalizeComputation(@Nullable Object object)
-  {
-    return object;
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    return fieldName != null
-           ? Collections.singletonList(fieldName)
-           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
+    return Collections.singletonList(new LongMaxAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override
@@ -219,18 +119,6 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLong
   }
 
   @Override
-  public String getTypeName()
-  {
-    return "long";
-  }
-
-  @Override
-  public int getMaxIntermediateSize2()
-  {
-    return Long.BYTES;
-  }
-
-  @Override
   public String toString()
   {
     return "LongMaxAggregatorFactory{" +
@@ -238,39 +126,5 @@ public class LongMaxAggregatorFactory extends NullableAggregatorFactory<BaseLong
            ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
            '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    LongMaxAggregatorFactory that = (LongMaxAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(expression, that.expression)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (expression != null ? expression.hashCode() : 0);
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    return result;
   }
 }

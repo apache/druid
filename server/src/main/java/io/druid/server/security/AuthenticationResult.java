@@ -21,6 +21,7 @@ package io.druid.server.security;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * An AuthenticationResult contains information about a successfully authenticated request.
@@ -83,5 +84,27 @@ public class AuthenticationResult
   public String getAuthenticatedBy()
   {
     return authenticatedBy;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AuthenticationResult that = (AuthenticationResult) o;
+    return Objects.equals(getIdentity(), that.getIdentity()) &&
+           Objects.equals(getAuthorizerName(), that.getAuthorizerName()) &&
+           Objects.equals(getAuthenticatedBy(), that.getAuthenticatedBy()) &&
+           Objects.equals(getContext(), that.getContext());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getIdentity(), getAuthorizerName(), getAuthenticatedBy(), getContext());
   }
 }

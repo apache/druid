@@ -29,7 +29,7 @@ import io.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -44,7 +44,7 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    super(macroTable, fieldName, name, expression);
+    super(macroTable, name, fieldName, expression);
   }
 
   public DoubleMinAggregatorFactory(String name, String fieldName)
@@ -101,14 +101,8 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new DoubleMinAggregatorFactory(
-        fieldName,
-        fieldName,
-        expression,
-        macroTable
-    ));
+    return Collections.singletonList(new DoubleMinAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
-
 
   @Override
   public byte[] getCacheKey()
