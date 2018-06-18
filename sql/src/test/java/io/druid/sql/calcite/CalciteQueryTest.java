@@ -1800,7 +1800,10 @@ public class CalciteQueryTest extends CalciteTestBase
     final List<String> queries = ImmutableList.of(
         "SELECT dim1 FROM druid.foo ORDER BY dim1", // SELECT query with order by
         "SELECT COUNT(*) FROM druid.foo x, druid.foo y", // Self-join
-        "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5" // DISTINCT with OFFSET
+        "SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 2 OFFSET 5", // DISTINCT with OFFSET
+        "SELECT COUNT(*) FROM foo WHERE dim1 NOT IN (SELECT dim1 FROM foo WHERE dim2 = 'a')", // NOT IN subquery
+        "EXPLAIN PLAN FOR SELECT COUNT(*) FROM foo WHERE dim1 IN (SELECT dim1 FROM foo WHERE dim2 = 'a')\n"
+        + "AND dim1 IN (SELECT dim1 FROM foo WHERE m2 > 2)" // AND of two IN subqueries
     );
 
     for (final String query : queries) {
