@@ -118,6 +118,7 @@ public class OverlordResource
   private final AuthorizerMapper authorizerMapper;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
+  private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
 
 
   @Inject
@@ -557,13 +558,12 @@ public class OverlordResource
       @Context final HttpServletRequest req
   )
   {
-
     //check for valid state
     if (state != null) {
-      List validStates = ImmutableList.of("pending", "waiting", "running", "complete");
-      if (!validStates.contains(StringUtils.toLowerCase(state))) {
+      if (!API_TASK_STATES.contains(StringUtils.toLowerCase(state))) {
         return Response.status(Status.BAD_REQUEST)
-                       .entity("Bad state query param passed : " + state).entity(ImmutableList.of()).build();
+                       .entity(StringUtils.format("Invalid state : %s, valid values are: %s", state, API_TASK_STATES))
+                       .build();
       }
     }
     // early authorization check if datasource != null
@@ -573,7 +573,7 @@ public class OverlordResource
           new Resource(dataSource, ResourceType.DATASOURCE),
           Action.READ
       );
-      Access authResult = AuthorizationUtils.authorizeResourceAction(
+      final Access authResult = AuthorizationUtils.authorizeResourceAction(
           req,
           resourceAction,
           authorizerMapper
@@ -649,17 +649,17 @@ public class OverlordResource
       }
     }
     if (state == null || "waiting".equals(StringUtils.toLowerCase(state))) {
-      final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks, allActiveTaskInfo);
+      final List<AnyTask> waitingWorkItems = filterActiveTasks(RunnerTaskState.WAITING, allActiveTasks);
       List<TaskStatusPlus> transformedWaitingList = Lists.transform(waitingWorkItems, activeTaskTransformFunc);
       finalTaskList.addAll(transformedWaitingList);
     }
     if (state == null || "pending".equals(StringUtils.toLowerCase(state))) {
-      final List<AnyTask> pendingWorkItems = filterActiveTasks(RunnerTaskState.PENDING, allActiveTasks, allActiveTaskInfo);
+      final List<AnyTask> pendingWorkItems = filterActiveTasks(RunnerTaskState.PENDING, allActiveTasks);
       List<TaskStatusPlus> transformedPendingList = Lists.transform(pendingWorkItems, activeTaskTransformFunc);
       finalTaskList.addAll(transformedPendingList);
     }
     if (state == null || "running".equals(StringUtils.toLowerCase(state))) {
-      final List<AnyTask> runningWorkItems = filterActiveTasks(RunnerTaskState.RUNNING, allActiveTasks, allActiveTaskInfo);
+      final List<AnyTask> runningWorkItems = filterActiveTasks(RunnerTaskState.RUNNING, allActiveTasks);
       List<TaskStatusPlus> transformedRunningList = Lists.transform(runningWorkItems, activeTaskTransformFunc);
       finalTaskList.addAll(transformedRunningList);
     }
@@ -674,15 +674,14 @@ public class OverlordResource
 
   private List<AnyTask> filterActiveTasks(
       RunnerTaskState state,
-      List<AnyTask> allTasks,
-      List<TaskInfo<Task>> allActiveTaskInfo
+      List<AnyTask> allTasks
   )
   {
     //divide active tasks into 3 lists : running, pending, waiting
     Optional<TaskRunner> taskRunnerOpt = taskMaster.getTaskRunner();
     if (!taskRunnerOpt.isPresent()) {
       throw new WebApplicationException(
-          Response.serverError().entity("No task runner found ").build()
+          Response.serverError().entity("No task runner found").build()
       );
     }
     TaskRunner runner = taskRunnerOpt.get();
