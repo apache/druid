@@ -17,9 +17,13 @@
  * under the License.
  */
 
-package io.druid.java.util.metrics.cgroups;
+package io.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
+import io.druid.java.util.emitter.core.Event;
+import io.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import io.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
+import io.druid.java.util.metrics.cgroups.TestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -28,9 +32,10 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.util.List;
 
-public class ProcCgroupDiscovererTest
+public class CgroupMemoryMonitorTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -41,51 +46,28 @@ public class ProcCgroupDiscovererTest
   private CgroupDiscoverer discoverer;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp() throws IOException
   {
     cgroupDir = temporaryFolder.newFolder();
     procDir = temporaryFolder.newFolder();
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
-  }
-
-  @Test
-  public void testSimpleProc()
-  {
-    Assert.assertEquals(
-        new File(
-            cgroupDir,
-            "cpu,cpuacct/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
-        ).toPath(),
-        discoverer.discover("cpu")
+    final File memoryDir = new File(
+        cgroupDir,
+        "memory/system.slice/some.service"
     );
+    Assert.assertTrue((memoryDir.isDirectory() && memoryDir.exists()) || memoryDir.mkdirs());
+    TestUtils.copyResource("/memory.stat", new File(memoryDir, "memory.stat"));
+    TestUtils.copyResource("/memory.numa_stat", new File(memoryDir, "memory.numa_stat"));
   }
 
   @Test
-  public void testParse()
+  public void testMonitor()
   {
-    final ProcCgroupDiscoverer.ProcMountsEntry entry = ProcCgroupDiscoverer.ProcMountsEntry.parse(
-        "/dev/md126 /ebs xfs rw,seclabel,noatime,attr2,inode64,sunit=1024,swidth=16384,noquota 0 0"
-    );
-    Assert.assertEquals("/dev/md126", entry.dev);
-    Assert.assertEquals(Paths.get("/ebs"), entry.path);
-    Assert.assertEquals("xfs", entry.type);
-    Assert.assertEquals(ImmutableSet.of(
-        "rw",
-        "seclabel",
-        "noatime",
-        "attr2",
-        "inode64",
-        "sunit=1024",
-        "swidth=16384",
-        "noquota"
-    ), entry.options);
-  }
-
-  @Test
-  public void testNullCgroup()
-  {
-    expectedException.expect(NullPointerException.class);
-    Assert.assertNull(new ProcCgroupDiscoverer(procDir.toPath()).discover(null));
+    final CgroupMemoryMonitor monitor = new CgroupMemoryMonitor(discoverer, ImmutableMap.of(), "some_feed");
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    Assert.assertTrue(monitor.doMonitor(emitter));
+    final List<Event> actualEvents = emitter.getEvents();
+    Assert.assertEquals(44, actualEvents.size());
   }
 }
