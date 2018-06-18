@@ -38,7 +38,7 @@ import java.util.Set;
 
 public class DoubleLeastPostAggregator implements PostAggregator
 {
-  private static final Comparator COMPARATOR = Comparator.nullsLast(Comparator.comparingDouble(Number::doubleValue));
+  private static final Comparator<Number> COMPARATOR = Comparator.nullsLast(Comparator.comparingDouble(Number::doubleValue));
 
   private final String name;
   private final List<PostAggregator> fields;

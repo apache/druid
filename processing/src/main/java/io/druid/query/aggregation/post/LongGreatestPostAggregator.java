@@ -38,7 +38,7 @@ import java.util.Set;
 
 public class LongGreatestPostAggregator implements PostAggregator
 {
-  private static final Comparator COMPARATOR = Comparator.nullsFirst(Comparator.comparingLong(Number::longValue));
+  private static final Comparator<Number> COMPARATOR = Comparator.nullsFirst(Comparator.comparingLong(Number::longValue));
 
   private final String name;
   private final List<PostAggregator> fields;
