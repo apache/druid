@@ -745,10 +745,13 @@ public class OverlordResourceTest
   public void testGetTasksNegativeState()
   {
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
-    List<TaskStatusPlus> responseObjects = (List) overlordResource
-        .getTasks("wrong", "ds_test", null, null, null, req)
+    Object responseObject = overlordResource
+        .getTasks("blah", "ds_test", null, null, null, req)
         .getEntity();
-    Assert.assertEquals(0, responseObjects.size());
+    Assert.assertEquals(
+        "Invalid state : blah, valid values are: [pending, waiting, running, complete]",
+        responseObject.toString()
+    );
   }
 
   @Test
