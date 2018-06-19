@@ -103,6 +103,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       return;
     }
 
+    final List<ServerHolder> entireServerHolderList = Lists.newArrayList(servers);
     final List<ServerHolder> serverHolderList = Lists.newArrayList(servers);
 
     if (serverHolderList.size() <= 1) {
@@ -126,7 +127,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       if (maxToLoad > 0) {
         serverHolderList.removeIf(s -> s.getNumberOfSegmentsInQueue() >= maxToLoad);
       }
-      final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
+      final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(entireServerHolderList);
 
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
         final ServerHolder holder = strategy.findNewSegmentHomeBalancer(segmentToMove.getSegment(), serverHolderList);
