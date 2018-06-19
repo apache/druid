@@ -103,17 +103,17 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       return;
     }
 
-    final List<ServerHolder> entireServerHolderList = Lists.newArrayList(servers);
-    final List<ServerHolder> serverHolderList = Lists.newArrayList(servers);
+    final List<ServerHolder> toMoveFrom = Lists.newArrayList(servers);
+    final List<ServerHolder> toMoveTo = Lists.newArrayList(servers);
 
-    if (serverHolderList.size() <= 1) {
+    if (toMoveTo.size() <= 1) {
       log.info("[%s]: One or fewer servers found.  Cannot balance.", tier);
       return;
     }
 
     int numSegments = 0;
-    for (ServerHolder server : serverHolderList) {
-      numSegments += server.getServer().getSegments().size();
+    for (ServerHolder sourceHolder : toMoveFrom) {
+      numSegments += sourceHolder.getServer().getSegments().size();
     }
 
     if (numSegments == 0) {
@@ -125,15 +125,15 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     long unmoved = 0L;
     for (int iter = 0; iter < maxSegmentsToMove; iter++) {
       if (maxToLoad > 0) {
-        serverHolderList.removeIf(s -> s.getNumberOfSegmentsInQueue() >= maxToLoad);
+        toMoveTo.removeIf(s -> s.getNumberOfSegmentsInQueue() >= maxToLoad);
       }
-      final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(entireServerHolderList);
+      final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(toMoveFrom);
 
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
-        final ServerHolder holder = strategy.findNewSegmentHomeBalancer(segmentToMove.getSegment(), serverHolderList);
+        final ServerHolder destinationHolder = strategy.findNewSegmentHomeBalancer(segmentToMove.getSegment(), toMoveTo);
 
-        if (holder != null) {
-          moveSegment(segmentToMove, holder.getServer(), params);
+        if (destinationHolder != null) {
+          moveSegment(segmentToMove, destinationHolder.getServer(), params);
         } else {
           ++unmoved;
         }
@@ -146,7 +146,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     stats.addToTieredStat("unmovedCount", tier, unmoved);
     stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
     if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
-      strategy.emitStats(tier, stats, serverHolderList);
+      strategy.emitStats(tier, stats, toMoveFrom);
     }
     log.info(
         "[%s]: Segments Moved: [%d] Segments Let Alone: [%d]",
