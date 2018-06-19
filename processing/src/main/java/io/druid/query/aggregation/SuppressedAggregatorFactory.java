@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class SuppressedAggregatorFactory extends AggregatorFactory
 {
@@ -131,21 +132,45 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public int hashCode()
-  {
-    return delegate.hashCode();
-  }
-
-  @Override
-  public boolean equals(Object obj)
-  {
-    return delegate.equals(obj);
-  }
-
-  @Override
   public byte[] getCacheKey()
   {
-    return delegate.getCacheKey();
+    byte[] delegateCacheKey = delegate.getCacheKey();
+    return ByteBuffer.allocate(1 + delegateCacheKey.length)
+                     .put(AggregatorUtil.SUPPRESSED_AGG_CACHE_TYPE_ID)
+                     .put(delegateCacheKey)
+                     .array();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SuppressedAggregatorFactory that = (SuppressedAggregatorFactory) o;
+    return Objects.equals(getDelegate(), that.getDelegate());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getDelegate());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SuppressedAggregatorFactory{" +
+           "delegate=" + delegate +
+           '}';
+  }
+
+  public AggregatorFactory getDelegate()
+  {
+    return delegate;
   }
 
   public static class SuppressedAggregator implements Aggregator
@@ -200,6 +225,38 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
     public void close()
     {
       delegate.close();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      SuppressedAggregator that = (SuppressedAggregator) o;
+      return Objects.equals(getDelegate(), that.getDelegate());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(getDelegate());
+    }
+
+    @Override
+    public String toString()
+    {
+      return "SuppressedAggregator{" +
+             "delegate=" + delegate +
+             '}';
+    }
+
+    public Aggregator getDelegate()
+    {
+      return delegate;
     }
   }
 
@@ -275,21 +332,35 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
     }
 
     @Override
-    public int hashCode()
+    public boolean equals(Object o)
     {
-      return delegate.hashCode();
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      SuppressedBufferAggregator that = (SuppressedBufferAggregator) o;
+      return Objects.equals(getDelegate(), that.getDelegate());
     }
 
     @Override
-    public boolean equals(Object obj)
+    public int hashCode()
     {
-      return delegate.equals(obj);
+      return Objects.hash(getDelegate());
     }
 
     @Override
     public String toString()
     {
-      return delegate.toString();
+      return "SuppressedBufferAggregator{" +
+             "delegate=" + delegate +
+             '}';
+    }
+
+    public BufferAggregator getDelegate()
+    {
+      return delegate;
     }
   }
 }

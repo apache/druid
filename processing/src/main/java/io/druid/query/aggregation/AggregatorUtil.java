@@ -94,6 +94,9 @@ public class AggregatorUtil
   public static final byte ARRAY_OF_DOUBLES_SKETCH_T_TEST_CACHE_TYPE_ID = 0x29;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID = 0x2A;
 
+  // Suppressed aggregator
+  public static final byte SUPPRESSED_AGG_CACHE_TYPE_ID = 0x2B;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *

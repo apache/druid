@@ -21,7 +21,6 @@ package io.druid.benchmark.query.timecompare;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -38,7 +37,6 @@ import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.granularity.Granularities;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.logger.Logger;
-import io.druid.js.JavaScriptConfig;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.Druids;
@@ -54,7 +52,6 @@ import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
-import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.filter.IntervalDimFilter;
@@ -98,7 +95,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -139,13 +135,11 @@ public class TimeCompareBenchmark
 
   private QueryRunnerFactory topNFactory;
   private Query topNQuery;
-  private Query topNQueryOptimize;
   private QueryRunner topNRunner;
 
 
   private QueryRunnerFactory timeseriesFactory;
   private Query timeseriesQuery;
-  private Query timeseriesQueryOptimize;
   private QueryRunner timeseriesRunner;
 
   private BenchmarkSchemaInfo schemaInfo;
@@ -196,24 +190,6 @@ public class TimeCompareBenchmark
     log.info("Previous interval: " + previous);
 
     { // basic.topNTimeCompare
-      JavaScriptAggregatorFactory jsAgg1 = new JavaScriptAggregatorFactory(
-          "sumLongSequential",
-          Arrays.asList("sumLongSequential"),
-          "function aggregate(current, a) { return current + a }",
-          "function reset() { return 0 }",
-          "function combine(a,b) { return a + b }",
-          JavaScriptConfig.getEnabledInstance()
-      );
-
-      JavaScriptAggregatorFactory jsAgg2 = new JavaScriptAggregatorFactory(
-          "_cmp_sumLongSequential",
-          Arrays.asList("sumLongSequential"),
-          "function aggregate(current, a) { return current + a }",
-          "function reset() { return 0 }",
-          "function combine(a,b) { return a + b }",
-          JavaScriptConfig.getEnabledInstance()
-      );
-
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       queryAggs.add(
           new FilteredAggregatorFactory(
@@ -230,7 +206,6 @@ public class TimeCompareBenchmark
       );
       queryAggs.add(
           new FilteredAggregatorFactory(
-              //jsAgg2,
               new LongSumAggregatorFactory(
                   "_cmp_sumLongSequential", "sumLongSequential"
               ),
@@ -251,8 +226,7 @@ public class TimeCompareBenchmark
           .aggregators(queryAggs)
           .threshold(threshold);
 
-      topNQuery = queryBuilderA.context(ImmutableMap.of("enableSegmentOptimize", false)).build();
-      topNQueryOptimize = queryBuilderA.context(ImmutableMap.of("enableSegmentOptimize", true)).build();
+      topNQuery = queryBuilderA.build();
       topNFactory = new TopNQueryRunnerFactory(
           new StupidPool<>(
               "TopNBenchmark-compute-bufferPool",
@@ -267,28 +241,9 @@ public class TimeCompareBenchmark
       basicQueries.put("topNTimeCompare", queryBuilderA);
     }
     { // basic.timeseriesTimeCompare
-      JavaScriptAggregatorFactory jsAgg1 = new JavaScriptAggregatorFactory(
-          "sumLongSequential",
-          Arrays.asList("sumLongSequential"),
-          "function aggregate(current, a) { return current + a }",
-          "function reset() { return 0 }",
-          "function combine(a,b) { return a + b }",
-          JavaScriptConfig.getEnabledInstance()
-      );
-
-      JavaScriptAggregatorFactory jsAgg2 = new JavaScriptAggregatorFactory(
-          "_cmp_sumLongSequential",
-          Arrays.asList("sumLongSequential"),
-          "function aggregate(current, a) { return current + a }",
-          "function reset() { return 0 }",
-          "function combine(a,b) { return a + b }",
-          JavaScriptConfig.getEnabledInstance()
-      );
-
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       queryAggs.add(
           new FilteredAggregatorFactory(
-              //jsAgg1,
               new LongSumAggregatorFactory(
                   "sumLongSequential", "sumLongSequential"
               ),
@@ -301,7 +256,6 @@ public class TimeCompareBenchmark
       );
       queryAggs.add(
           new FilteredAggregatorFactory(
-              //jsAgg2,
               new LongSumAggregatorFactory(
                   "_cmp_sumLongSequential", "sumLongSequential"
               ),
@@ -320,8 +274,7 @@ public class TimeCompareBenchmark
                                                                    .aggregators(queryAggs)
                                                                    .descending(false);
 
-      timeseriesQuery = timeseriesQueryBuilder.context(ImmutableMap.of("enableSegmentOptimize", false)).build();
-      timeseriesQueryOptimize = timeseriesQueryBuilder.context(ImmutableMap.of("enableSegmentOptimize", true)).build();
+      timeseriesQuery = timeseriesQueryBuilder.build();
       timeseriesFactory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
               QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
@@ -485,21 +438,6 @@ public class TimeCompareBenchmark
     }
   }
 
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexTopNOptimize(Blackhole blackhole)
-  {
-    Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(
-        QueryPlus.wrap(topNQueryOptimize),
-        Maps.<String, Object>newHashMap()
-    );
-    List<Result<TopNResultValue>> results = queryResult.toList();
-
-    for (Result<TopNResultValue> result : results) {
-      blackhole.consume(result);
-    }
-  }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
@@ -508,22 +446,6 @@ public class TimeCompareBenchmark
   {
     Sequence<Result<TimeseriesResultValue>> queryResult = timeseriesRunner.run(
         QueryPlus.wrap(timeseriesQuery),
-        Maps.<String, Object>newHashMap()
-    );
-    List<Result<TimeseriesResultValue>> results = queryResult.toList();
-
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
-  }
-
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void queryMultiQueryableIndexTimeseriesOptimize(Blackhole blackhole)
-  {
-    Sequence<Result<TimeseriesResultValue>> queryResult = timeseriesRunner.run(
-        QueryPlus.wrap(timeseriesQueryOptimize),
         Maps.<String, Object>newHashMap()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
