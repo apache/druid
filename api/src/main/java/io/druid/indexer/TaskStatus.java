@@ -17,14 +17,13 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.indexer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import io.druid.indexer.TaskState;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing

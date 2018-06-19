@@ -16,26 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package io.druid.indexing.common;
-
-import com.google.common.base.Optional;
-import io.druid.indexer.TaskLocation;
-import io.druid.indexer.TaskStatus;
-
-public interface TaskInfoProvider
+package io.druid.indexer;
+/**
+ * This includes the state of a task in the task runner not covered by {@link TaskState}, this state is not stored in database
+ */
+public enum RunnerTaskState
 {
-  /**
-   * @param id the task ID
-   *
-   * @return a TaskLocation associated with the task or TaskLocation.unknown() if no associated entry could be found
-   */
-  TaskLocation getTaskLocation(String id);
-
-  /**
-   * @param id the task ID
-   *
-   * @return an Optional.of() with the current status of the task or Optional.absent() if the task could not be found
-   */
-  Optional<TaskStatus> getTaskStatus(String id);
+  WAITING,
+  PENDING,
+  RUNNING,
+  NONE; // is used for a completed task
 }

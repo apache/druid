@@ -27,6 +27,8 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
@@ -108,6 +110,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   protected String getEntryTable()
   {
     return entryTable;
+  }
+
+  public TypeReference getEntryType()
+  {
+    return entryType;
   }
 
   @Override
@@ -294,7 +301,12 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     return getConnector().retryWithHandle(
         handle -> {
-          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(handle, timestamp, maxNumStatuses);
+          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
+              handle,
+              timestamp,
+              maxNumStatuses,
+              null
+          );
 
           return query
               .map(
@@ -317,10 +329,69 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
+  @Override
+  public List<TaskInfo<EntryType>> getCompletedTaskInfo(
+      DateTime timestamp,
+      @Nullable Integer maxNumStatuses,
+      @Nullable String datasource
+  )
+  {
+    return getConnector().retryWithHandle(
+        handle -> {
+          final Query<Map<String, Object>> query = createInactiveStatusesSinceQuery(
+              handle,
+              timestamp,
+              maxNumStatuses,
+              datasource
+          );
+          return query.map(new TaskInfoMapper()).list();
+        }
+    );
+  }
+
+  @Override
+  public List<TaskInfo<EntryType>> getActiveTaskInfo()
+  {
+    return getConnector().retryWithHandle(
+        handle -> {
+          return handle.createQuery(
+              StringUtils.format(
+                  "SELECT id, status_payload, payload, datasource, created_date FROM %s WHERE active = TRUE ORDER BY created_date",
+                  entryTable
+              )
+          ).map(new TaskInfoMapper()).list();
+        }
+    );
+  }
+
+  class TaskInfoMapper implements ResultSetMapper<TaskInfo<EntryType>>
+  {
+    @Override
+    public TaskInfo<EntryType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
+    {
+      final TaskInfo<EntryType> taskInfo;
+      try {
+        TaskStatus status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
+        taskInfo = new TaskInfo<>(
+            resultSet.getString("id"),
+            DateTimes.of(resultSet.getString("created_date")),
+            status,
+            resultSet.getString("datasource"),
+            getJsonMapper().readValue(resultSet.getBytes("payload"), getEntryType())
+        );
+      }
+      catch (IOException e) {
+        throw new SQLException(e);
+      }
+      return taskInfo;
+    }
+  }
+
   protected abstract Query<Map<String, Object>> createInactiveStatusesSinceQuery(
       Handle handle,
       DateTime timestamp,
-      @Nullable Integer maxNumStatuses
+      @Nullable Integer maxNumStatuses,
+      @Nullable String datasource
   );
 
   @Override
