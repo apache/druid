@@ -20,9 +20,9 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.server.coordinator.BalancerSegmentHolder;
 import io.druid.server.coordinator.BalancerStrategy;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -119,8 +119,13 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       log.info("No segments found.  Cannot balance.");
       return;
     }
+
+    final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     long unmoved = 0L;
     for (int iter = 0; iter < maxSegmentsToMove; iter++) {
+      if (maxToLoad > 0) {
+        serverHolderList.removeIf(s -> s.getNumberOfSegmentsInQueue() >= maxToLoad);
+      }
       final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
