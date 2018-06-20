@@ -46,27 +46,43 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
 
   @Override
   protected Query<Map<String, Object>> createInactiveStatusesSinceQuery(
-      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses
+      Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String datasource
   )
   {
     String sql = maxNumStatuses == null ? "SELECT " : "SELECT TOP :n ";
 
     sql += StringUtils.format(
         "    id, "
-        + "  status_payload "
+        + "  status_payload, "
+        + "  created_date, "
+        + "  datasource, "
+        + "  payload "
         + "FROM "
         + "  %s "
         + "WHERE "
-        + "  active = FALSE AND created_date >= :start "
+        + getWhereClauseForInactiveStatusesSinceQuery(datasource)
         + "ORDER BY created_date DESC",
         getEntryTable()
     );
-
+    if (maxNumStatuses != null) {
+      sql += " LIMIT :n";
+    }
     Query<Map<String, Object>> query = handle.createQuery(sql).bind("start", timestamp.toString());
 
     if (maxNumStatuses != null) {
       query = query.bind("n", maxNumStatuses);
     }
+    if (datasource != null) {
+      query = query.bind("ds", datasource);
+    }
     return query;
+  }
+  private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
+  {
+    String sql = StringUtils.format("active = FALSE AND created_date >= :start ");
+    if (datasource != null) {
+      sql += " AND datasource = :ds ";
+    }
+    return sql;
   }
 }

@@ -19,7 +19,7 @@
 package io.druid.indexing.kafka;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.kafka.KafkaIndexTask.Status;

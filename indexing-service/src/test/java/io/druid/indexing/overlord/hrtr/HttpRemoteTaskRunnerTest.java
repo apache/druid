@@ -35,7 +35,7 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.WorkerNodeService;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunnerListener;

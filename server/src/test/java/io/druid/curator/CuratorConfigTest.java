@@ -19,9 +19,10 @@
 
 package io.druid.curator;
 
-import io.druid.guice.JsonConfigTesterBase;
 import org.junit.Assert;
 import org.junit.Test;
+
+import io.druid.guice.JsonConfigTesterBase;
 
 public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
 {
@@ -30,10 +31,16 @@ public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
   {
     propertyValues.put(getPropertyKey("host"), "fooHost");
     propertyValues.put(getPropertyKey("acl"), "true");
+    propertyValues.put(getPropertyKey("user"), "test-zk-user");
+    propertyValues.put(getPropertyKey("pwd"), "test-zk-pwd");
+    propertyValues.put(getPropertyKey("authScheme"), "auth");
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
     CuratorConfig config = configProvider.get().get();
     Assert.assertEquals("fooHost", config.getZkHosts());
     Assert.assertEquals(true, config.getEnableAcl());
+    Assert.assertEquals("test-zk-user", config.getZkUser());
+    Assert.assertEquals("test-zk-pwd", config.getZkPwd());
+    Assert.assertEquals("auth", config.getAuthScheme());
   }
 }

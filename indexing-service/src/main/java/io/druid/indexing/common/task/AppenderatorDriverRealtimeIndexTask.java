@@ -45,7 +45,7 @@ import io.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import io.druid.indexing.common.TaskReport;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;

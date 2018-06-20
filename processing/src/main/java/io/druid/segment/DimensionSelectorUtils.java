@@ -52,7 +52,7 @@ public final class DimensionSelectorUtils
     if (idLookup != null) {
       return makeDictionaryEncodedValueMatcherGeneric(selector, idLookup.lookupId(value), value == null);
     } else if (selector.getValueCardinality() >= 0 && selector.nameLookupPossibleInAdvance()) {
-      // Employ precomputed BitSet optimization
+      // Employ caching BitSet optimization
       return makeDictionaryEncodedValueMatcherGeneric(selector, Predicates.equalTo(value));
     } else {
       return makeNonDictionaryEncodedValueMatcherGeneric(selector, value);

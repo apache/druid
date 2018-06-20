@@ -51,6 +51,7 @@ public class TaskStatusPlusTest
         DateTimes.nowUtc(),
         DateTimes.nowUtc(),
         TaskState.RUNNING,
+        RunnerTaskState.RUNNING,
         1000L,
         TaskLocation.create("testHost", 1010, -1),
         "ds_test",

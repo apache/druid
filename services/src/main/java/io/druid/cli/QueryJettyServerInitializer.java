@@ -132,7 +132,11 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     }
 
     // Add Gzip handler at the very end
-    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(root));
+    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
+        root,
+        serverConfig.getInflateBufferSize(),
+        serverConfig.getCompressionLevel()
+    ));
 
     final StatisticsHandler statisticsHandler = new StatisticsHandler();
     statisticsHandler.setHandler(handlerList);

@@ -53,19 +53,19 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMaxAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.NEGATIVE_INFINITY));
+    return new FloatMaxAggregator(getFloatColumnSelector(metricFactory, Float.NEGATIVE_INFINITY));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMaxBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.NEGATIVE_INFINITY));
+    return new FloatMaxBufferAggregator(getFloatColumnSelector(metricFactory, Float.NEGATIVE_INFINITY));
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return FloatMaxAggregator.combineValues(finalizeComputation(lhs), finalizeComputation(rhs));
+    return FloatMaxAggregator.combineValues(lhs, rhs);
   }
 
   @Override
@@ -84,25 +84,6 @@ public class FloatMaxAggregatorFactory extends SimpleFloatAggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(new FloatMaxAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
   }
 
   @Override

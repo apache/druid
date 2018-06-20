@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.Task;

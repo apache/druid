@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 
 public abstract class SimpleDoubleBufferAggregator implements BufferAggregator
 {
-  protected final BaseDoubleColumnValueSelector selector;
+  final BaseDoubleColumnValueSelector selector;
 
   SimpleDoubleBufferAggregator(BaseDoubleColumnValueSelector selector)
   {

@@ -30,6 +30,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,6 +78,33 @@ public class JSONParseSpecTest
     Assert.assertNull(parsedRow.get("root_baz2"));
     Assert.assertNull(parsedRow.get("jq_omg2"));
     Assert.assertNull(parsedRow.get("path_omg2"));
+  }
+
+  @Test
+  public void testParseRowWithConditional()
+  {
+    final JSONParseSpec parseSpec = new JSONParseSpec(
+        new TimestampSpec("timestamp", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")), null, null),
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.[?(@.maybe_object)].maybe_object.foo.test"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
+            )
+        ),
+        null
+    );
+
+    final Map<String, Object> expected = new HashMap<>();
+    expected.put("foo", new ArrayList());
+    expected.put("bar", Arrays.asList("test"));
+
+    final Parser<String, Object> parser = parseSpec.makeParser();
+    final Map<String, Object> parsedRow = parser.parseToMap("{\"something_else\": {\"foo\": \"test\"}}");
+
+    Assert.assertNotNull(parsedRow);
+    Assert.assertEquals(expected, parsedRow);
   }
 
   @Test

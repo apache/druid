@@ -49,7 +49,7 @@ public class TestUtils
 
     Assert.assertTrue(new File(
         cgroupDir,
-        "cpu,cpuacct/system.slice/mesos-agent-druid.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
+        "cpu,cpuacct/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
     ).mkdirs());
     copyResource("/proc.pid.cgroup", new File(procDir, "cgroup"));
   }

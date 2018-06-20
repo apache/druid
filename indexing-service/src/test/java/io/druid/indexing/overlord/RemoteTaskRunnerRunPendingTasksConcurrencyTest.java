@@ -22,7 +22,7 @@ package io.druid.indexing.overlord;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.task.Task;
 import io.druid.java.util.common.ISE;

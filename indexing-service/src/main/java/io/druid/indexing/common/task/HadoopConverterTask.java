@@ -28,7 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import io.druid.indexer.updater.HadoopConverterJob;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.UOE;

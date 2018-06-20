@@ -22,14 +22,19 @@ package io.druid.server.initialization;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Period;
 
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
+import java.util.zip.Deflater;
 
 /**
  */
 public class ServerConfig
 {
+
+  public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
+
   @JsonProperty
   @Min(1)
   private int numThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
@@ -67,6 +72,15 @@ public class ServerConfig
   @JsonProperty
   @NotNull
   private Period unannouncePropogationDelay = Period.ZERO;
+
+  @JsonProperty
+  @Min(0)
+  private int inflateBufferSize = DEFAULT_GZIP_INFLATE_BUFFER_SIZE;
+
+  @JsonProperty
+  @Min(-1)
+  @Max(9)
+  private int compressionLevel = Deflater.DEFAULT_COMPRESSION;
 
   public int getNumThreads()
   {
@@ -118,6 +132,17 @@ public class ServerConfig
     return unannouncePropogationDelay;
   }
 
+  public int getInflateBufferSize()
+  {
+    return inflateBufferSize;
+  }
+
+  public int getCompressionLevel()
+  {
+    return compressionLevel;
+  }
+
+
   @Override
   public boolean equals(Object o)
   {
@@ -135,6 +160,8 @@ public class ServerConfig
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
+           inflateBufferSize == that.inflateBufferSize &&
+           compressionLevel == that.compressionLevel &&
            Objects.equals(maxIdleTime, that.maxIdleTime) &&
            Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
            Objects.equals(unannouncePropogationDelay, that.unannouncePropogationDelay);
@@ -154,7 +181,9 @@ public class ServerConfig
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
-        unannouncePropogationDelay
+        unannouncePropogationDelay,
+        inflateBufferSize,
+        compressionLevel
     );
   }
 
@@ -172,6 +201,8 @@ public class ServerConfig
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
            ", unannouncePropogationDelay=" + unannouncePropogationDelay +
+           ", inflateBufferSize=" + inflateBufferSize +
+           ", compressionLevel=" + compressionLevel +
            '}';
   }
 }

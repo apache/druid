@@ -90,7 +90,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
               tmpSegmentDirs.add(dir);
               logger.info("Locally storing fetched segment at [%s]", dir);
 
-              JobHelper.unzipNoGuava(path, context.getConfiguration(), dir, context);
+              JobHelper.unzipNoGuava(path, context.getConfiguration(), dir, context, null);
               logger.info("finished fetching segment files");
 
               QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
