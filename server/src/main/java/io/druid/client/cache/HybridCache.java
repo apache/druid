@@ -21,14 +21,19 @@ package io.druid.client.cache;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import io.druid.java.util.emitter.service.ServiceEmitter;
+import io.druid.collections.SerializablePair;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class HybridCache implements Cache
 {
@@ -122,6 +127,41 @@ public class HybridCache implements Cache
     } else {
       return Collections.emptyMap();
     }
+  }
+
+  @Override
+  public Stream<SerializablePair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
+  {
+    if (!config.getUseL2()) {
+      return level1.getBulk(keys);
+    }
+    final List<SerializablePair<NamedKey, Optional<byte[]>>> materializedL1Results = level1
+        .getBulk(keys)
+        .collect(Collectors.toList());
+    final List<SerializablePair<NamedKey, Optional<byte[]>>> materializedL2Results = level2
+        .getBulk(
+            materializedL1Results.stream(
+            ).filter(
+                s -> !s.getRhs().isPresent()
+            ).map(
+                SerializablePair::getLhs
+            )
+        ).collect(Collectors.toList());
+    // The l2 list should only have "missing" ones from l1. So we loop through and look for the missing L1 results
+    // and replace with whatever l2 found
+    int l2Pos = 0;
+    for (int i = 0; i < materializedL1Results.size(); i++) {
+      final SerializablePair<NamedKey, Optional<byte[]>> me = materializedL1Results.get(i);
+      if (!me.getRhs().isPresent()) {
+        final SerializablePair<NamedKey, Optional<byte[]>> other = materializedL2Results.get(l2Pos++);
+        if (!me.getLhs().equals(other.getLhs())) {
+          // sanity check for something very broken
+          break;
+        }
+        materializedL1Results.set(i, other);
+      }
+    }
+    return materializedL1Results.stream();
   }
 
   @Override

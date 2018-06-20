@@ -21,14 +21,8 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -42,14 +36,13 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
+import io.druid.collections.SerializablePair;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
-import io.druid.java.util.common.guava.BaseSequence;
-import io.druid.java.util.common.guava.LazySequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -67,8 +60,10 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
+import io.druid.server.DruidNode;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
@@ -83,21 +78,36 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  */
 public class CachingClusteredClient implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
+  private static final DruidServer ALREADY_CACHED_SERVER = new DruidServer(
+      new DruidNode(
+          "__internal-client-cache",
+          "localhost",
+          -1,
+          -1,
+          true,
+          false
+      ),
+      new DruidServerConfig(),
+      ServerType.HISTORICAL
+  );
   private final QueryToolChestWarehouse warehouse;
   private final TimelineServerView serverView;
   private final Cache cache;
@@ -237,9 +247,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.downstreamQuery = query.withOverriddenContext(makeDownstreamQueryContext());
     }
 
-    private ImmutableMap<String, Object> makeDownstreamQueryContext()
+    private Map<String, Object> makeDownstreamQueryContext()
     {
-      final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
+      final Map<String, Object> contextBuilder = new LinkedHashMap<>();
 
       final int priority = QueryContexts.getPriority(query);
       contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
@@ -249,7 +259,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
         contextBuilder.put("bySegment", true);
       }
-      return contextBuilder.build();
+      return Collections.unmodifiableMap(contextBuilder);
     }
 
     Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
@@ -277,16 +287,101 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
       }
 
-      final List<Pair<Interval, byte[]>> alreadyCachedResults = pruneSegmentsWithCachedResults(queryCacheKey, segments);
-      final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segments);
-      return new LazySequence<>(() -> {
-        List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
-        addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
-        addSequencesFromServer(sequencesByInterval, segmentsByServer);
-        return Sequences
-            .simple(sequencesByInterval)
-            .flatMerge(seq -> seq, query.getResultOrdering());
-      });
+      final Stream<Sequence<T>> resultStream = deserializeFromCache(
+          maybeFetchCacheResults(
+              queryCacheKey,
+              segments.stream()
+          )
+      ).map(
+          tuple -> {
+            final ServerToSegment serverToSegment = tuple.getLhs();
+            final Optional<T> maybeResult = tuple.getRhs();
+            if (maybeResult.isPresent()) {
+              return new ServerMaybeSegmentMaybeCache<>(ALREADY_CACHED_SERVER, Optional.empty(), maybeResult);
+            }
+            final QueryableDruidServer queryableDruidServer = serverToSegment.getServer().pick();
+            if (queryableDruidServer == null) {
+              log.makeAlert(
+                  "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
+                  serverToSegment.getSegmentDescriptor(),
+                  query.getDataSource()
+              ).emit();
+              return new ServerMaybeSegmentMaybeCache<T>(
+                  ALREADY_CACHED_SERVER,
+                  Optional.empty(),
+                  Optional.empty()
+              );
+            } else {
+              final DruidServer server = queryableDruidServer.getServer();
+              return new ServerMaybeSegmentMaybeCache<>(
+                  server,
+                  Optional.ofNullable(serverToSegment.getSegmentDescriptor()),
+                  maybeResult
+              );
+            }
+          }
+      ).collect(
+          Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer)
+      ).entrySet(
+      ).stream(
+      ).map(
+          Map.Entry::getValue
+      ).filter(
+          l -> !l.isEmpty()
+      ).filter(
+          l -> l.get(0).getCachedValue().isPresent() || l.get(0).getSegmentDescriptor().isPresent()
+      ).map(
+          l -> {
+            final Stream<T> cachedResults = l.stream(
+            ).map(
+                ServerMaybeSegmentMaybeCache::getCachedValue
+            ).filter(
+                Optional::isPresent
+            ).map(
+                Optional::get
+            );
+
+            final List<SegmentDescriptor> segmentsOfServer = l.stream(
+            ).map(
+                ServerMaybeSegmentMaybeCache::getSegmentDescriptor
+            ).filter(
+                Optional::isPresent
+            ).map(
+                Optional::get
+            ).collect(
+                Collectors.toList()
+            );
+
+            if (segmentsOfServer.isEmpty()) {
+              return Sequences.simple(cachedResults);
+            }
+
+            final DruidServer server = l.get(0).getServer();
+            final QueryRunner serverRunner = serverView.getQueryRunner(server);
+
+            if (serverRunner == null) {
+              log.error("Server[%s] doesn't have a query runner", server);
+              return Sequences.empty();
+            }
+
+            final MultipleSpecificSegmentSpec segmentsOfServerSpec = new MultipleSpecificSegmentSpec(segmentsOfServer);
+
+            final Sequence<T> serverResults;
+            if (isBySegment) {
+              serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec);
+            } else if (!server.segmentReplicatable() || !populateCache) {
+              serverResults = getSimpleServerResults(serverRunner, segmentsOfServerSpec);
+            } else {
+              serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
+            }
+            return serverResults;
+          }
+      );
+      final Sequence<Sequence<T>> resultSeq = Sequences.simple(resultStream.parallel());
+      return resultSeq.flatMerge(
+          Function.identity(),
+          query.getResultOrdering()
+      );
     }
 
     private Set<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
@@ -297,14 +392,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
 
       final Set<ServerToSegment> segments = Sets.newLinkedHashSet();
-      final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = Maps.newHashMap();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
             query.getFilter(),
             holder.getObject(),
             partitionChunk -> partitionChunk.getObject().getSegment().getShardSpec(),
-            dimensionRangeCache
+            Maps.newHashMap()
         );
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
@@ -396,60 +490,70 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private List<Pair<Interval, byte[]>> pruneSegmentsWithCachedResults(
+    private Stream<SerializablePair<ServerToSegment, Optional<byte[]>>> maybeFetchCacheResults(
         final byte[] queryCacheKey,
-        final Set<ServerToSegment> segments
+        final Stream<ServerToSegment> segments
     )
     {
       if (queryCacheKey == null) {
-        return Collections.emptyList();
+        return segments.map(s -> new SerializablePair<>(s, Optional.empty()));
       }
-      final List<Pair<Interval, byte[]>> alreadyCachedResults = Lists.newArrayList();
-      Map<ServerToSegment, Cache.NamedKey> perSegmentCacheKeys = computePerSegmentCacheKeys(segments, queryCacheKey);
-      // Pull cached segments from cache and remove from set of segments to query
-      final Map<Cache.NamedKey, byte[]> cachedValues = computeCachedValues(perSegmentCacheKeys);
+      // We materialize the stream here in order to have the bulk cache fetching work as expected
+      final List<SerializablePair<ServerToSegment, Cache.NamedKey>> materializedKeyList = computePerSegmentCacheKeys(
+          segments,
+          queryCacheKey
+      ).collect(Collectors.toList());
 
-      perSegmentCacheKeys.forEach((segment, segmentCacheKey) -> {
-        final Interval segmentQueryInterval = segment.getSegmentDescriptor().getInterval();
-
-        final byte[] cachedValue = cachedValues.get(segmentCacheKey);
-        if (cachedValue != null) {
-          // remove cached segment from set of segments to query
-          segments.remove(segment);
-          alreadyCachedResults.add(Pair.of(segmentQueryInterval, cachedValue));
-        } else if (populateCache) {
-          // otherwise, if populating cache, add segment to list of segments to cache
-          final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
-          addCachePopulator(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
-        }
-      });
-      return alreadyCachedResults;
+      // Do bulk fetch
+      final Map<Cache.NamedKey, Optional<byte[]>> cachedValues = computeCachedValues(
+          materializedKeyList.stream()
+      ).collect(
+          Collectors.toMap(
+              SerializablePair::getLhs,
+              SerializablePair::getRhs
+          )
+      );
+      // Hash join to return the stream
+      return materializedKeyList.stream().map(
+          psck -> {
+            final ServerToSegment segment = psck.getLhs();
+            final Cache.NamedKey segmentCacheKey = psck.getRhs();
+            final Interval segmentQueryInterval = segment.getSegmentDescriptor().getInterval();
+            final Optional<byte[]> cachedValue = cachedValues.get(segmentCacheKey);
+            if (!cachedValue.isPresent()) {
+              // if populating cache, add segment to list of segments to cache if it is not cached
+              final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
+              addCachePopulator(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
+            }
+            return new SerializablePair<>(segment, cachedValue);
+          }
+      );
     }
 
-    private Map<ServerToSegment, Cache.NamedKey> computePerSegmentCacheKeys(
-        Set<ServerToSegment> segments,
+    private Stream<SerializablePair<ServerToSegment, Cache.NamedKey>> computePerSegmentCacheKeys(
+        Stream<ServerToSegment> segments,
         byte[] queryCacheKey
     )
     {
-      // cacheKeys map must preserve segment ordering, in order for shards to always be combined in the same order
-      Map<ServerToSegment, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
-      for (ServerToSegment serverToSegment : segments) {
-        final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
-            serverToSegment.getServer().getSegment().getIdentifier(),
-            serverToSegment.getSegmentDescriptor(),
-            queryCacheKey
-        );
-        cacheKeys.put(serverToSegment, segmentCacheKey);
-      }
-      return cacheKeys;
+      return segments.map(
+          serverToSegment -> {
+            // cacheKeys map must preserve segment ordering, in order for shards to always be combined in the same order
+            final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
+                serverToSegment.getServer().getSegment().getIdentifier(),
+                serverToSegment.getSegmentDescriptor(),
+                queryCacheKey
+            );
+            return new SerializablePair<>(serverToSegment, segmentCacheKey);
+          }
+      );
     }
 
-    private Map<Cache.NamedKey, byte[]> computeCachedValues(Map<ServerToSegment, Cache.NamedKey> cacheKeys)
+    private Stream<SerializablePair<Cache.NamedKey, Optional<byte[]>>> computeCachedValues(Stream<SerializablePair<ServerToSegment, Cache.NamedKey>> cacheKeys)
     {
       if (useCache) {
-        return cache.getBulk(Iterables.limit(cacheKeys.values(), cacheConfig.getCacheBulkMergeLimit()));
+        return cache.getBulk(cacheKeys.limit(cacheConfig.getCacheBulkMergeLimit()).map(SerializablePair::getRhs));
       } else {
-        return ImmutableMap.of();
+        return Stream.empty();
       }
     }
 
@@ -471,86 +575,91 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return cachePopulatorMap.get(StringUtils.format("%s_%s", segmentId, segmentInterval));
     }
 
-    private SortedMap<DruidServer, List<SegmentDescriptor>> groupSegmentsByServer(Set<ServerToSegment> segments)
+    private Stream<SerializablePair<DruidServer, List<SegmentDescriptor>>> groupSegmentsByServer(Stream<ServerToSegment> segments)
     {
-      final SortedMap<DruidServer, List<SegmentDescriptor>> serverSegments = Maps.newTreeMap();
-      for (ServerToSegment serverToSegment : segments) {
-        final QueryableDruidServer queryableDruidServer = serverToSegment.getServer().pick();
-
-        if (queryableDruidServer == null) {
-          log.makeAlert(
-              "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
-              serverToSegment.getSegmentDescriptor(),
-              query.getDataSource()
-          ).emit();
-        } else {
-          final DruidServer server = queryableDruidServer.getServer();
-          serverSegments.computeIfAbsent(server, s -> new ArrayList<>()).add(serverToSegment.getSegmentDescriptor());
-        }
-      }
-      return serverSegments;
+      return segments.map(
+          serverToSegment -> {
+            final QueryableDruidServer queryableDruidServer = serverToSegment.getServer().pick();
+            if (queryableDruidServer == null) {
+              log.makeAlert(
+                  "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
+                  serverToSegment.getSegmentDescriptor(),
+                  query.getDataSource()
+              ).emit();
+              return Optional.<SerializablePair<DruidServer, SegmentDescriptor>>empty();
+            } else {
+              final DruidServer server = queryableDruidServer.getServer();
+              return Optional.of(new SerializablePair<>(
+                  server,
+                  serverToSegment.getSegmentDescriptor()
+              ));
+            }
+          }
+      ).filter(
+          Optional::isPresent
+      ).map(
+          Optional::get
+      ).collect(
+          Collectors.groupingBy(
+              SerializablePair::getLhs,
+              TreeMap::new,
+              Collectors.mapping(SerializablePair::getRhs, Collectors.toList())
+          )
+      ).entrySet(
+      ).stream(
+      ).map(
+          e -> new SerializablePair<>(e.getKey(), e.getValue())
+      );
     }
 
-    private void addSequencesFromCache(
-        final List<Sequence<T>> listOfSequences,
-        final List<Pair<Interval, byte[]>> cachedResults
+    private Stream<SerializablePair<ServerToSegment, Optional<T>>> deserializeFromCache(
+        final Stream<SerializablePair<ServerToSegment, Optional<byte[]>>> cachedResults
     )
     {
       if (strategy == null) {
-        return;
+        return cachedResults.map(s -> new SerializablePair<>(s.getLhs(), Optional.empty()));
       }
-
-      final Function<Object, T> pullFromCacheFunction = strategy.pullFromSegmentLevelCache();
+      final com.google.common.base.Function<Object, T> pullFromCacheFunction = strategy.pullFromSegmentLevelCache();
       final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
-      for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
-        final byte[] cachedResult = cachedResultPair.rhs;
-        Sequence<Object> cachedSequence = new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
-            {
-              @Override
-              public Iterator<Object> make()
-              {
-                try {
-                  if (cachedResult.length == 0) {
-                    return Collections.emptyIterator();
-                  }
+      return cachedResults.map(cachedResultPair -> {
+        if (!cachedResultPair.getRhs().isPresent()) {
+          return new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty());
+        }
+        final byte[] cachedResult = cachedResultPair.getRhs().get();
+        try {
+          if (cachedResult.length == 0) {
+            return new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty());
+          }
 
-                  return objectMapper.readValues(
-                      objectMapper.getFactory().createParser(cachedResult),
-                      cacheObjectClazz
-                  );
-                }
-                catch (IOException e) {
-                  throw new RuntimeException(e);
-                }
-              }
-
-              @Override
-              public void cleanup(Iterator<Object> iterFromMake)
-              {
-              }
-            }
-        );
-        listOfSequences.add(Sequences.map(cachedSequence, pullFromCacheFunction));
-      }
+          final T obj = pullFromCacheFunction.apply(objectMapper.readValues(
+              objectMapper.getFactory().createParser(cachedResult),
+              cacheObjectClazz
+          ));
+          return new SerializablePair<>(cachedResultPair.getLhs(), Optional.ofNullable(obj));
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
     }
 
-    private void addSequencesFromServer(
-        final List<Sequence<T>> listOfSequences,
-        final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer
+    private Stream<Sequence<T>> addSequencesFromServer(
+        final Stream<SerializablePair<DruidServer, List<SegmentDescriptor>>> segmentsByServer
     )
     {
-      segmentsByServer.forEach((server, segmentsOfServer) -> {
+      return segmentsByServer.flatMap(entry -> {
+        final DruidServer server = entry.getLhs();
+        final List<SegmentDescriptor> segmentsOfServer = entry.getRhs();
         final QueryRunner serverRunner = serverView.getQueryRunner(server);
 
         if (serverRunner == null) {
           log.error("Server[%s] doesn't have a query runner", server);
-          return;
+          return Stream.empty();
         }
 
         final MultipleSpecificSegmentSpec segmentsOfServerSpec = new MultipleSpecificSegmentSpec(segmentsOfServer);
 
-        Sequence<T> serverResults;
+        final Sequence<T> serverResults;
         if (isBySegment) {
           serverResults = getBySegmentServerResults(serverRunner, segmentsOfServerSpec);
         } else if (!server.segmentReplicatable() || !populateCache) {
@@ -558,7 +667,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         } else {
           serverResults = getAndCacheServerResults(serverRunner, segmentsOfServerSpec);
         }
-        listOfSequences.add(serverResults);
+        return Stream.of(serverResults);
       });
     }
 
@@ -600,7 +709,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
               .withQuerySegmentSpec(segmentsOfServerSpec),
           responseContext
       );
-      final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
+      final com.google.common.base.Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
       return resultsBySegments
           .map(result -> {
             final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
@@ -623,7 +732,40 @@ public class CachingClusteredClient implements QuerySegmentWalker
             }
             return res;
           })
-          .flatMerge(seq -> seq, query.getResultOrdering());
+          .flatMerge(Function.identity(), query.getResultOrdering());
+    }
+  }
+
+  private static class ServerMaybeSegmentMaybeCache<T>
+  {
+    private final DruidServer server;
+    private final Optional<SegmentDescriptor> segmentDescriptor;
+    private final Optional<T> cachedValue;
+
+    public DruidServer getServer()
+    {
+      return server;
+    }
+
+    public Optional<SegmentDescriptor> getSegmentDescriptor()
+    {
+      return segmentDescriptor;
+    }
+
+    public Optional<T> getCachedValue()
+    {
+      return cachedValue;
+    }
+
+    private ServerMaybeSegmentMaybeCache(
+        DruidServer server,
+        Optional<SegmentDescriptor> segmentDescriptor,
+        Optional<T> cachedValue
+    )
+    {
+      this.server = server;
+      this.segmentDescriptor = segmentDescriptor;
+      this.cachedValue = cachedValue;
     }
   }
 

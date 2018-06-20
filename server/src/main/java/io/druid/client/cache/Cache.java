@@ -20,13 +20,17 @@
 package io.druid.client.cache;
 
 import com.google.common.base.Preconditions;
+import io.druid.collections.SerializablePair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  */
@@ -43,6 +47,17 @@ public interface Cache
    * @return
    */
   Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
+
+  /**
+   * Returns a stream of the input keys with an optional byte array if the key was found in the cache
+   *
+   * @param keys
+   * @return
+   */
+  default Stream<SerializablePair<NamedKey, Optional<byte[]>>> getBulk(Stream<NamedKey> keys)
+  {
+    return keys.map(key -> new SerializablePair<>(key, Optional.ofNullable(get(key))));
+  }
 
   void close(String namespace);
 
