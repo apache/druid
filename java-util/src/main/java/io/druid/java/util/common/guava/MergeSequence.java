@@ -19,7 +19,6 @@
 
 package io.druid.java.util.common.guava;
 
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.io.Closer;

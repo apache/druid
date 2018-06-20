@@ -22,9 +22,6 @@ package io.druid.query.datasourcemetadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -42,6 +39,7 @@ import io.druid.timeline.LogicalSegment;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -69,18 +67,11 @@ public class DataSourceQueryQueryToolChest
 
     final T max = segments.get(segments.size() - 1);
 
-    return Lists.newArrayList(
-        Iterables.filter(
-            segments,
-            new Predicate<T>()
-            {
-              @Override
-              public boolean apply(T input)
-              {
-                return max != null && input.getInterval().overlaps(max.getInterval());
-              }
-            }
-        )
+    return segments.stream(
+    ).filter(
+        segment -> max != null && segment.getInterval().overlaps(max.getInterval())
+    ).collect(
+        Collectors.toList()
     );
   }
 

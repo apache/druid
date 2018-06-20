@@ -22,7 +22,6 @@ package io.druid.client.cache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import io.druid.collections.SerializablePair;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
@@ -30,10 +29,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
 
 /**
  */
@@ -114,21 +111,6 @@ public class MapCache implements Cache
       }
     }
     return retVal;
-  }
-
-
-  @Override
-  public Stream<SerializablePair<NamedKey, byte[]>> getBulk(Stream<NamedKey> keys)
-  {
-    return keys.map(k -> {
-      final byte[] v = get(k);
-      if (v == null) {
-        return null;
-      }
-      return new SerializablePair<>(k, v);
-    }).filter(
-        Objects::nonNull
-    );
   }
 
   @Override
