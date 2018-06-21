@@ -73,7 +73,7 @@ public class Sequences
           @Override
           public void cleanup(Iterator<T> iterFromMake)
           {
-            // stream.close()  maybe??
+            stream.close();
           }
         }
     );
