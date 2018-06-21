@@ -24,7 +24,7 @@ import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.InputSplit;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.indexer.TaskState;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.Intervals;

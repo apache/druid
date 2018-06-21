@@ -247,10 +247,7 @@ public class QueryLifecycle
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
-    final Map<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery(
-        baseQuery,
-        System.currentTimeMillis()
-    );
+    final Map<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     final Sequence res = QueryPlus.wrap(baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())

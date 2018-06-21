@@ -34,6 +34,7 @@ public class TaskStatusPlus
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
   private final TaskState state;
+  private final RunnerTaskState runnerTaskState;
   private final Long duration;
   private final TaskLocation location;
   private final String dataSource;
@@ -48,6 +49,7 @@ public class TaskStatusPlus
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
       @JsonProperty("statusCode") @Nullable TaskState state,
+      @JsonProperty("runnerStatusCode") @Nullable RunnerTaskState runnerTaskState,
       @JsonProperty("duration") @Nullable Long duration,
       @JsonProperty("location") TaskLocation location,
       @JsonProperty("dataSource") @Nullable String dataSource, // nullable for backward compatibility
@@ -62,6 +64,7 @@ public class TaskStatusPlus
     this.createdTime = Preconditions.checkNotNull(createdTime, "createdTime");
     this.queueInsertionTime = Preconditions.checkNotNull(queueInsertionTime, "queueInsertionTime");
     this.state = state;
+    this.runnerTaskState = runnerTaskState;
     this.duration = duration;
     this.location = Preconditions.checkNotNull(location, "location");
     this.dataSource = dataSource;
@@ -98,6 +101,13 @@ public class TaskStatusPlus
   public TaskState getState()
   {
     return state;
+  }
+
+  @Nullable
+  @JsonProperty("runnerStatusCode")
+  public RunnerTaskState getRunnerTaskState()
+  {
+    return runnerTaskState;
   }
 
   @Nullable

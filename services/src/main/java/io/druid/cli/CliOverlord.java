@@ -95,6 +95,7 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.AuthConfig;
@@ -328,11 +329,13 @@ public class CliOverlord extends ServerRunnable
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
     private final AuthConfig authConfig;
+    private final ServerConfig serverConfig;
 
     @Inject
-    OverlordJettyServerInitializer(AuthConfig authConfig)
+    OverlordJettyServerInitializer(AuthConfig authConfig, ServerConfig serverConfig)
     {
       this.authConfig = authConfig;
+      this.serverConfig = serverConfig;
     }
 
     @Override
@@ -396,7 +399,11 @@ public class CliOverlord extends ServerRunnable
       handlerList.setHandlers(
           new Handler[]{
               JettyServerInitUtils.getJettyRequestLogHandler(),
-              JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+              JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                  root,
+                  serverConfig.getInflateBufferSize(),
+                  serverConfig.getCompressionLevel()
+              )
           }
       );
 

@@ -32,11 +32,12 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
@@ -139,6 +140,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
                     taskStatus.getStatusCode(),
+                    RunnerTaskState.NONE,
                     -1L,
                     TaskLocation.unknown(),
                     null,
@@ -154,6 +156,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                     DateTimes.EPOCH,
                     DateTimes.EPOCH,
                     TaskState.RUNNING,
+                    RunnerTaskState.RUNNING,
                     -1L,
                     TaskLocation.unknown(),
                     null,
@@ -174,6 +177,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                   DateTimes.EPOCH,
                   DateTimes.EPOCH,
                   TaskState.FAILED,
+                  RunnerTaskState.NONE,
                   -1L,
                   TaskLocation.unknown(),
                   null,

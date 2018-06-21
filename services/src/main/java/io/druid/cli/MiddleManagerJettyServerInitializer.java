@@ -27,6 +27,7 @@ import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.guice.annotations.Json;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.AuthConfig;
@@ -49,17 +50,19 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
 {
   private static Logger log = new Logger(MiddleManagerJettyServerInitializer.class);
 
-  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/status/health"
-  );
-
+  private final ServerConfig serverConfig;
   private final AuthConfig authConfig;
 
   @Inject
-  public MiddleManagerJettyServerInitializer(AuthConfig authConfig)
+  public MiddleManagerJettyServerInitializer(ServerConfig serverConfig, AuthConfig authConfig)
   {
+    this.serverConfig = serverConfig;
     this.authConfig = authConfig;
   }
+
+  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+      "/status/health"
+  );
 
   @Override
   public void initialize(Server server, Injector injector)
@@ -98,7 +101,11 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     handlerList.setHandlers(
         new Handler[]{
             JettyServerInitUtils.getJettyRequestLogHandler(),
-            JettyServerInitUtils.wrapWithDefaultGzipHandler(root),
+            JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                root,
+                serverConfig.getInflateBufferSize(),
+                serverConfig.getCompressionLevel()
+            ),
             new DefaultHandler()
         }
     );

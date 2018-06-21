@@ -24,11 +24,11 @@ import io.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public abstract class LongBufferAggregator implements BufferAggregator
+public abstract class SimpleLongBufferAggregator implements BufferAggregator
 {
-  protected final BaseLongColumnValueSelector selector;
+  final BaseLongColumnValueSelector selector;
 
-  LongBufferAggregator(BaseLongColumnValueSelector selector)
+  SimpleLongBufferAggregator(BaseLongColumnValueSelector selector)
   {
     this.selector = selector;
   }

@@ -27,7 +27,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -53,13 +53,13 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMinAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.POSITIVE_INFINITY));
+    return new FloatMinAggregator(getFloatColumnSelector(metricFactory, Float.POSITIVE_INFINITY));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatMinBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, Float.POSITIVE_INFINITY));
+    return new FloatMinBufferAggregator(getFloatColumnSelector(metricFactory, Float.POSITIVE_INFINITY));
   }
 
   @Override
@@ -80,37 +80,11 @@ public class FloatMinAggregatorFactory extends SimpleFloatAggregatorFactory
     return new FloatMinAggregatorFactory(name, name, null, macroTable);
   }
 
-
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new FloatMinAggregatorFactory(
-        fieldName,
-        fieldName,
-        expression,
-        macroTable
-    ));
+    return Collections.singletonList(new FloatMinAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
 
   @Override
   public byte[] getCacheKey()

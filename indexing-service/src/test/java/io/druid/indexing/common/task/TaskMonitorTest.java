@@ -23,10 +23,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import io.druid.client.indexing.NoopIndexingServiceClient;
 import io.druid.client.indexing.TaskStatusResponse;
 import io.druid.data.input.InputSplit;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.task.TaskMonitor.SubTaskCompleteEvent;
 import io.druid.indexing.common.task.TaskMonitor.TaskHistory;
@@ -199,6 +200,7 @@ public class TaskMonitorTest
               DateTimes.EPOCH,
               DateTimes.EPOCH,
               tasks.get(taskId),
+              RunnerTaskState.RUNNING,
               -1L,
               TaskLocation.unknown(),
               "testDataSource",

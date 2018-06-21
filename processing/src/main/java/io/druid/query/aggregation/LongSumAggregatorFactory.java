@@ -22,47 +22,27 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import io.druid.java.util.common.StringUtils;
 import io.druid.math.expr.ExprMacroTable;
-import io.druid.math.expr.Parser;
-import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 /**
  */
-public class LongSumAggregatorFactory extends AggregatorFactory
+public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
 {
-  private final String name;
-  private final String fieldName;
-  private final String expression;
-  private final ExprMacroTable macroTable;
-
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
+      @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("expression") String expression,
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkArgument(
-        fieldName == null ^ expression == null,
-        "Must have a valid, non-null fieldName or expression"
-    );
-
-    this.name = name;
-    this.fieldName = fieldName;
-    this.expression = expression;
-    this.macroTable = macroTable;
+    super(macroTable, name, fieldName, expression);
   }
 
   public LongSumAggregatorFactory(String name, String fieldName)
@@ -73,30 +53,13 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumAggregator(getLongColumnSelector(metricFactory));
+    return new LongSumAggregator(getLongColumnSelector(metricFactory, 0L));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumBufferAggregator(getLongColumnSelector(metricFactory));
-  }
-
-  private BaseLongColumnValueSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
-  {
-    return AggregatorUtil.makeColumnValueSelectorWithLongDefault(
-        metricFactory,
-        macroTable,
-        fieldName,
-        expression,
-        0L
-    );
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return LongSumAggregator.COMPARATOR;
+    return new LongSumBufferAggregator(getLongColumnSelector(metricFactory, 0L));
   }
 
   @Override
@@ -118,58 +81,9 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
-  }
-
-  @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @Override
-  public Object deserialize(Object object)
-  {
-    return object;
-  }
-
-  @Override
-  public Object finalizeComputation(Object object)
-  {
-    return object;
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
-  }
-
-  @Override
-  public List<String> requiredFields()
-  {
-    return fieldName != null
-           ? Collections.singletonList(fieldName)
-           : Parser.findRequiredBindings(Parser.parse(expression, macroTable));
+    return Collections.singletonList(new LongSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override
@@ -187,18 +101,6 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
-  {
-    return "long";
-  }
-
-  @Override
-  public int getMaxIntermediateSize()
-  {
-    return Long.BYTES;
-  }
-
-  @Override
   public String toString()
   {
     return "LongSumAggregatorFactory{" +
@@ -206,39 +108,5 @@ public class LongSumAggregatorFactory extends AggregatorFactory
            ", expression='" + expression + '\'' +
            ", name='" + name + '\'' +
            '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    LongSumAggregatorFactory that = (LongSumAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(expression, that.expression)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = fieldName != null ? fieldName.hashCode() : 0;
-    result = 31 * result + (expression != null ? expression.hashCode() : 0);
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    return result;
   }
 }

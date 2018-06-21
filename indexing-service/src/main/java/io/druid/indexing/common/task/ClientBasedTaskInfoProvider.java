@@ -24,8 +24,8 @@ import com.google.inject.Inject;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.client.indexing.TaskStatusResponse;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskStatus;
 
 public class ClientBasedTaskInfoProvider implements TaskInfoProvider
 {

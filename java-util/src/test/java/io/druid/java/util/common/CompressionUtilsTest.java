@@ -26,6 +26,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
+import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.junit.Assert;
 import org.junit.Before;
@@ -276,6 +277,20 @@ public class CompressionUtilsTest
   }
 
   @Test
+  public void testDecompressSnappy() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testDecompressSnappy");
+    final File snappyFile = new File(tmpDir, testFile.getName() + ".sz");
+    Assert.assertFalse(snappyFile.exists());
+    try (final OutputStream out = new FramedSnappyCompressorOutputStream(new FileOutputStream(snappyFile))) {
+      ByteStreams.copy(new FileInputStream(testFile), out);
+    }
+    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(snappyFile), snappyFile.getName())) {
+      assertGoodDataStream(inputStream);
+    }
+  }
+
+  @Test
   public void testDecompressZip() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder("testDecompressZip");
@@ -311,6 +326,52 @@ public class CompressionUtilsTest
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       assertGoodDataStream(inputStream);
     }
+  }
+
+  @Test
+  public void testEvilZip() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
+
+    final File evilResult = new File("/tmp/evil.txt");
+    java.nio.file.Files.deleteIfExists(evilResult.toPath());
+
+    File evilZip = new File(tmpDir, "evil.zip");
+    java.nio.file.Files.deleteIfExists(evilZip.toPath());
+    CompressionUtils.makeEvilZip(evilZip);
+
+    try {
+      CompressionUtils.unzip(evilZip, tmpDir);
+    }
+    catch (ISE ise) {
+      Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
+      Assert.assertFalse("Zip exploit triggered, /tmp/evil.txt was written.", evilResult.exists());
+      return;
+    }
+    Assert.fail("Exception was not thrown for malicious zip file");
+  }
+
+  @Test
+  public void testEvilZipInputStream() throws IOException
+  {
+    final File tmpDir = temporaryFolder.newFolder("testEvilZip");
+
+    final File evilResult = new File("/tmp/evil.txt");
+    java.nio.file.Files.deleteIfExists(evilResult.toPath());
+
+    File evilZip = new File(tmpDir, "evil.zip");
+    java.nio.file.Files.deleteIfExists(evilZip.toPath());
+    CompressionUtils.makeEvilZip(evilZip);
+
+    try {
+      CompressionUtils.unzip(new FileInputStream(evilZip), tmpDir);
+    }
+    catch (ISE ise) {
+      Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
+      Assert.assertFalse("Zip exploit triggered, /tmp/evil.txt was written.", evilResult.exists());
+      return;
+    }
+    Assert.fail("Exception was not thrown for malicious zip file");
   }
 
   @Test

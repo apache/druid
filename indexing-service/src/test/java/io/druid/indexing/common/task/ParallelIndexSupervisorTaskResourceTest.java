@@ -24,11 +24,12 @@ import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.data.input.FiniteFirehoseFactory;
 import io.druid.data.input.InputSplit;
 import io.druid.data.input.impl.StringInputRowParser;
+import io.druid.indexer.RunnerTaskState;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SurrogateAction;
@@ -623,6 +624,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
               DateTimes.EPOCH,
               DateTimes.EPOCH,
               TaskState.RUNNING,
+              RunnerTaskState.RUNNING,
               -1L,
               TaskLocation.unknown(),
               null,
@@ -723,6 +725,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
               DateTimes.EPOCH,
               DateTimes.EPOCH,
               state,
+              RunnerTaskState.NONE,
               -1L,
               TaskLocation.unknown(),
               null,

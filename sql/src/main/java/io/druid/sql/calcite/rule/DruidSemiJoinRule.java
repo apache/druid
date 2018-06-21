@@ -24,6 +24,7 @@ import com.google.common.base.Predicates;
 import io.druid.sql.calcite.planner.PlannerConfig;
 import io.druid.sql.calcite.rel.DruidRel;
 import io.druid.sql.calcite.rel.DruidSemiJoin;
+import io.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil;
@@ -115,15 +116,18 @@ public class DruidSemiJoinRule extends RelOptRule
       return;
     }
 
-    final Project rightPostProject = right.getPartialDruidQuery().getPostProject();
+    final PartialDruidQuery rightQuery = right.getPartialDruidQuery();
+    final Project rightProject = rightQuery.getSortProject() != null ?
+                                 rightQuery.getSortProject() :
+                                 rightQuery.getAggregateProject();
     int i = 0;
     for (int joinRef : joinInfo.rightSet()) {
       final int aggregateRef;
 
-      if (rightPostProject == null) {
+      if (rightProject == null) {
         aggregateRef = joinRef;
       } else {
-        final RexNode projectExp = rightPostProject.getChildExps().get(joinRef);
+        final RexNode projectExp = rightProject.getChildExps().get(joinRef);
         if (projectExp.isA(SqlKind.INPUT_REF)) {
           aggregateRef = ((RexInputRef) projectExp).getIndex();
         } else {
