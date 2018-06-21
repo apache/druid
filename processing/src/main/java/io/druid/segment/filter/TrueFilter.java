@@ -37,7 +37,7 @@ public class TrueFilter implements Filter
   @Override
   public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
-    return null;
+    return bitmapResultFactory.wrapAllTrue(Filters.allTrue(selector));
   }
 
   @Override
@@ -49,7 +49,7 @@ public class TrueFilter implements Filter
   @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
-    return false;
+    return true;
   }
 
   @Override
