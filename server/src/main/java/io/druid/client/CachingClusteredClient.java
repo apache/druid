@@ -42,6 +42,7 @@ import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.common.guava.MergeSequence;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -290,6 +291,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
       }
 
+      // This pipeline follows a few general steps:
+      // 1. Fetch cache results - Unfortunately this is an eager operation so that the non cached items can
+      // be batched per server. Cached results are assigned to a mock server ALREADY_CACHED_SERVER
+      // 2. Group the segment information by server
+      // 3. Per server (including the ALREADY_CACHED_SERVER) create the appropriate Sequence results
+      // 4. Wrap the whole thing up in a merge
       final Stream<Sequence<T>> resultStream = deserializeFromCache(
           maybeFetchCacheResults(
               queryCacheKey,
@@ -327,6 +334,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer)
       ).entrySet(
       ).stream(
+          // At this point we have the segments per server, and a special entry for the pre-cached stuff
       ).map(
           Map.Entry::getValue
       ).filter(
@@ -335,15 +343,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
           l -> l.get(0).getCachedValue().isPresent() || l.get(0).getSegmentDescriptor().isPresent()
       ).map(
           l -> {
-            final Stream<T> cachedResults = l.stream(
-            ).map(
-                ServerMaybeSegmentMaybeCache::getCachedValue
-            ).filter(
-                Optional::isPresent
-            ).map(
-                Optional::get
-            );
-
             final List<SegmentDescriptor> segmentsOfServer = l.stream(
             ).map(
                 ServerMaybeSegmentMaybeCache::getSegmentDescriptor
@@ -355,8 +354,24 @@ public class CachingClusteredClient implements QuerySegmentWalker
                 Collectors.toList()
             );
 
+            // We should only ever have cache or queries to run, not both. So if we have no segments, try caches
             if (segmentsOfServer.isEmpty()) {
-              return Sequences.simple(cachedResults);
+              // Have a special sequence for the cache results so the merge doesn't go all crazy.
+              // See io.druid.java.util.common.guava.MergeSequenceTest.testScrewsUpOnOutOfOrder for an example
+              return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(
+                  l.stream(
+                  ).map(
+                      ServerMaybeSegmentMaybeCache::getCachedValue
+                  ).filter(
+                      Optional::isPresent
+                  ).map(
+                      Optional::get
+                  ).map(
+                      Collections::singletonList
+                  ).map(
+                      Sequences::simple
+                  )
+              ));
             }
 
             final DruidServer server = l.get(0).getServer();
@@ -380,11 +395,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
             return serverResults;
           }
       );
-      final Sequence<Sequence<T>> resultSeq = Sequences.simple(resultStream);
-      return resultSeq.flatMerge(
-          Function.identity(),
-          query.getResultOrdering()
-      );
+
+      // Do the actual merge
+      return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(resultStream));
     }
 
     private Stream<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
