@@ -81,13 +81,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
+import java.util.Spliterators;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -379,7 +380,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
             return serverResults;
           }
       );
-      final Sequence<Sequence<T>> resultSeq = Sequences.simple(resultStream.parallel());
+      final Sequence<Sequence<T>> resultSeq = Sequences.simple(resultStream);
       return resultSeq.flatMerge(
           Function.identity(),
           query.getResultOrdering()
@@ -519,7 +520,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
             final ServerToSegment segment = psck.getLhs();
             final Cache.NamedKey segmentCacheKey = psck.getRhs();
             final Interval segmentQueryInterval = segment.getSegmentDescriptor().getInterval();
-            final Optional<byte[]> cachedValue = cachedValues.get(segmentCacheKey);
+            final Optional<byte[]> cachedValue = Optional.ofNullable(cachedValues.get(segmentCacheKey))
+                                                         .orElse(Optional.empty()); // Shouldn't happen in practice, but can screw up unit tests
             if (!cachedValue.isPresent()) {
               // if populating cache, add segment to list of segments to cache if it is not cached
               final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
@@ -582,23 +584,32 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (strategy == null) {
         return cachedResults.map(s -> new SerializablePair<>(s.getLhs(), Optional.empty()));
       }
-      final com.google.common.base.Function<Object, T> pullFromCacheFunction = strategy.pullFromSegmentLevelCache();
+      final Function<Object, T> pullFromCacheFunction = strategy.pullFromSegmentLevelCache()::apply;
       final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
-      return cachedResults.map(cachedResultPair -> {
+      return cachedResults.flatMap(cachedResultPair -> {
         if (!cachedResultPair.getRhs().isPresent()) {
-          return new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty());
+          return Stream.of(new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty()));
         }
         final byte[] cachedResult = cachedResultPair.getRhs().get();
         try {
           if (cachedResult.length == 0) {
-            return new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty());
+            return Stream.of(new SerializablePair<>(cachedResultPair.getLhs(), Optional.empty()));
           }
-
-          final T obj = pullFromCacheFunction.apply(objectMapper.readValues(
-              objectMapper.getFactory().createParser(cachedResult),
-              cacheObjectClazz
-          ));
-          return new SerializablePair<>(cachedResultPair.getLhs(), Optional.ofNullable(obj));
+          // Query granularity in a segment may be higher fidelity than the segment as a file, so this might have multiple results
+          return StreamSupport.stream(
+              Spliterators.spliteratorUnknownSize(
+                  objectMapper.readValues(
+                      objectMapper.getFactory().createParser(cachedResult),
+                      cacheObjectClazz
+                  ),
+                  0
+              ),
+              false
+          ).map(
+              pullFromCacheFunction
+          ).map(
+              obj -> new SerializablePair<>(cachedResultPair.getLhs(), Optional.ofNullable(obj))
+          );
         }
         catch (IOException e) {
           throw new RuntimeException(e);

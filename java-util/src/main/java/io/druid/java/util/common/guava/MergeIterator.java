@@ -40,14 +40,7 @@ public class MergeIterator<T> implements Iterator<T>
   {
     pQueue = new PriorityQueue<>(
         16,
-        new Comparator<PeekingIterator<T>>()
-        {
-          @Override
-          public int compare(PeekingIterator<T> lhs, PeekingIterator<T> rhs)
-          {
-            return comparator.compare(lhs.peek(), rhs.peek());
-          }
-        }
+        (lhs, rhs) -> comparator.compare(lhs.peek(), rhs.peek())
     );
 
     for (Iterator<T> iterator : iterators) {
