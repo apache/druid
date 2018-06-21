@@ -655,7 +655,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
               .withQuerySegmentSpec(segmentsOfServerSpec),
           responseContext
       );
-      final com.google.common.base.Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache();
+      final Function<T, Object> cacheFn = strategy.prepareForSegmentLevelCache()::apply;
       return resultsBySegments
           .map(result -> {
             final BySegmentResultValueClass<T> resultsOfSegment = result.getValue();
