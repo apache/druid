@@ -28,7 +28,7 @@ import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 
 /**
-*/
+ */
 public class MergeIterator<T> implements Iterator<T>
 {
   private final PriorityQueue<PeekingIterator<T>> pQueue;
@@ -40,7 +40,7 @@ public class MergeIterator<T> implements Iterator<T>
   {
     pQueue = new PriorityQueue<>(
         16,
-        (lhs, rhs) -> comparator.compare(lhs.peek(), rhs.peek())
+        Comparator.comparing(PeekingIterator::peek, comparator)
     );
 
     for (Iterator<T> iterator : iterators) {

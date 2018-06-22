@@ -164,10 +164,12 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     {
       private final List<DimensionSpec> dimensionSpecs =
           query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
-      private final List<String> dimOutputNames = dimensionSpecs.size() > 0
-                                                  ?
-                                                  Lists.transform(dimensionSpecs, DimensionSpec::getOutputName)
-                                                  : Collections.emptyList();
+      private final List<String> dimOutputNames = dimensionSpecs.stream(
+      ).map(
+          DimensionSpec::getOutputName
+      ).collect(
+          Collectors.toList()
+      );
 
       @Override
       public boolean isCacheable(SelectQuery query, boolean willMergeRunners)
