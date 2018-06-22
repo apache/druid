@@ -495,3 +495,10 @@ The noop filter is a filter which applies no conditions to your query.  Useful i
 ```json
 { "type" : "noop" }
 ```
+
+### True Filter
+The true filter is a filter which matches all values.  It can be used to temporarily disable other filters without removing the filter. 
+
+```json
+{ "type" : "true" }
+```
