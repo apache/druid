@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
@@ -45,13 +44,13 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
-  private final AmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public S3DataSegmentPusher(
-      AmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
       ObjectMapper jsonMapper
   )
@@ -86,10 +85,10 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
-  public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean replaceExisting)
+  public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
       throws IOException
   {
-    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment));
+    final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
 
     log.info("Copying segment[%s] to S3 at location[%s]", inSegment.getIdentifier(), s3Path);
 
@@ -108,13 +107,11 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     try {
       return S3Utils.retryS3Operation(
           () -> {
-            uploadFileIfPossible(s3Client, config.getBucket(), s3Path, zipOutFile, replaceExisting);
+            uploadFileIfPossible(config.getBucket(), s3Path, zipOutFile);
             uploadFileIfPossible(
-                s3Client,
                 config.getBucket(),
                 S3Utils.descriptorPathForSegmentPath(s3Path),
-                descriptorFile,
-                replaceExisting
+                descriptorFile
             );
 
             return outSegment;
@@ -160,26 +157,14 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     );
   }
 
-  private void uploadFileIfPossible(
-      AmazonS3 s3Client,
-      String bucket,
-      String key,
-      File file,
-      boolean replaceExisting
-  )
+  private void uploadFileIfPossible(String bucket, String key, File file)
   {
-    if (!replaceExisting && S3Utils.isObjectInBucketIgnoringPermission(s3Client, bucket, key)) {
-      log.info("Skipping push because key [%s] exists && replaceExisting == false", key);
-    } else {
-      final PutObjectRequest indexFilePutRequest = new PutObjectRequest(bucket, key, file);
+    final PutObjectRequest indexFilePutRequest = new PutObjectRequest(bucket, key, file);
 
-      if (!config.getDisableAcl()) {
-        indexFilePutRequest.setAccessControlList(
-            S3Utils.grantFullControlToBucketOwner(s3Client, bucket)
-        );
-      }
-      log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-      s3Client.putObject(indexFilePutRequest);
+    if (!config.getDisableAcl()) {
+      indexFilePutRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(s3Client, bucket));
     }
+    log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
+    s3Client.putObject(indexFilePutRequest);
   }
 }

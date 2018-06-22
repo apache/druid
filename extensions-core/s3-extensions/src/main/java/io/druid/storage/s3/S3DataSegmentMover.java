@@ -20,7 +20,6 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
@@ -49,12 +48,12 @@ public class S3DataSegmentMover implements DataSegmentMover
 {
   private static final Logger log = new Logger(S3DataSegmentMover.class);
 
-  private final AmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentMover(
-      AmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config
   )
   {
@@ -74,8 +73,11 @@ public class S3DataSegmentMover implements DataSegmentMover
       final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
       final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
 
-      final String targetS3Path = S3Utils.constructSegmentPath(targetS3BaseKey, DataSegmentPusher.getDefaultStorageDir(segment));
-      String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
+      final String targetS3Path = S3Utils.constructSegmentPath(
+          targetS3BaseKey,
+          DataSegmentPusher.getDefaultStorageDir(segment, false)
+      );
+      final String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
 
       if (targetS3Bucket.isEmpty()) {
         throw new SegmentLoadingException("Target S3 bucket is not specified");

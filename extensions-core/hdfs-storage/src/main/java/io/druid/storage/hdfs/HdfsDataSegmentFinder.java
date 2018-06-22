@@ -20,8 +20,9 @@
 package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
@@ -34,14 +35,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
 public class HdfsDataSegmentFinder implements DataSegmentFinder
 {
-
   private static final Logger log = new Logger(HdfsDataSegmentFinder.class);
 
   private final Configuration config;
@@ -58,7 +60,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
   public Set<DataSegment> findSegments(String workingDirPathStr, boolean updateDescriptor)
       throws SegmentLoadingException
   {
-    final Set<DataSegment> segments = Sets.newHashSet();
+    final Map<String, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
     final Path workingDirPath = new Path(workingDirPathStr);
     FileSystem fs;
     try {
@@ -80,15 +82,31 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
         final LocatedFileStatus locatedFileStatus = it.next();
         final Path path = locatedFileStatus.getPath();
         if (path.getName().endsWith("descriptor.json")) {
-          final Path indexZip;
+
+          // There are 3 supported path formats:
+          //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum/descriptor.json
+          //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_descriptor.json
+          //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_descriptor.json
           final String descriptorParts[] = path.getName().split("_");
-          if (descriptorParts.length == 2
-              && descriptorParts[1].equals("descriptor.json")
-              && org.apache.commons.lang.StringUtils.isNumeric(descriptorParts[0])) {
-            indexZip = new Path(path.getParent(), StringUtils.format("%s_index.zip", descriptorParts[0]));
-          } else {
-            indexZip = new Path(path.getParent(), "index.zip");
+
+          Path indexZip = new Path(path.getParent(), "index.zip");
+          if (descriptorParts.length > 1) {
+            Preconditions.checkState(descriptorParts.length <= 3 &&
+                                     org.apache.commons.lang.StringUtils.isNumeric(descriptorParts[0]) &&
+                                     "descriptor.json".equals(descriptorParts[descriptorParts.length - 1]),
+                                     "Unexpected descriptor filename format [%s]", path
+            );
+
+            indexZip = new Path(
+                path.getParent(),
+                StringUtils.format(
+                    "%s_%sindex.zip",
+                    descriptorParts[0],
+                    descriptorParts.length == 2 ? "" : descriptorParts[1] + "_"
+                )
+            );
           }
+
           if (fs.exists(indexZip)) {
             final DataSegment dataSegment = mapper.readValue(fs.open(path), DataSegment.class);
             log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
@@ -105,7 +123,12 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
                 mapper.writeValue(fs.create(path, true), dataSegment);
               }
             }
-            segments.add(dataSegment);
+
+            DataSegmentFinder.putInMapRetainingNewest(
+                timestampedSegments,
+                dataSegment,
+                locatedFileStatus.getModificationTime()
+            );
           } else {
             throw new SegmentLoadingException(
                 "index.zip didn't exist at [%s] while descripter.json exists!?",
@@ -119,7 +142,6 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
       throw new SegmentLoadingException(e, "Problems interacting with filesystem[%s].", workingDirPath);
     }
 
-    return segments;
+    return timestampedSegments.values().stream().map(x -> x.lhs).collect(Collectors.toSet());
   }
-
 }

@@ -43,6 +43,7 @@ import io.druid.java.util.common.Cacheable;
     @JsonSubTypes.Type(name = "interval", value = IntervalDimFilter.class),
     @JsonSubTypes.Type(name = "like", value = LikeDimFilter.class),
     @JsonSubTypes.Type(name = "expression", value = ExpressionDimFilter.class),
+    @JsonSubTypes.Type(name = "noop", value = NoopDimFilter.class),
     @JsonSubTypes.Type(name = "true", value = TrueDimFilter.class)
 })
 public interface DimFilter extends Cacheable

@@ -19,10 +19,6 @@
 
 package io.druid.segment.data;
 
-import io.druid.java.util.common.IAE;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
-
 import java.io.IOException;
 
 /**
@@ -30,19 +26,5 @@ import java.io.IOException;
  */
 public abstract class ColumnarMultiIntsSerializer implements ColumnarIntsSerializer
 {
-  @Override
-  public void add(Object obj) throws IOException
-  {
-    if (obj == null) {
-      addValues(null);
-    } else if (obj instanceof int[]) {
-      addValues(IntArrayList.wrap((int[]) obj));
-    } else if (obj instanceof IntList) {
-      addValues((IntList) obj);
-    } else {
-      throw new IAE("unsupported multi-value type: " + obj.getClass());
-    }
-  }
-
-  protected abstract void addValues(IntList vals) throws IOException;
+  public abstract void addValues(IndexedInts ints) throws IOException;
 }

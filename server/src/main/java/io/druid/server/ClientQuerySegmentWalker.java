@@ -116,7 +116,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     return new FluentQueryRunnerBuilder<>(toolChest)
         .create(
-            new SetAndVerifyContextQueryRunner(
+            new SetAndVerifyContextQueryRunner<>(
                 serverConfig,
                 new RetryQueryRunner<>(
                     baseClientRunner,

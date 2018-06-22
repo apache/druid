@@ -128,9 +128,10 @@ public class DatasourcesResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-      new AuthenticationResult("druid", "druid", null)
+      new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
@@ -142,9 +143,10 @@ public class DatasourcesResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).once();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
@@ -178,12 +180,13 @@ public class DatasourcesResourceTest
   @Test
   public void testSecuredGetFullQueryableDataSources()
   {
-    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
     // first request
     EasyMock.expect(server.getDataSources()).andReturn(
       ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
   ).once();
 
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         authenticationResult
@@ -200,6 +203,7 @@ public class DatasourcesResourceTest
         ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
     ).once();
 
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         authenticationResult
@@ -236,7 +240,7 @@ public class DatasourcesResourceTest
         inventoryView,
         null,
         null,
-        new AuthConfig(null, null),
+        new AuthConfig(),
         authMapper
     );
     Response response = datasourcesResource.getQueryableDataSources("full", null, request);
@@ -277,9 +281,10 @@ public class DatasourcesResourceTest
     EasyMock.expect(inventoryView.getInventory()).andReturn(
         ImmutableList.of(server)
     ).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
-        new AuthenticationResult("druid", "druid", null)
+        new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
@@ -309,7 +314,7 @@ public class DatasourcesResourceTest
   @Test
   public void testFullGetTheDataSource()
   {
-    DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap());
+    DruidDataSource dataSource1 = new DruidDataSource("datasource1", new HashMap<>());
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(
         dataSource1
     ).atLeastOnce();

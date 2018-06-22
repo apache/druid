@@ -28,13 +28,12 @@ public class IndexedComplexColumn implements ComplexColumn
   private final Indexed column;
   private final String typeName;
 
-  public IndexedComplexColumn(
-      String typeName, Indexed column
-  )
+  public IndexedComplexColumn(String typeName, Indexed column)
   {
     this.column = column;
     this.typeName = typeName;
   }
+
   @Override
   public Class<?> getClazz()
   {

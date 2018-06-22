@@ -83,7 +83,7 @@ public class IndexIOTest
     return outList;
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}, {1}")
   public static Iterable<Object[]> constructionFeeder()
   {
 

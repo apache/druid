@@ -27,7 +27,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -37,7 +37,7 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @JsonCreator
   public FloatSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
+      @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("expression") String expression,
       @JacksonInject ExprMacroTable macroTable
   )
@@ -53,13 +53,13 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
+    return new FloatSumAggregator(getFloatColumnSelector(metricFactory, 0.0f));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new FloatSumBufferAggregator(makeColumnValueSelectorWithFloatDefault(metricFactory, 0.0f));
+    return new FloatSumBufferAggregator(getFloatColumnSelector(metricFactory, 0.0f));
   }
 
   @Override
@@ -80,30 +80,10 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
     return new FloatSumAggregatorFactory(name, name, null, macroTable);
   }
 
-
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.asList(new FloatSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
-  }
-
-  @JsonProperty
-  public String getFieldName()
-  {
-    return fieldName;
-  }
-
-  @JsonProperty
-  public String getExpression()
-  {
-    return expression;
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
+    return Collections.singletonList(new FloatSumAggregatorFactory(fieldName, fieldName, expression, macroTable));
   }
 
   @Override

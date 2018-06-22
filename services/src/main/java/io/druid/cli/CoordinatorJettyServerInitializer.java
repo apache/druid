@@ -30,6 +30,7 @@ import io.druid.java.util.common.logger.Logger;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.http.OverlordProxyServlet;
 import io.druid.server.http.RedirectFilter;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.security.AuthConfig;
@@ -71,12 +72,16 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
   private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
+  private final AuthConfig authConfig;
+  private final ServerConfig serverConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties)
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, AuthConfig authConfig, ServerConfig serverConfig)
   {
     this.config = config;
     this.beOverlord = CliCoordinator.isOverlord(properties);
+    this.authConfig = authConfig;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -117,6 +122,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     // perform no-op authorization for these resources
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     if (beOverlord) {
       AuthenticationUtils.addNoopAuthorizationFilters(root, CliOverlord.UNSECURED_PATHS);
@@ -125,8 +131,9 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
-    JettyServerInitUtils.addExtensionFilters(root, injector);
+    AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
+    JettyServerInitUtils.addExtensionFilters(root, injector);
 
     // Check that requests were authorized before sending responses
     AuthenticationUtils.addPreResponseAuthorizationCheckFilter(
@@ -162,7 +169,11 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     handlerList.setHandlers(
         new Handler[]{
             JettyServerInitUtils.getJettyRequestLogHandler(),
-            JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+            JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                root,
+                serverConfig.getInflateBufferSize(),
+                serverConfig.getCompressionLevel()
+            )
         }
     );
 

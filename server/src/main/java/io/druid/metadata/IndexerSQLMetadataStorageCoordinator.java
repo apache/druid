@@ -26,8 +26,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -39,6 +39,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.logger.Logger;
@@ -61,10 +62,13 @@ import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -208,7 +212,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final String dataSource,
       final List<Interval> intervals
-  ) throws IOException
+  )
   {
     if (intervals == null || intervals.isEmpty()) {
       throw new IAE("null/empty intervals");
@@ -241,29 +245,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .bind(2 * i + 2, interval.getStart().toString());
     }
 
-    final ResultIterator<byte[]> dbSegments = sql
-        .map(ByteArrayMapper.FIRST)
-        .iterator();
-
-    final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
-        Ordering.natural()
-    );
-
-    while (dbSegments.hasNext()) {
-      final byte[] payload = dbSegments.next();
-
-      DataSegment segment = jsonMapper.readValue(
-          payload,
-          DataSegment.class
+    try (final ResultIterator<byte[]> dbSegments = sql.map(ByteArrayMapper.FIRST).iterator()) {
+      return VersionedIntervalTimeline.forSegments(
+          Iterators.transform(
+              dbSegments,
+              payload -> {
+                try {
+                  return jsonMapper.readValue(payload, DataSegment.class);
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+          )
       );
-
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-
     }
-
-    dbSegments.close();
-
-    return timeline;
   }
 
   /**
@@ -584,7 +580,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 StringUtils.format(
                     "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
                     + "VALUES (:id, :dataSource, :created_date, :start, :end, :sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
-                    dbTables.getPendingSegmentsTable(), connector.getQuoteString()
+                    dbTables.getPendingSegmentsTable(),
+                    connector.getQuoteString()
                 )
             )
                   .bind("id", newIdentifier.getIdentifierAsString())
@@ -656,7 +653,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           StringUtils.format(
               "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
               + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-              dbTables.getSegmentsTable(), connector.getQuoteString()
+              dbTables.getSegmentsTable(),
+              connector.getQuoteString()
           )
       )
             .bind("id", segment.getIdentifier())
@@ -1012,5 +1010,59 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     log.info("Found %,d segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
     return matchingSegments;
+  }
+
+  @Override
+  public List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval)
+  {
+    return connector.retryWithHandle(
+        handle -> handle.createQuery(
+            StringUtils.format(
+                "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource " +
+                    "AND start >= :start AND %2$send%2$s <= :end AND used = true",
+                dbTables.getSegmentsTable(), connector.getQuoteString()
+            )
+        )
+            .bind("dataSource", dataSource)
+            .bind("start", interval.getStart().toString())
+            .bind("end", interval.getEnd().toString())
+            .map(new ResultSetMapper<Pair<DataSegment, String>>()
+            {
+              @Override
+              public Pair<DataSegment, String> map(int index, ResultSet r, StatementContext ctx) throws SQLException
+              {
+                try {
+                  return new Pair<>(
+                      jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
+                      r.getString("created_date"));
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+            })
+            .list()
+    );
+  }
+
+  @Override
+  public boolean insertDataSourceMetadata(String dataSource, DataSourceMetadata metadata)
+  {
+    return 1 == connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format(
+                    "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) VALUES" +
+                        " (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+                    dbTables.getDataSourceTable()
+                )
+            )
+            .bind("dataSource", dataSource)
+            .bind("created_date", DateTimes.nowUtc().toString())
+            .bind("commit_metadata_payload", jsonMapper.writeValueAsBytes(metadata))
+            .bind("commit_metadata_sha1", BaseEncoding.base16().encode(
+                Hashing.sha1().hashBytes(jsonMapper.writeValueAsBytes(metadata)).asBytes()))
+            .execute()
+    );
   }
 }

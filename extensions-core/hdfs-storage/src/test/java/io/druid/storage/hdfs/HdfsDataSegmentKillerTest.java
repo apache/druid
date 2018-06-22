@@ -26,13 +26,13 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  */
@@ -129,8 +129,48 @@ public class HdfsDataSegmentKillerTest
     Path interval1Dir = new Path(dataSourceDir, "intervalNew");
     Path version11Dir = new Path(interval1Dir, "v1");
 
-    makePartitionDirWithIndexWitNewFormat(fs, version11Dir, 3);
+    Assert.assertTrue(fs.mkdirs(version11Dir));
+    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_index.zip", 3)));
+    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_descriptor.json", 3)));
+
     killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.zip").toString()));
+
+    Assert.assertFalse(fs.exists(version11Dir));
+    Assert.assertFalse(fs.exists(interval1Dir));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.exists(new Path("/tmp")));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+    Assert.assertTrue(fs.delete(dataSourceDir, false));
+  }
+
+  @Test
+  public void testKillForSegmentWithUniquePath() throws Exception
+  {
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return "/tmp";
+          }
+        }
+    );
+
+    FileSystem fs = FileSystem.get(config);
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
+
+    Path interval1Dir = new Path(dataSourceDir, "intervalNew");
+    Path version11Dir = new Path(interval1Dir, "v1");
+    String uuid = UUID.randomUUID().toString().substring(0, 5);
+
+    Assert.assertTrue(fs.mkdirs(version11Dir));
+    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_%s_index.zip", 3, uuid)));
+    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_%s_descriptor.json", 3, uuid)));
+
+    killer.kill(getSegmentWithPath(new Path(version11Dir, StringUtils.format("%s_%s_index.zip", 3, uuid)).toString()));
 
     Assert.assertFalse(fs.exists(version11Dir));
     Assert.assertFalse(fs.exists(interval1Dir));
@@ -161,22 +201,8 @@ public class HdfsDataSegmentKillerTest
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException
   {
     Assert.assertTrue(fs.mkdirs(path));
-    try (FSDataOutputStream os = fs.create(new Path(path, "index.zip")); FSDataOutputStream oos = fs.create(new Path(
-        path,
-        "descriptor.json"
-    ))) {
-    }
-  }
-
-  private void makePartitionDirWithIndexWitNewFormat(FileSystem fs, Path path, Integer partitionNumber)
-      throws IOException
-  {
-    Assert.assertTrue(fs.mkdirs(path));
-    try (FSDataOutputStream os = fs.create(new Path(
-        path,
-        StringUtils.format("%s_index.zip", partitionNumber)
-    )); FSDataOutputStream oos = fs.create(new Path(path, StringUtils.format("%s_descriptor.json", partitionNumber)))) {
-    }
+    fs.createNewFile(new Path(path, "index.zip"));
+    fs.createNewFile(new Path(path, "descriptor.json"));
   }
 
   private DataSegment getSegmentWithPath(String path)

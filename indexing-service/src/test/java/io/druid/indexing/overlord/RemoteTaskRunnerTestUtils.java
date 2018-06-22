@@ -29,7 +29,7 @@ import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.IndexingServiceCondition;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.NoopProvisioningStrategy;

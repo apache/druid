@@ -21,6 +21,7 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexing.kafka.KafkaTuningConfig;
+import io.druid.segment.indexing.TuningConfigs;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import io.druid.segment.IndexSpec;
 import org.joda.time.Duration;
@@ -40,6 +41,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
 
   public KafkaSupervisorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
+      @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
@@ -65,6 +67,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
   {
     super(
         maxRowsInMemory,
+        maxBytesInMemory,
         maxRowsPerSegment,
         intermediatePersistPeriod,
         basePersistDirectory,
@@ -131,6 +134,7 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig
     return "KafkaSupervisorTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
+           ", maxBytesInMemory=" + TuningConfigs.getMaxBytesInMemoryOrDefault(getMaxBytesInMemory()) +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +

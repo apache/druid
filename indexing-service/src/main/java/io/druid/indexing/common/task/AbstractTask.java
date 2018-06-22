@@ -25,7 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.java.util.common.DateTimes;

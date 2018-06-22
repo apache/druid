@@ -27,7 +27,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.TimeAndDimsHolder;
+import io.druid.segment.incremental.IncrementalIndexRowHolder;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -48,6 +48,12 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
     Long ret = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
     // remove null -> zero conversion when https://github.com/druid-io/druid/pull/5278 series of patches is merged
     return ret == null ? DimensionHandlerUtils.ZERO_LONG : ret;
+  }
+
+  @Override
+  public long estimateEncodedKeyComponentSize(Long key)
+  {
+    return Long.BYTES;
   }
 
   @Override
@@ -83,7 +89,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec spec,
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -92,7 +98,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(
-      TimeAndDimsHolder currEntry,
+      IncrementalIndexRowHolder currEntry,
       IncrementalIndex.DimensionDesc desc
   )
   {
@@ -169,9 +175,9 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public Long convertUnsortedEncodedKeyComponentToSortedEncodedKeyComponent(Long key)
+  public ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues)
   {
-    return key;
+    return selectorWithUnsortedValues;
   }
 
   @Override

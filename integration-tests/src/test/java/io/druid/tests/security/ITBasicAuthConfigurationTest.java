@@ -100,6 +100,11 @@ public class ITBasicAuthConfigurationTest
         httpClient
     );
 
+    final HttpClient unsecuredClient = httpClient;
+
+    // check that we are allowed to access unsecured path without credentials.
+    checkUnsecuredCoordinatorLoadQueuePath(unsecuredClient);
+
     // check that admin works
     checkNodeAccess(adminClient);
 
@@ -219,6 +224,23 @@ public class ITBasicAuthConfigurationTest
     
     LOG.info("Testing Avatica query on router with incorrect credentials.");
     testAvaticaAuthFailure(routerUrl);
+
+    LOG.info("Checking OPTIONS requests on services...");
+    testOptionsRequests(adminClient);
+  }
+
+  private void testOptionsRequests(HttpClient httpClient)
+  {
+    makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
+    makeRequest(httpClient, HttpMethod.OPTIONS, config.getIndexerUrl() + "/status", null);
+    makeRequest(httpClient, HttpMethod.OPTIONS, config.getBrokerUrl() + "/status", null);
+    makeRequest(httpClient, HttpMethod.OPTIONS, config.getHistoricalUrl() + "/status", null);
+    makeRequest(httpClient, HttpMethod.OPTIONS, config.getRouterUrl() + "/status", null);
+  }
+
+  private void checkUnsecuredCoordinatorLoadQueuePath(HttpClient client)
+  {
+    makeRequest(client, HttpMethod.GET, config.getCoordinatorUrl() + "/druid/coordinator/v1/loadqueue", null);
   }
 
   private void testAvaticaQuery(String url)

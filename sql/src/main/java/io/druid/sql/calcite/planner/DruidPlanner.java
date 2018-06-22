@@ -75,7 +75,7 @@ public class DruidPlanner implements Closeable
   private final PlannerContext plannerContext;
   private final AuthorizerMapper authorizerMapper;
 
-  DruidPlanner(
+  public DruidPlanner(
       final Planner planner,
       final PlannerContext plannerContext,
       final AuthorizerMapper authorizerMapper

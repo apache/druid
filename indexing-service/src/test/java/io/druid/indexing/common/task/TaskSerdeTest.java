@@ -30,6 +30,7 @@ import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
@@ -69,6 +70,7 @@ import java.util.List;
 public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
+  private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final IndexSpec indexSpec = new IndexSpec();
 
   @Rule
@@ -78,6 +80,7 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
@@ -108,7 +111,7 @@ public class TaskSerdeTest
     Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
-    Assert.assertEquals(75000, tuningConfig.getMaxRowsInMemory());
+    Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(null, tuningConfig.getNumShards());
     Assert.assertEquals(5000000, (int) tuningConfig.getTargetPartitionSize());
   }
@@ -195,6 +198,7 @@ public class TaskSerdeTest
                 10000,
                 10,
                 null,
+                null,
                 9999,
                 null,
                 indexSpec,
@@ -213,7 +217,8 @@ public class TaskSerdeTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -280,6 +285,7 @@ public class TaskSerdeTest
                 null,
                 null,
                 null,
+                null,
                 indexSpec,
                 3,
                 true,
@@ -296,7 +302,8 @@ public class TaskSerdeTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
@@ -537,6 +544,7 @@ public class TaskSerdeTest
 
             new RealtimeTuningConfig(
                 1,
+                null,
                 new Period("PT10M"),
                 null,
                 null,
@@ -549,6 +557,7 @@ public class TaskSerdeTest
                 0,
                 0,
                 true,
+                null,
                 null,
                 null,
                 null

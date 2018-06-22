@@ -28,9 +28,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.indexer.TaskInfo;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskLock;
-import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
@@ -39,6 +39,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.metadata.EntryExistsException;
 import io.druid.metadata.MetadataStorageActionHandler;
 import io.druid.metadata.MetadataStorageActionHandlerFactory;
@@ -46,11 +47,11 @@ import io.druid.metadata.MetadataStorageActionHandlerTypes;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
@@ -213,17 +214,26 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
-  public List<TaskStatus> getRecentlyFinishedTaskStatuses(@Nullable Integer maxTaskStatuses)
+  public List<TaskInfo<Task>> getActiveTaskInfo()
   {
     return ImmutableList.copyOf(
-        handler
-            .getInactiveStatusesSince(
-                DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold()),
-                maxTaskStatuses
-            )
-            .stream()
-            .filter(TaskStatus::isComplete)
-            .collect(Collectors.toList())
+        handler.getActiveTaskInfo()
+    );
+  }
+
+  @Override
+  public List<TaskInfo<Task>> getRecentlyFinishedTaskInfo(
+      @Nullable Integer maxTaskStatuses,
+      @Nullable Duration duration,
+      @Nullable String datasource
+  )
+  {
+    return ImmutableList.copyOf(
+        handler.getCompletedTaskInfo(
+            DateTimes.nowUtc().minus(duration == null ? config.getRecentlyFinishedThreshold() : duration),
+            maxTaskStatuses,
+            datasource
+        )
     );
   }
 
@@ -258,15 +268,15 @@ public class MetadataTaskStorage implements TaskStorage
     Preconditions.checkNotNull(newLock, "newLock");
 
     log.info(
-        "Replacing lock on interval[%s] version[%s] for task: %s",
-        oldLock.getInterval(),
-        oldLock.getVersion(),
+        "Replacing an existing lock[%s] with a new lock[%s] for task: %s",
+        oldLock,
+        newLock,
         taskid
     );
 
     final Long oldLockId = handler.getLockId(taskid, oldLock);
     if (oldLockId == null) {
-      throw new ISE("Cannot find lock[%s]", oldLock);
+      throw new ISE("Cannot find an existing lock[%s]", oldLock);
     }
 
     handler.replaceLock(taskid, oldLockId, newLock);

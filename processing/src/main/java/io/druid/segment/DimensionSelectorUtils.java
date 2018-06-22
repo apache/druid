@@ -52,7 +52,7 @@ public final class DimensionSelectorUtils
     if (idLookup != null) {
       return makeDictionaryEncodedValueMatcherGeneric(selector, idLookup.lookupId(value), value == null);
     } else if (selector.getValueCardinality() >= 0 && selector.nameLookupPossibleInAdvance()) {
-      // Employ precomputed BitSet optimization
+      // Employ caching BitSet optimization
       return makeDictionaryEncodedValueMatcherGeneric(selector, Predicates.equalTo(value));
     } else {
       return makeNonDictionaryEncodedValueMatcherGeneric(selector, value);
@@ -170,8 +170,11 @@ public final class DimensionSelectorUtils
       Predicate<String> predicate
   )
   {
-    final BitSet predicateMatchingValueIds = makePredicateMatchingSet(selector, predicate);
+    final BitSet checkedIds = new BitSet(selector.getValueCardinality());
+    final BitSet matchingIds = new BitSet(selector.getValueCardinality());
     final boolean matchNull = predicate.apply(null);
+
+    // Lazy matcher; only check an id if matches() is called.
     return new ValueMatcher()
     {
       @Override
@@ -184,7 +187,20 @@ public final class DimensionSelectorUtils
           return matchNull;
         } else {
           for (int i = 0; i < size; ++i) {
-            if (predicateMatchingValueIds.get(row.get(i))) {
+            final int id = row.get(i);
+            final boolean matches;
+
+            if (checkedIds.get(id)) {
+              matches = matchingIds.get(id);
+            } else {
+              matches = predicate.apply(selector.lookupName(id));
+              checkedIds.set(id);
+              if (matches) {
+                matchingIds.set(id);
+              }
+            }
+
+            if (matches) {
               return true;
             }
           }
@@ -270,4 +286,12 @@ public final class DimensionSelectorUtils
       return constantSelector(extractionFn.apply(value));
     }
   }
+
+  public static boolean isNilSelector(final DimensionSelector selector)
+  {
+    return selector.nameLookupPossibleInAdvance()
+           && selector.getValueCardinality() == 1
+           && selector.lookupName(0) == null;
+  }
+
 }

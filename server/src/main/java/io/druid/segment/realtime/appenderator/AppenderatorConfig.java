@@ -32,6 +32,8 @@ public interface AppenderatorConfig
 
   int getMaxRowsInMemory();
 
+  long getMaxBytesInMemory();
+
   int getMaxPendingPersists();
 
   Period getIntermediatePersistPeriod();

@@ -43,7 +43,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.tasklogs.LogUtils;
@@ -358,7 +358,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 }
                               }
 
-                              // Add dataSource and taskId for metrics or logging
+                              // Add dataSource, taskId and taskType for metrics or logging
                               command.add(
                                   StringUtils.format(
                                       "-D%s%s=%s",
@@ -373,6 +373,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                       MonitorsConfig.METRIC_DIMENSION_PREFIX,
                                       DruidMetrics.TASK_ID,
                                       task.getId()
+                                  )
+                              );
+                              command.add(
+                                  StringUtils.format(
+                                      "-D%s%s=%s",
+                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                                      DruidMetrics.TASK_TYPE,
+                                      task.getType()
                                   )
                               );
 

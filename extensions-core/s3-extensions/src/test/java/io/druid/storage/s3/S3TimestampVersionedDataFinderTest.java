@@ -19,7 +19,6 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -40,7 +39,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     S3ObjectSummary object0 = new S3ObjectSummary(), object1 = new S3ObjectSummary();
 
@@ -82,7 +81,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     final ListObjectsV2Result result = new ListObjectsV2Result();
     result.setKeyCount(0);
@@ -110,7 +109,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     S3ObjectSummary object0 = new S3ObjectSummary();
 
@@ -147,7 +146,7 @@ public class S3TimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    AmazonS3Client s3Client = EasyMock.createStrictMock(AmazonS3Client.class);
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
 
     S3ObjectSummary object0 = new S3ObjectSummary();
 
@@ -165,9 +164,7 @@ public class S3TimestampVersionedDataFinderTest
             .once();
     S3TimestampVersionedDataFinder finder = new S3TimestampVersionedDataFinder(s3Client);
 
-
     EasyMock.replay(s3Client);
-
 
     URI latest = finder.getLatestVersion(URI.create(StringUtils.format("s3://%s/%s", bucket, object0.getKey())), null);
 

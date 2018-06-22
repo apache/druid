@@ -19,8 +19,6 @@
 
 package io.druid.segment.data;
 
-import io.druid.java.util.common.IAE;
-
 import java.io.IOException;
 
 /**
@@ -28,24 +26,5 @@ import java.io.IOException;
  */
 public abstract class SingleValueColumnarIntsSerializer implements ColumnarIntsSerializer
 {
-  @Override
-  public void add(Object obj) throws IOException
-  {
-    if (obj == null) {
-      addValue(0);
-    } else if (obj instanceof Integer) {
-      addValue(((Number) obj).intValue());
-    } else if (obj instanceof int[]) {
-      int[] vals = (int[]) obj;
-      if (vals.length == 0) {
-        addValue(0);
-      } else {
-        addValue(vals[0]);
-      }
-    } else {
-      throw new IAE("Unsupported single value type: " + obj.getClass());
-    }
-  }
-
-  protected abstract void addValue(int val) throws IOException;
+  public abstract void addValue(int val) throws IOException;
 }

@@ -44,11 +44,12 @@ import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskReport;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.JodaUtils;
@@ -424,11 +425,11 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     Map<String, Object> totalsMap = Maps.newHashMap();
 
     if (determinePartitionsStatsGetter != null) {
-      totalsMap.put("determinePartitions", determinePartitionsStatsGetter.getTotalMetrics());
+      totalsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsStatsGetter.getTotalMetrics());
     }
 
     if (buildSegmentsStatsGetter != null) {
-      totalsMap.put("buildSegments", buildSegmentsStatsGetter.getTotalMetrics());
+      totalsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsStatsGetter.getTotalMetrics());
     }
 
     returnMap.put("totals", totalsMap);
@@ -455,13 +456,13 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     Map<String, Object> metrics = Maps.newHashMap();
     if (determineConfigStatus != null) {
       metrics.put(
-          "determinePartitions",
+          RowIngestionMeters.DETERMINE_PARTITIONS,
           determineConfigStatus.getMetrics()
       );
     }
     if (buildSegmentsStatus != null) {
       metrics.put(
-          "buildSegments",
+          RowIngestionMeters.BUILD_SEGMENTS,
           buildSegmentsStatus.getMetrics()
       );
     }

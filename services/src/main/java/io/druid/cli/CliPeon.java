@@ -62,12 +62,14 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
-import io.druid.indexing.overlord.ThreadPoolTaskRunner;
+import io.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.java.util.common.lifecycle.Lifecycle;
@@ -161,6 +163,19 @@ public class CliPeon extends GuiceRunnable
 
             PolyBind.createChoice(
                 binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                 .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+
+            PolyBind.createChoice(
+                binder,
                 "druid.indexer.task.chathandler.type",
                 Key.get(ChatHandlerProvider.class),
                 Key.get(ServiceAnnouncingChatHandlerProvider.class)
@@ -207,9 +222,9 @@ public class CliPeon extends GuiceRunnable
                 )
             );
 
-            binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
-            binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
+            binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);
+            binder.bind(SingleTaskBackgroundRunner.class).in(ManageLifecycle.class);
 
             JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
             binder.install(new CacheModule());

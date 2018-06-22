@@ -22,12 +22,11 @@ package io.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import io.druid.discovery.DruidLeaderClient;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexing.common.SegmentLoaderFactory;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.TestUtils;
@@ -38,18 +37,15 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.NoopTestTaskFileWriter;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.Tasks;
-import io.druid.indexing.overlord.ThreadPoolTaskRunner;
+import io.druid.indexing.overlord.TestTaskRunner;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
-import io.druid.server.DruidNode;
 import io.druid.server.coordination.ChangeRequestHistory;
 import io.druid.server.coordination.ChangeRequestsSnapshot;
-import io.druid.server.initialization.ServerConfig;
-import io.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -57,14 +53,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 
 /**
  */
 public class WorkerTaskManagerTest
 {
-  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, true, false);
-
+  private final TaskLocation location = TaskLocation.create("localhost", 1, 2);
   private final ObjectMapper jsonMapper;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
@@ -98,26 +94,33 @@ public class WorkerTaskManagerTest
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
 
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Collections.emptyList();
+      }
+    };
+
     return new WorkerTaskManager(
         jsonMapper,
-        new ThreadPoolTaskRunner(
+        new TestTaskRunner(
             new TaskToolboxFactory(
                 taskConfig,
                 taskActionClientFactory,
-                null, null, null, null, null, null, null, notifierFactory, null, null, null, new SegmentLoaderFactory(
-                new SegmentLoaderLocalCacheManager(
-                    null,
-                    new SegmentLoaderConfig()
-                    {
-                      @Override
-                      public List<StorageLocationConfig> getLocations()
-                      {
-                        return Lists.newArrayList();
-                      }
-                    },
-                    jsonMapper
-                )
-            ),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                notifierFactory,
+                null,
+                null,
+                null,
+                new SegmentLoaderFactory(new SegmentLoaderLocalCacheManager(null, loaderConfig, jsonMapper)),
                 jsonMapper,
                 indexIO,
                 null,
@@ -130,9 +133,7 @@ public class WorkerTaskManagerTest
                 new NoopTestTaskFileWriter()
             ),
             taskConfig,
-            new NoopServiceEmitter(),
-            DUMMY_NODE,
-            new ServerConfig()
+            location
         ),
         taskConfig,
         EasyMock.createNiceMock(DruidLeaderClient.class)
@@ -181,7 +182,7 @@ public class WorkerTaskManagerTest
         TaskAnnouncement.create(
             task2,
             TaskStatus.success(task2.getId()),
-            TaskLocation.create("localhost", 1, 2)
+            location
         )
     );
 
@@ -196,11 +197,9 @@ public class WorkerTaskManagerTest
     Assert.assertTrue(new File(workerTaskManager.getCompletedTaskDir(), task1.getId()).exists());
     Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDir(), task1.getId()).exists());
 
-    ChangeRequestsSnapshot<WorkerHistoryItem> baseHistory = workerTaskManager.getChangesSince(
-        new ChangeRequestHistory.Counter(
-            -1,
-            0
-        )).get();
+    ChangeRequestsSnapshot<WorkerHistoryItem> baseHistory = workerTaskManager
+        .getChangesSince(new ChangeRequestHistory.Counter(-1, 0))
+        .get();
 
     Assert.assertFalse(baseHistory.isResetCounter());
     Assert.assertEquals(3, baseHistory.getRequests().size());

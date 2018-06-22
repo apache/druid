@@ -32,7 +32,6 @@ import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.CompressionStrategy;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -112,13 +111,13 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(@Nullable Object obj) throws IOException
+  public void serialize(ColumnValueSelector selector) throws IOException
   {
-    if (obj == null) {
+    if (selector.isNull()) {
       nullRowsBitmap.add(rowCount);
       writer.add(0L);
     } else {
-      writer.add(((Number) obj).longValue());
+      writer.add(selector.getLong());
     }
     rowCount++;
   }

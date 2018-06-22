@@ -82,4 +82,9 @@ public class GoogleStorage
   {
     return storage.objects().get(bucket, path).execute().getEtag();
   }
+
+  public Storage.Objects.List list(final String bucket) throws IOException
+  {
+    return storage.objects().list(bucket);
+  }
 }

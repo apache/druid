@@ -6,32 +6,58 @@ layout: doc_page
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
-|`druid.auth.authenticationChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
+|`druid.auth.authenticatorChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
 |`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
+|`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
+|`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add endpoints).|false|no|
 
 ## Enabling Authentication/Authorization
 
-## Authentication Chain
-Authentication decisions are handled by a chain of Authenticator instances. A request will be checked by Authenticators in the sequence defined by the `druid.auth.authenticationChain`.
+## Authenticator Chain
+Authentication decisions are handled by a chain of Authenticator instances. A request will be checked by Authenticators in the sequence defined by the `druid.auth.authenticatorChain`.
 
 Authenticator implementions are provided by extensions.
 
 For example, the following authentication chain definition enables the Kerberos and HTTP Basic authenticators, from the `druid-kerberos` and `druid-basic-security` core extensions, respectively:
 
 ```
-druid.auth.authenticationChain=["kerberos", "basic"]
+druid.auth.authenticatorChain=["kerberos", "basic"]
 ```
 
 A request will pass through all Authenticators in the chain, until one of the Authenticators successfully authenticates the request or sends an HTTP error response. Authenticators later in the chain will be skipped after the first successful authentication or if the request is terminated with an error response.
 
 If no Authenticator in the chain successfully authenticated a request or sent an HTTP error response, an HTTP error response will be sent at the end of the chain.
 
-Druid includes a built-in Authenticator, used for the default unsecured configuration.
+Druid includes two built-in Authenticators, one of which is used for the default unsecured configuration.
 
 ### AllowAll Authenticator
 
 This built-in Authenticator authenticates all requests, and always directs them to an Authorizer named "allowAll". It is not intended to be used for anything other than the default unsecured configuration.
+
+### Anonymous Authenticator
+
+This built-in Authenticator authenticates all requests, and directs them to an Authorizer specified in the configuration by the user. It is intended to be used for adding a default level of access so 
+the Anonymous Authenticator should be added to the end of the authentication chain. A request that reaches the Anonymous Authenticator at the end of the chain will succeed or fail depending on how the Authorizer linked to the Anonymous Authenticator is configured.
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|`druid.auth.authenticator.<authenticatorName>.authorizerName`|Authorizer that requests should be directed to.|N/A|Yes|
+|`druid.auth.authenticator.<authenticatorName>.identity`|The identity of the requester.|defaultUser|No|
+
+To use the Anonymous Authenticator, add an authenticator with type `anonymous` to the authenticatorChain.
+
+For example, the following enables the Anonymous Authenticator with the `druid-basic-security` extension:
+
+```
+druid.auth.authenticatorChain=["basic", "anonymous"]
+
+druid.auth.authenticator.anonymous.type=anonymous
+druid.auth.authenticator.anonymous.identity=defaultUser
+druid.auth.authenticator.anonymous.authorizerName=myBasicAuthorizer
+
+# ... usual configs for basic authentication would go here ...
+```
 
 ## Escalator
 The `druid.escalator.type` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a broker node communicates with historical nodes for query processing).

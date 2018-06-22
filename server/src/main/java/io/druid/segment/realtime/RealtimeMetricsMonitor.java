@@ -33,6 +33,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * RealtimeMetricsMonitor is only used by RealtimeIndexTask, this monitor only supports FireDepartmentMetrics.
+ * New ingestion task types should support RowIngestionMeters and use TaskRealtimeMetricsMonitor instead.
+ * Please see the comment on RowIngestionMeters for more information regarding the relationship between
+ * RowIngestionMeters and FireDepartmentMetrics.
  */
 public class RealtimeMetricsMonitor extends AbstractMonitor
 {
@@ -80,6 +84,12 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
         log.error("[%,d] Unparseable events! Turn on debug logging to see exception stack trace.", unparseable);
       }
       emitter.emit(builder.build("ingest/events/unparseable", unparseable));
+      final long dedup = metrics.dedup() - previous.dedup();
+      if (dedup > 0) {
+        log.warn("[%,d] duplicate events!", dedup);
+      }
+      emitter.emit(builder.build("ingest/events/duplicate", dedup));
+
       emitter.emit(builder.build("ingest/events/processed", metrics.processed() - previous.processed()));
       emitter.emit(builder.build("ingest/rows/output", metrics.rowOutput() - previous.rowOutput()));
       emitter.emit(builder.build("ingest/persists/count", metrics.numPersists() - previous.numPersists()));

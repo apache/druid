@@ -42,6 +42,9 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |--------|-----------|-------|
 |`druid.zk.paths.base`|Base Zookeeper path.|`/druid`|
 |`druid.zk.service.host`|The ZooKeeper hosts to connect to. This is a REQUIRED property and therefore a host address must be supplied.|none|
+|`druid.zk.service.user`|The username to authenticate with ZooKeeper. This is an optional property.|none|
+|`druid.zk.service.pwd`|The [Password Provider](../operations/password-provider.html) or the string password to authenticate with ZooKeeper. This is an optional property.|none|
+|`druid.zk.service.authScheme`|digest is the only authentication scheme supported. |digest|
 
 #### Zookeeper Behavior
 
@@ -346,7 +349,7 @@ You can enable caching of results at the broker, historical, or realtime level u
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
+|`druid.cache.type`|`local`, `memcached`, `hybrid`, `caffeine`|The type of cache to use for queries.|`caffeine`|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.unCacheable</code>|All druid query types|All query types to not cache.|["groupBy", "select"]|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|true, false|Whether to use cache for getting query results.|false|
 |<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|true, false|Whether to populate cache.|false|

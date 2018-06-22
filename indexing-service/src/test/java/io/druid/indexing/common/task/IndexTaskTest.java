@@ -36,14 +36,13 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.indexer.TaskMetricsUtils;
 import io.druid.indexer.TaskState;
 import io.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskReport;
 import io.druid.indexing.common.TaskReportFileWriter;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LockAcquireAction;
@@ -53,6 +52,8 @@ import io.druid.indexing.common.actions.SegmentAllocateAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.stats.RowIngestionMeters;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import io.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import io.druid.indexing.overlord.SegmentPublishResult;
@@ -72,6 +73,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
@@ -136,6 +138,7 @@ public class IndexTaskTest
   private IndexIO indexIO;
   private volatile int segmentAllocatePartitionCounter;
   private File reportsFile;
+  private RowIngestionMetersFactory rowIngestionMetersFactory;
 
   public IndexTaskTest()
   {
@@ -143,6 +146,7 @@ public class IndexTaskTest
     jsonMapper = testUtils.getTestObjectMapper();
     indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
+    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
   }
 
   @Before
@@ -152,7 +156,7 @@ public class IndexTaskTest
   }
 
   @After
-  public void teardown() throws IOException
+  public void teardown()
   {
     reportsFile.delete();
   }
@@ -182,7 +186,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -227,7 +232,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
@@ -278,7 +284,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
@@ -321,7 +328,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     List<DataSegment> segments = runTask(indexTask).rhs;
@@ -357,7 +365,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -389,7 +398,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -427,7 +437,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
@@ -476,7 +487,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -538,7 +550,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -589,7 +602,8 @@ public class IndexTaskTest
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -630,12 +644,13 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfig(2, 2, 2L, null, false, false, true),
+            createTuningConfig(2, 2, null, 2L, null, false, false, true),
             false
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -674,12 +689,13 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, 2L, null, false, true, true),
+            createTuningConfig(3, 2, null, 2L, null, false, true, true),
             false
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -717,12 +733,13 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, 2L, null, false, false, true),
+            createTuningConfig(3, 2, null, 2L, null, false, false, true),
             false
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -789,7 +806,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, false, false, false), // ignore parse exception,
+        createTuningConfig(2, null, null, null, null, false, false, false), // ignore parse exception,
         false
     );
 
@@ -799,7 +816,8 @@ public class IndexTaskTest
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -841,7 +859,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, false, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, false, false, true), // report parse exception
         false
     );
 
@@ -851,7 +869,8 @@ public class IndexTaskTest
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -859,9 +878,9 @@ public class IndexTaskTest
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList("Unparseable timestamp found! Event: {time=unparseable, d=a, val=1}")
     );
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
@@ -889,6 +908,7 @@ public class IndexTaskTest
 
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         2,
+        null,
         null,
         null,
         null,
@@ -938,7 +958,8 @@ public class IndexTaskTest
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -948,32 +969,33 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-            TaskMetricsUtils.ROWS_PROCESSED, 4,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 4,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 1
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 4,
+            RowIngestionMeters.UNPARSEABLE, 4,
+            RowIngestionMeters.THROWN_AWAY, 1
         ),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 3,
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 4,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 1
+
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.UNPARSEABLE, 4,
+            RowIngestionMeters.THROWN_AWAY, 1
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
             "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unable to parse row [this is not JSON]",
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
@@ -1011,6 +1033,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         indexSpec,
         null,
         true,
@@ -1058,7 +1081,8 @@ public class IndexTaskTest
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1068,21 +1092,28 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "buildSegments",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 2
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.UNPARSEABLE, 0,
+            RowIngestionMeters.THROWN_AWAY, 0
+        ),
+        RowIngestionMeters.BUILD_SEGMENTS,
+        ImmutableMap.of(
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.UNPARSEABLE, 3,
+            RowIngestionMeters.THROWN_AWAY, 2
         )
     );
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
@@ -1116,6 +1147,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         indexSpec,
         null,
         true,
@@ -1163,7 +1195,8 @@ public class IndexTaskTest
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1173,25 +1206,32 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
-            TaskMetricsUtils.ROWS_PROCESSED_WITH_ERRORS, 0,
-            TaskMetricsUtils.ROWS_PROCESSED, 1,
-            TaskMetricsUtils.ROWS_UNPARSEABLE, 3,
-            TaskMetricsUtils.ROWS_THROWN_AWAY, 2
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.UNPARSEABLE, 3,
+            RowIngestionMeters.THROWN_AWAY, 2
+        ),
+        RowIngestionMeters.BUILD_SEGMENTS,
+        ImmutableMap.of(
+            RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
+            RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.UNPARSEABLE, 0,
+            RowIngestionMeters.THROWN_AWAY, 0
         )
     );
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         Arrays.asList(
             "Unparseable timestamp found! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
             "Unparseable timestamp found! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
             "Unparseable timestamp found! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
         ),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         new ArrayList<>()
     );
 
@@ -1244,7 +1284,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, 1, null, null, false, true, true), // report parse exception
+        createTuningConfig(2, 1, null, null, null, false, true, true), // report parse exception
         false
     );
 
@@ -1254,7 +1294,8 @@ public class IndexTaskTest
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1313,7 +1354,7 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, false, false, true), // report parse exception
+        createTuningConfig(2, null, null, null, null, false, false, true), // report parse exception
         false
     );
 
@@ -1323,7 +1364,8 @@ public class IndexTaskTest
         parseExceptionIgnoreSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null
+        null,
+        rowIngestionMetersFactory
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1334,9 +1376,9 @@ public class IndexTaskTest
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
     Map<String, Object> expectedUnparseables = ImmutableMap.of(
-        "determinePartitions",
+        RowIngestionMeters.DETERMINE_PARTITIONS,
         new ArrayList<>(),
-        "buildSegments",
+        RowIngestionMeters.BUILD_SEGMENTS,
         Arrays.asList("Unparseable timestamp found! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}")
     );
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
@@ -1424,7 +1466,7 @@ public class IndexTaskTest
       }
 
       @Override
-      public DataSegment push(File file, DataSegment segment, boolean replaceExisting)
+      public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
       {
         segments.add(segment);
         return segment;
@@ -1437,12 +1479,27 @@ public class IndexTaskTest
       }
     };
 
+    final DataSegmentKiller killer = new DataSegmentKiller()
+    {
+      @Override
+      public void kill(DataSegment segment)
+      {
+
+      }
+
+      @Override
+      public void killAll()
+      {
+
+      }
+    };
+
     final TaskToolbox box = new TaskToolbox(
         null,
         actionClient,
         null,
         pusher,
-        null,
+        killer,
         null,
         null,
         null,
@@ -1537,6 +1594,7 @@ public class IndexTaskTest
         targetPartitionSize,
         1,
         null,
+        null,
         numShards,
         forceExtendableShardSpecs,
         forceGuaranteedRollup,
@@ -1547,6 +1605,7 @@ public class IndexTaskTest
   private static IndexTuningConfig createTuningConfig(
       Integer targetPartitionSize,
       Integer maxRowsInMemory,
+      Long maxBytesInMemory,
       Long maxTotalRows,
       Integer numShards,
       boolean forceExtendableShardSpecs,
@@ -1557,6 +1616,7 @@ public class IndexTaskTest
     return new IndexTask.IndexTuningConfig(
         targetPartitionSize,
         maxRowsInMemory,
+        maxBytesInMemory,
         maxTotalRows,
         null,
         numShards,

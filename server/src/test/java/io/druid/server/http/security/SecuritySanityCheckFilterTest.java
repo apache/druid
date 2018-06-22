@@ -41,6 +41,7 @@ public class SecuritySanityCheckFilterTest
     FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
 
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(null).once();
     filterChain.doFilter(req, resp);
     EasyMock.expectLastCall().once();
@@ -58,9 +59,12 @@ public class SecuritySanityCheckFilterTest
     FilterChain filterChain = EasyMock.createStrictMock(FilterChain.class);
     ServletOutputStream outputStream = EasyMock.createNiceMock(ServletOutputStream.class);
 
-    AuthenticationResult authenticationResult = new AuthenticationResult("does-not-belong", "does-not-belong", null);
+    AuthenticationResult authenticationResult = new AuthenticationResult("does-not-belong", "does-not-belong",
+                                                                         null,
+                                                                         null);
 
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(true).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(authenticationResult).once();
     EasyMock.expect(resp.getOutputStream()).andReturn(outputStream).once();
     resp.setStatus(403);

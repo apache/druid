@@ -58,32 +58,13 @@ public class FloatsColumn implements GenericColumn
   @Override
   public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
   {
-    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory()
-                                                                        .makeEmptyImmutableBitmap());
-  }
-
-  @Override
-  public float getFloatSingleValueRow(int rowNum)
-  {
-    return column.get(rowNum);
+    return column.makeColumnValueSelector(offset, IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap());
   }
 
   @Override
   public long getLongSingleValueRow(int rowNum)
   {
     return (long) column.get(rowNum);
-  }
-
-  @Override
-  public double getDoubleSingleValueRow(int rowNum)
-  {
-    return (double) column.get(rowNum);
-  }
-
-  @Override
-  public boolean isNull(int rowNum)
-  {
-    return false;
   }
 
   @Override

@@ -32,8 +32,10 @@ import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -138,6 +140,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private KafkaIndexTaskClient taskClient;
   private TaskQueue taskQueue;
   private String topic;
+  private RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private static String getTopic()
   {
@@ -185,6 +188,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     tuningConfig = new KafkaSupervisorTuningConfig(
         1000,
+        null,
         50000,
         new Period("P1Y"),
         new File("/test"),
@@ -208,6 +212,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     topic = getTopic();
+    rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
   }
 
   @After
@@ -1981,8 +1986,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
             taskClientFactory,
             objectMapper,
             new NoopServiceEmitter(),
-            new DruidMonitorSchedulerConfig()
-        )
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory
+        ),
+        rowIngestionMetersFactory
     );
   }
 
@@ -2049,7 +2056,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         ),
         ImmutableMap.<String, Object>of(),
         null,
-        null
+        null,
+        rowIngestionMetersFactory
     );
   }
 
@@ -2084,7 +2092,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     {
       return dataSource;
     }
- 
+
   }
 
   private static class TestableKafkaSupervisor extends KafkaSupervisor
@@ -2095,10 +2103,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
         IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
         KafkaIndexTaskClientFactory taskClientFactory,
         ObjectMapper mapper,
-        KafkaSupervisorSpec spec
+        KafkaSupervisorSpec spec,
+        RowIngestionMetersFactory rowIngestionMetersFactory
     )
     {
-      super(taskStorage, taskMaster, indexerMetadataStorageCoordinator, taskClientFactory, mapper, spec);
+      super(
+          taskStorage,
+          taskMaster,
+          indexerMetadataStorageCoordinator,
+          taskClientFactory,
+          mapper,
+          spec,
+          rowIngestionMetersFactory
+      );
     }
 
     @Override

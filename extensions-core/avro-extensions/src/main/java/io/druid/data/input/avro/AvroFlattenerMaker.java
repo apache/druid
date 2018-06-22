@@ -44,7 +44,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       Configuration.builder()
                    .jsonProvider(new GenericAvroJsonProvider())
                    .mappingProvider(new GenericAvroMappingProvider())
-                   .options(EnumSet.noneOf(Option.class))
+                   .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
   private static final EnumSet<Schema.Type> ROOT_TYPES = EnumSet.of(

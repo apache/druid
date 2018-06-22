@@ -20,24 +20,24 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-
 import io.druid.guice.LocalDataStorageDruidModule;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
 public class LocalDataSegmentFinder implements DataSegmentFinder
 {
-
   private static final Logger log = new Logger(LocalDataSegmentFinder.class);
 
   private final ObjectMapper mapper;
@@ -49,25 +49,26 @@ public class LocalDataSegmentFinder implements DataSegmentFinder
   }
 
   @Override
-  public Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor)
-      throws SegmentLoadingException
+  public Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor) throws SegmentLoadingException
   {
+    final Map<String, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
 
-    final Set<DataSegment> segments = Sets.newHashSet();
     final File workingDir = new File(workingDirPath);
     if (!workingDir.isDirectory()) {
       throw new SegmentLoadingException("Working directory [%s] didn't exist !?", workingDir);
     }
-    recursiveSearchSegments(segments, workingDir, updateDescriptor);
-    return segments;
+    recursiveSearchSegments(timestampedSegments, workingDir, updateDescriptor);
+
+    return timestampedSegments.values().stream().map(x -> x.lhs).collect(Collectors.toSet());
   }
 
-  private void recursiveSearchSegments(Set<DataSegment> segments, File workingDir, boolean updateDescriptor)
-      throws SegmentLoadingException
+  private void recursiveSearchSegments(
+      Map<String, Pair<DataSegment, Long>> timestampedSegments, File workingDir, boolean updateDescriptor
+  ) throws SegmentLoadingException
   {
     for (File file : workingDir.listFiles()) {
       if (file.isDirectory()) {
-        recursiveSearchSegments(segments, file, updateDescriptor);
+        recursiveSearchSegments(timestampedSegments, file, updateDescriptor);
       } else if (file.getName().equals("descriptor.json")) {
         final File indexZip = new File(file.getParentFile(), "index.zip");
         if (indexZip.exists()) {
@@ -88,7 +89,8 @@ public class LocalDataSegmentFinder implements DataSegmentFinder
                 FileUtils.writeStringToFile(file, mapper.writeValueAsString(dataSegment));
               }
             }
-            segments.add(dataSegment);
+
+            DataSegmentFinder.putInMapRetainingNewest(timestampedSegments, dataSegment, indexZip.lastModified());
           }
           catch (IOException e) {
             throw new SegmentLoadingException(

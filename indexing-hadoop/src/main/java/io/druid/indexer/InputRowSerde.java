@@ -306,14 +306,7 @@ public class InputRowSerde
       }
 
       //writing all metrics
-      Supplier<InputRow> supplier = new Supplier<InputRow>()
-      {
-        @Override
-        public InputRow get()
-        {
-          return row;
-        }
-      };
+      Supplier<InputRow> supplier = () -> row;
       WritableUtils.writeVInt(out, aggs.length);
       for (AggregatorFactory aggFactory : aggs) {
         String k = aggFactory.getName();

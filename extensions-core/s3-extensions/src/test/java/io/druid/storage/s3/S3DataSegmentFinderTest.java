@@ -22,6 +22,7 @@ package io.druid.storage.s3;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -35,10 +36,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
+import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.TestHelper;
@@ -61,6 +61,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -114,7 +115,7 @@ public class S3DataSegmentFinderTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  MockAmazonS3Client mockS3Client;
+  ServerSideEncryptingAmazonS3 mockS3Client;
   S3DataSegmentPusherConfig config;
 
   private String bucket;
@@ -216,31 +217,51 @@ public class S3DataSegmentFinderTest
     final String serializedSegment4_0 = mapper.writeValueAsString(updatedSegment4_0);
     final String serializedSegment4_1 = mapper.writeValueAsString(updatedSegment4_1);
 
-    Assert.assertNotEquals(serializedSegment1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getObjectContent()));
-    Assert.assertNotEquals(serializedSegment2,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getObjectContent()));
-    Assert.assertNotEquals(serializedSegment3,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getObjectContent()));
-    Assert.assertNotEquals(serializedSegment4_0,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getObjectContent()));
-    Assert.assertNotEquals(serializedSegment4_1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getObjectContent()));
+    Assert.assertNotEquals(
+        serializedSegment1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getObjectContent())
+    );
+    Assert.assertNotEquals(
+        serializedSegment2,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getObjectContent())
+    );
+    Assert.assertNotEquals(
+        serializedSegment3,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getObjectContent())
+    );
+    Assert.assertNotEquals(
+        serializedSegment4_0,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getObjectContent())
+    );
+    Assert.assertNotEquals(
+        serializedSegment4_1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getObjectContent())
+    );
 
     final Set<DataSegment> segments2 = s3DataSegmentFinder.findSegments("", true);
 
     Assert.assertEquals(segments, segments2);
 
-    Assert.assertEquals(serializedSegment1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getObjectContent()));
-    Assert.assertEquals(serializedSegment2,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getObjectContent()));
-    Assert.assertEquals(serializedSegment3,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getObjectContent()));
-    Assert.assertEquals(serializedSegment4_0,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getObjectContent()));
-    Assert.assertEquals(serializedSegment4_1,
-                           IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getObjectContent()));
+    Assert.assertEquals(
+        serializedSegment1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor1).getObjectContent())
+    );
+    Assert.assertEquals(
+        serializedSegment2,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor2).getObjectContent())
+    );
+    Assert.assertEquals(
+        serializedSegment3,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor3).getObjectContent())
+    );
+    Assert.assertEquals(
+        serializedSegment4_0,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_0).getObjectContent())
+    );
+    Assert.assertEquals(
+        serializedSegment4_1,
+        IOUtils.toString(mockS3Client.getObject(bucket, descriptor4_1).getObjectContent())
+    );
   }
 
   @Test(expected = SegmentLoadingException.class)
@@ -274,9 +295,7 @@ public class S3DataSegmentFinderTest
   public void testFindSegmentsUpdateLoadSpec() throws Exception
   {
     config.setBucket("amazing");
-    final DataSegment segmentMissingLoadSpec = DataSegment.builder(SEGMENT_1)
-        .loadSpec(ImmutableMap.of())
-        .build();
+    final DataSegment segmentMissingLoadSpec = DataSegment.builder(SEGMENT_1).loadSpec(ImmutableMap.of()).build();
     final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
     final String segmentPath = baseKey + "/interval_missing_load_spec/v1/1/";
     final String descriptorPath = S3Utils.descriptorPathForSegmentPath(segmentPath);
@@ -297,28 +316,58 @@ public class S3DataSegmentFinderTest
     Assert.assertEquals(indexPath, testLoadSpec.get("key"));
   }
 
+  @Test
+  public void testPreferNewestSegment() throws Exception
+  {
+    baseKey = "replicaDataSource";
+
+    config = new S3DataSegmentPusherConfig();
+    config.setBucket(bucket);
+    config.setBaseKey(baseKey);
+
+    descriptor1 = S3Utils.descriptorPathForSegmentPath(baseKey + "/interval10/v1/0/older/");
+    descriptor2 = S3Utils.descriptorPathForSegmentPath(baseKey + "/interval10/v1/0/newer/");
+
+    indexZip1 = S3Utils.indexZipForSegmentPath(descriptor1);
+    indexZip2 = S3Utils.indexZipForSegmentPath(descriptor2);
+
+    mockS3Client.putObject(bucket, descriptor1, mapper.writeValueAsString(SEGMENT_1));
+    mockS3Client.putObject(bucket, indexZip1, "dummy");
+
+    Thread.sleep(1000);
+
+    mockS3Client.putObject(bucket, descriptor2, mapper.writeValueAsString(SEGMENT_1));
+    mockS3Client.putObject(bucket, indexZip2, "dummy");
+
+    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
+    final Set<DataSegment> segments = s3DataSegmentFinder.findSegments("", false);
+
+    Assert.assertEquals(1, segments.size());
+    Assert.assertEquals(indexZip2, segments.iterator().next().getLoadSpec().get("key"));
+  }
+
   private String getDescriptorPath(DataSegment segment)
   {
     return S3Utils.descriptorPathForSegmentPath(String.valueOf(segment.getLoadSpec().get("key")));
   }
 
-  private static class MockAmazonS3Client extends AmazonS3Client
+  private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     private final File baseDir;
-    private final Map<String, Set<String>> storage = Maps.newHashMap();
+    private final Map<String, Map<String, ObjectMetadata>> storage = Maps.newHashMap();
 
     public MockAmazonS3Client(File baseDir)
     {
-      super();
+      super(new AmazonS3Client(), new NoopServerSideEncryption());
       this.baseDir = baseDir;
     }
 
     @Override
     public boolean doesObjectExist(String bucketName, String objectName)
     {
-      final Set<String> keys = storage.get(bucketName);
+      final Map<String, ObjectMetadata> keys = storage.get(bucketName);
       if (keys != null) {
-        return keys.contains(objectName);
+        return keys.keySet().contains(objectName);
       }
       return false;
     }
@@ -329,7 +378,9 @@ public class S3DataSegmentFinderTest
       final String bucketName = listObjectsV2Request.getBucketName();
       final String prefix = listObjectsV2Request.getPrefix();
 
-      final List<String> keysOrigin = Lists.newArrayList(storage.get(bucketName));
+      final List<String> keysOrigin = storage.get(bucketName) == null
+                                      ? ImmutableList.of()
+                                      : new ArrayList<>(storage.get(bucketName).keySet());
 
       Predicate<String> prefixFilter = new Predicate<String>()
       {
@@ -387,7 +438,7 @@ public class S3DataSegmentFinderTest
         throw ex;
       }
 
-      if (!storage.get(bucketName).contains(objectKey)) {
+      if (!storage.get(bucketName).keySet().contains(objectKey)) {
         AmazonServiceException ex = new AmazonS3Exception("S3DataSegmentFinderTest");
         ex.setStatusCode(404);
         ex.setErrorCode("NoSuchKey");
@@ -398,6 +449,7 @@ public class S3DataSegmentFinderTest
       S3Object storageObject = new S3Object();
       storageObject.setBucketName(bucketName);
       storageObject.setKey(objectKey);
+      storageObject.setObjectMetadata(storage.get(bucketName).get(objectKey));
       try {
         storageObject.setObjectContent(new FileInputStream(objectPath));
       }
@@ -412,18 +464,27 @@ public class S3DataSegmentFinderTest
     }
 
     @Override
+    public S3Object getObject(GetObjectRequest request)
+    {
+      return getObject(request.getBucketName(), request.getKey());
+    }
+
+    @Override
     public PutObjectResult putObject(String bucketName, String key, String data)
     {
-      return putObject(bucketName, key, new ByteArrayInputStream(StringUtils.toUtf8(data)), null);
+      ObjectMetadata metadata = new ObjectMetadata();
+      metadata.setLastModified(DateTimes.nowUtc().toDate());
+
+      return putObject(bucketName, key, new ByteArrayInputStream(StringUtils.toUtf8(data)), metadata);
     }
 
     @Override
     public PutObjectResult putObject(String bucketName, String key, InputStream input, ObjectMetadata metadata)
     {
       if (!storage.containsKey(bucketName)) {
-        storage.put(bucketName, Sets.newHashSet());
+        storage.put(bucketName, new HashMap<>());
       }
-      storage.get(bucketName).add(key);
+      storage.get(bucketName).put(key, metadata);
 
       final File objectPath = new File(baseDir, key);
 

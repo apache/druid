@@ -29,7 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.NonBlockingPool;
-import io.druid.collections.ResourceHolder;
+import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -136,18 +136,18 @@ public class GroupByStrategyV2 implements GroupByStrategy
       if (requiredMergeBufferNum > mergeBufferPool.maxSize()) {
         throw new ResourceLimitExceededException(
             "Query needs " + requiredMergeBufferNum + " merge buffers, but only "
-            + mergeBufferPool.maxSize() + " merge buffers are configured"
+            + mergeBufferPool.maxSize() + " merge buffers were configured"
         );
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final ResourceHolder<List<ByteBuffer>> mergeBufferHolders;
+        final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
         if (QueryContexts.hasTimeout(query)) {
           mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
         } else {
           mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
         }
-        if (mergeBufferHolders == null) {
+        if (mergeBufferHolders.isEmpty()) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {
           return new GroupByQueryResource(mergeBufferHolders);
@@ -338,7 +338,6 @@ public class GroupByStrategyV2 implements GroupByStrategy
         queryWatcher,
         queryRunners,
         processingConfig.getNumThreads(),
-        bufferPool,
         mergeBufferPool,
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,

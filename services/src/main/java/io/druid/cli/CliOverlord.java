@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -53,6 +54,8 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
+import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -89,8 +92,10 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
+import io.druid.server.initialization.ServerConfig;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.security.AuthConfig;
 import io.druid.server.security.AuthenticationUtils;
 import io.druid.server.security.Authenticator;
 import io.druid.server.security.AuthenticatorMapper;
@@ -182,6 +187,19 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
 
+            PolyBind.createChoice(
+                binder,
+                "druid.indexer.task.rowIngestionMeters.type",
+                Key.get(RowIngestionMetersFactory.class),
+                Key.get(DropwizardRowIngestionMetersFactory.class)
+            );
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
+                binder, Key.get(RowIngestionMetersFactory.class)
+            );
+            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
+                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+
             configureTaskStorage(binder);
             configureAutoscale(binder);
             configureRunners(binder);
@@ -194,7 +212,9 @@ public class CliOverlord extends ServerRunnable
             if (standalone) {
               binder.bind(RedirectFilter.class).in(LazySingleton.class);
               binder.bind(RedirectInfo.class).to(OverlordRedirectInfo.class).in(LazySingleton.class);
-              binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
+              binder.bind(JettyServerInitializer.class)
+                    .to(OverlordJettyServerInitializer.class)
+                    .in(LazySingleton.class);
             }
 
             Jerseys.addResource(binder, OverlordResource.class);
@@ -302,6 +322,16 @@ public class CliOverlord extends ServerRunnable
    */
   private static class OverlordJettyServerInitializer implements JettyServerInitializer
   {
+    private final AuthConfig authConfig;
+    private final ServerConfig serverConfig;
+
+    @Inject
+    OverlordJettyServerInitializer(AuthConfig authConfig, ServerConfig serverConfig)
+    {
+      this.authConfig = authConfig;
+      this.serverConfig = serverConfig;
+    }
+
     @Override
     public void initialize(Server server, Injector injector)
     {
@@ -330,9 +360,12 @@ public class CliOverlord extends ServerRunnable
 
       // perform no-op authorization for these resources
       AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
+      AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
       authenticators = authenticatorMapper.getAuthenticatorChain();
       AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
+
+      AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
 
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
@@ -360,7 +393,11 @@ public class CliOverlord extends ServerRunnable
       handlerList.setHandlers(
           new Handler[]{
               JettyServerInitUtils.getJettyRequestLogHandler(),
-              JettyServerInitUtils.wrapWithDefaultGzipHandler(root)
+              JettyServerInitUtils.wrapWithDefaultGzipHandler(
+                  root,
+                  serverConfig.getInflateBufferSize(),
+                  serverConfig.getCompressionLevel()
+              )
           }
       );
 

@@ -19,13 +19,9 @@
 
 package io.druid.curator;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.LazySingleton;
-import io.druid.java.util.common.lifecycle.Lifecycle;
-import io.druid.java.util.common.logger.Logger;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.DefaultExhibitorRestClient;
 import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
@@ -33,13 +29,23 @@ import org.apache.curator.ensemble.exhibitor.Exhibitors;
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
+import org.apache.curator.shaded.com.google.common.base.Strings;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 
-import java.util.List;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
+import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.lifecycle.Lifecycle;
+import io.druid.java.util.common.logger.Logger;
 
 /**
  */
@@ -70,15 +76,20 @@ public class CuratorModule implements Module
       CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle
   )
   {
-    final CuratorFramework framework =
-        CuratorFrameworkFactory.builder()
-                               .ensembleProvider(ensembleProvider)
-                               .sessionTimeoutMs(config.getZkSessionTimeoutMs())
-                               .retryPolicy(new BoundedExponentialBackoffRetry(
-                                   BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES))
-                               .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
-                               .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
-                               .build();
+    final Builder builder = CuratorFrameworkFactory.builder();
+    if (!Strings.isNullOrEmpty(config.getZkUser()) && !Strings.isNullOrEmpty(config.getZkPwd())) {
+      builder.authorization(
+          config.getAuthScheme(),
+          StringUtils.format("%s:%s", config.getZkUser(), config.getZkPwd()).getBytes(StandardCharsets.UTF_8)
+      );
+    }
+    final CuratorFramework framework = builder
+        .ensembleProvider(ensembleProvider)
+        .sessionTimeoutMs(config.getZkSessionTimeoutMs())
+        .retryPolicy(new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES))
+        .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
+        .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
+        .build();
 
     lifecycle.addHandler(
         new Lifecycle.Handler()

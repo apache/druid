@@ -19,7 +19,6 @@
 package io.druid.segment.realtime.appenderator;
 
 import io.druid.data.input.InputRow;
-import io.druid.query.SegmentDescriptor;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
@@ -27,14 +26,12 @@ import io.druid.segment.realtime.plumber.NoopRejectionPolicyFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
-import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
 
 public class AppenderatorPlumberTest
 {
@@ -46,7 +43,7 @@ public class AppenderatorPlumberTest
     this.appenderatorTester = new AppenderatorTester(10);
     DataSegmentAnnouncer segmentAnnouncer = EasyMock
         .createMock(DataSegmentAnnouncer.class);
-    segmentAnnouncer.announceSegment(EasyMock.<DataSegment> anyObject());
+    segmentAnnouncer.announceSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
 
     SegmentPublisher segmentPublisher = EasyMock
@@ -62,12 +59,13 @@ public class AppenderatorPlumberTest
     EasyMock
         .expect(
             handoffNotifier.registerSegmentHandoffCallback(
-                EasyMock.<SegmentDescriptor> anyObject(),
-                EasyMock.<Executor> anyObject(),
-                EasyMock.<Runnable> anyObject())).andReturn(true).anyTimes();
+                EasyMock.anyObject(),
+                EasyMock.anyObject(),
+                EasyMock.anyObject())).andReturn(true).anyTimes();
     
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         1,
+        null,
         null,
         null,
         null,
@@ -80,6 +78,7 @@ public class AppenderatorPlumberTest
         0,
         0,
         false,
+        null,
         null,
         null,
         null
@@ -113,17 +112,17 @@ public class AppenderatorPlumberTest
     commitMetadata.put("x", "1");
     Assert.assertEquals(
         1,
-        plumber.add(rows[0], null));        
+        plumber.add(rows[0], null).getRowCount());
 
     commitMetadata.put("x", "2");
     Assert.assertEquals(
         2,
-        plumber.add(rows[1], null));        
+        plumber.add(rows[1], null).getRowCount());
 
     commitMetadata.put("x", "3");
     Assert.assertEquals(
         3,
-        plumber.add(rows[2], null));
+        plumber.add(rows[2], null).getRowCount());
 
     
     Assert.assertEquals(1, plumber.getSegmentsView().size());

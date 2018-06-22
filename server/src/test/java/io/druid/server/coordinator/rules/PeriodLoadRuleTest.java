@@ -83,6 +83,31 @@ public class PeriodLoadRuleTest
   }
 
   @Test
+  public void testAppliesToPartialOverlap()
+  {
+    DateTime now = DateTimes.of("2012-12-31T01:00:00");
+    PeriodLoadRule rule = new PeriodLoadRule(
+            new Period("P1M"),
+            ImmutableMap.<String, Integer>of("", 0)
+    );
+
+    Assert.assertTrue(
+            rule.appliesTo(
+                    builder.interval(new Interval(now.minusWeeks(1), now.plusWeeks(1))).build(),
+                    now
+            )
+    );
+    Assert.assertTrue(
+            rule.appliesTo(
+                    builder.interval(
+                            new Interval(now.minusMonths(1).minusWeeks(1), now.minusMonths(1).plusWeeks(1))
+                    ).build(),
+                    now
+            )
+    );
+  }
+
+  @Test
   public void testSerdeNullTieredReplicants() throws Exception
   {
     PeriodLoadRule rule = new PeriodLoadRule(

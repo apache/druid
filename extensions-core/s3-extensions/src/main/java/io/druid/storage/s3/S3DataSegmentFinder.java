@@ -20,15 +20,14 @@
 package io.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentFinder;
@@ -37,21 +36,23 @@ import io.druid.timeline.DataSegment;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class S3DataSegmentFinder implements DataSegmentFinder
 {
   private static final Logger log = new Logger(S3DataSegmentFinder.class);
 
-  private final AmazonS3 s3Client;
+  private final ServerSideEncryptingAmazonS3 s3Client;
   private final ObjectMapper jsonMapper;
   private final S3DataSegmentPusherConfig config;
 
   @Inject
   public S3DataSegmentFinder(
-      AmazonS3 s3Client,
+      ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
       ObjectMapper jsonMapper
   )
@@ -64,7 +65,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
   @Override
   public Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor) throws SegmentLoadingException
   {
-    final Set<DataSegment> segments = Sets.newHashSet();
+    final Map<String, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
 
     try {
       final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
@@ -107,7 +108,12 @@ public class S3DataSegmentFinder implements DataSegmentFinder
                   s3Client.putObject(config.getBucket(), descriptorJson, bais, objectMetadata);
                 }
               }
-              segments.add(dataSegment);
+
+              DataSegmentFinder.putInMapRetainingNewest(
+                  timestampedSegments,
+                  dataSegment,
+                  objectMetadata.getLastModified() == null ? 0 : objectMetadata.getLastModified().getTime()
+              );
             }
           } else {
             throw new SegmentLoadingException(
@@ -128,6 +134,6 @@ public class S3DataSegmentFinder implements DataSegmentFinder
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
       Throwables.propagate(e);
     }
-    return segments;
+    return timestampedSegments.values().stream().map(x -> x.lhs).collect(Collectors.toSet());
   }
 }

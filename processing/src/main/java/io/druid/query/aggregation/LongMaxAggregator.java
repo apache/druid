@@ -21,14 +21,10 @@ package io.druid.query.aggregation;
 
 import io.druid.segment.BaseLongColumnValueSelector;
 
-import java.util.Comparator;
-
 /**
  */
 public class LongMaxAggregator implements Aggregator
 {
-  static final Comparator COMPARATOR = LongSumAggregator.COMPARATOR;
-
   static long combineValues(Object lhs, Object rhs)
   {
     return Math.max(((Number) lhs).longValue(), ((Number) rhs).longValue());

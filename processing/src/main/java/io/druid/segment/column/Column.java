@@ -20,6 +20,7 @@
 package io.druid.segment.column;
 
 import io.druid.java.util.common.StringUtils;
+import io.druid.segment.selector.settable.SettableColumnValueSelector;
 
 /**
  */
@@ -43,4 +44,9 @@ public interface Column
   ComplexColumn getComplexColumn();
   BitmapIndex getBitmapIndex();
   SpatialIndex getSpatialIndex();
+
+  /**
+   * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
+   */
+  SettableColumnValueSelector makeSettableColumnValueSelector();
 }

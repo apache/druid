@@ -28,8 +28,8 @@ import io.druid.query.topn.TopNResultBuilder;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.BaseFloatColumnValueSelector;
 import io.druid.segment.BaseLongColumnValueSelector;
-import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ValueType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -51,7 +51,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
 
   @Override
   public Aggregator[][] getDimExtractionRowSelector(
-      TopNQuery query, TopNParams params, Capabilities capabilities
+      TopNQuery query, TopNParams params, StorageAdapter storageAdapter
   )
   {
     return null;
