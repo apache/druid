@@ -26,8 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.lookup.LookupExtractor;
@@ -38,6 +36,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
@@ -68,7 +67,7 @@ public class MapLookupExtractor extends LookupExtractor
   {
     String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
     if (keyEquivalent == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // keyEquivalent is null only for SQL Compatible Null Behavior
       // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       return null;
     }
@@ -80,14 +79,16 @@ public class MapLookupExtractor extends LookupExtractor
   {
     String valueToLookup = NullHandling.nullToEmptyIfNeeded(value);
     if (valueToLookup == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // valueToLookup is null only for SQL Compatible Null Behavior
       // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       // null value maps to empty list when SQL Compatible
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
-
-    return Lists.newArrayList(Maps.filterKeys(map, key -> map.get(key).equals(valueToLookup)).keySet());
-
+    return map.entrySet()
+              .stream()
+              .filter(entry -> entry.getValue().equals(valueToLookup))
+              .map(entry -> entry.getKey())
+              .collect(Collectors.toList());
   }
 
   @Override

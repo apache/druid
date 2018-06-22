@@ -44,7 +44,10 @@ public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumn
 
   @Override
   public void processValueFromGroupingKey(
-      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap, int keyBufferPosition
+      GroupByColumnSelectorPlus selectorPlus,
+      ByteBuffer key,
+      Map<String, Object> resultMap,
+      int keyBufferPosition
   )
   {
     if (key.get(keyBufferPosition) == NullHandling.IS_NULL_BYTE) {
@@ -87,7 +90,11 @@ public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumn
 
   @Override
   public void initGroupingKeyColumnValue(
-      int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
   )
   {
     writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);

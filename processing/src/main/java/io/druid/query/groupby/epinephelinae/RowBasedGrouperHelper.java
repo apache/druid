@@ -1397,12 +1397,15 @@ public class RowBasedGrouperHelper
     )
     {
       if (NullHandling.sqlCompatible()) {
-        return new NullableRowBasedKeySerdeHelper(makeNumericSerdeHelper(
-            valueType,
-            keyBufferPosition + Byte.BYTES,
-            pushLimitDown,
-            stringComparator
-        ), keyBufferPosition);
+        return new NullableRowBasedKeySerdeHelper(
+            makeNumericSerdeHelper(
+                valueType,
+                keyBufferPosition + Byte.BYTES,
+                pushLimitDown,
+                stringComparator
+            ),
+            keyBufferPosition
+        );
       } else {
         return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
       }
@@ -1723,8 +1726,8 @@ public class RowBasedGrouperHelper
         BufferComparator delegateBufferComparator = this.delegate.getBufferComparator();
         this.comparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
           boolean isLhsNull = (lhsBuffer.get(lhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
-          boolean isrhsNull = (rhsBuffer.get(rhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
-          if (isLhsNull && isrhsNull) {
+          boolean isRhsNull = (rhsBuffer.get(rhsPosition + keyBufferPosition) == NullHandling.IS_NULL_BYTE);
+          if (isLhsNull && isRhsNull) {
             // Both are null
             return 0;
           }
@@ -1733,7 +1736,7 @@ public class RowBasedGrouperHelper
             return -1;
           }
           // only rhs is null
-          if (isrhsNull) {
+          if (isRhsNull) {
             return 1;
           }
           return delegateBufferComparator.compare(

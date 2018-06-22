@@ -79,7 +79,7 @@ public class LongGreatestPostAggregator implements PostAggregator
     while (fieldsIter.hasNext()) {
       Number nextVal = ((Number) fieldsIter.next().compute(values));
       // Ignore NULL values and return the greatest out of non-null values.
-      if (nextVal != null && COMPARATOR.compare(nextVal, retVal) > 0) {
+      if (nextVal != null && (retVal == null || COMPARATOR.compare(nextVal, retVal) > 0)) {
         if (nextVal instanceof Long) {
           retVal = (Long) nextVal;
         } else {

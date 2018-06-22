@@ -70,7 +70,7 @@ public class LessThanHavingSpec extends BaseHavingSpec
     if (metricVal == null || value == null) {
       return false;
     }
-    return HavingSpecMetricComparator.compare(row, aggregationName, value, aggregators) < 0;
+    return HavingSpecMetricComparator.compare(aggregationName, value, aggregators, metricVal) < 0;
   }
 
   /**

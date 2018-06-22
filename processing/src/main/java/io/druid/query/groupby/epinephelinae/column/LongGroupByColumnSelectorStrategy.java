@@ -37,7 +37,10 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
 
   @Override
   public void processValueFromGroupingKey(
-      GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap, int keyBufferPosition
+      GroupByColumnSelectorPlus selectorPlus,
+      ByteBuffer key,
+      Map<String, Object> resultMap,
+      int keyBufferPosition
   )
   {
     final long val = key.getLong(keyBufferPosition);
@@ -64,7 +67,11 @@ public class LongGroupByColumnSelectorStrategy implements GroupByColumnSelectorS
 
   @Override
   public void initGroupingKeyColumnValue(
-      int keyBufferPosition, int columnIndex, Object rowObj, ByteBuffer keyBuffer, int[] stack
+      int keyBufferPosition,
+      int columnIndex,
+      Object rowObj,
+      ByteBuffer keyBuffer,
+      int[] stack
   )
   {
     writeToKeyBuffer(keyBufferPosition, rowObj, keyBuffer);
