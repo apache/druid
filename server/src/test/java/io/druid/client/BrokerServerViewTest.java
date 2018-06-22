@@ -130,8 +130,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(actualPartitionHolder.isComplete());
     Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
 
-    ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
-                                                                                                  .next()).getObject();
+    ServerSelector selector = (actualPartitionHolder.iterator().next()).getObject();
     Assert.assertFalse(selector.isEmpty());
     Assert.assertEquals(segment, selector.getSegment());
     Assert.assertEquals(druidServer, selector.pick().getServer());

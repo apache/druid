@@ -30,7 +30,7 @@ import com.google.inject.Inject;
 import io.druid.concurrent.TaskThreadPriority;
 import io.druid.guice.annotations.Self;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.config.TaskConfig;
@@ -387,6 +387,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     {
       return task.getDataSource();
     }
+
   }
 
   private class SingleTaskBackgroundRunnerCallable implements Callable<TaskStatus>

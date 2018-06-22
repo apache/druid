@@ -19,7 +19,7 @@
 
 package io.druid.indexing.common.task;
 
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.java.util.emitter.service.ServiceMetricEvent;
 import io.druid.query.DruidMetrics;
 import io.druid.server.security.Access;
