@@ -60,12 +60,11 @@ public interface KafkaIndexTaskRunner extends ChatHandler
   @VisibleForTesting
   Response setEndOffsets(
       Map<Integer, Long> offsets,
-      boolean resume,
       boolean finish // this field is only for internal purposes, shouldn't be usually set by users
   ) throws InterruptedException;
 
   @VisibleForTesting
-  Response pause(long timeout) throws InterruptedException;
+  Response pause() throws InterruptedException;
   @VisibleForTesting
   void resume() throws InterruptedException;
 }

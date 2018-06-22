@@ -43,8 +43,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -1534,7 +1534,7 @@ public class KafkaSupervisor implements Supervisor
 
               log.info("Setting endOffsets for tasks in taskGroup [%d] to %s and resuming", groupId, endOffsets);
               for (final String taskId : setEndOffsetTaskIds) {
-                setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, true, finalize));
+                setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, finalize));
               }
 
               List<Boolean> results = Futures.successfulAsList(setEndOffsetFutures)
@@ -1781,7 +1781,6 @@ public class KafkaSupervisor implements Supervisor
         new KafkaPartitions(ioConfig.getTopic(), endPartitions),
         consumerProperties,
         true,
-        false,
         minimumMessageTime,
         maximumMessageTime,
         ioConfig.isSkipOffsetGaps()
