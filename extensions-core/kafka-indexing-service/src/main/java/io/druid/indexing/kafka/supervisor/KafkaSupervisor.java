@@ -43,8 +43,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -888,10 +888,6 @@ public class KafkaSupervisor implements Supervisor
   @VisibleForTesting
   String generateSequenceName(int groupId)
   {
-    if (taskGroups.get(groupId) == null) {
-      log.warn("taskGroups does not contain groupId %s, returning null sequenceName", groupId);
-      return null;
-    }
     return generateSequenceName(
         taskGroups.get(groupId).partitionOffsets,
         taskGroups.get(groupId).minimumMessageTime,
