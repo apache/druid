@@ -49,7 +49,7 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
       Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String datasource
   )
   {
-    String sql = maxNumStatuses == null ? "SELECT " : "SELECT TOP :n ";
+    String sql = maxNumStatuses == null ? "SELECT " : "SELECT TOP (:n) ";
 
     sql += StringUtils.format(
         "    id, "
