@@ -1713,6 +1713,7 @@ public class RowBasedGrouperHelper
       }
     }
 
+    // This class is only used when SQL compatible null handling is enabled.
     private class NullableRowBasedKeySerdeHelper implements RowBasedKeySerdeHelper
     {
       private final RowBasedKeySerdeHelper delegate;
