@@ -888,10 +888,15 @@ public class KafkaSupervisor implements Supervisor
   @VisibleForTesting
   String generateSequenceName(int groupId)
   {
+    TaskGroup taskGroup = taskGroups.get(groupId);
+    if (taskGroup == null) {
+      log.warn("group id: %s not found in taskGroups, cannot generate sequence number", groupId);
+      throw new IAE("group id: %s not found in taskGroups", groupId);
+    }
     return generateSequenceName(
-        taskGroups.get(groupId).partitionOffsets,
-        taskGroups.get(groupId).minimumMessageTime,
-        taskGroups.get(groupId).maximumMessageTime
+        taskGroup.partitionOffsets,
+        taskGroup.minimumMessageTime,
+        taskGroup.maximumMessageTime
     );
   }
 
@@ -1631,8 +1636,9 @@ public class KafkaSupervisor implements Supervisor
 
           // reset partitions offsets for this task group so that they will be re-read from metadata storage
           partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
-          sequenceTaskGroup.remove(generateSequenceName(groupId));
-
+          if (taskGroups.get(groupId) != null) {
+            sequenceTaskGroup.remove(generateSequenceName(groupId));
+          }
           // kill all the tasks in this pending completion group
           killTasksInGroup(group);
           // set a flag so the other pending completion groups for this set of partitions will also stop
