@@ -488,14 +488,6 @@ Filtering on a set of ISO 8601 intervals:
 }
 ```
 
-
-### Noop Filter
-The noop filter is a filter which applies no conditions to your query.  Useful if you need to disable other filters when queries are generated programatically. 
-
-```json
-{ "type" : "noop" }
-```
-
 ### True Filter
 The true filter is a filter which matches all values.  It can be used to temporarily disable other filters without removing the filter. 
 
