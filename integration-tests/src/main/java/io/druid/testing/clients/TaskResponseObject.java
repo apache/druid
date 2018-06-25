@@ -21,7 +21,7 @@ package io.druid.testing.clients;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import org.joda.time.DateTime;
 
 public class TaskResponseObject

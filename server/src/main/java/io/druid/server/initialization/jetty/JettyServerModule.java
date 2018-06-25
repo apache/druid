@@ -376,9 +376,9 @@ public class JettyServerModule extends JerseyServletModule
           public void stop()
           {
             try {
-              final long unannounceDelay = config.getUnannouncePropogationDelay().toStandardDuration().getMillis();
+              final long unannounceDelay = config.getUnannouncePropagationDelay().toStandardDuration().getMillis();
               if (unannounceDelay > 0) {
-                log.info("Waiting %s ms for unannouncement to propogate.", unannounceDelay);
+                log.info("Waiting %s ms for unannouncement to propagate.", unannounceDelay);
                 Thread.sleep(unannounceDelay);
               } else {
                 log.debug("Skipping unannounce wait.");

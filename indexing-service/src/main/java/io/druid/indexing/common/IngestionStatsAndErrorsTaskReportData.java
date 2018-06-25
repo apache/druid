@@ -22,6 +22,7 @@ package io.druid.indexing.common;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.indexer.IngestionState;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
@@ -37,13 +38,14 @@ public class IngestionStatsAndErrorsTaskReportData
   private Map<String, Object> rowStats;
 
   @JsonProperty
+  @Nullable
   private String errorMsg;
 
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
-      @JsonProperty("errorMsg") String errorMsg
+      @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
     this.ingestionState = ingestionState;
@@ -71,6 +73,7 @@ public class IngestionStatsAndErrorsTaskReportData
   }
 
   @JsonProperty
+  @Nullable
   public String getErrorMsg()
   {
     return errorMsg;

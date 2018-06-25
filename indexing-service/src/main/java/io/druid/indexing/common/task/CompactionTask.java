@@ -40,7 +40,7 @@ import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.NoopInputRowParser;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;

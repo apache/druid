@@ -42,6 +42,9 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |--------|-----------|-------|
 |`druid.zk.paths.base`|Base Zookeeper path.|`/druid`|
 |`druid.zk.service.host`|The ZooKeeper hosts to connect to. This is a REQUIRED property and therefore a host address must be supplied.|none|
+|`druid.zk.service.user`|The username to authenticate with ZooKeeper. This is an optional property.|none|
+|`druid.zk.service.pwd`|The [Password Provider](../operations/password-provider.html) or the string password to authenticate with ZooKeeper. This is an optional property.|none|
+|`druid.zk.service.authScheme`|digest is the only authentication scheme supported. |digest|
 
 #### Zookeeper Behavior
 

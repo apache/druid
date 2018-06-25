@@ -42,7 +42,7 @@ import io.druid.discovery.DruidNodeDiscovery;
 import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.WorkerNodeService;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskStatus;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
