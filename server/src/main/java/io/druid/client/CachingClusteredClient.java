@@ -45,7 +45,7 @@ import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.MergeSequence;
-import io.druid.java.util.common.guava.MergeWorkTask;
+import io.druid.java.util.common.guava.MergeWorkCallable;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -119,7 +119,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final ListeningExecutorService backgroundExecutorService;
-  private final ForkJoinPool mergeFjp;
+  private final ExecutorService mergeExecutor;
 
   @Inject
   public CachingClusteredClient(
@@ -129,7 +129,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Smile ObjectMapper objectMapper,
       @BackgroundCaching ExecutorService backgroundExecutorService,
       CacheConfig cacheConfig,
-      @Processing ForkJoinPool mergeFjp
+      @Processing ExecutorService mergeExecutor
   )
   {
     this.warehouse = warehouse;
@@ -138,7 +138,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.objectMapper = objectMapper;
     this.cacheConfig = cacheConfig;
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
-    this.mergeFjp = mergeFjp;
+    this.mergeExecutor = mergeExecutor;
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY)) {
       log.warn(
           "Even though groupBy caching is enabled, v2 groupBys will not be cached. "
@@ -200,11 +200,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
     );
     final OptionalLong mergeBatch = QueryContexts.getIntermediateMergeBatchThreshold(query);
     if (mergeBatch.isPresent()) {
-      return MergeWorkTask.parallelMerge(
+      return MergeWorkCallable.parallelMerge(
           query.getResultOrdering(),
           sequences,
           mergeBatch.getAsLong(),
-          mergeFjp
+          mergeExecutor
       );
     } else {
       return new MergeSequence<>(
