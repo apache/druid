@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class MergeWorkCallableTest
+public class MergeWorkTaskTest
 {
   @Test
   public void testNotParallelSequence() throws Exception
@@ -48,7 +48,7 @@ public class MergeWorkCallableTest
     );
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
-    SequenceTestHelper.testAll(() -> MergeWorkCallable.parallelMerge(
+    SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
         Ordering.natural(),
         testSeqs.stream(),
         999,
@@ -66,7 +66,7 @@ public class MergeWorkCallableTest
     );
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
-    SequenceTestHelper.testAll(() -> MergeWorkCallable.parallelMerge(
+    SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
         Ordering.natural(),
         testSeqs.stream().parallel(),
         999,
@@ -84,7 +84,7 @@ public class MergeWorkCallableTest
     );
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
-    SequenceTestHelper.testAll(() -> MergeWorkCallable.parallelMerge(
+    SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
         Ordering.natural(),
         testSeqs.stream().parallel(),
         1,
@@ -102,7 +102,7 @@ public class MergeWorkCallableTest
     );
     final List<Integer> expected = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9);
 
-    SequenceTestHelper.testAll(() -> MergeWorkCallable.parallelMerge(
+    SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
         Ordering.natural(),
         testSeqs.stream().parallel(),
         2,
@@ -127,7 +127,7 @@ public class MergeWorkCallableTest
         (t, e) -> exception.set(e),
         false
     );
-    SequenceTestHelper.testAll(() -> MergeWorkCallable.parallelMerge(
+    SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
         Ordering.natural(),
         testSeqs.stream().parallel(),
         1,
@@ -159,7 +159,7 @@ public class MergeWorkCallableTest
     }
     final Random r = new Random(37489165L);
     intList.forEach(i -> listList.get(r.nextInt(listList.size())).add(i));
-    SequenceTestHelper.testAll(() -> MergeWorkCallable.parallelMerge(
+    SequenceTestHelper.testAll(() -> MergeWorkTask.parallelMerge(
         Ordering.natural(),
         listList.stream(
         ).map(

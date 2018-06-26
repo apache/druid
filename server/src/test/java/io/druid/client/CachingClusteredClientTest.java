@@ -65,7 +65,7 @@ import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.FunctionalIterable;
 import io.druid.java.util.common.guava.MergeIterable;
-import io.druid.java.util.common.guava.MergeWorkCallable;
+import io.druid.java.util.common.guava.MergeWorkTask;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.TrinaryFn;
@@ -3199,7 +3199,7 @@ public class CachingClusteredClientTest
     Assert.assertFalse(sequences.isEmpty());
 
 
-    final Sequence<Result<TimeseriesResultValue>> parallelMergeResults = MergeWorkCallable.parallelMerge(
+    final Sequence<Result<TimeseriesResultValue>> parallelMergeResults = MergeWorkTask.parallelMerge(
         query.getResultOrdering(),
         client.run(
             QueryPlus.wrap(query),
