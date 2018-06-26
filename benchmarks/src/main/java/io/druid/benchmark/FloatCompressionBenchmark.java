@@ -82,9 +82,8 @@ public class FloatCompressionBenchmark
     int count = columnarFloats.size();
     float sum = 0;
     for (int i = 0; i < count; i++) {
-      sum += columnarFloats.get(i);
+      bh.consume(columnarFloats.get(i));
     }
-    bh.consume(sum);
     columnarFloats.close();
   }
 
@@ -95,9 +94,8 @@ public class FloatCompressionBenchmark
     int count = columnarFloats.size();
     float sum = 0;
     for (int i = 0; i < count; i += rand.nextInt(2000)) {
-      sum += columnarFloats.get(i);
+      bh.consume(columnarFloats.get(i));
     }
-    bh.consume(sum);
     columnarFloats.close();
   }
 

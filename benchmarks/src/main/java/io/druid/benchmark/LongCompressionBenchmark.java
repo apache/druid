@@ -85,9 +85,8 @@ public class LongCompressionBenchmark
     int count = columnarLongs.size();
     long sum = 0;
     for (int i = 0; i < count; i++) {
-      sum += columnarLongs.get(i);
+      bh.consume(columnarLongs.get(i));
     }
-    bh.consume(sum);
     columnarLongs.close();
   }
 
@@ -98,9 +97,8 @@ public class LongCompressionBenchmark
     int count = columnarLongs.size();
     long sum = 0;
     for (int i = 0; i < count; i += rand.nextInt(2000)) {
-      sum += columnarLongs.get(i);
+      bh.consume(columnarLongs.get(i));
     }
-    bh.consume(sum);
     columnarLongs.close();
   }
 
