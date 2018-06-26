@@ -99,9 +99,9 @@ import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -109,6 +109,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -178,7 +179,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
   private final RowIngestionMeters rowIngestionMeters;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
-  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new LinkedList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new LinkedList<>();
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -435,16 +437,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
             throw new RuntimeException(backgroundThreadException);
           }
 
-          // Check if any handoffFuture failed.
-          final List<ListenableFuture<SegmentsAndMetadata>> handoffFinished = handOffWaitList
-              .stream()
-              .filter(Future::isDone)
-              .collect(Collectors.toList());
-
-          for (ListenableFuture<SegmentsAndMetadata> handoffFuture : handoffFinished) {
-            // If handoffFuture failed, the below line will throw an exception and catched by (1), and then (2) or (3).
-            handoffFuture.get();
-          }
+          checkPublishAndHandoffFailure();
 
           maybePersistAndPublishSequences(committerSupplier);
 
@@ -650,9 +643,13 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
         throw new RuntimeException(backgroundThreadException);
       }
 
+      // Wait for publish futures to complete.
+      Futures.allAsList(publishWaitList).get();
+
       // Wait for handoff futures to complete.
       // Note that every publishing task (created by calling AppenderatorDriver.publish()) has a corresponding
-      // handoffFuture. As a result, waiting for handoff futures includes waiting for publishing tasks to complete, too.
+      // handoffFuture. handoffFuture can throw an exception if 1) the corresponding publishFuture failed or 2) it
+      // failed to persist sequences. It might also return null if handoff failed, but was recoverable.
       // See publishAndRegisterHandoff() for details.
       List<SegmentsAndMetadata> handedOffList = Collections.emptyList();
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
@@ -663,6 +660,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                                  .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
         }
         catch (TimeoutException e) {
+          // Handoff timeout is not an indexing failure, but coordination failure. We simply ignore timeout exception
+          // here.
           log.makeAlert("Timed out after [%d] millis waiting for handoffs", tuningConfig.getHandoffConditionTimeout())
              .addData("TaskId", task.getId())
              .emit();
@@ -684,6 +683,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     catch (InterruptedException | RejectedExecutionException e) {
       // (2) catch InterruptedException and RejectedExecutionException thrown for the whole ingestion steps including
       // the final publishing.
+      Futures.allAsList(publishWaitList).cancel(true);
       Futures.allAsList(handOffWaitList).cancel(true);
       appenderator.closeNow();
       // handle the InterruptedException that gets wrapped in a RejectedExecutionException
@@ -702,6 +702,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     }
     catch (Exception e) {
       // (3) catch all other exceptions thrown for the whole ingestion steps including the final publishing.
+      Futures.allAsList(publishWaitList).cancel(true);
+      Futures.allAsList(handOffWaitList).cancel(true);
       appenderator.closeNow();
       throw e;
     }
@@ -721,15 +723,57 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     return TaskStatus.success(task.getId());
   }
 
+  private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException
+  {
+    // Check if any publishFuture failed.
+    final List<ListenableFuture<SegmentsAndMetadata>> publishFinished = publishWaitList
+        .stream()
+        .filter(Future::isDone)
+        .collect(Collectors.toList());
+
+    for (ListenableFuture<SegmentsAndMetadata> publishFuture : publishFinished) {
+      // If publishFuture failed, the below line will throw an exception and catched by (1), and then (2) or (3).
+      publishFuture.get();
+    }
+
+    publishWaitList.removeAll(publishFinished);
+
+    // Check if any handoffFuture failed.
+    final List<ListenableFuture<SegmentsAndMetadata>> handoffFinished = handOffWaitList
+        .stream()
+        .filter(Future::isDone)
+        .collect(Collectors.toList());
+
+    for (ListenableFuture<SegmentsAndMetadata> handoffFuture : handoffFinished) {
+      // If handoffFuture failed, the below line will throw an exception and catched by (1), and then (2) or (3).
+      handoffFuture.get();
+    }
+
+    handOffWaitList.removeAll(handoffFinished);
+  }
+
   private void publishAndRegisterHandoff(SequenceMetadata sequenceMetadata)
   {
     log.info("Publishing segments for sequence [%s]", sequenceMetadata);
 
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
-        sequenceMetadata.createPublisher(toolbox, ioConfig.isUseTransaction()),
-        sequenceMetadata.getCommitterSupplier(topic, lastPersistedOffsets).get(),
-        Collections.singletonList(sequenceMetadata.getSequenceName())
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = Futures.transform(
+        driver.publish(
+            sequenceMetadata.createPublisher(toolbox, ioConfig.isUseTransaction()),
+            sequenceMetadata.getCommitterSupplier(topic, lastPersistedOffsets).get(),
+            Collections.singletonList(sequenceMetadata.getSequenceName())
+        ),
+        (Function<SegmentsAndMetadata, SegmentsAndMetadata>) publishedSegmentsAndMetadata -> {
+          if (publishedSegmentsAndMetadata == null) {
+            throw new ISE(
+                "Transaction failure publishing segments for sequence [%s]",
+                sequenceMetadata
+            );
+          } else {
+            return publishedSegmentsAndMetadata;
+          }
+        }
     );
+    publishWaitList.add(publishFuture);
 
     // Create a handoffFuture for every publishFuture. The created handoffFuture must fail if publishFuture fails.
     final SettableFuture<SegmentsAndMetadata> handoffFuture = SettableFuture.create();
@@ -740,25 +784,16 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
         new FutureCallback<SegmentsAndMetadata>()
         {
           @Override
-          public void onSuccess(@Nullable SegmentsAndMetadata publishedSegmentsAndMetadata)
+          public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
           {
-            if (publishedSegmentsAndMetadata == null) {
-              final RuntimeException e = new ISE(
-                  "Transaction failure publishing segments for sequence [%s]",
-                  sequenceMetadata
-              );
-              handoffFuture.setException(e);
-              throw e;
-            } else {
-              log.info(
-                  "Published segments[%s] with metadata[%s].",
-                  publishedSegmentsAndMetadata.getSegments()
-                                              .stream()
-                                              .map(DataSegment::getIdentifier)
-                                              .collect(Collectors.toList()),
-                  Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
-              );
-            }
+            log.info(
+                "Published segments[%s] with metadata[%s].",
+                publishedSegmentsAndMetadata.getSegments()
+                                            .stream()
+                                            .map(DataSegment::getIdentifier)
+                                            .collect(Collectors.toList()),
+                Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
+            );
 
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
