@@ -59,15 +59,16 @@ public class Sequences
     );
   }
 
-  public static <T> Sequence<T> simple(final Stream<T> stream)
+  public static <T> Sequence<T> simple(final Stream<? extends T> stream)
   {
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
           @Override
+          @SuppressWarnings("unchecked")
           public Iterator<T> make()
           {
-            return stream.iterator();
+            return (Iterator<T>) stream.iterator();
           }
 
           @Override

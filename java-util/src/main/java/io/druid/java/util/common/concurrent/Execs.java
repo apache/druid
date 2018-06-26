@@ -22,6 +22,7 @@ package io.druid.java.util.common.concurrent;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -29,6 +30,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,6 +39,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -146,5 +150,30 @@ public class Execs
           }
         }
     );
+  }
+
+  private static final AtomicLong fjpWorkerThreadCount = new AtomicLong(0L);
+
+  public static ForkJoinWorkerThread makeWorkerThread(String name, ForkJoinPool pool)
+  {
+    final FJPWorkerThread t = new FJPWorkerThread(pool);
+    t.setDaemon(true);
+    t.setName(StringUtils.nonStrictFormat(name, fjpWorkerThreadCount.getAndIncrement()));
+    return t;
+  }
+
+  static class FJPWorkerThread extends ForkJoinWorkerThread
+  {
+    /**
+     * Creates a ForkJoinWorkerThread operating in the given pool.
+     *
+     * @param pool the pool this thread works in
+     *
+     * @throws NullPointerException if pool is null
+     */
+    FJPWorkerThread(ForkJoinPool pool)
+    {
+      super(pool);
+    }
   }
 }

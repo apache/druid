@@ -25,6 +25,8 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Numbers;
 
+import java.util.OptionalLong;
+
 @PublicApi
 public class QueryContexts
 {
@@ -33,6 +35,7 @@ public class QueryContexts
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
+  public static final String INTERMEDIATE_MERGE_BATCH_THRESHOLD = "intermediateMergeBatchThreshold";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -169,6 +172,25 @@ public class QueryContexts
     }
   }
 
+  /**
+   * Return an optional long of the batch size. If the batch is less than 1 (0 or negative) then just return empty
+   *
+   * @param query The query whose context is to be used
+   * @param <T>   The query result type
+   *
+   * @return An optional long which, if present, will only be a positive long
+   */
+  public static <T> OptionalLong getIntermediateMergeBatchThreshold(Query<T> query)
+  {
+    final OptionalLong optionalLong = parseLong(query, INTERMEDIATE_MERGE_BATCH_THRESHOLD);
+    if (!optionalLong.isPresent()) {
+      return optionalLong;
+    }
+    if (optionalLong.getAsLong() < 1) {
+      return OptionalLong.empty();
+    }
+    return optionalLong;
+  }
 
 
   public static <T> long getMaxScatterGatherBytes(Query<T> query)
@@ -214,6 +236,12 @@ public class QueryContexts
   {
     final Object val = query.getContextValue(key);
     return val == null ? defaultValue : Numbers.parseLong(val);
+  }
+
+  static <T> OptionalLong parseLong(Query<T> query, String key)
+  {
+    final Object val = query.getContextValue(key);
+    return val == null ? OptionalLong.empty() : OptionalLong.of(Numbers.parseLong(val));
   }
 
   static <T> int parseInt(Query<T> query, String key, int defaultValue)

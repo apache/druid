@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.hash.Hasher;
@@ -37,12 +38,14 @@ import io.druid.client.selector.QueryableDruidServer;
 import io.druid.client.selector.ServerSelector;
 import io.druid.collections.SerializablePair;
 import io.druid.guice.annotations.BackgroundCaching;
+import io.druid.guice.annotations.Processing;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.MergeSequence;
+import io.druid.java.util.common.guava.MergeWorkTask;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -82,9 +85,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Spliterators;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -114,6 +119,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final ListeningExecutorService backgroundExecutorService;
+  private final ForkJoinPool mergeFjp;
 
   @Inject
   public CachingClusteredClient(
@@ -122,7 +128,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Cache cache,
       @Smile ObjectMapper objectMapper,
       @BackgroundCaching ExecutorService backgroundExecutorService,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      @Processing ForkJoinPool mergeFjp
   )
   {
     this.warehouse = warehouse;
@@ -131,7 +138,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     this.objectMapper = objectMapper;
     this.cacheConfig = cacheConfig;
     this.backgroundExecutorService = MoreExecutors.listeningDecorator(backgroundExecutorService);
-
+    this.mergeFjp = mergeFjp;
     if (cacheConfig.isQueryCacheable(Query.GROUP_BY)) {
       log.warn(
           "Even though groupBy caching is enabled, v2 groupBys will not be cached. "
@@ -169,7 +176,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
    * Run a query. The timelineConverter will be given the "master" timeline and can be used to return a different
    * timeline, if desired. This is used by getQueryRunnerForSegments.
    */
-  private <T> Stream<Sequence<T>> run(
+  @VisibleForTesting
+  <T> Stream<Sequence<T>> run(
       final QueryPlus<T> queryPlus,
       final Map<String, Object> responseContext,
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
@@ -185,16 +193,25 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
-    return new MergeSequence<T>(
-        query.getResultOrdering(),
-        Sequences.simple(
-            CachingClusteredClient.this.run(
-                queryPlus,
-                responseContext,
-                timelineConverter
-            )
-        )
+    final Stream<? extends Sequence<T>> sequences = CachingClusteredClient.this.run(
+        queryPlus,
+        responseContext,
+        timelineConverter
     );
+    final OptionalLong mergeBatch = QueryContexts.getIntermediateMergeBatchThreshold(query);
+    if (mergeBatch.isPresent()) {
+      return MergeWorkTask.parallelMerge(
+          query.getResultOrdering(),
+          sequences,
+          mergeBatch.getAsLong(),
+          mergeFjp
+      );
+    } else {
+      return new MergeSequence<>(
+          query.getResultOrdering(),
+          Sequences.simple(sequences)
+      );
+    }
   }
 
   @Override
@@ -630,21 +647,24 @@ public class CachingClusteredClient implements QuerySegmentWalker
     // Downstream consumers should check each and handle appropriately.
     private Stream<List<ServerMaybeSegmentMaybeCache<T>>> groupCachedResultsByServer(Stream<SerializablePair<ServerToSegment, Optional<T>>> cacheResolvedStream)
     {
-      return cacheResolvedStream.map(
+      final List<List<ServerMaybeSegmentMaybeCache<T>>> listList = cacheResolvedStream.map(
           this::pickServer
       ).collect(
           Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer)
-      ).entrySet(
+      ).values(
+          // Even though we have matrialized the map, and are iterating across the values,
+          // the java.util.HashMap.ValueSpliterator does not currently support things like sizing or subsetting,
+          // so we want to convert the collection into a form conducive with embarassing parallelization down the line
       ).stream(
           // At this point we have the segments per server, and a special entry for the pre-cached stuff
-      ).map(
-          Map.Entry::getValue
       ).filter(
           l -> !l.isEmpty()
       ).filter(
           // Get rid of any alerted conditions missing queryableDruidServer
           l -> l.get(0).getCachedValue().isPresent() || l.get(0).getSegmentDescriptor().isPresent()
-      );
+      ).collect(Collectors.toList());
+      // We do a hard materialization here so that the resulting spliterators have properties that we want
+      return listList.stream();
     }
 
     private Stream<SerializablePair<ServerToSegment, Optional<T>>> deserializeFromCache(

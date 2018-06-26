@@ -58,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  */
@@ -272,7 +273,8 @@ public class CachingClusteredClientFunctionalityTest
           {
             return mergeLimit;
           }
-        }
+        },
+        ForkJoinPool.commonPool()
     );
   }
 

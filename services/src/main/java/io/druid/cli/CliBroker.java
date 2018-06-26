@@ -39,12 +39,16 @@ import io.druid.discovery.DruidNodeDiscoveryProvider;
 import io.druid.discovery.LookupNodeService;
 import io.druid.guice.CacheModule;
 import io.druid.guice.DruidProcessingModule;
+import io.druid.guice.ForkJoinPoolProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.LifecycleForkJoinPool;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.ManageLifecycle;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
+import io.druid.guice.annotations.Processing;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.RetryQueryRunnerConfig;
@@ -63,6 +67,7 @@ import io.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  */
@@ -101,6 +106,14 @@ public class CliBroker extends ServerRunnable
             binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
             binder.bind(BrokerServerView.class).in(LazySingleton.class);
             binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
+            binder.bind(Key.get(LifecycleForkJoinPool.class, Processing.class))
+                  .toProvider(new ForkJoinPoolProvider("processing-fjp-%s"))
+                  .in(ManageLifecycle.class);
+            // Bind the lifecycle key, then bind the lifecycle to the forkjoinpool key so that any extensions that
+            // want to have their own fork join pool instead of this one can do so.
+            LifecycleModule.register(binder, LifecycleForkJoinPool.class, Processing.class);
+            binder.bind(Key.get(ForkJoinPool.class, Processing.class))
+                  .to(Key.get(LifecycleForkJoinPool.class, Processing.class));
 
             JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
             binder.install(new CacheModule());
