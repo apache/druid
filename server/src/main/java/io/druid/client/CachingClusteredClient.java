@@ -202,7 +202,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     if (mergeBatch.isPresent()) {
       return MergeWorkTask.parallelMerge(
           query.getResultOrdering(),
-          sequences,
+          sequences.parallel(),
           mergeBatch.getAsLong(),
           mergeFjp
       );
