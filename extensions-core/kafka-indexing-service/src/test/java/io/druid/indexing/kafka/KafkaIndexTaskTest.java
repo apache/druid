@@ -156,7 +156,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;

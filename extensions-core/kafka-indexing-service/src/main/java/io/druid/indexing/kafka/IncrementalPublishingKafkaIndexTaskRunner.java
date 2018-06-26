@@ -28,7 +28,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -729,7 +728,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     final ListenableFuture<SegmentsAndMetadata> publishFuture = driver.publish(
         sequenceMetadata.createPublisher(toolbox, ioConfig.isUseTransaction()),
         sequenceMetadata.getCommitterSupplier(topic, lastPersistedOffsets).get(),
-        ImmutableList.of(sequenceMetadata.getSequenceName())
+        Collections.singletonList(sequenceMetadata.getSequenceName())
     );
 
     // Create a handoffFuture for every publishFuture. The created handoffFuture must fail if publishFuture fails.
