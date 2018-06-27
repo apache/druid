@@ -20,6 +20,8 @@ package io.druid.indexer;
 
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+
 /**
  * This class is used to store task info from runner query and cache in OverlordResource
  */
@@ -29,9 +31,16 @@ public class TaskInfo<EntryType>
   private final DateTime createdTime;
   private final TaskStatus status;
   private final String dataSource;
+  @Nullable
   private final EntryType task;
 
-  public TaskInfo(String id, DateTime createdTime, TaskStatus status, String dataSource, EntryType task)
+  public TaskInfo(
+      String id,
+      DateTime createdTime,
+      TaskStatus status,
+      String dataSource,
+      @Nullable EntryType task
+  )
   {
     this.id = id;
     this.createdTime = createdTime;
@@ -60,6 +69,7 @@ public class TaskInfo<EntryType>
     return dataSource;
   }
 
+  @Nullable
   public EntryType getTask()
   {
     return task;
