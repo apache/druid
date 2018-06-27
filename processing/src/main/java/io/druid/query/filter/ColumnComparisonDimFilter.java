@@ -24,11 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.filter.ColumnComparisonFilter;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -101,6 +104,15 @@ public class ColumnComparisonDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimensions.stream()
+        .map(DimensionSpec::getDimension)
+        .collect(Collectors.toSet())
+    );
   }
 
   @Override

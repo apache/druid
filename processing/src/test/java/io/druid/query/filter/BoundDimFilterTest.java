@@ -42,6 +42,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import io.druid.guice.GuiceInjectors;
@@ -127,5 +128,12 @@ public class BoundDimFilterTest
     BoundDimFilter boundDimFilterWithExtract = new BoundDimFilter("dimension", "12", "15", null, null, true, extractionFn, StringComparators.ALPHANUMERIC);
 
     Assert.assertNotEquals(boundDimFilter.hashCode(), boundDimFilterWithExtract.hashCode());
+  }
+
+  @Test
+  public void testGetRequiredColumns()
+  {
+    BoundDimFilter boundDimFilter = new BoundDimFilter("dimension", "12", "15", null, null, true, null, StringComparators.ALPHANUMERIC);
+    Assert.assertEquals(boundDimFilter.getRequiredColumns(), Sets.newHashSet("dimension"));
   }
 }

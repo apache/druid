@@ -19,6 +19,7 @@
 
 package io.druid.query.filter;
 
+import com.google.common.collect.Sets;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
@@ -74,5 +75,12 @@ public class SelectorDimFilterTest
         )
     );
     Assert.assertEquals(selectorDimFilter, filter.optimize());
+  }
+
+  @Test
+  public void testGetRequiredColumns()
+  {
+    SelectorDimFilter selectorDimFilter = new SelectorDimFilter("abc", "d", null);
+    Assert.assertEquals(selectorDimFilter.getRequiredColumns(), Sets.newHashSet("abc"));
   }
 }

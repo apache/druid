@@ -26,6 +26,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
@@ -40,6 +41,7 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.Objects;
 
 public class BoundDimFilter implements DimFilter
@@ -244,6 +246,12 @@ public class BoundDimFilter implements DimFilter
     }
     retSet.add(range);
     return retSet;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.filter.ExpressionFilter;
 
+import java.util.HashSet;
 import java.util.Objects;
 
 public class ExpressionDimFilter implements DimFilter
@@ -68,6 +70,12 @@ public class ExpressionDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(final String dimension)
   {
     return null;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(Parser.findRequiredBindings(parsed));
   }
 
   @Override
