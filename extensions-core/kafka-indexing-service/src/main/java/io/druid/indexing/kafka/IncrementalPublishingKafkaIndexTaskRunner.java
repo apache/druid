@@ -489,23 +489,23 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
                                             : parser.parseBatch(ByteBuffer.wrap(valueBytes));
                 boolean isPersistRequired = false;
 
+                final SequenceMetadata sequenceToUse = sequences
+                    .stream()
+                    .filter(sequenceMetadata -> sequenceMetadata.canHandle(record))
+                    .findFirst()
+                    .orElse(null);
+
+                if (sequenceToUse == null) {
+                  throw new ISE(
+                      "WTH?! cannot find any valid sequence for record with partition [%d] and offset [%d]. Current sequences: %s",
+                      record.partition(),
+                      record.offset(),
+                      sequences
+                  );
+                }
+
                 for (InputRow row : rows) {
                   if (row != null && task.withinMinMaxRecordTime(row)) {
-                    final SequenceMetadata sequenceToUse = sequences
-                        .stream()
-                        .filter(sequenceMetadata -> sequenceMetadata.canHandle(record))
-                        .findFirst()
-                        .orElse(null);
-
-                    if (sequenceToUse == null) {
-                      throw new ISE(
-                          "WTH?! cannot find any valid sequence for record with partition [%d] and offset [%d]. Current sequences: %s",
-                          record.partition(),
-                          record.offset(),
-                          sequences
-                      );
-                    }
-
                     final AppenderatorDriverAddResult addResult = driver.add(
                         row,
                         sequenceToUse.getSequenceName(),
