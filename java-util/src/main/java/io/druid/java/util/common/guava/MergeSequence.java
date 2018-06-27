@@ -19,6 +19,7 @@
 
 package io.druid.java.util.common.guava;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import io.druid.java.util.common.io.Closer;
@@ -47,7 +48,16 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
   {
     PriorityQueue<Yielder<T>> pQueue = new PriorityQueue<>(
         32,
-        ordering.onResultOf(Yielder::get)
+        ordering.onResultOf(
+            new Function<Yielder<T>, T>()
+            {
+              @Override
+              public T apply(Yielder<T> input)
+              {
+                return input.get();
+              }
+            }
+        )
     );
 
     pQueue = baseSequences.accumulate(

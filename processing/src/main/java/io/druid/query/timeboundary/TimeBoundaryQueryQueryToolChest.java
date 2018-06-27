@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.java.util.common.DateTimes;
@@ -44,7 +46,6 @@ import io.druid.timeline.LogicalSegment;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  */
@@ -84,12 +85,19 @@ public class TimeBoundaryQueryQueryToolChest
     final T min = query.isMaxTime() ? null : segments.get(0);
     final T max = query.isMinTime() ? null : segments.get(segments.size() - 1);
 
-    return segments.stream(
-    ).filter(
-        segment -> (min != null && segment.getInterval().overlaps(min.getInterval())) ||
-                   (max != null && segment.getInterval().overlaps(max.getInterval()))
-    ).collect(
-        Collectors.toList()
+    return Lists.newArrayList(
+        Iterables.filter(
+            segments,
+            new Predicate<T>()
+            {
+              @Override
+              public boolean apply(T input)
+              {
+                return (min != null && input.getInterval().overlaps(min.getInterval())) ||
+                       (max != null && input.getInterval().overlaps(max.getInterval()));
+              }
+            }
+        )
     );
   }
 

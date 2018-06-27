@@ -23,15 +23,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.druid.common.guava.CombiningSequence;
-import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.JodaUtils;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.guava.MappedSequence;
@@ -62,7 +64,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
@@ -110,8 +111,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           Map<String, Object> context
       )
       {
-        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(
-            config);
+        SegmentMetadataQuery updatedQuery = ((SegmentMetadataQuery) queryPlus.getQuery()).withFinalizedAnalysisTypes(config);
         QueryPlus<SegmentAnalysis> updatedQueryPlus = queryPlus.withQuery(updatedQuery);
         return new MappedSequence<>(
             CombiningSequence.create(
@@ -240,11 +240,18 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     DateTime targetEnd = max.getInterval().getEnd();
     final Interval targetInterval = new Interval(config.getDefaultHistory(), targetEnd);
 
-    return segments.stream(
-    ).filter(
-        segment -> segment.getInterval().overlaps(targetInterval)
-    ).collect(
-        Collectors.toList()
+    return Lists.newArrayList(
+        Iterables.filter(
+            segments,
+            new Predicate<T>()
+            {
+              @Override
+              public boolean apply(T input)
+              {
+                return (input.getInterval().overlaps(targetInterval));
+              }
+            }
+        )
     );
   }
 

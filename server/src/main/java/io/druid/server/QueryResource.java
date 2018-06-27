@@ -198,9 +198,6 @@ public class QueryResource implements QueryCountStatsProvider
             QueryContexts.isSerializeDateTimeAsLong(query, false)
             || (!shouldFinalize && QueryContexts.isSerializeDateTimeAsLongInner(query, false));
         final ObjectWriter jsonWriter = context.newOutputWriter(serializeDateTimeAsLong);
-        // Wishlist: https://github.com/FasterXML/jackson-databind/blob/master/src/main/java/com/fasterxml/jackson/databind/ext/jdk8/Jdk8StreamSerializer.java
-        // https://github.com/FasterXML/jackson-databind/commit/cd32cd5539752cb606c41f09b04d61f170edf323
-        // Probably landing in jackson-databind 3.x
         Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
