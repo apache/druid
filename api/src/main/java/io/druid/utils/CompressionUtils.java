@@ -69,7 +69,7 @@ public class CompressionUtils
    * @param pulledFile The source file
    * @param outDir     The destination directory to put the resulting file
    *
-   * @throws IOException on propogated IO exception, IAE if it cannot determine the proper new name for `pulledFile`
+   * @throws IOException on propagated IO exception, IAE if it cannot determine the proper new name for `pulledFile`
    */
   @Deprecated // See description for alternative
   public static void gunzip(File pulledFile, File outDir)

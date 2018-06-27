@@ -71,7 +71,7 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  private Period unannouncePropogationDelay = Period.ZERO;
+  private Period unannouncePropagationDelay = Period.ZERO;
 
   @JsonProperty
   @Min(0)
@@ -127,9 +127,9 @@ public class ServerConfig
     return gracefulShutdownTimeout;
   }
 
-  public Period getUnannouncePropogationDelay()
+  public Period getUnannouncePropagationDelay()
   {
-    return unannouncePropogationDelay;
+    return unannouncePropagationDelay;
   }
 
   public int getInflateBufferSize()
@@ -164,7 +164,7 @@ public class ServerConfig
            compressionLevel == that.compressionLevel &&
            Objects.equals(maxIdleTime, that.maxIdleTime) &&
            Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
-           Objects.equals(unannouncePropogationDelay, that.unannouncePropogationDelay);
+           Objects.equals(unannouncePropagationDelay, that.unannouncePropagationDelay);
   }
 
   @Override
@@ -181,7 +181,7 @@ public class ServerConfig
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
-        unannouncePropogationDelay,
+        unannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel
     );
@@ -200,7 +200,7 @@ public class ServerConfig
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
-           ", unannouncePropogationDelay=" + unannouncePropogationDelay +
+           ", unannouncePropagationDelay=" + unannouncePropagationDelay +
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            '}';

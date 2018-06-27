@@ -32,6 +32,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.easymock.EasyMock.expect;
+
 /**
  */
 public class ServerSelectorTest
@@ -42,7 +44,7 @@ public class ServerSelectorTest
   public void setUp()
   {
     tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
-    EasyMock.expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
+    expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
   }
 
   @Test
@@ -53,7 +55,7 @@ public class ServerSelectorTest
                    .dataSource("test_broker_server_view")
                    .interval(Intervals.of("2012/2013"))
                    .loadSpec(
-                       ImmutableMap.<String, Object>of(
+                       ImmutableMap.of(
                            "type",
                            "local",
                            "path",
@@ -61,13 +63,13 @@ public class ServerSelectorTest
                        )
                    )
                    .version("v1")
-                   .dimensions(ImmutableList.<String>of())
-                   .metrics(ImmutableList.<String>of())
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())
                    .binaryVersion(9)
                    .size(0)
                    .build(),
-        EasyMock.createMock(TierSelectorStrategy.class)
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
 
     selector.addServerAndUpdateSegment(
@@ -80,7 +82,7 @@ public class ServerSelectorTest
                        "test_broker_server_view")
                    .interval(Intervals.of("2012/2013"))
                    .loadSpec(
-                       ImmutableMap.<String, Object>of(
+                       ImmutableMap.of(
                            "type",
                            "local",
                            "path",
@@ -89,13 +91,13 @@ public class ServerSelectorTest
                    )
                    .version("v1")
                    .dimensions(
-                       ImmutableList.<String>of(
+                       ImmutableList.of(
                            "a",
                            "b",
                            "c"
                        ))
                    .metrics(
-                       ImmutableList.<String>of())
+                       ImmutableList.of())
                    .shardSpec(NoneShardSpec.instance())
                    .binaryVersion(9)
                    .size(0)
