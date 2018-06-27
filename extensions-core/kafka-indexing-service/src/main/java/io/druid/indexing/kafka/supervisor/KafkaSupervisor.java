@@ -1529,12 +1529,11 @@ public class KafkaSupervisor implements Supervisor
 
               if (endOffsets.equals(taskGroup.sequenceOffsets.lastEntry().getValue())) {
                 log.warn(
-                    "Not adding checkpoint [%s] as its same as the start offsets [%s] of latest sequence for the task group [%d]",
+                    "Checkpoint [%s] is same as the start offsets [%s] of latest sequence for the task group [%d]",
                     endOffsets,
                     taskGroup.sequenceOffsets.lastEntry().getValue(),
                     groupId
                 );
-                return endOffsets;
               }
 
               log.info("Setting endOffsets for tasks in taskGroup [%d] to %s and resuming", groupId, endOffsets);
