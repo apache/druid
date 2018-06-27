@@ -57,10 +57,10 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
    * @param fjp           The ForkJoinPool to do the intermediate merges in.
    * @param <T>           The result type
    *
-   * @throws RuntimeException Will throw a RuntimeException in during iterating through the returned Sequence if a Throwable
-   * was encountered in an intermediate merge
-   *
    * @return A Sequence that will be the merged results of the sub-sequences
+   *
+   * @throws RuntimeException Will throw a RuntimeException in during iterating through the returned Sequence if a Throwable
+   *                          was encountered in an intermediate merge
    */
   public static <T> Sequence<T> parallelMerge(
       Ordering<? super T> ordering,
