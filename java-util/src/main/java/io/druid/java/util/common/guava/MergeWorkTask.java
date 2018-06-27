@@ -21,6 +21,7 @@ package io.druid.java.util.common.guava;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
+import io.druid.java.util.common.Pair;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -47,11 +48,17 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
    * merge is still done when the returned sequence accumulated. The intermediate merges are yielded in the order
    * in which they are ready.
    *
+   * Exceptions that happen during execution of the merge are passed through and bubbled up during the resulting sequence
+   * iteration
+   *
    * @param ordering      The ordering to pass into MergeSequence
    * @param baseSequences The sequences that need merged
    * @param batchSize     The input stream should be split down to this number if possible. This sets the target number of segments per merge thread work
    * @param fjp           The ForkJoinPool to do the intermediate merges in.
    * @param <T>           The result type
+   *
+   * @throws RuntimeException Will throw a RuntimeException in during iterating through the returned Sequence if a Throwable
+   * was encountered in an intermediate merge
    *
    * @return A Sequence that will be the merged results of the sub-sequences
    */
@@ -94,9 +101,16 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
       spliteratorStack.push(other);
     }
 
-    final BlockingQueue<Sequence<T>> readyForFinalMerge = new ArrayBlockingQueue<>(tasks.size());
-    tasks.forEach(t -> fjp.submit(() -> {
-      readyForFinalMerge.add(t.join());
+    // We guarantee enough space to put all the results so that the FJP doesn't block waiting for results to come in
+    final BlockingQueue<Pair<Sequence<T>, Throwable>> readyForFinalMerge = new ArrayBlockingQueue<>(tasks.size());
+    tasks.forEach(task -> fjp.submit(() -> {
+      try {
+        readyForFinalMerge.add(Pair.of(task.join(), null));
+      }
+      catch (Throwable t) {
+        // FJP.join exceptions are different than executor service's `.get()`
+        readyForFinalMerge.add(Pair.of(null, t));
+      }
     }));
 
     final long totalAdditions = tasks.size();
@@ -126,7 +140,11 @@ public class MergeWorkTask<T> extends ForkJoinTask<Sequence<T>>
                     }
                     try {
                       taken++;
-                      return readyForFinalMerge.take();
+                      final Pair<Sequence<T>, Throwable> result = readyForFinalMerge.take();
+                      if (result.rhs != null) {
+                        throw new RuntimeException("failed in executing merge task", result.rhs);
+                      }
+                      return result.lhs;
                     }
                     catch (InterruptedException e) {
                       Thread.currentThread().interrupt();
