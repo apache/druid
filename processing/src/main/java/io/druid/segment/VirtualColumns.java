@@ -71,7 +71,7 @@ public class VirtualColumns implements Cacheable
     }
   }
 
-  public static VirtualColumns create(VirtualColumn ... virtualColumns)
+  public static VirtualColumns create(VirtualColumn...virtualColumns)
   {
     return create(Lists.newArrayList(virtualColumns));
   }
