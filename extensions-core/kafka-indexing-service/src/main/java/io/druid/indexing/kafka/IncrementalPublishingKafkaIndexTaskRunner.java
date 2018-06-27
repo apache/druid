@@ -103,6 +103,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -1504,7 +1505,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     private final int sequenceId;
     private final String sequenceName;
     private final Map<Integer, Long> startOffsets;
-    private final Map<Integer, Long> endOffsets;
+    private final ConcurrentHashMap<Integer, Long> endOffsets;
     private final Set<Integer> assignments;
     private final boolean sentinel;
     private volatile boolean checkpointed;
@@ -1524,8 +1525,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
       this.sequenceId = sequenceId;
       this.sequenceName = sequenceName;
       this.startOffsets = ImmutableMap.copyOf(startOffsets);
-      this.endOffsets = Maps.newHashMap(endOffsets);
-      this.assignments = Sets.newHashSet(startOffsets.keySet());
+      this.endOffsets = new ConcurrentHashMap<>(endOffsets);
+      this.assignments = new HashSet<>(startOffsets.keySet());
       this.checkpointed = checkpointed;
       this.sentinel = false;
     }
@@ -1575,10 +1576,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
     void updateAssignments(Map<Integer, Long> nextPartitionOffset)
     {
       assignments.clear();
-      nextPartitionOffset.entrySet().forEach(partitionOffset -> {
-        if (Longs.compare(endOffsets.get(partitionOffset.getKey()), nextPartitionOffset.get(partitionOffset.getKey()))
-            > 0) {
-          assignments.add(partitionOffset.getKey());
+      nextPartitionOffset.forEach((key, value) -> {
+        if (Longs.compare(endOffsets.get(key), nextPartitionOffset.get(key)) > 0) {
+          assignments.add(key);
         }
       });
     }
@@ -1637,7 +1637,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
             {
               Preconditions.checkState(
                   assignments.isEmpty(),
-                  "This committer can be used only once all the records till offsets [%s] have been consumed, also make sure to call updateAssignments before using this committer",
+                  "This committer can be used only once all the records till offsets [%s] have been consumed, also make"
+                  + " sure to call updateAssignments before using this committer",
                   endOffsets
               );
 
@@ -1646,16 +1647,20 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
               // corresponding to the current sequence. Generally, lastPersistedOffsets should already
               // cover endOffsets but just to be sure take max of offsets and persist that
               for (Map.Entry<Integer, Long> partitionOffset : endOffsets.entrySet()) {
-                lastPersistedOffsets.put(partitionOffset.getKey(), Math.max(
-                    partitionOffset.getValue(),
-                    lastPersistedOffsets.getOrDefault(partitionOffset.getKey(), 0L)
-                ));
+                lastPersistedOffsets.put(
+                    partitionOffset.getKey(),
+                    Math.max(
+                        partitionOffset.getValue(),
+                        lastPersistedOffsets.getOrDefault(partitionOffset.getKey(), 0L)
+                    )
+                );
               }
 
               // Publish metadata can be different from persist metadata as we are going to publish only
               // subset of segments
-              return ImmutableMap.of(METADATA_NEXT_PARTITIONS, new KafkaPartitions(topic, lastPersistedOffsets),
-                                     METADATA_PUBLISH_PARTITIONS, new KafkaPartitions(topic, endOffsets)
+              return ImmutableMap.of(
+                  METADATA_NEXT_PARTITIONS, new KafkaPartitions(topic, lastPersistedOffsets),
+                  METADATA_PUBLISH_PARTITIONS, new KafkaPartitions(topic, endOffsets)
               );
             }
 
