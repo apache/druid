@@ -193,7 +193,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
-    final Stream<? extends Sequence<T>> sequences = CachingClusteredClient.this.run(
+    final Stream<? extends Sequence<T>> sequences = run(
         queryPlus,
         responseContext,
         timelineConverter
@@ -334,7 +334,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // 2. Group the segment information by server
       // 3. Per server (including the ALREADY_CACHED_SERVER) create the appropriate Sequence results - cached results
       // are handled in their own merge
-      // 4. Wrap the whole thing up in a merge
       final Stream<SerializablePair<ServerToSegment, Optional<T>>> cacheResolvedResults = deserializeFromCache(
           maybeFetchCacheResults(
               queryCacheKey,
@@ -345,7 +344,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
           cacheResolvedResults
       ).map(
           this::runOnServer
-      );
+      ).collect(
+          // We do a hard materialization here so that the resulting spliterators have properties that we want
+          // Otherwise the stream's spliterator is of a hash map entry spliterator from the group-by-server operation
+          // This also causes eager initialization of the **sequences**, aka forking off the direct druid client requests
+          // Sequence result accumulation should still be lazy
+          Collectors.toList()
+      ).stream();
     }
 
     private Stream<ServerToSegment> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
@@ -552,7 +557,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
      * and return the merged sequence. For the ones that were NOT cached, get the server result sequence queued up into
      * the stream response
      *
-     * @param segmentOrResult A list that is traversed in order to determine what should be sent back.
+     * @param segmentOrResult A list that is traversed in order to determine what should be sent back. All segments
+     *                        should be on the same server.
      *
      * @return A sequence of either the merged cached results, or the server results from any particular server
      */
@@ -647,7 +653,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     // Downstream consumers should check each and handle appropriately.
     private Stream<List<ServerMaybeSegmentMaybeCache<T>>> groupCachedResultsByServer(Stream<SerializablePair<ServerToSegment, Optional<T>>> cacheResolvedStream)
     {
-      final List<List<ServerMaybeSegmentMaybeCache<T>>> listList = cacheResolvedStream.map(
+      return cacheResolvedStream.map(
           this::pickServer
       ).collect(
           Collectors.groupingBy(ServerMaybeSegmentMaybeCache::getServer)
@@ -662,9 +668,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       ).filter(
           // Get rid of any alerted conditions missing queryableDruidServer
           l -> l.get(0).getCachedValue().isPresent() || l.get(0).getSegmentDescriptor().isPresent()
-      ).collect(Collectors.toList());
-      // We do a hard materialization here so that the resulting spliterators have properties that we want
-      return listList.stream();
+      );
     }
 
     private Stream<SerializablePair<ServerToSegment, Optional<T>>> deserializeFromCache(

@@ -604,9 +604,18 @@ public class CachingClusteredClientTest
             .once();
     EasyMock.replay(cache);
     client = makeClient(MoreExecutors.sameThreadExecutor(), cache, 0);
+
+    // Direct druid client runners are eagerly forked off
+    QueryRunner runner = EasyMock.createStrictMock(QueryRunner.class);
+    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
+
+    EasyMock.reset(serverView);
+    EasyMock.expect(serverView.getQueryRunner(lastServer)).andReturn(runner).once();
+    EasyMock.replay(runner, serverView);
+
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
-    EasyMock.verify(cache);
-    EasyMock.verify(dataSegment);
+
+    EasyMock.verify(cache, dataSegment, serverView, runner);
     Assert.assertTrue("Capture cache keys", cacheKeyCapture.hasCaptured());
     Assert.assertTrue("Cache Keys empty", cacheKeyCapture.getValue().count() == 0);
   }
