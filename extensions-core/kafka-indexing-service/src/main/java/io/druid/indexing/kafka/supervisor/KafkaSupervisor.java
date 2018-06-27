@@ -43,8 +43,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.indexer.TaskLocation;
-import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.stats.RowIngestionMetersFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -1636,7 +1636,12 @@ public class KafkaSupervisor implements Supervisor
 
           // reset partitions offsets for this task group so that they will be re-read from metadata storage
           partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
-          if (taskGroups.get(groupId) != null) {
+          if (taskGroups.get(groupId) == null) {
+            log.warn(
+                "group id: %s not found in taskGroups, skipping remove from sequenceTaskGroup or it might have already been removed",
+                groupId
+            );
+          } else {
             sequenceTaskGroup.remove(generateSequenceName(groupId));
           }
           // kill all the tasks in this pending completion group
