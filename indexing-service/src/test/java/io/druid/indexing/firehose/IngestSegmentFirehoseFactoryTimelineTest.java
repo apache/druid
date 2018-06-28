@@ -53,7 +53,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.filter.NoopDimFilter;
+import io.druid.query.filter.TrueDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
@@ -350,7 +350,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,
           testCase.interval,
-          new NoopDimFilter(),
+          new TrueDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
           INDEX_IO
