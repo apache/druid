@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.stream.Stream;
 
 /**
- * {@link FirehoseFactory} designed for batch processing. Its implementations assume that the amount of inputs is
+ * {@link FiniteFirehoseFactory} designed for batch processing. Its implementations assume that the amount of inputs is
  * limited.
  *
  * @param <T> parser type
@@ -35,7 +35,7 @@ import java.util.stream.Stream;
 public interface FiniteFirehoseFactory<T extends InputRowParser, S> extends FirehoseFactory<T>
 {
   /**
-   * Returns true if the {@link FirehoseFactory} supports parallel batch indexing.
+   * Returns true if this {@link FiniteFirehoseFactory} supports parallel batch indexing.
    */
   @JsonIgnore
   @Override
@@ -45,7 +45,11 @@ public interface FiniteFirehoseFactory<T extends InputRowParser, S> extends Fire
   }
 
   /**
-   * Returns an iterator of {@link InputSplit}s.
+   * Returns a {@link Stream} for {@link InputSplit}s. In parallel batch indexing, each {@link InputSplit} is processed
+   * by a sub task.
+   *
+   * Listing splits may cause high overhead in some implementations. In this case, {@link InputSplit}s should be listed
+   * lazily so that the listing overhead could be amortized.
    */
   @JsonIgnore
   Stream<InputSplit<S>> getSplits() throws IOException;

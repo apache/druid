@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Input unit for distributed batch ingestion. Used in {@link FiniteFirehoseFactory}.
+ * An {@link InputSplit} represents the input data processed by a {@code io.druid.indexing.common.task.Task}.
  */
 public class InputSplit<T>
 {

@@ -274,6 +274,13 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     );
   }
 
+  /**
+   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
+   *
+   * <pre>
+   * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
+   * </pre>
+   */
   private static URI toUri(S3ObjectSummary object)
   {
     final String originalAuthority = object.getBucketName();
