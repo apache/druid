@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.FloatDimensionSchema;
@@ -39,6 +40,7 @@ import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -198,6 +200,18 @@ public class ExpressionFilterTest extends BaseFilterTest
     assertFilterMatches(EDF("missing > 2"), ImmutableList.of());
     assertFilterMatches(EDF("missing > 2.0"), ImmutableList.of());
     assertFilterMatches(EDF("like(missing, '1%')"), ImmutableList.of());
+  }
+
+  @Test
+  public void testGetRequiredColumn()
+  {
+    Assert.assertEquals(EDF("like(dim1, '1%')").getRequiredColumns(), Sets.newHashSet("dim1"));
+    Assert.assertEquals(EDF("dim2 == '1'").getRequiredColumns(), Sets.newHashSet("dim2"));
+    Assert.assertEquals(EDF("dim3 < '2'").getRequiredColumns(), Sets.newHashSet("dim3"));
+    Assert.assertEquals(EDF("dim4 == ''").getRequiredColumns(), Sets.newHashSet("dim4"));
+    Assert.assertEquals(EDF("1 + 1").getRequiredColumns(), Sets.newHashSet());
+    Assert.assertEquals(EDF("dim0 == dim3").getRequiredColumns(), Sets.newHashSet("dim0", "dim3"));
+    Assert.assertEquals(EDF("missing == ''").getRequiredColumns(), Sets.newHashSet("missing"));
   }
 
   private static ExpressionDimFilter EDF(final String expression)

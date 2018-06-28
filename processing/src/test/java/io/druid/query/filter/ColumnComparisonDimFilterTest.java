@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -86,5 +87,17 @@ public class ColumnComparisonDimFilterTest
         columnComparisonDimFilter2.hashCode(),
         columnComparisonDimFilter3.hashCode()
     );
+  }
+
+  @Test
+  public void testGetRequiredColumns()
+  {
+    ColumnComparisonDimFilter columnComparisonDimFilter = new ColumnComparisonDimFilter(
+        ImmutableList.of(
+            DefaultDimensionSpec.of("abc"),
+            DefaultDimensionSpec.of("d")
+        )
+    );
+    Assert.assertEquals(columnComparisonDimFilter.getRequiredColumns(), Sets.newHashSet("abc", "d"));
   }
 }

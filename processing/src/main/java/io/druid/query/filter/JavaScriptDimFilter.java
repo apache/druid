@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import io.druid.java.util.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
@@ -34,6 +35,7 @@ import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 
 public class JavaScriptDimFilter implements DimFilter
 {
@@ -132,6 +134,12 @@ public class JavaScriptDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

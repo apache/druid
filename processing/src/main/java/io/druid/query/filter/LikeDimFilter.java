@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
 import io.druid.java.util.common.StringUtils;
@@ -34,6 +35,7 @@ import io.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.regex.Pattern;
 
 public class LikeDimFilter implements DimFilter
@@ -304,6 +306,12 @@ public class LikeDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

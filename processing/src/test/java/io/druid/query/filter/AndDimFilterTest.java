@@ -16,45 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.query.filter;
 
-import com.google.common.collect.RangeSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.nio.ByteBuffer;
-import java.util.HashSet;
-
-/**
- */
-public class NoopDimFilter implements DimFilter
+public class AndDimFilterTest
 {
-  @Override
-  public byte[] getCacheKey()
-  {        
-    return ByteBuffer.allocate(1).put(DimFilterUtils.NOOP_CACHE_ID).array();
-  }
-
-  @Override
-  public DimFilter optimize()
+  @Test
+  public void testGetRequiredColumns()
   {
-    return this;
-  }
-
-  @Override
-  public Filter toFilter()
-  {
-    return null;
-  }
-
-  @Override
-  public RangeSet<String> getDimensionRangeSet(String dimension)
-  {
-    return null;
-  }
-
-  @Override
-  public HashSet<String> getRequiredColumns()
-  {
-    return null;
+    AndDimFilter andDimFilter = new AndDimFilter(
+        Lists.newArrayList(
+            new SelectorDimFilter("a", "d", null),
+            new SelectorDimFilter("b", "d", null),
+            new SelectorDimFilter("c", "d", null)
+        )
+    );
+    Assert.assertEquals(andDimFilter.getRequiredColumns(), Sets.newHashSet("a", "b", "c"));
   }
 }

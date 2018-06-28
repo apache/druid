@@ -20,18 +20,18 @@
 package io.druid.query.filter;
 
 import com.google.common.collect.RangeSet;
+import io.druid.segment.filter.TrueFilter;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
 
 /**
  */
-public class NoopDimFilter implements DimFilter
+public class TrueDimFilter implements DimFilter
 {
   @Override
   public byte[] getCacheKey()
   {        
-    return ByteBuffer.allocate(1).put(DimFilterUtils.NOOP_CACHE_ID).array();
+    return ByteBuffer.allocate(1).put(DimFilterUtils.TRUE_CACHE_ID).array();
   }
 
   @Override
@@ -43,17 +43,11 @@ public class NoopDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return null;
+    return new TrueFilter();
   }
 
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
-  {
-    return null;
-  }
-
-  @Override
-  public HashSet<String> getRequiredColumns()
   {
     return null;
   }
