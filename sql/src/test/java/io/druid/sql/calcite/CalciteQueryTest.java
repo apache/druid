@@ -6727,21 +6727,21 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         "SELECT "
-        + "  FLOOR(__time TO SECOND), "
+        + "  FLOOR(__time TO YEAR), "
         + "  SUM(m1), "
         + "  SUM(m1) + SUM(m2) "
         + "FROM "
         + "  druid.foo "
         + "WHERE "
         + "  dim2 = 'a' "
-        + "GROUP BY FLOOR(__time TO SECOND) "
-        + "ORDER BY FLOOR(__time TO SECOND) desc",
+        + "GROUP BY FLOOR(__time TO YEAR) "
+        + "ORDER BY FLOOR(__time TO YEAR) desc",
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .filters(SELECTOR("dim2", "a", null))
-                  .granularity(Granularities.SECOND)
+                  .granularity(Granularities.YEAR)
                   .aggregators(
                       AGGS(
                           new DoubleSumAggregatorFactory("a0", "m1"),
