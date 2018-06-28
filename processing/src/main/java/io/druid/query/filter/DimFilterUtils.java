@@ -36,7 +36,6 @@ import java.util.Set;
  */
 public class DimFilterUtils
 {
-  static final byte NOOP_CACHE_ID = -0x4;
   static final byte SELECTOR_CACHE_ID = 0x0;
   static final byte AND_CACHE_ID = 0x1;
   static final byte OR_CACHE_ID = 0x2;
