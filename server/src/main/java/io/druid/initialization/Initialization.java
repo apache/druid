@@ -20,6 +20,7 @@
 package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.guice.ObjectMapperModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -401,7 +402,8 @@ public class Initialization
         new EscalatorModule(),
         new AuthorizerModule(),
         new AuthorizerMapperModule(),
-        new StartupLoggingModule()
+        new StartupLoggingModule(),
+        new ObjectMapperModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);

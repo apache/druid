@@ -681,6 +681,11 @@
                 <version>4.5.1</version>
             </dependency>
             <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-guice</artifactId>
+                <version>2.9.6</version>
+            </dependency>
+            <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${dropwizard.metrics.version}</version>
