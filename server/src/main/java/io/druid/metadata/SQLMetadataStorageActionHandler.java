@@ -370,19 +370,29 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     public TaskInfo<EntryType> map(int index, ResultSet resultSet, StatementContext context) throws SQLException
     {
       final TaskInfo<EntryType> taskInfo;
+      EntryType task;
+      TaskStatus status;
       try {
-        TaskStatus status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
-        taskInfo = new TaskInfo<>(
-            resultSet.getString("id"),
-            DateTimes.of(resultSet.getString("created_date")),
-            status,
-            resultSet.getString("datasource"),
-            getJsonMapper().readValue(resultSet.getBytes("payload"), getEntryType())
-        );
+        task = getJsonMapper().readValue(resultSet.getBytes("payload"), getEntryType());
       }
       catch (IOException e) {
+        log.error(e, "Encountered exception while deserializing task payload, setting task to null");
+        task = null;
+      }
+      try {
+        status = getJsonMapper().readValue(resultSet.getBytes("status_payload"), getStatusType());
+      }
+      catch (IOException e) {
+        log.error(e, "Encountered exception while deserializing task status_payload");
         throw new SQLException(e);
       }
+      taskInfo = new TaskInfo<>(
+          resultSet.getString("id"),
+          DateTimes.of(resultSet.getString("created_date")),
+          status,
+          resultSet.getString("datasource"),
+          task
+      );
       return taskInfo;
     }
   }

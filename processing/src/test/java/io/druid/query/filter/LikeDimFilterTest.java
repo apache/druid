@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.SubstringDimExtractionFn;
 import org.junit.Assert;
@@ -59,5 +60,12 @@ public class LikeDimFilterTest
     Assert.assertNotEquals(filter, filter3);
     Assert.assertEquals(filter.hashCode(), filter2.hashCode());
     Assert.assertNotEquals(filter.hashCode(), filter3.hashCode());
+  }
+
+  @Test
+  public void testGetRequiredColumns()
+  {
+    final DimFilter filter = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
+    Assert.assertEquals(filter.getRequiredColumns(), Sets.newHashSet("foo"));
   }
 }

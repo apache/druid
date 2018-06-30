@@ -19,6 +19,7 @@
 
 package io.druid.query.filter;
 
+import com.google.common.collect.Sets;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.segment.filter.JavaScriptFilter;
@@ -104,5 +105,12 @@ public class JavaScriptDimFilterTest
     expectedException.expectMessage("JavaScript is disabled");
     javaScriptDimFilter.toFilter();
     Assert.assertTrue(false);
+  }
+
+  @Test
+  public void testGetRequiredColumns()
+  {
+    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", FN1, null, new JavaScriptConfig(false));
+    Assert.assertEquals(javaScriptDimFilter.getRequiredColumns(), Sets.newHashSet("dim"));
   }
 }

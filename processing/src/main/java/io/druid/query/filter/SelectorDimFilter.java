@@ -26,6 +26,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
@@ -39,6 +40,7 @@ import io.druid.segment.filter.SelectorFilter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
 
 /**
@@ -201,6 +203,12 @@ public class SelectorDimFilter implements DimFilter
       retSet.add(Range.singleton(valueEquivalent));
     }
     return retSet;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

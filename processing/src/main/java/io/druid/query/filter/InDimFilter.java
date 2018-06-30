@@ -28,6 +28,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
@@ -48,6 +49,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -225,6 +227,12 @@ public class InDimFilter implements DimFilter
       }
     }
     return retSet;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

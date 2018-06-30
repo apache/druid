@@ -27,6 +27,7 @@ import com.google.common.collect.RangeSet;
 import io.druid.segment.filter.NotFilter;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -98,6 +99,12 @@ public class NotDimFilter implements DimFilter
     }
     RangeSet<String> rangeSet = field.getDimensionRangeSet(dimension);
     return rangeSet == null ? null : rangeSet.complement();
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return field.getRequiredColumns();
   }
 
   @Override

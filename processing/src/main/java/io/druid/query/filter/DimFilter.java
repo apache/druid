@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
 import io.druid.java.util.common.Cacheable;
 
+import java.util.HashSet;
+
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -43,7 +45,7 @@ import io.druid.java.util.common.Cacheable;
     @JsonSubTypes.Type(name = "interval", value = IntervalDimFilter.class),
     @JsonSubTypes.Type(name = "like", value = LikeDimFilter.class),
     @JsonSubTypes.Type(name = "expression", value = ExpressionDimFilter.class),
-    @JsonSubTypes.Type(name = "noop", value = NoopDimFilter.class)
+    @JsonSubTypes.Type(name = "true", value = TrueDimFilter.class)
 })
 public interface DimFilter extends Cacheable
 {
@@ -75,4 +77,9 @@ public interface DimFilter extends Cacheable
    * determine for this DimFilter.
    */
   RangeSet<String> getDimensionRangeSet(String dimension);
+
+  /**
+   * @return a HashSet that represents all columns' name which the DimFilter required to do filter.
+   */
+  HashSet<String> getRequiredColumns();
 }
