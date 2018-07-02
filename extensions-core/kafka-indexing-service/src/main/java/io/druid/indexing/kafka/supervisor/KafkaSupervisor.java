@@ -890,7 +890,7 @@ public class KafkaSupervisor implements Supervisor
   {
     TaskGroup taskGroup = taskGroups.get(groupId);
     if (taskGroup == null) {
-      log.warn("group id: %s not found in taskGroups, cannot generate sequence number", groupId);
+      log.error("group id: %s not found in taskGroups, cannot generate sequence name", groupId);
       throw new IAE("group id: %s not found in taskGroups", groupId);
     }
     return generateSequenceName(
@@ -1637,7 +1637,7 @@ public class KafkaSupervisor implements Supervisor
           partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
           if (taskGroups.get(groupId) == null) {
             log.warn(
-                "group id: %s not found in taskGroups, skipping remove from sequenceTaskGroup or it might have already been removed",
+                "group id: %s not found in taskGroups, skipping remove from sequenceTaskGroup",
                 groupId
             );
           } else {
