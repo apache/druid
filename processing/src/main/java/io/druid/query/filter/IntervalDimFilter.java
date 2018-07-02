@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.Pair;
@@ -34,6 +35,7 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 public class IntervalDimFilter implements DimFilter
@@ -120,6 +122,12 @@ public class IntervalDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return convertedFilter.getDimensionRangeSet(dimension);
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.filter.Filters;
@@ -31,6 +32,7 @@ import io.druid.segment.filter.OrFilter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -103,6 +105,15 @@ public class OrDimFilter implements DimFilter
       }
     }
     return retSet;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    HashSet<String> requiredColumns = Sets.newHashSet();
+    fields.stream()
+        .forEach(field -> requiredColumns.addAll(field.getRequiredColumns()));
+    return requiredColumns;
   }
 
   @Override

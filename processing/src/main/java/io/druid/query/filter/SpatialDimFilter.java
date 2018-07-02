@@ -22,11 +22,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import io.druid.collections.spatial.search.Bound;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.filter.SpatialFilter;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 
 /**
  */
@@ -90,6 +92,12 @@ public class SpatialDimFilter implements DimFilter
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
+  }
+
+  @Override
+  public HashSet<String> getRequiredColumns()
+  {
+    return Sets.newHashSet(dimension);
   }
 
   @Override

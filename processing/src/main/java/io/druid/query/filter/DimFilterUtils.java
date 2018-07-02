@@ -36,7 +36,6 @@ import java.util.Set;
  */
 public class DimFilterUtils
 {
-  static final byte NOOP_CACHE_ID = -0x4;
   static final byte SELECTOR_CACHE_ID = 0x0;
   static final byte AND_CACHE_ID = 0x1;
   static final byte OR_CACHE_ID = 0x2;
@@ -52,6 +51,7 @@ public class DimFilterUtils
   static final byte LIKE_CACHE_ID = 0xC;
   static final byte COLUMN_COMPARISON_CACHE_ID = 0xD;
   static final byte EXPRESSION_CACHE_ID = 0xE;
+  static final byte TRUE_CACHE_ID = 0xF;
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
 
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)

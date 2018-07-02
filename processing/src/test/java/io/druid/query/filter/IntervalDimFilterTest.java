@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import io.druid.guice.GuiceInjectors;
@@ -229,5 +230,19 @@ public class IntervalDimFilterTest
         null
     );
     Assert.assertNotEquals(intervalFilter1, intervalFilter5);
+  }
+
+  @Test
+  public void testGetRequiredColumns()
+  {
+    DimFilter intervalFilter = new IntervalDimFilter(
+        Column.TIME_COLUMN_NAME,
+        Arrays.asList(
+            Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+            Intervals.of("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+        ),
+        null
+    );
+    Assert.assertEquals(intervalFilter.getRequiredColumns(), Sets.newHashSet(Column.TIME_COLUMN_NAME));
   }
 }
