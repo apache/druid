@@ -32,7 +32,9 @@ import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.Pair;
 import io.druid.java.util.common.concurrent.ListenableFutures;
+import io.druid.java.util.common.guava.Comparators;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.SegmentDescriptor;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -43,8 +45,9 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -194,18 +197,13 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       for (final SegmentIdentifier identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
         final long key = identifier.getInterval().getStartMillis();
-        if (activeSegmentsForSequence.get(key) == null || activeSegmentsForSequence.get(key).stream().noneMatch(
-            segmentWithState -> {
-              if (segmentWithState.getSegmentIdentifier().equals(identifier)) {
-                segmentWithState.finishAppending();
-                return true;
-              } else {
-                return false;
-              }
-            }
-        )) {
+        final SegmentsOfInterval segmentsOfInterval = activeSegmentsForSequence.get(key);
+        if (segmentsOfInterval == null ||
+            segmentsOfInterval.getAppendingSegment() == null ||
+            !segmentsOfInterval.getAppendingSegment().getSegmentIdentifier().equals(identifier)) {
           throw new ISE("WTF?! Asked to remove segment[%s] that didn't exist...", identifier);
         }
+        segmentsOfInterval.finishAppendingToCurrentActiveSegment(SegmentWithState::finishAppending);
       }
     }
   }
@@ -396,33 +394,53 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   private static class SegmentsForSequenceBuilder
   {
-    private final NavigableMap<Long, LinkedList<SegmentWithState>> intervalToSegmentStates;
+    // segmentId -> (appendingSegment, appendFinishedSegments)
+    private final NavigableMap<SegmentIdentifier, Pair<SegmentWithState, List<SegmentWithState>>> intervalToSegments =
+        new TreeMap<>(Comparator.comparing(SegmentIdentifier::getInterval, Comparators.intervalsByStartThenEnd()));
     private final String lastSegmentId;
 
     SegmentsForSequenceBuilder(String lastSegmentId)
     {
-      this.intervalToSegmentStates = new TreeMap<>();
       this.lastSegmentId = lastSegmentId;
     }
 
     void add(SegmentWithState segmentWithState)
     {
       final SegmentIdentifier identifier = segmentWithState.getSegmentIdentifier();
-      final LinkedList<SegmentWithState> segmentsInInterval = intervalToSegmentStates.computeIfAbsent(
-          identifier.getInterval().getStartMillis(),
-          k -> new LinkedList<>()
-      );
+      final Pair<SegmentWithState, List<SegmentWithState>> pair = intervalToSegments.get(identifier);
+      final List<SegmentWithState> appendFinishedSegments = pair == null || pair.rhs == null ?
+                                                            new ArrayList<>() :
+                                                            pair.rhs;
+
       // always keep APPENDING segments for an interval start millis in the front
       if (segmentWithState.getState() == SegmentState.APPENDING) {
-        segmentsInInterval.addFirst(segmentWithState);
+        if (pair != null && pair.lhs != null) {
+          throw new ISE(
+              "WTF?! there was already an appendingSegment[%s] before adding an appendingSegment[%s]",
+              pair.lhs,
+              segmentWithState
+          );
+        }
+
+        intervalToSegments.put(identifier, Pair.of(segmentWithState, appendFinishedSegments));
       } else {
-        segmentsInInterval.addLast(segmentWithState);
+        final SegmentWithState appendingSegment = pair == null ? null : pair.lhs;
+        appendFinishedSegments.add(segmentWithState);
+        intervalToSegments.put(identifier, Pair.of(appendingSegment, appendFinishedSegments));
       }
     }
 
     SegmentsForSequence build()
     {
-      return new SegmentsForSequence(intervalToSegmentStates, lastSegmentId);
+      final NavigableMap<Long, SegmentsOfInterval> map = new TreeMap<>();
+      for (Entry<SegmentIdentifier, Pair<SegmentWithState, List<SegmentWithState>>> entry :
+          intervalToSegments.entrySet()) {
+        map.put(
+            entry.getKey().getInterval().getStartMillis(),
+            new SegmentsOfInterval(entry.getKey().getInterval(), entry.getValue().lhs, entry.getValue().rhs)
+        );
+      }
+      return new SegmentsForSequence(map, lastSegmentId);
     }
   }
 }
