@@ -29,6 +29,13 @@ import io.druid.query.QueryMetrics;
 @ExtensionPoint
 public interface TimeseriesQueryMetrics extends QueryMetrics<TimeseriesQuery>
 {
+
+  /**
+   * Sets {@link TimeseriesQuery#getLimit()} of the given query as dimension.
+   */
+  @PublicApi
+  void limit(TimeseriesQuery query);
+
   /**
    * Sets the number of metrics of the given timeseries query as dimension.
    */

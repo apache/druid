@@ -79,7 +79,8 @@ public class TimeseriesBinaryFnTest
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         Granularities.ALL,
-        aggregatorFactories
+        aggregatorFactories,
+        0
     ).apply(
         result1,
         result2
@@ -121,7 +122,8 @@ public class TimeseriesBinaryFnTest
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         Granularities.DAY,
-        aggregatorFactories
+        aggregatorFactories,
+        0
     ).apply(
         result1,
         result2
@@ -147,7 +149,8 @@ public class TimeseriesBinaryFnTest
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         Granularities.ALL,
-        aggregatorFactories
+        aggregatorFactories,
+        0
     ).apply(
         result1,
         result2
@@ -189,7 +192,8 @@ public class TimeseriesBinaryFnTest
 
     Result<TimeseriesResultValue> actual = new TimeseriesBinaryFn(
         Granularities.ALL,
-        aggregatorFactories
+        aggregatorFactories,
+        0
     ).apply(
         result1,
         result2

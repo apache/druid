@@ -103,12 +103,25 @@ public class DruidQuery
   private final RowSignature sourceRowSignature;
   private final PlannerContext plannerContext;
 
+  @Nullable
   private final DimFilter filter;
+
+  @Nullable
   private final SelectProjection selectProjection;
+
+  @Nullable
   private final Grouping grouping;
+
+  @Nullable
   private final SortProject sortProject;
+
+  @Nullable
   private final DefaultLimitSpec limitSpec;
+
+  @Nullable
   private final RowSignature outputRowSignature;
+
+  @Nullable
   private final RelDataType outputRowType;
 
   private final Query query;
@@ -731,7 +744,7 @@ public class DruidQuery
 
     final Granularity queryGranularity;
     final boolean descending;
-
+    int timeseriesLimit = 0;
     if (grouping.getDimensions().isEmpty()) {
       queryGranularity = Granularities.ALL;
       descending = false;
@@ -746,11 +759,10 @@ public class DruidQuery
         // Timeseries only applies if the single dimension is granular __time.
         return null;
       }
-
       if (limitSpec != null) {
-        // If there is a limit spec, timeseries cannot LIMIT; and must be ORDER BY time (or nothing).
+        // If there is a limit spec, set timeseriesLimit to given value if less than Integer.Max_VALUE
         if (limitSpec.isLimited()) {
-          return null;
+          timeseriesLimit = limitSpec.getLimit();
         }
 
         if (limitSpec.getColumns().isEmpty()) {
@@ -797,6 +809,7 @@ public class DruidQuery
         queryGranularity,
         grouping.getAggregatorFactories(),
         postAggregators,
+        timeseriesLimit,
         ImmutableSortedMap.copyOf(theContext)
     );
   }
