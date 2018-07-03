@@ -33,7 +33,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -42,8 +41,7 @@ import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
@@ -68,7 +66,6 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.collect.Utils;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.parsers.ParseException;
 import io.druid.java.util.emitter.EmittingLogger;
@@ -127,23 +124,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -179,7 +174,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final AuthorizerMapper authorizerMapper;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
 
-  private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
+  private final Map<Integer, Long> endOffsets;
   private final Map<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
   private final Map<Integer, Long> maxEndOffsets = new HashMap<>();
   private final Map<Integer, Long> lastPersistedOffsets = new ConcurrentHashMap<>();
@@ -192,7 +187,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
   private volatile Thread runThread = null;
-  private volatile File sequencesPersistFile = null;
   private final AtomicBoolean stopRequested = new AtomicBoolean(false);
   private final AtomicBoolean publishOnStop = new AtomicBoolean(false);
 
@@ -232,20 +226,17 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final Object statusLock = new Object();
 
   private volatile boolean pauseRequested = false;
-  private volatile long pauseMillis = 0;
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
-  private final BlockingQueue<SequenceMetadata> publishQueue = new LinkedBlockingQueue<>();
-  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new CopyOnWriteArrayList<>(); // to prevent concurrency visibility issue
-  private final CountDownLatch waitForPublishes = new CountDownLatch(1);
-  private final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new LinkedList<>();
+  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new LinkedList<>();
   private final String topic;
 
   private volatile CopyOnWriteArrayList<SequenceMetadata> sequences;
-  private ListeningExecutorService publishExecService;
+  private volatile Throwable backgroundThreadException;
   private final boolean useLegacy;
 
   @JsonCreator
@@ -274,7 +265,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     this.authorizerMapper = authorizerMapper;
-    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
+    this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndPartitions().getPartitionOffsetMap());
     this.maxEndOffsets.putAll(endOffsets.entrySet()
                                         .stream()
                                         .collect(Collectors.toMap(
@@ -343,75 +334,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return ioConfig;
   }
 
-  private void createAndStartPublishExecutor()
-  {
-    publishExecService = MoreExecutors.listeningDecorator(Execs.singleThreaded("publish-driver"));
-    publishExecService.submit(
-        (Runnable) () -> {
-          while (true) {
-            try {
-              final SequenceMetadata sequenceMetadata = publishQueue.take();
-
-              Preconditions.checkNotNull(driver);
-
-              if (sequenceMetadata.isSentinel()) {
-                waitForPublishes.countDown();
-                break;
-              }
-
-              log.info("Publishing segments for sequence [%s]", sequenceMetadata);
-
-              final SegmentsAndMetadata result = driver.publish(
-                  sequenceMetadata.getPublisher(toolbox, ioConfig.isUseTransaction()),
-                  sequenceMetadata.getCommitterSupplier(topic, lastPersistedOffsets).get(),
-                  ImmutableList.of(sequenceMetadata.getSequenceName())
-              ).get();
-
-              if (result == null) {
-                throw new ISE(
-                    "Transaction failure publishing segments for sequence [%s]",
-                    sequenceMetadata
-                );
-              } else {
-                log.info(
-                    "Published segments[%s] with metadata[%s].",
-                    Joiner.on(", ").join(
-                        result.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
-                    ),
-                    Preconditions.checkNotNull(result.getCommitMetadata(), "commitMetadata")
-                );
-              }
-
-              sequences.remove(sequenceMetadata);
-              publishingSequences.remove(sequenceMetadata.getSequenceName());
-              try {
-                persistSequences();
-              }
-              catch (IOException e) {
-                log.error(e, "Unable to persist state, dying");
-                Throwables.propagate(e);
-              }
-
-              final ListenableFuture<SegmentsAndMetadata> handOffFuture = driver.registerHandoff(result);
-              handOffWaitList.add(handOffFuture);
-            }
-            catch (Throwable t) {
-              if ((t instanceof InterruptedException || (t instanceof RejectedExecutionException
-                                                         && t.getCause() instanceof InterruptedException))) {
-                log.warn("Stopping publish thread as we are interrupted, probably we are shutting down");
-              } else {
-                log.makeAlert(t, "Error in publish thread, dying").emit();
-                throwableAtomicReference.set(t);
-              }
-              Futures.allAsList(handOffWaitList).cancel(true);
-              waitForPublishes.countDown();
-              break;
-            }
-          }
-        }
-    );
-  }
-
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
@@ -426,47 +348,40 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     status = Status.STARTING;
     this.toolbox = toolbox;
 
-    if (getContext() != null && getContext().get("checkpoints") != null) {
-      log.info("Got checkpoints [%s]", (String) getContext().get("checkpoints"));
-      final TreeMap<Integer, Map<Integer, Long>> checkpoints = toolbox.getObjectMapper().readValue(
-          (String) getContext().get("checkpoints"),
-          new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
-          {
-          }
-      );
-
-      Iterator<Map.Entry<Integer, Map<Integer, Long>>> sequenceOffsets = checkpoints.entrySet().iterator();
-      Map.Entry<Integer, Map<Integer, Long>> previous = sequenceOffsets.next();
-      while (sequenceOffsets.hasNext()) {
-        Map.Entry<Integer, Map<Integer, Long>> current = sequenceOffsets.next();
+    if (!restoreSequences()) {
+      final TreeMap<Integer, Map<Integer, Long>> checkpoints = getCheckPointsFromContext(toolbox, this);
+      if (checkpoints != null) {
+        Iterator<Map.Entry<Integer, Map<Integer, Long>>> sequenceOffsets = checkpoints.entrySet().iterator();
+        Map.Entry<Integer, Map<Integer, Long>> previous = sequenceOffsets.next();
+        while (sequenceOffsets.hasNext()) {
+          Map.Entry<Integer, Map<Integer, Long>> current = sequenceOffsets.next();
+          sequences.add(new SequenceMetadata(
+              previous.getKey(),
+              StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
+              previous.getValue(),
+              current.getValue(),
+              true
+          ));
+          previous = current;
+        }
         sequences.add(new SequenceMetadata(
             previous.getKey(),
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
             previous.getValue(),
-            current.getValue(),
-            true
+            maxEndOffsets,
+            false
         ));
-        previous = current;
+      } else {
+        sequences.add(new SequenceMetadata(
+            0,
+            StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
+            ioConfig.getStartPartitions().getPartitionOffsetMap(),
+            maxEndOffsets,
+            false
+        ));
       }
-      sequences.add(new SequenceMetadata(
-          previous.getKey(),
-          StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
-          previous.getValue(),
-          maxEndOffsets,
-          false
-      ));
-    } else {
-      sequences.add(new SequenceMetadata(
-          0,
-          StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
-          ioConfig.getStartPartitions().getPartitionOffsetMap(),
-          maxEndOffsets,
-          false
-      ));
-    }
 
-    sequencesPersistFile = new File(toolbox.getPersistDir(), "sequences.json");
-    restoreSequences();
+    }
     log.info("Starting with sequences:  %s", sequences);
 
     if (chatHandlerProvider.isPresent()) {
@@ -504,15 +419,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
         )
     );
 
-    try (
-        final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
-    ) {
+    try (final KafkaConsumer<byte[], byte[]> consumer = newConsumer()) {
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
       appenderator = newAppenderator(fireDepartmentMetrics, toolbox);
       driver = newDriver(appenderator, toolbox, fireDepartmentMetrics);
-      createAndStartPublishExecutor();
 
       final String topic = ioConfig.getStartPartitions().getTopic();
 
@@ -602,7 +514,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       status = Status.READING;
       try {
         while (stillReading) {
-          if (possiblyPause(assignment)) {
+          if (possiblyPause()) {
             // The partition assignments may have changed while paused by a call to setEndOffsets() so reassign
             // partitions upon resuming. This is safe even if the end offsets have not been modified.
             assignment = assignPartitionsAndSeekToNext(consumer, topic);
@@ -615,8 +527,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           }
 
           // if stop is requested or task's end offset is set by call to setEndOffsets method with finish set to true
-          if (stopRequested.get() || (sequences.get(sequences.size() - 1).isCheckpointed()
-                                      && !ioConfig.isPauseAfterRead())) {
+          if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
           }
 
@@ -624,11 +535,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             break;
           }
 
-          checkAndMaybeThrowException();
-
-          if (!ioConfig.isPauseAfterRead()) {
-            maybePersistAndPublishSequences(committerSupplier);
+          if (backgroundThreadException != null) {
+            throw new RuntimeException(backgroundThreadException);
           }
+          checkPublishAndHandoffFailure();
+
+          maybePersistAndPublishSequences(committerSupplier);
 
           // The retrying business is because the KafkaConsumer throws OffsetOutOfRangeException if the seeked-to
           // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
@@ -640,19 +552,17 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           catch (OffsetOutOfRangeException e) {
             log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
             possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, toolbox);
-            stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+            stillReading = !assignment.isEmpty();
           }
 
           SequenceMetadata sequenceToCheckpoint = null;
           for (ConsumerRecord<byte[], byte[]> record : records) {
-            if (log.isTraceEnabled()) {
-              log.trace(
-                  "Got topic[%s] partition[%d] offset[%,d].",
-                  record.topic(),
-                  record.partition(),
-                  record.offset()
-              );
-            }
+            log.trace(
+                "Got topic[%s] partition[%d] offset[%,d].",
+                record.topic(),
+                record.partition(),
+                record.offset()
+            );
 
             if (record.offset() < endOffsets.get(record.partition())) {
               if (record.offset() != nextOffsets.get(record.partition())) {
@@ -680,24 +590,23 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                             : parser.parseBatch(ByteBuffer.wrap(valueBytes));
                 boolean isPersistRequired = false;
 
+                final SequenceMetadata sequenceToUse = sequences
+                    .stream()
+                    .filter(sequenceMetadata -> sequenceMetadata.canHandle(record))
+                    .findFirst()
+                    .orElse(null);
+
+                if (sequenceToUse == null) {
+                  throw new ISE(
+                      "WTH?! cannot find any valid sequence for record with partition [%d] and offset [%d]. Current sequences: %s",
+                      record.partition(),
+                      record.offset(),
+                      sequences
+                  );
+                }
+
                 for (InputRow row : rows) {
                   if (row != null && withinMinMaxRecordTime(row)) {
-                    SequenceMetadata sequenceToUse = null;
-                    for (SequenceMetadata sequence : sequences) {
-                      if (sequence.canHandle(record)) {
-                        sequenceToUse = sequence;
-                      }
-                    }
-
-                    if (sequenceToUse == null) {
-                      throw new ISE(
-                          "WTH?! cannot find any valid sequence for record with partition [%d] and offset [%d]. Current sequences: %s",
-                          record.partition(),
-                          record.offset(),
-                          sequences
-                      );
-                    }
-
                     final AppenderatorDriverAddResult addResult = driver.add(
                         row,
                         sequenceToUse.getSequenceName(),
@@ -751,7 +660,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                         public void onFailure(Throwable t)
                         {
                           log.error("Persist failed, dying");
-                          throwableAtomicReference.set(t);
+                          backgroundThreadException = t;
                         }
                       }
                   );
@@ -779,11 +688,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 && assignment.remove(record.partition())) {
               log.info("Finished reading topic[%s], partition[%,d].", record.topic(), record.partition());
               assignPartitions(consumer, topic, assignment);
-              stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+              stillReading = !assignment.isEmpty();
             }
           }
 
-          if (sequenceToCheckpoint != null && !ioConfig.isPauseAfterRead()) {
+          if (sequenceToCheckpoint != null && stillReading) {
             Preconditions.checkArgument(
                 sequences.get(sequences.size() - 1)
                          .getSequenceName()
@@ -792,7 +701,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 sequenceToCheckpoint,
                 sequences
             );
-            requestPause(PAUSE_FOREVER);
+            requestPause();
             if (!toolbox.getTaskActionClient().submit(new CheckPointDataSourceMetadataAction(
                 getDataSource(),
                 ioConfig.getBaseSequenceName(),
@@ -803,6 +712,11 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             }
           }
         }
+      }
+      catch (Exception e) {
+        // (1) catch all exceptions while reading from kafka
+        log.error(e, "Encountered exception in run() before persisting.");
+        throw e;
       }
       finally {
         log.info("Persisting all pending data");
@@ -824,16 +738,23 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           sequenceMetadata.updateAssignments(nextOffsets);
           publishingSequences.add(sequenceMetadata.getSequenceName());
           // persist already done in finally, so directly add to publishQueue
-          publishQueue.add(sequenceMetadata);
+          publishAndRegisterHandoff(sequenceMetadata);
         }
       }
 
-      // add Sentinel SequenceMetadata to indicate end of all sequences
-      publishQueue.add(SequenceMetadata.getSentinelSequenceMetadata());
-      waitForPublishes.await();
-      checkAndMaybeThrowException();
+      if (backgroundThreadException != null) {
+        throw new RuntimeException(backgroundThreadException);
+      }
 
-      List<SegmentsAndMetadata> handedOffList = Lists.newArrayList();
+      // Wait for publish futures to complete.
+      Futures.allAsList(publishWaitList).get();
+
+      // Wait for handoff futures to complete.
+      // Note that every publishing task (created by calling AppenderatorDriver.publish()) has a corresponding
+      // handoffFuture. handoffFuture can throw an exception if 1) the corresponding publishFuture failed or 2) it
+      // failed to persist sequences. It might also return null if handoff failed, but was recoverable.
+      // See publishAndRegisterHandoff() for details.
+      List<SegmentsAndMetadata> handedOffList = Collections.emptyList();
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOffList = Futures.allAsList(handOffWaitList).get();
       } else {
@@ -842,6 +763,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                                  .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
         }
         catch (TimeoutException e) {
+          // Handoff timeout is not an indexing failure, but coordination failure. We simply ignore timeout exception
+          // here.
           log.makeAlert("Timed out after [%d] millis waiting for handoffs", tuningConfig.getHandoffConditionTimeout())
              .addData("TaskId", this.getId())
              .emit();
@@ -861,8 +784,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           );
         }
       }
+
+      appenderator.close();
     }
     catch (InterruptedException | RejectedExecutionException e) {
+      // (2) catch InterruptedException and RejectedExecutionException thrown for the whole ingestion steps including
+      // the final publishing.
+      Futures.allAsList(publishWaitList).cancel(true);
+      Futures.allAsList(handOffWaitList).cancel(true);
       appenderator.closeNow();
       // handle the InterruptedException that gets wrapped in a RejectedExecutionException
       if (e instanceof RejectedExecutionException
@@ -878,23 +807,19 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
       log.info("The task was asked to stop before completing");
     }
+    catch (Exception e) {
+      // (3) catch all other exceptions thrown for the whole ingestion steps including the final publishing.
+      Futures.allAsList(publishWaitList).cancel(true);
+      Futures.allAsList(handOffWaitList).cancel(true);
+      appenderator.closeNow();
+      throw e;
+    }
     finally {
-      if (appenderator != null) {
-        if (throwableAtomicReference.get() != null) {
-          appenderator.closeNow();
-        } else {
-          appenderator.close();
-        }
-      }
       if (driver != null) {
         driver.close();
       }
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
-      }
-
-      if (publishExecService != null) {
-        publishExecService.shutdownNow();
       }
 
       toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
@@ -947,9 +872,9 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     );
 
     try (
-            final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
-            final StreamAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
-            final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
+        final Appenderator appenderator0 = newAppenderator(fireDepartmentMetrics, toolbox);
+        final StreamAppenderatorDriver driver = newDriver(appenderator0, toolbox, fireDepartmentMetrics);
+        final KafkaConsumer<byte[], byte[]> consumer = newConsumer()
     ) {
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
@@ -1032,7 +957,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       status = Status.READING;
       try {
         while (stillReading) {
-          if (possiblyPause(assignment)) {
+          if (possiblyPause()) {
             // The partition assignments may have changed while paused by a call to setEndOffsets() so reassign
             // partitions upon resuming. This is safe even if the end offsets have not been modified.
             assignment = assignPartitionsAndSeekToNext(consumer, topic);
@@ -1058,7 +983,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           catch (OffsetOutOfRangeException e) {
             log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
             possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, toolbox);
-            stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+            stillReading = !assignment.isEmpty();
           }
 
           for (ConsumerRecord<byte[], byte[]> record : records) {
@@ -1158,7 +1083,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
                 && assignment.remove(record.partition())) {
               log.info("Finished reading topic[%s], partition[%,d].", record.topic(), record.partition());
               assignPartitions(consumer, topic, assignment);
-              stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+              stillReading = !assignment.isEmpty();
             }
           }
         }
@@ -1211,32 +1136,37 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           sequenceNames.values()
       ).get();
 
+      final List<String> publishedSegments = published.getSegments()
+                                                      .stream()
+                                                      .map(DataSegment::getIdentifier)
+                                                      .collect(Collectors.toList());
+      log.info(
+          "Published segments[%s] with metadata[%s].",
+          publishedSegments,
+          Preconditions.checkNotNull(published.getCommitMetadata(), "commitMetadata")
+      );
+
       final Future<SegmentsAndMetadata> handoffFuture = driver.registerHandoff(published);
-      final SegmentsAndMetadata handedOff;
+      SegmentsAndMetadata handedOff = null;
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOff = handoffFuture.get();
       } else {
-        handedOff = handoffFuture.get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
+        try {
+          handedOff = handoffFuture.get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
+        }
+        catch (TimeoutException e) {
+          log.makeAlert("Timed out after [%d] millis waiting for handoffs", tuningConfig.getHandoffConditionTimeout())
+             .addData("TaskId", getId())
+             .emit();
+        }
       }
 
       if (handedOff == null) {
-        throw new ISE("Transaction failure publishing segments, aborting");
+        log.warn("Failed to handoff segments[%s]", publishedSegments);
       } else {
         log.info(
-            "Published segments[%s] with metadata[%s].",
-            Joiner.on(", ").join(
-                Iterables.transform(
-                    handedOff.getSegments(),
-                    new Function<DataSegment, String>()
-                    {
-                      @Override
-                      public String apply(DataSegment input)
-                      {
-                        return input.getIdentifier();
-                      }
-                    }
-                )
-            ),
+            "Handoff completed for segments[%s] with metadata[%s]",
+            handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList()),
             Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }
@@ -1268,11 +1198,154 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return success();
   }
 
-  private void checkAndMaybeThrowException()
+  private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException
   {
-    if (throwableAtomicReference.get() != null) {
-      Throwables.propagate(throwableAtomicReference.get());
+    // Check if any publishFuture failed.
+    final List<ListenableFuture<SegmentsAndMetadata>> publishFinished = publishWaitList
+        .stream()
+        .filter(Future::isDone)
+        .collect(Collectors.toList());
+
+    for (ListenableFuture<SegmentsAndMetadata> publishFuture : publishFinished) {
+      // If publishFuture failed, the below line will throw an exception and catched by (1), and then (2) or (3).
+      publishFuture.get();
     }
+
+    publishWaitList.removeAll(publishFinished);
+
+    // Check if any handoffFuture failed.
+    final List<ListenableFuture<SegmentsAndMetadata>> handoffFinished = handOffWaitList
+        .stream()
+        .filter(Future::isDone)
+        .collect(Collectors.toList());
+
+    for (ListenableFuture<SegmentsAndMetadata> handoffFuture : handoffFinished) {
+      // If handoffFuture failed, the below line will throw an exception and catched by (1), and then (2) or (3).
+      handoffFuture.get();
+    }
+
+    handOffWaitList.removeAll(handoffFinished);
+  }
+
+  private void publishAndRegisterHandoff(SequenceMetadata sequenceMetadata)
+  {
+    log.info("Publishing segments for sequence [%s]", sequenceMetadata);
+
+    final ListenableFuture<SegmentsAndMetadata> publishFuture = Futures.transform(
+        driver.publish(
+            sequenceMetadata.createPublisher(toolbox, ioConfig.isUseTransaction()),
+            sequenceMetadata.getCommitterSupplier(topic, lastPersistedOffsets).get(),
+            Collections.singletonList(sequenceMetadata.getSequenceName())
+        ),
+        (Function<SegmentsAndMetadata, SegmentsAndMetadata>) publishedSegmentsAndMetadata -> {
+          if (publishedSegmentsAndMetadata == null) {
+            throw new ISE(
+                "Transaction failure publishing segments for sequence [%s]",
+                sequenceMetadata
+            );
+          } else {
+            return publishedSegmentsAndMetadata;
+          }
+        }
+    );
+    publishWaitList.add(publishFuture);
+
+    // Create a handoffFuture for every publishFuture. The created handoffFuture must fail if publishFuture fails.
+    final SettableFuture<SegmentsAndMetadata> handoffFuture = SettableFuture.create();
+    handOffWaitList.add(handoffFuture);
+
+    Futures.addCallback(
+        publishFuture,
+        new FutureCallback<SegmentsAndMetadata>()
+        {
+          @Override
+          public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
+          {
+            log.info(
+                "Published segments[%s] with metadata[%s].",
+                publishedSegmentsAndMetadata.getSegments()
+                                            .stream()
+                                            .map(DataSegment::getIdentifier)
+                                            .collect(Collectors.toList()),
+                Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
+            );
+
+            sequences.remove(sequenceMetadata);
+            publishingSequences.remove(sequenceMetadata.getSequenceName());
+            try {
+              persistSequences();
+            }
+            catch (IOException e) {
+              log.error(e, "Unable to persist state, dying");
+              handoffFuture.setException(e);
+              throw new RuntimeException(e);
+            }
+
+            Futures.transform(
+                driver.registerHandoff(publishedSegmentsAndMetadata),
+                new Function<SegmentsAndMetadata, Void>()
+                {
+                  @Nullable
+                  @Override
+                  public Void apply(@Nullable SegmentsAndMetadata handoffSegmentsAndMetadata)
+                  {
+                    if (handoffSegmentsAndMetadata == null) {
+                      log.warn(
+                          "Failed to handoff segments[%s]",
+                          publishedSegmentsAndMetadata.getSegments()
+                                                      .stream()
+                                                      .map(DataSegment::getIdentifier)
+                                                      .collect(Collectors.toList())
+                      );
+                    }
+                    handoffFuture.set(handoffSegmentsAndMetadata);
+                    return null;
+                  }
+                }
+            );
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            log.error(t, "Error while publishing segments for sequence[%s]", sequenceMetadata);
+            handoffFuture.setException(t);
+          }
+        }
+    );
+  }
+
+  private static File getSequencesPersistFile(TaskToolbox toolbox)
+  {
+    return new File(toolbox.getPersistDir(), "sequences.json");
+  }
+
+  private boolean restoreSequences() throws IOException
+  {
+    final File sequencesPersistFile = getSequencesPersistFile(toolbox);
+    if (sequencesPersistFile.exists()) {
+      sequences = new CopyOnWriteArrayList<>(
+          toolbox.getObjectMapper().<List<SequenceMetadata>>readValue(
+              sequencesPersistFile,
+              new TypeReference<List<SequenceMetadata>>()
+              {
+              }
+          )
+      );
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private synchronized void persistSequences() throws IOException
+  {
+    log.info("Persisting Sequences Metadata [%s]", sequences);
+    toolbox.getObjectMapper().writerWithType(
+        new TypeReference<List<SequenceMetadata>>()
+        {
+        }
+    ).writeValue(getSequencesPersistFile(toolbox), sequences);
   }
 
   private void maybePersistAndPublishSequences(Supplier<Committer> committerSupplier)
@@ -1289,7 +1362,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
               result,
               sequenceMetadata
           );
-          publishQueue.add(sequenceMetadata);
+          publishAndRegisterHandoff(sequenceMetadata);
         }
         catch (InterruptedException e) {
           log.warn("Interrupted while persisting sequence [%s]", sequenceMetadata);
@@ -1299,25 +1372,146 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  private void restoreSequences() throws IOException
+  private Set<Integer> assignPartitionsAndSeekToNext(KafkaConsumer consumer, String topic)
   {
-    Preconditions.checkNotNull(sequencesPersistFile);
-    if (sequencesPersistFile.exists()) {
-      sequences = new CopyOnWriteArrayList<>(toolbox.getObjectMapper().<List<SequenceMetadata>>readValue(
-          sequencesPersistFile, new TypeReference<List<SequenceMetadata>>()
-          {
-          }));
+    // Initialize consumer assignment.
+    final Set<Integer> assignment = Sets.newHashSet();
+    for (Map.Entry<Integer, Long> entry : nextOffsets.entrySet()) {
+      final long endOffset = endOffsets.get(entry.getKey());
+      if (entry.getValue() < endOffset) {
+        assignment.add(entry.getKey());
+      } else if (entry.getValue() == endOffset) {
+        log.info("Finished reading partition[%d].", entry.getKey());
+      } else {
+        throw new ISE(
+            "WTF?! Cannot start from offset[%,d] > endOffset[%,d]",
+            entry.getValue(),
+            endOffset
+        );
+      }
+    }
+
+    KafkaIndexTask.assignPartitions(consumer, topic, assignment);
+
+    // Seek to starting offsets.
+    for (final int partition : assignment) {
+      final long offset = nextOffsets.get(partition);
+      log.info("Seeking partition[%d] to offset[%,d].", partition, offset);
+      consumer.seek(new TopicPartition(topic, partition), offset);
+    }
+
+    return assignment;
+  }
+
+  /**
+   * Checks if the pauseRequested flag was set and if so blocks until pauseRequested is cleared.
+   * <p/>
+   * Sets paused = true and signals paused so callers can be notified when the pause command has been accepted.
+   * <p/>
+   *
+   * @return true if a pause request was handled, false otherwise
+   */
+  private boolean possiblyPause() throws InterruptedException
+  {
+    pauseLock.lockInterruptibly();
+    try {
+      if (pauseRequested) {
+        status = Status.PAUSED;
+        hasPaused.signalAll();
+
+        while (pauseRequested) {
+          log.info("Pausing ingestion until resumed");
+          shouldResume.await();
+        }
+
+        status = Status.READING;
+        shouldResume.signalAll();
+        log.info("Ingestion loop resumed");
+        return true;
+      }
+    }
+    finally {
+      pauseLock.unlock();
+    }
+
+    return false;
+  }
+
+  private void possiblyResetOffsetsOrWait(
+      Map<TopicPartition, Long> outOfRangePartitions,
+      KafkaConsumer<byte[], byte[]> consumer,
+      TaskToolbox taskToolbox
+  ) throws InterruptedException, IOException
+  {
+    final Map<TopicPartition, Long> resetPartitions = Maps.newHashMap();
+    boolean doReset = false;
+    if (tuningConfig.isResetOffsetAutomatically()) {
+      for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+        final TopicPartition topicPartition = outOfRangePartition.getKey();
+        final long nextOffset = outOfRangePartition.getValue();
+        // seek to the beginning to get the least available offset
+        consumer.seekToBeginning(Collections.singletonList(topicPartition));
+        final long leastAvailableOffset = consumer.position(topicPartition);
+        // reset the seek
+        consumer.seek(topicPartition, nextOffset);
+        // Reset consumer offset if resetOffsetAutomatically is set to true
+        // and the current message offset in the kafka partition is more than the
+        // next message offset that we are trying to fetch
+        if (leastAvailableOffset > nextOffset) {
+          doReset = true;
+          resetPartitions.put(topicPartition, nextOffset);
+        }
+      }
+    }
+
+    if (doReset) {
+      sendResetRequestAndWait(resetPartitions, taskToolbox);
+    } else {
+      log.warn("Retrying in %dms", pollRetryMs);
+      pollRetryLock.lockInterruptibly();
+      try {
+        long nanos = TimeUnit.MILLISECONDS.toNanos(pollRetryMs);
+        while (nanos > 0L && !pauseRequested && !stopRequested.get()) {
+          nanos = isAwaitingRetry.awaitNanos(nanos);
+        }
+      }
+      finally {
+        pollRetryLock.unlock();
+      }
     }
   }
 
-  private synchronized void persistSequences() throws IOException
+  private void requestPause()
   {
-    log.info("Persisting Sequences Metadata [%s]", sequences);
-    toolbox.getObjectMapper().writerWithType(
-        new TypeReference<List<SequenceMetadata>>()
-        {
-        }
-    ).writeValue(sequencesPersistFile, sequences);
+    pauseRequested = true;
+  }
+
+  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
+      throws IOException
+  {
+    Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
+    for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
+      partitionOffsetMap.put(outOfRangePartition.getKey().partition(), outOfRangePartition.getValue());
+    }
+    boolean result = taskToolbox.getTaskActionClient()
+                                .submit(new ResetDataSourceMetadataAction(
+                                    getDataSource(),
+                                    new KafkaDataSourceMetadata(new KafkaPartitions(
+                                        ioConfig.getStartPartitions()
+                                                .getTopic(),
+                                        partitionOffsetMap
+                                    ))
+                                ));
+
+    if (result) {
+      log.makeAlert("Resetting Kafka offsets for datasource [%s]", getDataSource())
+         .addData("partitions", partitionOffsetMap.keySet())
+         .emit();
+      // wait for being killed by supervisor
+      requestPause();
+    } else {
+      log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
+    }
   }
 
   @Override
@@ -1474,25 +1668,23 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Produces(MediaType.APPLICATION_JSON)
   public Response setEndOffsetsHTTP(
       Map<Integer, Long> offsets,
-      @QueryParam("resume") @DefaultValue("false") final boolean resume,
       @QueryParam("finish") @DefaultValue("true") final boolean finish,
       // this field is only for internal purposes, shouldn't be usually set by users
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
     authorizationCheck(req, Action.WRITE);
-    return setEndOffsets(offsets, resume, finish);
+    return setEndOffsets(offsets, finish);
   }
 
   public Response setEndOffsets(
       Map<Integer, Long> offsets,
-      final boolean resume,
       final boolean finish // this field is only for internal purposes, shouldn't be usually set by users
   ) throws InterruptedException
   {
     // for backwards compatibility, should be removed from versions greater than 0.12.x
     if (useLegacy) {
-      return setEndOffsetsLegacy(offsets, resume);
+      return setEndOffsetsLegacy(offsets);
     }
 
     if (offsets == null) {
@@ -1520,7 +1712,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             (latestSequence.getEndOffsets().equals(offsets) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequences);
           return Response.ok(offsets).build();
-        } else if (latestSequence.isCheckpointed() && !ioConfig.isPauseAfterRead()) {
+        } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
                          .entity(StringUtils.format(
                              "WTH?! Sequence [%s] has already endOffsets set, cannot set to [%s]",
@@ -1553,13 +1745,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           log.info("Updating endOffsets from [%s] to [%s]", endOffsets, offsets);
           endOffsets.putAll(offsets);
         } else {
-          Preconditions.checkState(!ioConfig.isPauseAfterRead());
           // create new sequence
           final SequenceMetadata newSequence = new SequenceMetadata(
               latestSequence.getSequenceId() + 1,
               StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), latestSequence.getSequenceId() + 1),
               offsets,
-              maxEndOffsets,
+              endOffsets,
               false
           );
           sequences.add(newSequence);
@@ -1569,75 +1760,21 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
       catch (Exception e) {
         log.error(e, "Unable to set end offsets, dying");
-        throwableAtomicReference.set(e);
-        Throwables.propagate(e);
+        backgroundThreadException = e;
+        // should resume to immediately finish kafka index task as failed
+        resume();
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                       .entity(Throwables.getStackTraceAsString(e))
+                       .build();
       }
       finally {
         pauseLock.unlock();
       }
     }
 
-    if (resume) {
-      resume();
-    }
+    resume();
 
     return Response.ok(offsets).build();
-  }
-
-  private Response setEndOffsetsLegacy(
-      Map<Integer, Long> offsets,
-      final boolean resume
-  ) throws InterruptedException
-  {
-    if (offsets == null) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity("Request body must contain a map of { partition:endOffset }")
-                     .build();
-    } else if (!endOffsets.keySet().containsAll(offsets.keySet())) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(
-                         StringUtils.format(
-                             "Request contains partitions not being handled by this task, my partitions: %s",
-                             endOffsets.keySet()
-                         )
-                     )
-                     .build();
-    }
-
-    pauseLock.lockInterruptibly();
-    try {
-      if (!isPaused()) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("Task must be paused before changing the end offsets")
-                       .build();
-      }
-
-      for (Map.Entry<Integer, Long> entry : offsets.entrySet()) {
-        if (entry.getValue().compareTo(nextOffsets.get(entry.getKey())) < 0) {
-          return Response.status(Response.Status.BAD_REQUEST)
-                         .entity(
-                             StringUtils.format(
-                                 "End offset must be >= current offset for partition [%s] (current: %s)",
-                                 entry.getKey(),
-                                 nextOffsets.get(entry.getKey())
-                             )
-                         )
-                         .build();
-        }
-      }
-
-      endOffsets.putAll(offsets);
-      log.info("endOffsets changed to %s", endOffsets);
-    }
-    finally {
-      pauseLock.unlock();
-    }
-
-    if (resume) {
-      resume();
-    }
-
-    return Response.ok(endOffsets).build();
   }
 
   @GET
@@ -1649,7 +1786,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return getCheckpoints();
   }
 
-  public Map<Integer, Map<Integer, Long>> getCheckpoints()
+  private Map<Integer, Map<Integer, Long>> getCheckpoints()
   {
     TreeMap<Integer, Map<Integer, Long>> result = new TreeMap<>();
     result.putAll(
@@ -1661,8 +1798,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   /**
    * Signals the ingestion loop to pause.
    *
-   * @param timeout how long to pause for before resuming in milliseconds, <= 0 means indefinitely
-   *
    * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
    * method has timed out and returned before the task has paused; 200 OK with a map of the current partition offsets
    * in the response body if the task successfully paused
@@ -1671,15 +1806,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   @Path("/pause")
   @Produces(MediaType.APPLICATION_JSON)
   public Response pauseHTTP(
-      @QueryParam("timeout") @DefaultValue("0") final long timeout,
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
     authorizationCheck(req, Action.WRITE);
-    return pause(timeout);
+    return pause();
   }
 
-  public Response pause(final long timeout) throws InterruptedException
+  public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.BAD_REQUEST)
@@ -1689,7 +1823,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
     pauseLock.lockInterruptibly();
     try {
-      pauseMillis = timeout <= 0 ? PAUSE_FOREVER : timeout;
       pauseRequested = true;
 
       pollRetryLock.lockInterruptibly();
@@ -1764,6 +1897,79 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     return startTime;
   }
 
+  @Nullable
+  private static TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
+      TaskToolbox toolbox,
+      KafkaIndexTask task
+  ) throws IOException
+  {
+    final String checkpointsString = task.getContextValue("checkpoints");
+    if (checkpointsString != null) {
+      log.info("Checkpoints [%s]", checkpointsString);
+      return toolbox.getObjectMapper().readValue(
+          checkpointsString,
+          new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+          {
+          }
+      );
+    } else {
+      return null;
+    }
+  }
+
+  private Response setEndOffsetsLegacy(
+      Map<Integer, Long> offsets
+  ) throws InterruptedException
+  {
+    if (offsets == null) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity("Request body must contain a map of { partition:endOffset }")
+                     .build();
+    } else if (!endOffsets.keySet().containsAll(offsets.keySet())) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(
+                         StringUtils.format(
+                             "Request contains partitions not being handled by this task, my partitions: %s",
+                             endOffsets.keySet()
+                         )
+                     )
+                     .build();
+    }
+
+    pauseLock.lockInterruptibly();
+    try {
+      if (!isPaused()) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity("Task must be paused before changing the end offsets")
+                       .build();
+      }
+
+      for (Map.Entry<Integer, Long> entry : offsets.entrySet()) {
+        if (entry.getValue().compareTo(nextOffsets.get(entry.getKey())) < 0) {
+          return Response.status(Response.Status.BAD_REQUEST)
+                         .entity(
+                             StringUtils.format(
+                                 "End offset must be >= current offset for partition [%s] (current: %s)",
+                                 entry.getKey(),
+                                 nextOffsets.get(entry.getKey())
+                             )
+                         )
+                         .build();
+        }
+      }
+
+      endOffsets.putAll(offsets);
+      log.info("endOffsets changed to %s", endOffsets);
+    }
+    finally {
+      pauseLock.unlock();
+    }
+
+    resume();
+
+    return Response.ok(endOffsets).build();
+  }
+
   @VisibleForTesting
   FireDepartmentMetrics getFireDepartmentMetrics()
   {
@@ -1773,12 +1979,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private boolean isPaused()
   {
     return status == Status.PAUSED;
-  }
-
-  private void requestPause(long pauseMillis)
-  {
-    this.pauseMillis = pauseMillis;
-    pauseRequested = true;
   }
 
   private Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
@@ -1852,169 +2052,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             partitions.stream().map(n -> new TopicPartition(topic, n)).collect(Collectors.toList())
         )
     );
-  }
-
-  private Set<Integer> assignPartitionsAndSeekToNext(KafkaConsumer consumer, String topic)
-  {
-    // Initialize consumer assignment.
-    final Set<Integer> assignment = Sets.newHashSet();
-    for (Map.Entry<Integer, Long> entry : nextOffsets.entrySet()) {
-      final long endOffset = endOffsets.get(entry.getKey());
-      if (entry.getValue() < endOffset) {
-        assignment.add(entry.getKey());
-      } else if (entry.getValue() == endOffset) {
-        log.info("Finished reading partition[%d].", entry.getKey());
-      } else {
-        throw new ISE(
-            "WTF?! Cannot start from offset[%,d] > endOffset[%,d]",
-            entry.getValue(),
-            endOffset
-        );
-      }
-    }
-
-    assignPartitions(consumer, topic, assignment);
-
-    // Seek to starting offsets.
-    for (final int partition : assignment) {
-      final long offset = nextOffsets.get(partition);
-      log.info("Seeking partition[%d] to offset[%,d].", partition, offset);
-      consumer.seek(new TopicPartition(topic, partition), offset);
-    }
-
-    return assignment;
-  }
-
-  /**
-   * Checks if the pauseRequested flag was set and if so blocks:
-   * a) if pauseMillis == PAUSE_FOREVER, until pauseRequested is cleared
-   * b) if pauseMillis != PAUSE_FOREVER, until pauseMillis elapses -or- pauseRequested is cleared
-   * <p/>
-   * If pauseMillis is changed while paused, the new pause timeout will be applied. This allows adjustment of the
-   * pause timeout (making a timed pause into an indefinite pause and vice versa is valid) without having to resume
-   * and ensures that the loop continues to stay paused without ingesting any new events. You will need to signal
-   * shouldResume after adjusting pauseMillis for the new value to take effect.
-   * <p/>
-   * Sets paused = true and signals paused so callers can be notified when the pause command has been accepted.
-   * <p/>
-   * Additionally, pauses if all partitions assignments have been read and pauseAfterRead flag is set.
-   *
-   * @return true if a pause request was handled, false otherwise
-   */
-  private boolean possiblyPause(Set<Integer> assignment) throws InterruptedException
-  {
-    pauseLock.lockInterruptibly();
-    try {
-      if (ioConfig.isPauseAfterRead() && assignment.isEmpty()) {
-        pauseMillis = PAUSE_FOREVER;
-        pauseRequested = true;
-      }
-
-      if (pauseRequested) {
-        status = Status.PAUSED;
-        long nanos = 0;
-        hasPaused.signalAll();
-
-        while (pauseRequested) {
-          if (pauseMillis == PAUSE_FOREVER) {
-            log.info("Pausing ingestion until resumed");
-            shouldResume.await();
-          } else {
-            if (pauseMillis > 0) {
-              log.info("Pausing ingestion for [%,d] ms", pauseMillis);
-              nanos = TimeUnit.MILLISECONDS.toNanos(pauseMillis);
-              pauseMillis = 0;
-            }
-            if (nanos <= 0L) {
-              pauseRequested = false; // timeout elapsed
-            }
-            nanos = shouldResume.awaitNanos(nanos);
-          }
-        }
-
-        status = Status.READING;
-        shouldResume.signalAll();
-        log.info("Ingestion loop resumed");
-        return true;
-      }
-    }
-    finally {
-      pauseLock.unlock();
-    }
-
-    return false;
-  }
-
-  private void possiblyResetOffsetsOrWait(
-      Map<TopicPartition, Long> outOfRangePartitions,
-      KafkaConsumer<byte[], byte[]> consumer,
-      TaskToolbox taskToolbox
-  ) throws InterruptedException, IOException
-  {
-    final Map<TopicPartition, Long> resetPartitions = Maps.newHashMap();
-    boolean doReset = false;
-    if (tuningConfig.isResetOffsetAutomatically()) {
-      for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
-        final TopicPartition topicPartition = outOfRangePartition.getKey();
-        final long nextOffset = outOfRangePartition.getValue();
-        // seek to the beginning to get the least available offset
-        consumer.seekToBeginning(Collections.singletonList(topicPartition));
-        final long leastAvailableOffset = consumer.position(topicPartition);
-        // reset the seek
-        consumer.seek(topicPartition, nextOffset);
-        // Reset consumer offset if resetOffsetAutomatically is set to true
-        // and the current message offset in the kafka partition is more than the
-        // next message offset that we are trying to fetch
-        if (leastAvailableOffset > nextOffset) {
-          doReset = true;
-          resetPartitions.put(topicPartition, nextOffset);
-        }
-      }
-    }
-
-    if (doReset) {
-      sendResetRequestAndWait(resetPartitions, taskToolbox);
-    } else {
-      log.warn("Retrying in %dms", pollRetryMs);
-      pollRetryLock.lockInterruptibly();
-      try {
-        long nanos = TimeUnit.MILLISECONDS.toNanos(pollRetryMs);
-        while (nanos > 0L && !pauseRequested && !stopRequested.get()) {
-          nanos = isAwaitingRetry.awaitNanos(nanos);
-        }
-      }
-      finally {
-        pollRetryLock.unlock();
-      }
-    }
-  }
-
-  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
-      throws IOException
-  {
-    Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
-    for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
-      partitionOffsetMap.put(outOfRangePartition.getKey().partition(), outOfRangePartition.getValue());
-    }
-    boolean result = taskToolbox.getTaskActionClient()
-                                .submit(new ResetDataSourceMetadataAction(
-                                    getDataSource(),
-                                    new KafkaDataSourceMetadata(new KafkaPartitions(
-                                        ioConfig.getStartPartitions()
-                                                .getTopic(),
-                                        partitionOffsetMap
-                                    ))
-                                ));
-
-    if (result) {
-      log.makeAlert("Resetting Kafka offsets for datasource [%s]", getDataSource())
-         .addData("partitions", partitionOffsetMap.keySet())
-         .emit();
-      // wait for being killed by supervisor
-      requestPause(PAUSE_FOREVER);
-    } else {
-      log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
-    }
   }
 
   private boolean withinMinMaxRecordTime(final InputRow row)
@@ -2142,7 +2179,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       return sentinel;
     }
 
-    public void setEndOffsets(Map<Integer, Long> newEndOffsets)
+    void setEndOffsets(Map<Integer, Long> newEndOffsets)
     {
       lock.lock();
       try {
@@ -2154,15 +2191,14 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
     }
 
-    public void updateAssignments(Map<Integer, Long> nextPartitionOffset)
+    void updateAssignments(Map<Integer, Long> nextPartitionOffset)
     {
       lock.lock();
       try {
         assignments.clear();
-        nextPartitionOffset.entrySet().forEach(partitionOffset -> {
-          if (Longs.compare(endOffsets.get(partitionOffset.getKey()), nextPartitionOffset.get(partitionOffset.getKey()))
-              > 0) {
-            assignments.add(partitionOffset.getKey());
+        nextPartitionOffset.forEach((key, value) -> {
+          if (Longs.compare(endOffsets.get(key), nextPartitionOffset.get(key)) > 0) {
+            assignments.add(key);
           }
         });
       }
@@ -2171,7 +2207,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
     }
 
-    public boolean isOpen()
+    boolean isOpen()
     {
       return !assignments.isEmpty();
     }
@@ -2180,30 +2216,15 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     {
       lock.lock();
       try {
+        final Long partitionEndOffset = endOffsets.get(record.partition());
         return isOpen()
-               && endOffsets.get(record.partition()) != null
+               && partitionEndOffset != null
                && record.offset() >= startOffsets.get(record.partition())
-               && record.offset() < endOffsets.get(record.partition());
+               && record.offset() < partitionEndOffset;
       }
       finally {
         lock.unlock();
       }
-    }
-
-    private SequenceMetadata()
-    {
-      this.sequenceId = -1;
-      this.sequenceName = null;
-      this.startOffsets = null;
-      this.endOffsets = null;
-      this.assignments = null;
-      this.checkpointed = true;
-      this.sentinel = true;
-    }
-
-    public static SequenceMetadata getSentinelSequenceMetadata()
-    {
-      return new SequenceMetadata();
     }
 
     @Override
@@ -2226,8 +2247,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       }
     }
 
-
-    public Supplier<Committer> getCommitterSupplier(String topic, Map<Integer, Long> lastPersistedOffsets)
+    Supplier<Committer> getCommitterSupplier(String topic, Map<Integer, Long> lastPersistedOffsets)
     {
       // Set up committer.
       return () ->
@@ -2280,7 +2300,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           };
     }
 
-    public TransactionalSegmentPublisher getPublisher(TaskToolbox toolbox, boolean useTransaction)
+    TransactionalSegmentPublisher createPublisher(TaskToolbox toolbox, boolean useTransaction)
     {
       return (segments, commitMetadata) -> {
         final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(

@@ -179,6 +179,7 @@ public interface Task
    */
   TaskStatus run(TaskToolbox toolbox) throws Exception;
 
+  @Nullable
   Map<String, Object> getContext();
 
   @Nullable
