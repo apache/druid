@@ -2193,8 +2193,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected String generateSequenceName(int groupId)
+    protected String generateSequenceName(TaskGroup group)
     {
+      int groupId = group.partitionOffsets.keySet().iterator().next();
       return StringUtils.format("sequenceName-%d", groupId);
     }
 
@@ -2205,7 +2206,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
         Optional<DateTime> maximumMessageTime
     )
     {
-      return generateSequenceName(getTaskGroupIdForPartition(startPartitions.keySet().iterator().next()));
+      int groupId = getTaskGroupIdForPartition(startPartitions.keySet().iterator().next());
+      ImmutableMap<Integer, Long> partitionOffsets = ImmutableMap.of(groupId, (long) groupId);
+      final TaskGroup taskGroup = new TaskGroup(
+          partitionOffsets,
+          minimumMessageTime,
+          maximumMessageTime
+      );
+      return generateSequenceName(taskGroup);
     }
   }
 }
