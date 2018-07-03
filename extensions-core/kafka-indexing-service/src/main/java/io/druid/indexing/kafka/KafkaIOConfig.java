@@ -31,7 +31,6 @@ import java.util.Map;
 public class KafkaIOConfig implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
-  private static final boolean DEFAULT_PAUSE_AFTER_READ = false;
   private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
   private final String baseSequenceName;
@@ -39,7 +38,6 @@ public class KafkaIOConfig implements IOConfig
   private final KafkaPartitions endPartitions;
   private final Map<String, String> consumerProperties;
   private final boolean useTransaction;
-  private final boolean pauseAfterRead;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
   private final boolean skipOffsetGaps;
@@ -51,7 +49,6 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
       @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
-      @JsonProperty("pauseAfterRead") Boolean pauseAfterRead,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
@@ -62,7 +59,6 @@ public class KafkaIOConfig implements IOConfig
     this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
-    this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
@@ -118,12 +114,6 @@ public class KafkaIOConfig implements IOConfig
   }
 
   @JsonProperty
-  public boolean isPauseAfterRead()
-  {
-    return pauseAfterRead;
-  }
-
-  @JsonProperty
   public Optional<DateTime> getMaximumMessageTime()
   {
     return maximumMessageTime;
@@ -150,7 +140,6 @@ public class KafkaIOConfig implements IOConfig
            ", endPartitions=" + endPartitions +
            ", consumerProperties=" + consumerProperties +
            ", useTransaction=" + useTransaction +
-           ", pauseAfterRead=" + pauseAfterRead +
            ", minimumMessageTime=" + minimumMessageTime +
            ", maximumMessageTime=" + maximumMessageTime +
            ", skipOffsetGaps=" + skipOffsetGaps +

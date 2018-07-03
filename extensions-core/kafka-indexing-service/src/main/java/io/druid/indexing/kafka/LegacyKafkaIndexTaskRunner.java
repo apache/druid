@@ -20,14 +20,11 @@ package io.druid.indexing.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.data.input.Committer;
@@ -81,12 +78,10 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -102,6 +97,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -174,7 +170,6 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private volatile FireDepartmentMetrics fireDepartmentMetrics;
   private volatile IngestionState ingestionState;
 
-  private volatile long pauseMillis = 0;
   private volatile boolean pauseRequested;
 
   LegacyKafkaIndexTaskRunner(
@@ -355,7 +350,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       status = Status.READING;
       try {
         while (stillReading) {
-          if (possiblyPause(assignment)) {
+          if (possiblyPause()) {
             // The partition assignments may have changed while paused by a call to setEndOffsets() so reassign
             // partitions upon resuming. This is safe even if the end offsets have not been modified.
             assignment = assignPartitionsAndSeekToNext(consumer, topic);
@@ -381,7 +376,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
           catch (OffsetOutOfRangeException e) {
             log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
             possiblyResetOffsetsOrWait(e.offsetOutOfRangePartitions(), consumer, toolbox);
-            stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+            stillReading = !assignment.isEmpty();
           }
 
           for (ConsumerRecord<byte[], byte[]> record : records) {
@@ -476,7 +471,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
                 && assignment.remove(record.partition())) {
               log.info("Finished reading topic[%s], partition[%,d].", record.topic(), record.partition());
               KafkaIndexTask.assignPartitions(consumer, topic, assignment);
-              stillReading = ioConfig.isPauseAfterRead() || !assignment.isEmpty();
+              stillReading = !assignment.isEmpty();
             }
           }
         }
@@ -534,32 +529,38 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
           sequenceNames.values()
       ).get();
 
+      final List<String> publishedSegments = published.getSegments()
+                                                       .stream()
+                                                       .map(DataSegment::getIdentifier)
+                                                       .collect(Collectors.toList());
+
+      log.info(
+          "Published segments[%s] with metadata[%s].",
+          publishedSegments,
+          Preconditions.checkNotNull(published.getCommitMetadata(), "commitMetadata")
+      );
+
       final Future<SegmentsAndMetadata> handoffFuture = driver.registerHandoff(published);
-      final SegmentsAndMetadata handedOff;
+      SegmentsAndMetadata handedOff = null;
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOff = handoffFuture.get();
       } else {
-        handedOff = handoffFuture.get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
+        try {
+          handedOff = handoffFuture.get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
+        }
+        catch (TimeoutException e) {
+          log.makeAlert("Timed out after [%d] millis waiting for handoffs", tuningConfig.getHandoffConditionTimeout())
+             .addData("TaskId", task.getId())
+             .emit();
+        }
       }
 
       if (handedOff == null) {
-        throw new ISE("Transaction failure publishing segments, aborting");
+        log.warn("Failed to handoff segments[%s]", publishedSegments);
       } else {
         log.info(
-            "Published segments[%s] with metadata[%s].",
-            Joiner.on(", ").join(
-                Iterables.transform(
-                    handedOff.getSegments(),
-                    new Function<DataSegment, String>()
-                    {
-                      @Override
-                      public String apply(DataSegment input)
-                      {
-                        return input.getIdentifier();
-                      }
-                    }
-                )
-            ),
+            "Handoff completed for segments[%s] with metadata[%s]",
+            handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList()),
             Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }
@@ -627,50 +628,24 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   }
 
   /**
-   * Checks if the pauseRequested flag was set and if so blocks:
-   * a) if pauseMillis == PAUSE_FOREVER, until pauseRequested is cleared
-   * b) if pauseMillis != PAUSE_FOREVER, until pauseMillis elapses -or- pauseRequested is cleared
-   * <p/>
-   * If pauseMillis is changed while paused, the new pause timeout will be applied. This allows adjustment of the
-   * pause timeout (making a timed pause into an indefinite pause and vice versa is valid) without having to resume
-   * and ensures that the loop continues to stay paused without ingesting any new events. You will need to signal
-   * shouldResume after adjusting pauseMillis for the new value to take effect.
+   * Checks if the pauseRequested flag was set and if so blocks until pauseRequested is cleared.
    * <p/>
    * Sets paused = true and signals paused so callers can be notified when the pause command has been accepted.
    * <p/>
-   * Additionally, pauses if all partitions assignments have been read and pauseAfterRead flag is set.
    *
    * @return true if a pause request was handled, false otherwise
    */
-  private boolean possiblyPause(Set<Integer> assignment) throws InterruptedException
+  private boolean possiblyPause() throws InterruptedException
   {
     pauseLock.lockInterruptibly();
     try {
-      if (ioConfig.isPauseAfterRead() && assignment.isEmpty()) {
-        pauseMillis = KafkaIndexTask.PAUSE_FOREVER;
-        pauseRequested = true;
-      }
-
       if (pauseRequested) {
         status = Status.PAUSED;
-        long nanos = 0;
         hasPaused.signalAll();
 
         while (pauseRequested) {
-          if (pauseMillis == KafkaIndexTask.PAUSE_FOREVER) {
-            log.info("Pausing ingestion until resumed");
-            shouldResume.await();
-          } else {
-            if (pauseMillis > 0) {
-              log.info("Pausing ingestion for [%,d] ms", pauseMillis);
-              nanos = TimeUnit.MILLISECONDS.toNanos(pauseMillis);
-              pauseMillis = 0;
-            }
-            if (nanos <= 0L) {
-              pauseRequested = false; // timeout elapsed
-            }
-            nanos = shouldResume.awaitNanos(nanos);
-          }
+          log.info("Pausing ingestion until resumed");
+          shouldResume.await();
         }
 
         status = Status.READING;
@@ -752,15 +727,14 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
          .addData("partitions", partitionOffsetMap.keySet())
          .emit();
       // wait for being killed by supervisor
-      requestPause(KafkaIndexTask.PAUSE_FOREVER);
+      requestPause();
     } else {
       log.makeAlert("Failed to send reset request for partitions [%s]", partitionOffsetMap.keySet()).emit();
     }
   }
 
-  private void requestPause(long pauseMillis)
+  private void requestPause()
   {
-    this.pauseMillis = pauseMillis;
     pauseRequested = true;
   }
 
@@ -941,10 +915,10 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   }
 
   @Override
-  public Response setEndOffsets(Map<Integer, Long> offsets, boolean resume, boolean finish) throws InterruptedException
+  public Response setEndOffsets(Map<Integer, Long> offsets, boolean finish) throws InterruptedException
   {
     // finish is not used in this mode
-    return setEndOffsets(offsets, resume);
+    return setEndOffsets(offsets);
   }
 
   @POST
@@ -953,12 +927,11 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   @Produces(MediaType.APPLICATION_JSON)
   public Response setEndOffsetsHTTP(
       Map<Integer, Long> offsets,
-      @QueryParam("resume") @DefaultValue("false") final boolean resume,
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
     authorizationCheck(req, Action.WRITE);
-    return setEndOffsets(offsets, resume);
+    return setEndOffsets(offsets);
   }
 
   @GET
@@ -1000,8 +973,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   }
 
   public Response setEndOffsets(
-      Map<Integer, Long> offsets,
-      final boolean resume
+      Map<Integer, Long> offsets
   ) throws InterruptedException
   {
     if (offsets == null) {
@@ -1048,9 +1020,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       pauseLock.unlock();
     }
 
-    if (resume) {
-      resume();
-    }
+    resume();
 
     return Response.ok(endOffsets).build();
   }
@@ -1063,8 +1033,6 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   /**
    * Signals the ingestion loop to pause.
    *
-   * @param timeout how long to pause for before resuming in milliseconds, <= 0 means indefinitely
-   *
    * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
    * method has timed out and returned before the task has paused; 200 OK with a map of the current partition offsets
    * in the response body if the task successfully paused
@@ -1073,16 +1041,15 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   @Path("/pause")
   @Produces(MediaType.APPLICATION_JSON)
   public Response pauseHTTP(
-      @QueryParam("timeout") @DefaultValue("0") final long timeout,
       @Context final HttpServletRequest req
   ) throws InterruptedException
   {
     authorizationCheck(req, Action.WRITE);
-    return pause(timeout);
+    return pause();
   }
 
   @Override
-  public Response pause(final long timeout) throws InterruptedException
+  public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
       return Response.status(Response.Status.BAD_REQUEST)
@@ -1092,7 +1059,6 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
 
     pauseLock.lockInterruptibly();
     try {
-      pauseMillis = timeout <= 0 ? KafkaIndexTask.PAUSE_FOREVER : timeout;
       pauseRequested = true;
 
       pollRetryLock.lockInterruptibly();
