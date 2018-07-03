@@ -74,15 +74,16 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
 
                 if (!queuePeon.getSegmentsToDrop().contains(segment)) {
                   queuePeon.dropSegment(
-                      segment, new LoadPeonCallback()
-                      {
-                        @Override
-                        public void execute()
-                        {
-                        }
+                      segment, () -> {
                       }
                   );
                   stats.addToTieredStat("unneededCount", server.getTier(), 1);
+                  log.info(
+                      "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
+                      segment.getIdentifier(),
+                      server.getName(),
+                      server.getTier()
+                  );
                 }
               }
             }
