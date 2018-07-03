@@ -28,11 +28,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.indexer.TaskLocation;
+import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.RetryPolicy;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskInfoProvider;
-import io.druid.indexer.TaskStatus;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.IOE;
 import io.druid.java.util.common.ISE;
@@ -167,19 +167,14 @@ public class KafkaIndexTaskClient
 
   public Map<Integer, Long> pause(final String id)
   {
-    return pause(id, 0);
-  }
-
-  public Map<Integer, Long> pause(final String id, final long timeout)
-  {
-    log.debug("Pause task[%s] timeout[%d]", id, timeout);
+    log.debug("Pause task[%s]", id);
 
     try {
       final FullResponseHolder response = submitRequest(
           id,
           HttpMethod.POST,
           "pause",
-          timeout > 0 ? StringUtils.format("timeout=%d", timeout) : null,
+          null,
           true
       );
 
@@ -361,18 +356,17 @@ public class KafkaIndexTaskClient
   public boolean setEndOffsets(
       final String id,
       final Map<Integer, Long> endOffsets,
-      final boolean resume,
       final boolean finalize
   )
   {
-    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s] finalize[%s]", id, endOffsets, resume, finalize);
+    log.debug("SetEndOffsets task[%s] endOffsets[%s] finalize[%s]", id, endOffsets, finalize);
 
     try {
       final FullResponseHolder response = submitRequest(
           id,
           HttpMethod.POST,
           "offsets/end",
-          StringUtils.format("resume=%s&finish=%s", resume, finalize),
+          StringUtils.format("finish=%s", finalize),
           jsonMapper.writeValueAsBytes(endOffsets),
           true
       );
@@ -416,18 +410,13 @@ public class KafkaIndexTaskClient
 
   public ListenableFuture<Map<Integer, Long>> pauseAsync(final String id)
   {
-    return pauseAsync(id, 0);
-  }
-
-  public ListenableFuture<Map<Integer, Long>> pauseAsync(final String id, final long timeout)
-  {
     return executorService.submit(
         new Callable<Map<Integer, Long>>()
         {
           @Override
           public Map<Integer, Long> call()
           {
-            return pause(id, timeout);
+            return pause(id);
           }
         }
     );
@@ -490,7 +479,7 @@ public class KafkaIndexTaskClient
   }
 
   public ListenableFuture<Boolean> setEndOffsetsAsync(
-      final String id, final Map<Integer, Long> endOffsets, final boolean resume, final boolean finalize
+      final String id, final Map<Integer, Long> endOffsets, final boolean finalize
   )
   {
     return executorService.submit(
@@ -499,7 +488,7 @@ public class KafkaIndexTaskClient
           @Override
           public Boolean call()
           {
-            return setEndOffsets(id, endOffsets, resume, finalize);
+            return setEndOffsets(id, endOffsets, finalize);
           }
         }
     );

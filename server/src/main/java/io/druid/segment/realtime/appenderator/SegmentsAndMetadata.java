@@ -23,12 +23,13 @@ import com.google.common.collect.ImmutableList;
 import io.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 public class SegmentsAndMetadata
 {
-  private static final SegmentsAndMetadata NIL = new SegmentsAndMetadata(ImmutableList.<DataSegment>of(), null);
+  private static final SegmentsAndMetadata NIL = new SegmentsAndMetadata(Collections.emptyList(), null);
 
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;

@@ -49,7 +49,7 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
       Handle handle, DateTime timestamp, @Nullable Integer maxNumStatuses, @Nullable String datasource
   )
   {
-    String sql = maxNumStatuses == null ? "SELECT " : "SELECT TOP :n ";
+    String sql = maxNumStatuses == null ? "SELECT " : "SELECT TOP (:n) ";
 
     sql += StringUtils.format(
         "    id, "
@@ -64,9 +64,7 @@ public class SQLServerMetadataStorageActionHandler<EntryType, StatusType, LogTyp
         + "ORDER BY created_date DESC",
         getEntryTable()
     );
-    if (maxNumStatuses != null) {
-      sql += " LIMIT :n";
-    }
+
     Query<Map<String, Object>> query = handle.createQuery(sql).bind("start", timestamp.toString());
 
     if (maxNumStatuses != null) {
