@@ -130,8 +130,9 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
         final List<ServerHolder> toMoveToWithLoadQueueCapacity =
             toMoveTo.stream()
-                    .filter(s -> s.getNumberOfSegmentsInQueue() < maxToLoad)
+                    .filter(s -> maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)
                     .collect(Collectors.toList());
+
         final ServerHolder destinationHolder =
             strategy.findNewSegmentHomeBalancer(segmentToMove.getSegment(), toMoveToWithLoadQueueCapacity);
 
