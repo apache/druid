@@ -124,7 +124,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     long unmoved = 0L;
-    for (int moved = 0; moved < maxSegmentsToMove;) {
+    for (int moved = 0; (moved + unmoved) < maxSegmentsToMove;) {
       final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(toMoveFrom);
 
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
