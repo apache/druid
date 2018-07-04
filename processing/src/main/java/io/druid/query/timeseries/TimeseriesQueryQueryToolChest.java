@@ -353,7 +353,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
             queryPlus = queryPlus.withQuery(timeseriesQuery);
           }
-          if (timeseriesQuery.getLimit() != 0) {
+          if (timeseriesQuery.getLimit() < Integer.MAX_VALUE) {
             timeseriesQuery = timeseriesQuery.withLimit(timeseriesQuery.getLimit());
             queryPlus = queryPlus.withQuery(timeseriesQuery);
           }

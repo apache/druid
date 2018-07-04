@@ -82,7 +82,6 @@ import io.druid.query.topn.DimensionTopNMetricSpec;
 import io.druid.query.topn.InvertedTopNMetricSpec;
 import io.druid.query.topn.NumericTopNMetricSpec;
 import io.druid.query.topn.TopNQueryBuilder;
-import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
@@ -6739,27 +6738,21 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     testQuery(
         "SELECT "
-        + "  FLOOR(__time TO SECOND), "
         + "  AVG(m2), "
         + "  SUM(m1) + SUM(m2) "
         + "FROM "
         + "  druid.foo "
         + "WHERE "
         + "  dim2 = 'a' "
-        + "GROUP BY FLOOR(__time TO SECOND) "
-        + "ORDER BY FLOOR(__time TO SECOND) "
+        + "GROUP BY m1 "
+        + "ORDER BY m1 "
         + "LIMIT 5",
         Collections.singletonList(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(QSS(Filtration.eternity()))
                 .granularity(Granularities.ALL)
-                .dimension(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG))
-                .virtualColumns(
-                    VirtualColumns.create(
-                        EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_floor(\"__time\",'PT1S','','UTC')", ValueType.LONG)
-                    )
-                )
+                .dimension(new DefaultDimensionSpec("m1", "d0", ValueType.FLOAT))
                 .filters("dim2", "a")
                 .aggregators(AGGS(
                     new DoubleSumAggregatorFactory("a0:sum", "m2"),
@@ -6786,8 +6779,8 @@ public class CalciteQueryTest extends CalciteTestBase
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{946684800000L, 1.0, 2.0},
-            new Object[]{978307200000L, 4.0, 8.0}
+            new Object[]{1.0, 2.0},
+            new Object[]{4.0, 8.0}
         )
     );
   }
