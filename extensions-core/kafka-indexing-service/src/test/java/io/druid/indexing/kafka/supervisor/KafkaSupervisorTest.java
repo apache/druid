@@ -2193,12 +2193,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected String generateSequenceName(TaskGroup group)
-    {
-      return super.generateSequenceName(group);
-    }
-
-    @Override
     protected String generateSequenceName(
         Map<Integer, Long> startPartitions,
         Optional<DateTime> minimumMessageTime,
