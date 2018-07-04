@@ -322,7 +322,11 @@ public abstract class LoadRule implements Rule
       } else {
         final int currentReplicantsInTier = entry.getIntValue();
         final int numToDrop = currentReplicantsInTier - targetReplicants.getOrDefault(tier, 0);
-        numDropped = dropForTier(numToDrop, holders, segment, params.getBalancerStrategy());
+        if (numToDrop > 0) {
+          numDropped = dropForTier(numToDrop, holders, segment, params.getBalancerStrategy());
+        } else {
+          numDropped = 0;
+        }
       }
 
       stats.addToTieredStat(DROPPED_COUNT, tier, numDropped);
