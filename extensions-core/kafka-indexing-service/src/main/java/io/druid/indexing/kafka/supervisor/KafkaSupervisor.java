@@ -143,7 +143,8 @@ public class KafkaSupervisor implements Supervisor
    * time, there should only be up to a maximum of [taskCount] actively-reading task groups (tracked in the [taskGroups]
    * map) + zero or more pending-completion task groups (tracked in [pendingCompletionTaskGroups]).
    */
-  public static class TaskGroup
+  @VisibleForTesting
+  static class TaskGroup
   {
     // This specifies the partitions and starting offsets for this task group. It is set on group creation from the data
     // in [partitionGroups] and never changes during the lifetime of this task group, which will live until a task in
@@ -777,8 +778,8 @@ public class KafkaSupervisor implements Supervisor
           resetKafkaMetadata.getKafkaPartitions().getPartitionOffsetMap().keySet().forEach(partition -> {
             final int groupId = getTaskGroupIdForPartition(partition);
             killTaskGroupForPartitions(ImmutableSet.of(partition));
-            sequenceTaskGroup.remove(generateSequenceName(taskGroups.get(groupId)));
-            taskGroups.remove(groupId);
+            final TaskGroup removedGroup = taskGroups.remove(groupId);
+            sequenceTaskGroup.remove(generateSequenceName(removedGroup));
             partitionGroups.get(groupId).replaceAll((partitionId, offset) -> NOT_SET);
           });
         } else {
