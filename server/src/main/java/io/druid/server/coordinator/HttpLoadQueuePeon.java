@@ -390,7 +390,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       SegmentHolder holder = segmentsToLoad.get(segment);
 
       if (holder == null) {
-        log.info("Server[%s] to load segment[%s] queued.", serverId, segment.getIdentifier());
+        log.debug("Server[%s] to load segment[%s] queued.", serverId, segment.getIdentifier());
         segmentsToLoad.put(segment, new LoadSegmentHolder(segment, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
@@ -415,7 +415,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       SegmentHolder holder = segmentsToDrop.get(segment);
 
       if (holder == null) {
-        log.info("Server[%s] to drop segment[%s] queued.", serverId, segment.getIdentifier());
+        log.debug("Server[%s] to drop segment[%s] queued.", serverId, segment.getIdentifier());
         segmentsToDrop.put(segment, new DropSegmentHolder(segment, callback));
         processingExecutor.execute(this::doSegmentManagement);
       } else {
