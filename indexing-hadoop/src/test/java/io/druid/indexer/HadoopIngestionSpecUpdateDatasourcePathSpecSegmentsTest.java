@@ -51,9 +51,12 @@ import java.util.Map;
  */
 public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
 {
-  private final String testDatasource = "test";
-  private final Interval testDatasourceInterval = Intervals.of("1970/3000");
-  private final Interval testDatasourceIntervalPartial = Intervals.of("2050/3000");
+  private static final String testDatasource = "test";
+  private static final String testDatasource2 = "test2";
+  private static final Interval testDatasourceInterval = Intervals.of("1970/3000");
+  private static final Interval testDatasourceInterval2 = Intervals.of("2000/2001");
+  private static final Interval testDatasourceIntervalPartial = Intervals.of("2050/3000");
+
   private final ObjectMapper jsonMapper;
 
   public HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest()
@@ -67,7 +70,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
   }
 
   private static final DataSegment SEGMENT = new DataSegment(
-      "test1",
+      testDatasource,
       Intervals.of("2000/3000"),
       "ver",
       ImmutableMap.<String, Object>of(
@@ -75,6 +78,21 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
           "path", "/tmp/index1.zip"
       ),
       ImmutableList.of("host"),
+      ImmutableList.of("visited_sum", "unique_hosts"),
+      NoneShardSpec.instance(),
+      9,
+      2
+  );
+
+  private static final DataSegment SEGMENT2 = new DataSegment(
+      testDatasource2,
+      Intervals.of("2000/3000"),
+      "ver2",
+      ImmutableMap.<String, Object>of(
+          "type", "local",
+          "path", "/tmp/index2.zip"
+      ),
+      ImmutableList.of("host2"),
       ImmutableList.of("visited_sum", "unique_hosts"),
       NoneShardSpec.instance(),
       9,
@@ -213,6 +231,22 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
                     null
                 ),
                 null
+            ),
+            new DatasourcePathSpec(
+                jsonMapper,
+                null,
+                new DatasourceIngestionSpec(
+                    testDatasource2,
+                    testDatasourceInterval2,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    null
+                ),
+                null
             )
         )
     );
@@ -223,6 +257,10 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     Assert.assertEquals(
         ImmutableList.of(WindowedDataSegment.of(SEGMENT)),
         ((DatasourcePathSpec) ((MultiplePathSpec) config.getPathSpec()).getChildren().get(1)).getSegments()
+    );
+    Assert.assertEquals(
+        ImmutableList.of(new WindowedDataSegment(SEGMENT2, testDatasourceInterval2)),
+        ((DatasourcePathSpec) ((MultiplePathSpec) config.getPathSpec()).getChildren().get(2)).getSegments()
     );
   }
 
@@ -259,9 +297,21 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     );
 
     UsedSegmentLister segmentLister = EasyMock.createMock(UsedSegmentLister.class);
+
     EasyMock.expect(
-        segmentLister.getUsedSegmentsForIntervals(testDatasource, Lists.newArrayList(jobInterval))
+        segmentLister.getUsedSegmentsForIntervals(
+            testDatasource,
+            Lists.newArrayList(jobInterval != null ? jobInterval.overlap(testDatasourceInterval) : null)
+        )
     ).andReturn(ImmutableList.of(SEGMENT));
+
+    EasyMock.expect(
+        segmentLister.getUsedSegmentsForIntervals(
+            testDatasource2,
+            Lists.newArrayList(jobInterval != null ? jobInterval.overlap(testDatasourceInterval2) : null)
+        )
+    ).andReturn(ImmutableList.of(SEGMENT2));
+
     EasyMock.replay(segmentLister);
 
     spec = HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(spec, jsonMapper, segmentLister);
