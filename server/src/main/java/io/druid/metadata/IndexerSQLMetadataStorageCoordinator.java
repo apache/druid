@@ -131,7 +131,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new HandleCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> withHandle(Handle handle)
+          public List<DataSegment> withHandle(Handle handle) throws Exception
           {
             final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
                 handle,

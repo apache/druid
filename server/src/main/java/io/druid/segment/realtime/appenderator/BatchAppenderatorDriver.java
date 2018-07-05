@@ -132,7 +132,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
     final Map<SegmentIdentifier, SegmentWithState> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
         .collect(Collectors.toMap(SegmentWithState::getSegmentIdentifier, Function.identity()));
 
-    final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
+    final ListenableFuture<SegmentsAndMetadata> future = Futures.transform(
         pushInBackground(null, requestedSegmentIdsForSequences.keySet(), false),
         this::dropInBackground
     );
