@@ -170,11 +170,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Druids.TimeseriesQueryBuilder.copy(this).postAggregators(postAggregatorSpecs).build();
   }
 
-  public TimeseriesQuery withLimit(int limit)
-  {
-    return Druids.TimeseriesQueryBuilder.copy(this).limit(limit).build();
-  }
-
   @Override
   public String toString()
   {
