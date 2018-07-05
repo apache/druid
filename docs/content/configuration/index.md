@@ -167,7 +167,7 @@ Filtered Request Logger filters requests based on a configurable query/time thre
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0 i.e no filtering|
-|`druid.request.logging.delegate`|Delegate request logger to log requests.|none|
+|`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composite Request Logging
 Composite Request Logger emits request logs to multiple request loggers.

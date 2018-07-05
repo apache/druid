@@ -2193,19 +2193,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected String generateSequenceName(int groupId)
-    {
-      return StringUtils.format("sequenceName-%d", groupId);
-    }
-
-    @Override
     protected String generateSequenceName(
         Map<Integer, Long> startPartitions,
         Optional<DateTime> minimumMessageTime,
         Optional<DateTime> maximumMessageTime
     )
     {
-      return generateSequenceName(getTaskGroupIdForPartition(startPartitions.keySet().iterator().next()));
+      final int groupId = getTaskGroupIdForPartition(startPartitions.keySet().iterator().next());
+      return StringUtils.format("sequenceName-%d", groupId);
     }
   }
 }
