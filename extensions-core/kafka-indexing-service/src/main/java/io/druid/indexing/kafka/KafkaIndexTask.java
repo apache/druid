@@ -69,8 +69,6 @@ import java.util.stream.Collectors;
 
 public class KafkaIndexTask extends AbstractTask implements ChatHandler
 {
-  public static final long PAUSE_FOREVER = -1L;
-
   public enum Status
   {
     NOT_STARTED,

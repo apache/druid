@@ -174,7 +174,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    log.info("Asking server peon[%s] to load segment[%s]", basePath, segment.getIdentifier());
+    log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getIdentifier());
     queuedSize.addAndGet(segment.getSize());
     segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Collections.singletonList(callback)));
   }
@@ -205,7 +205,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    log.info("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
+    log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
     segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
   }
 
@@ -244,16 +244,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     }
 
     try {
-      if (currentlyProcessing == null) {
-        if (!stopped) {
-          log.makeAlert("Crazy race condition! server[%s]", basePath)
-             .emit();
-        }
-        actionCompleted();
-        return;
-      }
-
-      log.info("Server[%s] processing segment[%s]", basePath, currentlyProcessing.getSegmentIdentifier());
       final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentIdentifier());
       final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
       curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
@@ -397,7 +387,12 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         return;
       }
       actionCompleted();
-      log.info("Server[%s] done processing [%s]", basePath, path);
+      log.info(
+          "Server[%s] done processing %s of segment [%s]",
+          basePath,
+          currentlyProcessing.getType() == LOAD ? "load" : "drop",
+          path
+      );
     }
   }
 

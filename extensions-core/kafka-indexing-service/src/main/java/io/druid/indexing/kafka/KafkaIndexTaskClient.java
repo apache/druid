@@ -100,19 +100,14 @@ public class KafkaIndexTaskClient extends IndexTaskClient
 
   public Map<Integer, Long> pause(final String id)
   {
-    return pause(id, 0);
-  }
-
-  public Map<Integer, Long> pause(final String id, final long timeout)
-  {
-    log.debug("Pause task[%s] timeout[%d]", id, timeout);
+    log.debug("Pause task[%s]", id);
 
     try {
       final FullResponseHolder response = submitRequestWithEmptyContent(
           id,
           HttpMethod.POST,
           "pause",
-          timeout > 0 ? StringUtils.format("timeout=%d", timeout) : null,
+          null,
           true
       );
 
@@ -287,18 +282,17 @@ public class KafkaIndexTaskClient extends IndexTaskClient
   public boolean setEndOffsets(
       final String id,
       final Map<Integer, Long> endOffsets,
-      final boolean resume,
       final boolean finalize
   )
   {
-    log.debug("SetEndOffsets task[%s] endOffsets[%s] resume[%s] finalize[%s]", id, endOffsets, resume, finalize);
+    log.debug("SetEndOffsets task[%s] endOffsets[%s] finalize[%s]", id, endOffsets, finalize);
 
     try {
       final FullResponseHolder response = submitJsonRequest(
           id,
           HttpMethod.POST,
           "offsets/end",
-          StringUtils.format("resume=%s&finish=%s", resume, finalize),
+          StringUtils.format("finish=%s", finalize),
           serialize(endOffsets),
           true
       );
@@ -324,12 +318,7 @@ public class KafkaIndexTaskClient extends IndexTaskClient
 
   public ListenableFuture<Map<Integer, Long>> pauseAsync(final String id)
   {
-    return pauseAsync(id, 0);
-  }
-
-  public ListenableFuture<Map<Integer, Long>> pauseAsync(final String id, final long timeout)
-  {
-    return doAsync(() -> pause(id, timeout));
+    return doAsync(() -> pause(id));
   }
 
   public ListenableFuture<KafkaIndexTask.Status> getStatusAsync(final String id)
@@ -355,11 +344,10 @@ public class KafkaIndexTaskClient extends IndexTaskClient
   public ListenableFuture<Boolean> setEndOffsetsAsync(
       final String id,
       final Map<Integer, Long> endOffsets,
-      final boolean resume,
       final boolean finalize
   )
   {
-    return doAsync(() -> setEndOffsets(id, endOffsets, resume, finalize));
+    return doAsync(() -> setEndOffsets(id, endOffsets, finalize));
   }
 
   public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id)

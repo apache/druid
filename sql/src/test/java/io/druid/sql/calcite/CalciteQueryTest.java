@@ -82,6 +82,7 @@ import io.druid.query.topn.DimensionTopNMetricSpec;
 import io.druid.query.topn.InvertedTopNMetricSpec;
 import io.druid.query.topn.NumericTopNMetricSpec;
 import io.druid.query.topn.TopNQueryBuilder;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
@@ -6717,6 +6718,104 @@ public class CalciteQueryTest extends CalciteTestBase
             new Object[]{1L},
             new Object[]{1L},
             new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testPostAggWithTimeseries() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "  FLOOR(__time TO YEAR), "
+        + "  SUM(m1), "
+        + "  SUM(m1) + SUM(m2) "
+        + "FROM "
+        + "  druid.foo "
+        + "WHERE "
+        + "  dim2 = 'a' "
+        + "GROUP BY FLOOR(__time TO YEAR) "
+        + "ORDER BY FLOOR(__time TO YEAR) desc",
+        Collections.singletonList(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .filters(SELECTOR("dim2", "a", null))
+                  .granularity(Granularities.YEAR)
+                  .aggregators(
+                      AGGS(
+                          new DoubleSumAggregatorFactory("a0", "m1"),
+                          new DoubleSumAggregatorFactory("a1", "m2")
+                      )
+                  )
+                  .postAggregators(
+                      EXPRESSION_POST_AGG("p0", "(\"a0\" + \"a1\")")
+                  )
+                  .descending(true)
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{978307200000L, 4.0, 8.0},
+            new Object[]{946684800000L, 1.0, 2.0}
+        )
+    );
+  }
+
+  @Test
+  public void testPostAggWithTopN() throws Exception
+  {
+    testQuery(
+        "SELECT "
+        + "  FLOOR(__time TO SECOND), "
+        + "  AVG(m2), "
+        + "  SUM(m1) + SUM(m2) "
+        + "FROM "
+        + "  druid.foo "
+        + "WHERE "
+        + "  dim2 = 'a' "
+        + "GROUP BY FLOOR(__time TO SECOND) "
+        + "ORDER BY FLOOR(__time TO SECOND) "
+        + "LIMIT 5",
+        Collections.singletonList(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG))
+                .virtualColumns(
+                    VirtualColumns.create(
+                        EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_floor(\"__time\",'PT1S','','UTC')", ValueType.LONG)
+                    )
+                )
+                .filters("dim2", "a")
+                .aggregators(AGGS(
+                    new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                    new CountAggregatorFactory("a0:count"),
+                    new DoubleSumAggregatorFactory("a1", "m1"),
+                    new DoubleSumAggregatorFactory("a2", "m2")
+                ))
+                .postAggregators(
+                    ImmutableList.of(
+                        new ArithmeticPostAggregator(
+                            "a0",
+                            "quotient",
+                            ImmutableList.of(
+                                new FieldAccessPostAggregator(null, "a0:sum"),
+                                new FieldAccessPostAggregator(null, "a0:count")
+                            )
+                        ),
+                        EXPRESSION_POST_AGG("p0", "(\"a1\" + \"a2\")")
+                    )
+                )
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+                .threshold(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0, 2.0},
+            new Object[]{978307200000L, 4.0, 8.0}
         )
     );
   }

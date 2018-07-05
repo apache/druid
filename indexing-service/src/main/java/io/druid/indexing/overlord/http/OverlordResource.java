@@ -654,7 +654,7 @@ public class OverlordResource
 
     Function<TaskInfo<Task>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
         taskInfo.getId(),
-        taskInfo.getTask().getType(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
         taskInfo.getCreatedTime(),
         // Would be nice to include the real queue insertion time, but the
         // TaskStorage API doesn't yet allow it.
@@ -689,7 +689,7 @@ public class OverlordResource
         allActiveTasks.add(
             new AnyTask(
                 task.getId(),
-                task.getTask().getType(),
+                task.getTask() == null ? null : task.getTask().getType(),
                 SettableFuture.create(),
                 task.getDataSource(),
                 null,
@@ -1010,7 +1010,7 @@ public class OverlordResource
     if (type != null) {
       optionalTypeFilteredList = collectionToFilter
           .stream()
-          .filter(task -> task.getType().equals(type))
+          .filter(task -> type.equals(task.getType()))
           .collect(Collectors.toList());
     }
     if (dataSource != null) {

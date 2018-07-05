@@ -745,6 +745,46 @@ public class OverlordResourceTest
   }
 
   @Test
+  public void testGetNullCompleteTask()
+  {
+    expectAuthorizationTokenCheck();
+    EasyMock.expect(taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(null, null, null)).andStubReturn(
+        ImmutableList.of(
+            new TaskInfo(
+                "id_1",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskStatus.success("id_1"),
+                "allow",
+                null
+            ),
+            new TaskInfo(
+                "id_2",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskStatus.success("id_2"),
+                "deny",
+                getTaskWithIdAndDatasource("id_2", "deny")
+            ),
+            new TaskInfo(
+                "id_3",
+                DateTime.now(ISOChronology.getInstanceUTC()),
+                TaskStatus.success("id_3"),
+                "allow",
+                getTaskWithIdAndDatasource("id_3", "allow")
+            )
+        )
+    );
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+    List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
+        .getTasks("complete", null, null, null, null, req)
+        .getEntity();
+    Assert.assertEquals(2, responseObjects.size());
+    Assert.assertEquals("id_1", responseObjects.get(0).getId());
+    TaskStatusPlus tsp = responseObjects.get(0);
+    Assert.assertEquals(null, tsp.getType());
+    Assert.assertTrue("DataSource Check", "allow".equals(responseObjects.get(0).getDataSource()));
+  }
+
+  @Test
   public void testGetTasksNegativeState()
   {
     EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);

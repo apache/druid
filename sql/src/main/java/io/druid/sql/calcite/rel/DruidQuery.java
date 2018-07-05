@@ -778,6 +778,12 @@ public class DruidQuery
     }
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
+
+    final List<PostAggregator> postAggregators = new ArrayList<>(grouping.getPostAggregators());
+    if (sortProject != null) {
+      postAggregators.addAll(sortProject.getPostAggregators());
+    }
+
     final Map<String, Object> theContext = Maps.newHashMap();
     theContext.put("skipEmptyBuckets", true);
     theContext.putAll(plannerContext.getQueryContext());
@@ -790,7 +796,7 @@ public class DruidQuery
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),
-        grouping.getPostAggregators(),
+        postAggregators,
         ImmutableSortedMap.copyOf(theContext)
     );
   }
@@ -849,6 +855,11 @@ public class DruidQuery
 
     final Filtration filtration = Filtration.create(filter).optimize(sourceRowSignature);
 
+    final List<PostAggregator> postAggregators = new ArrayList<>(grouping.getPostAggregators());
+    if (sortProject != null) {
+      postAggregators.addAll(sortProject.getPostAggregators());
+    }
+
     return new TopNQuery(
         dataSource,
         getVirtualColumns(plannerContext.getExprMacroTable(), true),
@@ -859,7 +870,7 @@ public class DruidQuery
         filtration.getDimFilter(),
         Granularities.ALL,
         grouping.getAggregatorFactories(),
-        grouping.getPostAggregators(),
+        postAggregators,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
