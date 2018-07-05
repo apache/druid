@@ -21,6 +21,7 @@ package io.druid.java.util.common;
 
 import com.google.common.base.Function;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 
 /**
@@ -28,18 +29,20 @@ import java.util.Comparator;
 public class Pair<T1, T2>
 {
 
-  public static <T1, T2> Pair<T1, T2> of(T1 lhs, T2 rhs)
+  public static <T1, T2> Pair<T1, T2> of(@Nullable T1 lhs, @Nullable T2 rhs)
   {
     return new Pair<>(lhs, rhs);
   }
 
+  @Nullable
   public final T1 lhs;
 
+  @Nullable
   public final T2 rhs;
 
   public Pair(
-      T1 lhs,
-      T2 rhs
+      @Nullable T1 lhs,
+      @Nullable T2 rhs
   )
   {
     this.lhs = lhs;
