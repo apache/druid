@@ -36,17 +36,14 @@ public class TimeseriesBinaryFn
 {
   private final Granularity gran;
   private final List<AggregatorFactory> aggregations;
-  private final int limit;
 
   public TimeseriesBinaryFn(
       Granularity granularity,
-      List<AggregatorFactory> aggregations,
-      int limit
+      List<AggregatorFactory> aggregations
   )
   {
     this.gran = granularity;
     this.aggregations = aggregations;
-    this.limit = limit;
   }
 
   @Override

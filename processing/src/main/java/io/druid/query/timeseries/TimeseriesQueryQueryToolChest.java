@@ -108,20 +108,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       )
       {
         int limit = ((TimeseriesQuery) queryPlus.getQuery()).getLimit();
-        if (limit < Integer.MAX_VALUE) {
-          return super.doRun(
-              baseRunner,
-              // Don't do post aggs until makePostComputeManipulatorFn() is called
-              queryPlus.withQuery(((TimeseriesQuery) queryPlus.getQuery()).withPostAggregatorSpecs(ImmutableList.of())),
-              context
-          ).limit(limit);
-        }
-        return super.doRun(
+        Sequence<Result<TimeseriesResultValue>> result = super.doRun(
             baseRunner,
             // Don't do post aggs until makePostComputeManipulatorFn() is called
             queryPlus.withQuery(((TimeseriesQuery) queryPlus.getQuery()).withPostAggregatorSpecs(ImmutableList.of())),
             context
         );
+        if (limit < Integer.MAX_VALUE) {
+          return result.limit(limit);
+        }
+        return result;
       }
 
       @Override
@@ -140,8 +136,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         TimeseriesQuery query = (TimeseriesQuery) input;
         return new TimeseriesBinaryFn(
             query.getGranularity(),
-            query.getAggregatorSpecs(),
-            query.getLimit()
+            query.getAggregatorSpecs()
         );
       }
     };
@@ -351,10 +346,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
           if (timeseriesQuery.getDimensionsFilter() != null) {
             timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
-            queryPlus = queryPlus.withQuery(timeseriesQuery);
-          }
-          if (timeseriesQuery.getLimit() < Integer.MAX_VALUE) {
-            timeseriesQuery = timeseriesQuery.withLimit(timeseriesQuery.getLimit());
             queryPlus = queryPlus.withQuery(timeseriesQuery);
           }
           return runner.run(queryPlus, responseContext);

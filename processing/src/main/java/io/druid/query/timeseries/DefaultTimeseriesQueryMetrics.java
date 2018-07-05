@@ -44,7 +44,7 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
   @Override
   public void limit(TimeseriesQuery query)
   {
-    setDimension("limit", toString().valueOf(query.getLimit()));
+    setDimension("limit", String.valueOf(query.getLimit()));
   }
 
   @Override
