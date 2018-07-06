@@ -36,7 +36,7 @@ import io.druid.segment.DimensionIndexer;
 import io.druid.segment.Metadata;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ListIndexed;
@@ -85,7 +85,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return Integer.MAX_VALUE;
     }
 

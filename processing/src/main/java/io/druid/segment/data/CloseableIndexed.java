@@ -17,19 +17,10 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.data;
 
-import io.druid.segment.column.ColumnHolder;
+import java.io.Closeable;
 
-import javax.annotation.Nullable;
-import java.util.List;
-
-/**
- */
-public interface ColumnSelector
+public interface CloseableIndexed<T> extends Indexed<T>, Closeable
 {
-  List<String> getColumnNames();
-
-  @Nullable
-  ColumnHolder getColumn(String columnName);
 }

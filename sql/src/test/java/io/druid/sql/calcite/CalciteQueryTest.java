@@ -83,7 +83,7 @@ import io.druid.query.topn.InvertedTopNMetricSpec;
 import io.druid.query.topn.NumericTopNMetricSpec;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import io.druid.server.security.AuthenticationResult;
@@ -7022,7 +7022,7 @@ public class CalciteQueryTest extends CalciteTestBase
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
     return new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(interval.getEndMillis()),
         false,

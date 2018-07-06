@@ -35,7 +35,7 @@ import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -90,7 +90,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    if (Column.TIME_COLUMN_NAME.equals(dimensionSpec.getDimension())) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(dimensionSpec.getDimension())) {
       if (extractionFn == null) {
         throw new UnsupportedOperationException("time dimension must provide an extraction function");
       }
@@ -298,7 +298,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
-    if (columnName.equals(Column.TIME_COLUMN_NAME)) {
+    if (columnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       class TimeLongColumnSelector implements LongColumnSelector
       {
         @Override
@@ -380,7 +380,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    if (Column.TIME_COLUMN_NAME.equals(columnName)) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
       return new ColumnCapabilitiesImpl().setType(ValueType.LONG);
     } else {

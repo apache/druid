@@ -90,11 +90,11 @@ public class ColumnBuilder
     return this;
   }
 
-  public Column build()
+  public ColumnHolder build()
   {
     Preconditions.checkState(type != null, "Type must be set.");
 
-    return new SimpleColumn(
+    return new SimpleColumnHolder(
         new ColumnCapabilitiesImpl()
             .setType(type)
             .setDictionaryEncoded(dictionaryEncoded)

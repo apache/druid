@@ -74,7 +74,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -285,7 +285,7 @@ public class DumpSegment extends GuiceRunnable
                         final String columnName = columnNames.get(i);
                         final Object value = selectors.get(i).getObject();
 
-                        if (timeISO8601 && columnNames.get(i).equals(Column.TIME_COLUMN_NAME)) {
+                        if (timeISO8601 && columnNames.get(i).equals(ColumnHolder.TIME_COLUMN_NAME)) {
                           row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
                         } else {
                           row.put(columnName, value);
@@ -350,8 +350,8 @@ public class DumpSegment extends GuiceRunnable
               jg.writeStartObject();
 
               for (final String columnName : columnNames) {
-                final Column column = index.getColumn(columnName);
-                final BitmapIndex bitmapIndex = column.getBitmapIndex();
+                final ColumnHolder columnHolder = index.getColumn(columnName);
+                final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
 
                 if (bitmapIndex == null) {
                   jg.writeNullField(columnName);
@@ -399,7 +399,7 @@ public class DumpSegment extends GuiceRunnable
 
     // Empty columnNames => include all columns.
     if (columnNames.isEmpty()) {
-      columnNames.add(Column.TIME_COLUMN_NAME);
+      columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
       Iterables.addAll(columnNames, index.getColumnNames());
     } else {
       // Remove any provided columns that do not exist in this segment.

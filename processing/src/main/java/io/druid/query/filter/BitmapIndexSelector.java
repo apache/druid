@@ -19,17 +19,22 @@
 
 package io.druid.query.filter;
 
+import com.google.errorprone.annotations.MustBeClosed;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.collections.spatial.ImmutableRTree;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.data.CloseableIndexed;
+
+import javax.annotation.Nullable;
 
 /**
  */
 public interface BitmapIndexSelector
 {
-  Indexed<String> getDimensionValues(String dimension);
+  @MustBeClosed
+  @Nullable
+  CloseableIndexed<String> getDimensionValues(String dimension);
   boolean hasMultipleValues(String dimension);
   int getNumRows();
   BitmapFactory getBitmapFactory();

@@ -35,7 +35,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.data.ArrayBasedIndexedInts;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -324,9 +324,9 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public Indexed<String> getSortedIndexedValues()
+  public CloseableIndexed<String> getSortedIndexedValues()
   {
-    return new Indexed<String>()
+    return new CloseableIndexed<String>()
     {
       @Override
       public Class<? extends String> getClazz()
@@ -363,6 +363,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         // nothing to inspect
+      }
+
+      @Override
+      public void close()
+      {
+        // nothing to close
       }
     };
   }

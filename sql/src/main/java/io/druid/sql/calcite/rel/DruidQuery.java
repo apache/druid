@@ -58,7 +58,7 @@ import io.druid.query.topn.TopNMetricSpec;
 import io.druid.query.topn.TopNQuery;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.aggregation.Aggregation;
 import io.druid.sql.calcite.aggregation.DimensionExpression;
@@ -975,7 +975,7 @@ public class DruidQuery
         descending = false;
       } else if (limitSpec.getColumns().size() == 1) {
         final OrderByColumnSpec orderBy = Iterables.getOnlyElement(limitSpec.getColumns());
-        if (!orderBy.getDimension().equals(Column.TIME_COLUMN_NAME)) {
+        if (!orderBy.getDimension().equals(ColumnHolder.TIME_COLUMN_NAME)) {
           // Select cannot handle sorting on anything other than __time.
           return null;
         }

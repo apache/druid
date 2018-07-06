@@ -25,7 +25,7 @@ import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexRowHolder;
 
@@ -63,7 +63,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public Indexed<Float> getSortedIndexedValues()
+  public CloseableIndexed<Float> getSortedIndexedValues()
   {
     throw new UnsupportedOperationException("Numeric columns do not support value dictionaries.");
   }

@@ -28,7 +28,7 @@ import io.druid.segment.Metadata;
 import io.druid.segment.TransformableRowIterator;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.BitmapValues;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.data.CloseableIndexed;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.joda.time.Interval;
 
@@ -143,7 +143,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
   @Nullable
   @Override
-  public <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension)
+  public <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension)
   {
     final DimensionAccessor accessor = accessors.get(dimension);
     if (accessor == null) {

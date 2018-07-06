@@ -46,7 +46,7 @@ import io.druid.query.topn.DimensionAndMetricValueExtractor;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.DimensionHandlerUtils;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.server.QueryLifecycleFactory;
 import io.druid.server.security.AuthenticationResult;
 import io.druid.sql.calcite.planner.Calcites;
@@ -223,7 +223,7 @@ public class QueryMaker
                               final Object[] retVal = new Object[fieldList.size()];
                               for (RelDataTypeField field : fieldList) {
                                 final String outputName = outputRowSignature.getRowOrder().get(field.getIndex());
-                                if (outputName.equals(Column.TIME_COLUMN_NAME)) {
+                                if (outputName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
                                   retVal[field.getIndex()] = coerce(
                                       holder.getTimestamp().getMillis(),
                                       field.getType().getSqlTypeName()

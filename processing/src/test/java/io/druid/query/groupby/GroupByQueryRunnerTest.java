@@ -123,7 +123,7 @@ import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.ContainsSearchQuerySpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -4789,8 +4789,8 @@ public class GroupByQueryRunnerTest
             Lists.newArrayList(
                 new DefaultDimensionSpec("market", "market"),
                 new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
-                    Column.TIME_COLUMN_NAME,
+                    ColumnHolder.TIME_COLUMN_NAME,
+                    ColumnHolder.TIME_COLUMN_NAME,
                     new TimeFormatExtractionFn("EEEE", null, null, null, false)
                 )
             )
@@ -5630,8 +5630,8 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-    final DimFilter fridayFilter = new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null, null, false));
-    final DimFilter firstDaysFilter = new InDimFilter(Column.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"), new TimeFormatExtractionFn("d", null, null, null, false));
+    final DimFilter fridayFilter = new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null, null, false));
+    final DimFilter firstDaysFilter = new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"), new TimeFormatExtractionFn("d", null, null, null, false));
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
@@ -6223,7 +6223,7 @@ public class GroupByQueryRunnerTest
             Lists.newArrayList(
                 new DefaultDimensionSpec("market", "market"),
                 new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
+                    ColumnHolder.TIME_COLUMN_NAME,
                     "dayOfWeek",
                     new TimeFormatExtractionFn("EEEE", null, null, null, false)
                 )
@@ -6479,7 +6479,7 @@ public class GroupByQueryRunnerTest
             Lists.newArrayList(
                 new DefaultDimensionSpec("market", "market"),
                 new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
+                    ColumnHolder.TIME_COLUMN_NAME,
                     "dayOfWeek",
                     new CascadeExtractionFn(
                         new ExtractionFn[]{
@@ -8112,7 +8112,7 @@ public class GroupByQueryRunnerTest
             Lists.<DimensionSpec>newArrayList(
                 new DefaultDimensionSpec("qualityLong", "ql_alias"),
                 new DefaultDimensionSpec("qualityFloat", "qf_alias"),
-                new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "time_alias")
+                new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias")
             )
         )
         .setDimFilter(new SelectorDimFilter("quality", "entertainment", null))
@@ -8672,7 +8672,7 @@ public class GroupByQueryRunnerTest
             Lists.<DimensionSpec>newArrayList(
                 new DefaultDimensionSpec("quality", "alias"),
                 new ExtractionDimensionSpec(
-                    Column.TIME_COLUMN_NAME,
+                    ColumnHolder.TIME_COLUMN_NAME,
                     "time_day",
                     ValueType.LONG,
                     new TimeFormatExtractionFn(null, null, null, Granularities.DAY, true)

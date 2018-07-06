@@ -71,7 +71,7 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.TestHelper;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.loading.DataSegmentArchiver;
@@ -550,7 +550,7 @@ public class IngestSegmentFirehoseFactoryTest
     Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
     Integer rowcount = 0;
     final TransformSpec transformSpec = new TransformSpec(
-        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "1", null),
+        new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "1", null),
         ImmutableList.of(
             new ExpressionTransform(METRIC_FLOAT_NAME, METRIC_FLOAT_NAME + " * 10", ExprMacroTable.nil())
         )

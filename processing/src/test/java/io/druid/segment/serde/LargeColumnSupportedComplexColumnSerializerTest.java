@@ -28,7 +28,7 @@ import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.ValueType;
@@ -115,8 +115,8 @@ public class LargeColumnSupportedComplexColumnSerializerTest
             .setFileMapper(mapper);
         serde.deserializeColumn(mapper.mapFile("test"), builder);
 
-        Column column = builder.build();
-        ComplexColumn complexColumn = column.getComplexColumn();
+        ColumnHolder columnHolder = builder.build();
+        ComplexColumn complexColumn = (ComplexColumn) columnHolder.getColumn();
         HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
 
         for (int i = 0; i < aCase; i++) {

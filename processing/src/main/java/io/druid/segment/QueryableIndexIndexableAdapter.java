@@ -25,24 +25,24 @@ import com.google.common.collect.Sets;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.CloseQuietly;
 import io.druid.java.util.common.io.Closer;
-import io.druid.java.util.common.logger.Logger;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BaseColumn;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapValues;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.ImmutableBitmapValues;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.selector.settable.SettableColumnValueSelector;
 import io.druid.segment.selector.settable.SettableLongColumnValueSelector;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -55,8 +55,6 @@ import java.util.Set;
  */
 public class QueryableIndexIndexableAdapter implements IndexableAdapter
 {
-  private static final Logger log = new Logger(QueryableIndexIndexableAdapter.class);
-
   private final int numRows;
   private final QueryableIndex input;
   private final ImmutableList<String> availableDimensions;
@@ -66,25 +64,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   {
     this.input = input;
     numRows = input.getNumRows();
-
-    // It appears possible that the dimensions have some columns listed which do not have a DictionaryEncodedColumn
-    // This breaks current logic, but should be fine going forward.  This is a work-around to make things work
-    // in the current state.  This code shouldn't be needed once github tracker issue #55 is finished.
-    ImmutableList.Builder<String> availableDimensions = ImmutableList.builder();
-    for (String dim : input.getAvailableDimensions()) {
-      final Column col = input.getColumn(dim);
-
-      if (col == null) {
-        log.warn("Wtf!? column[%s] didn't exist!?!?!?", dim);
-      } else {
-        if (col.getDictionaryEncoding() == null) {
-          log.info("No dictionary on dimension[%s]", dim);
-        }
-        availableDimensions.add(dim);
-      }
-    }
-    this.availableDimensions = availableDimensions.build();
-
+    availableDimensions = ImmutableList.copyOf(input.getAvailableDimensions());
     this.metadata = input.getMetadata();
   }
 
@@ -116,21 +96,24 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
   @Nullable
   @Override
-  public <T extends Comparable<T>> Indexed<T> getDimValueLookup(String dimension)
+  public <T extends Comparable<? super T>> CloseableIndexed<T> getDimValueLookup(String dimension)
   {
-    final Column column = input.getColumn(dimension);
+    final ColumnHolder columnHolder = input.getColumn(dimension);
 
-    if (column == null) {
+    if (columnHolder == null) {
       return null;
     }
 
-    final DictionaryEncodedColumn<T> dict = column.getDictionaryEncoding();
+    final BaseColumn col = columnHolder.getColumn();
 
-    if (dict == null) {
+    if (!(col instanceof DictionaryEncodedColumn)) {
       return null;
     }
 
-    return new Indexed<T>()
+    @SuppressWarnings("unchecked")
+    DictionaryEncodedColumn<T> dict = (DictionaryEncodedColumn<T>) col;
+
+    return new CloseableIndexed<T>()
     {
       @Override
       public Class<? extends T> getClazz()
@@ -166,6 +149,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("dict", dict);
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        dict.close();
       }
     };
   }
@@ -227,7 +216,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           columnCache
       );
 
-      offsetTimestampSelector = columnSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+      offsetTimestampSelector = columnSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
 
       final List<DimensionHandler> dimensionHandlers = new ArrayList<>(input.getDimensionHandlers().values());
 
@@ -370,9 +359,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public String getMetricType(String metric)
   {
-    final Column column = input.getColumn(metric);
+    final ColumnHolder columnHolder = input.getColumn(metric);
 
-    final ValueType type = column.getCapabilities().getType();
+    final ValueType type = columnHolder.getCapabilities().getType();
     switch (type) {
       case FLOAT:
         return "float";
@@ -381,7 +370,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       case DOUBLE:
         return "double";
       case COMPLEX: {
-        try (ComplexColumn complexColumn = column.getComplexColumn()) {
+        try (ComplexColumn complexColumn = (ComplexColumn) columnHolder.getColumn()) {
           return complexColumn.getTypeName();
         }
       }
@@ -399,12 +388,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public BitmapValues getBitmapValues(String dimension, int dictId)
   {
-    final Column column = input.getColumn(dimension);
-    if (column == null) {
+    final ColumnHolder columnHolder = input.getColumn(dimension);
+    if (columnHolder == null) {
       return BitmapValues.EMPTY;
     }
 
-    final BitmapIndex bitmaps = column.getBitmapIndex();
+    final BitmapIndex bitmaps = columnHolder.getBitmapIndex();
     if (bitmaps == null) {
       return BitmapValues.EMPTY;
     }
@@ -419,13 +408,13 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @VisibleForTesting
   BitmapValues getBitmapIndex(String dimension, String value)
   {
-    final Column column = input.getColumn(dimension);
+    final ColumnHolder columnHolder = input.getColumn(dimension);
 
-    if (column == null) {
+    if (columnHolder == null) {
       return BitmapValues.EMPTY;
     }
 
-    final BitmapIndex bitmaps = column.getBitmapIndex();
+    final BitmapIndex bitmaps = columnHolder.getBitmapIndex();
     if (bitmaps == null) {
       return BitmapValues.EMPTY;
     }

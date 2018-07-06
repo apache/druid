@@ -46,7 +46,7 @@ import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumn;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -235,7 +235,7 @@ public class ScanQueryRunnerTest
   {
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
-        .columns(Column.TIME_COLUMN_NAME, QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
+        .columns(ColumnHolder.TIME_COLUMN_NAME, QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -629,7 +629,7 @@ public class ScanQueryRunnerTest
 
   private String getTimestampName()
   {
-    return legacy ? "timestamp" : Column.TIME_COLUMN_NAME;
+    return legacy ? "timestamp" : ColumnHolder.TIME_COLUMN_NAME;
   }
 
   private List<ScanResultValue> toExpected(

@@ -67,7 +67,7 @@ import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
@@ -179,7 +179,7 @@ public class TimeseriesBenchmark
 
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
-      BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
+      BoundDimFilter timeFilter = new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
                                                      StringComparators.NUMERIC);
       queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
 
@@ -199,7 +199,7 @@ public class TimeseriesBenchmark
 
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
-      BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
+      BoundDimFilter timeFilter = new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
                                                      StringComparators.ALPHANUMERIC);
       queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
 

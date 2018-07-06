@@ -37,8 +37,9 @@ import io.druid.query.filter.Filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BaseColumn;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.NumericColumn;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.data.Indexed;
@@ -50,6 +51,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -97,18 +100,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    if (dimension == null) {
-      return 0;
+    ColumnHolder columnHolder = index.getColumn(dimension);
+    try (BaseColumn col = columnHolder.getColumn()) {
+      if (!(col instanceof DictionaryEncodedColumn)) {
+        return Integer.MAX_VALUE;
+      }
+      return ((DictionaryEncodedColumn) col).getCardinality();
     }
-
-    Column column = index.getColumn(dimension);
-    if (column == null) {
-      return 0;
+    catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
-    if (!column.getCapabilities().isDictionaryEncoded()) {
-      return Integer.MAX_VALUE;
-    }
-    return column.getDictionaryEncoding().getCardinality();
   }
 
   @Override
@@ -120,7 +121,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMinTime()
   {
-    try (final NumericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getNumericColumn()) {
+    try (final NumericColumn column = (NumericColumn) index.getColumn(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
       return DateTimes.utc(column.getLongSingleValueRow(0));
     }
   }
@@ -128,7 +129,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMaxTime()
   {
-    try (final NumericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getNumericColumn()) {
+    try (final NumericColumn column = (NumericColumn) index.getColumn(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
       return DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
   }
@@ -137,9 +138,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   public Comparable getMinValue(String dimension)
   {
-    Column column = index.getColumn(dimension);
-    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = column.getBitmapIndex();
+    ColumnHolder columnHolder = index.getColumn(dimension);
+    if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
+      BitmapIndex bitmap = columnHolder.getBitmapIndex();
       return bitmap.getCardinality() > 0 ? bitmap.getValue(0) : null;
     }
     return null;
@@ -149,9 +150,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   public Comparable getMaxValue(String dimension)
   {
-    Column column = index.getColumn(dimension);
-    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = column.getBitmapIndex();
+    ColumnHolder columnHolder = index.getColumn(dimension);
+    if (columnHolder != null && columnHolder.getCapabilities().hasBitmapIndexes()) {
+      BitmapIndex bitmap = columnHolder.getBitmapIndex();
       return bitmap.getCardinality() > 0 ? bitmap.getValue(bitmap.getCardinality() - 1) : null;
     }
     return null;
@@ -173,9 +174,16 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public String getColumnTypeName(String columnName)
   {
-    final Column column = index.getColumn(columnName);
-    try (final ComplexColumn complexColumn = column.getComplexColumn()) {
-      return complexColumn != null ? complexColumn.getTypeName() : column.getCapabilities().getType().toString();
+    final ColumnHolder columnHolder = index.getColumn(columnName);
+    try (final BaseColumn col = columnHolder.getColumn()) {
+      if (col instanceof ComplexColumn) {
+        return ((ComplexColumn) col).getTypeName();
+      } else {
+        return columnHolder.getCapabilities().getType().toString();
+      }
+    }
+    catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -318,11 +326,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Nullable
   static ColumnCapabilities getColumnCapabilities(ColumnSelector index, String columnName)
   {
-    Column columnObj = index.getColumn(columnName);
-    if (columnObj == null) {
+    ColumnHolder columnHolder = index.getColumn(columnName);
+    if (columnHolder == null) {
       return null;
     }
-    return columnObj.getCapabilities();
+    return columnHolder.getCapabilities();
   }
 
   private static class CursorSequenceBuilder
@@ -371,7 +379,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       // Column caches shared amongst all cursors in this sequence.
       final Map<String, BaseColumn> columnCache = new HashMap<>();
 
-      final NumericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getNumericColumn();
+      final NumericColumn timestamps = (NumericColumn) index.getColumn(ColumnHolder.TIME_COLUMN_NAME).getColumn();
 
       final Closer closer = Closer.create();
       closer.register(timestamps);

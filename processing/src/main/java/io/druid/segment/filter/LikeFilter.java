@@ -31,10 +31,13 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.ColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.Indexed;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.NoSuchElementException;
 
 public class LikeFilter implements Filter
@@ -101,14 +104,15 @@ public class LikeFilter implements Filter
       }
 
       // search for start, end indexes in the bitmaps; then include all matching bitmaps between those points
-      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+      try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
 
-      // Union bitmaps for all matching dimension values in range.
-      // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
-      return Filters.bitmapsFromIndexes(
-          getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues),
-          bitmapIndex
-      );
+        // Union bitmaps for all matching dimension values in range.
+        // Use lazy iterator to allow unioning bitmaps one by one and avoid materializing all of them at once.
+        return Filters.bitmapsFromIndexes(getDimValueIndexIterableForPrefixMatch(bitmapIndex, dimValues), bitmapIndex);
+      }
+      catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     } else {
       // fallback
       return Filters.matchPredicateNoUnion(

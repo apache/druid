@@ -39,7 +39,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.NumericColumn;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
@@ -165,8 +165,8 @@ public class UseIndexesStrategy extends SearchStrategy
     final ImmutableBitmap timeFilteredBitmap;
     if (!interval.contains(segment.getDataInterval())) {
       final MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
-      final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-      try (final NumericColumn timeValues = timeColumn.getNumericColumn()) {
+      final ColumnHolder timeColumnHolder = index.getColumn(ColumnHolder.TIME_COLUMN_NAME);
+      try (final NumericColumn timeValues = (NumericColumn) timeColumnHolder.getColumn()) {
 
         int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
         int endIndex = Math.min(
@@ -246,12 +246,12 @@ public class UseIndexesStrategy extends SearchStrategy
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
       for (DimensionSpec dimension : dimsToSearch) {
-        final Column column = index.getColumn(dimension.getDimension());
-        if (column == null) {
+        final ColumnHolder columnHolder = index.getColumn(dimension.getDimension());
+        if (columnHolder == null) {
           continue;
         }
 
-        final BitmapIndex bitmapIndex = column.getBitmapIndex();
+        final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
         Preconditions.checkArgument(bitmapIndex != null,
                                     "Dimension [%s] should support bitmap index", dimension.getDimension()
         );

@@ -29,7 +29,7 @@ import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.Pair;
 import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ValueType;
 import io.druid.sql.calcite.expression.SimpleExtraction;
 import io.druid.sql.calcite.planner.Calcites;
@@ -150,7 +150,7 @@ public class RowSignature
       final ValueType columnType = getColumnType(columnName);
       final RelDataType type;
 
-      if (Column.TIME_COLUMN_NAME.equals(columnName)) {
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
         type = Calcites.createSqlType(typeFactory, SqlTypeName.TIMESTAMP);
       } else {
         switch (columnType) {

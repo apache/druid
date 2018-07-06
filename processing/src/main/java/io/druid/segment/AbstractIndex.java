@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +47,7 @@ public abstract class AbstractIndex
         null
     ).toList();
     List<String> columnNames = new ArrayList<>();
-    columnNames.add(Column.TIME_COLUMN_NAME);
+    columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
     columnNames.addAll(getColumnNames());
     for (Cursor cursor : cursors) {
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();

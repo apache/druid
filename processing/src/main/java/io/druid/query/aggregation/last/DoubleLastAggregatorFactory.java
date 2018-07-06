@@ -35,7 +35,7 @@ import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -61,14 +61,14 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
     this.name = name;
     this.fieldName = fieldName;
-    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
+    this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new DoubleLastAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
         metricFactory.makeColumnValueSelector(fieldName)
     );
   }
@@ -77,7 +77,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new DoubleLastBufferAggregator(
-        metricFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+        metricFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
         metricFactory.makeColumnValueSelector(fieldName)
     );
   }
@@ -185,7 +185,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Arrays.asList(Column.TIME_COLUMN_NAME, fieldName);
+    return Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, fieldName);
   }
 
   @Override

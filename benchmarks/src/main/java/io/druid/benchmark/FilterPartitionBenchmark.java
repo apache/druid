@@ -61,7 +61,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.AndFilter;
@@ -186,7 +186,7 @@ public class FilterPartitionBenchmark
 
     Interval interval = schemaInfo.getDataInterval();
     timeFilterNone = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(Long.MAX_VALUE),
         String.valueOf(Long.MAX_VALUE),
         true,
@@ -198,7 +198,7 @@ public class FilterPartitionBenchmark
 
     long halfEnd = (interval.getEndMillis() + interval.getStartMillis()) / 2;
     timeFilterHalf = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(halfEnd),
         true,
@@ -209,7 +209,7 @@ public class FilterPartitionBenchmark
     ));
 
     timeFilterAll = new BoundFilter(new BoundDimFilter(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         String.valueOf(interval.getStartMillis()),
         String.valueOf(interval.getEndMillis()),
         true,

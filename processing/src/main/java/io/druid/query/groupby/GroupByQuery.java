@@ -60,7 +60,7 @@ import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 
@@ -676,10 +676,10 @@ public class GroupByQuery extends BaseQuery<Row>
       }
     }
 
-    if (outputNames.contains(Column.TIME_COLUMN_NAME)) {
+    if (outputNames.contains(ColumnHolder.TIME_COLUMN_NAME)) {
       throw new IAE(
           "'%s' cannot be used as an output name for dimensions, aggregators, or post-aggregators.",
-          Column.TIME_COLUMN_NAME
+          ColumnHolder.TIME_COLUMN_NAME
       );
     }
   }

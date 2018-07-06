@@ -80,7 +80,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -621,7 +621,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setDimensions(Lists.<DimensionSpec>newArrayList(
             new DefaultDimensionSpec("dimA", "dimA"),
             new ExtractionDimensionSpec(
-                Column.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME,
                 "hour",
                 ValueType.LONG,
                 new TimeFormatExtractionFn(

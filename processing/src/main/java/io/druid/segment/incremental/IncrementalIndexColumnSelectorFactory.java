@@ -28,7 +28,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.SingleScanTimeDimensionSelector;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -72,7 +72,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 
@@ -105,7 +105,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
       return virtualColumns.makeColumnValueSelector(columnName, this);
     }
 
-    if (columnName.equals(Column.TIME_COLUMN_NAME)) {
+    if (columnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return rowHolder;
     }
 

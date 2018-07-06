@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import io.druid.collections.bitmap.ConciseBitmapFactory;
 import io.druid.java.util.common.Intervals;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -98,7 +98,7 @@ public class EmptyIndexTest
       Assert.assertEquals(
           "getReadOnlyTimestamps",
           0,
-          emptyQueryableIndex.getColumn(Column.TIME_COLUMN_NAME).getLength()
+          emptyQueryableIndex.getColumn(ColumnHolder.TIME_COLUMN_NAME).getLength()
       );
     }
     finally {

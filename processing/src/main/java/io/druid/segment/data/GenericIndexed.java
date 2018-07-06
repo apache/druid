@@ -76,7 +76,7 @@ import java.util.Iterator;
  * value files are identified as: StringUtils.format("%s_value_%d", columnName, fileNumber)
  * number of value files == numElements/numberOfElementsPerValueFile
  */
-public class GenericIndexed<T> implements Indexed<T>, Serializer
+public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
 {
   static final byte VERSION_ONE = 0x1;
   static final byte VERSION_TWO = 0x2;
@@ -470,6 +470,12 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
     {
       return GenericIndexed.this.iterator();
     }
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // nothing to close
   }
 
   ///////////////

@@ -26,7 +26,7 @@ import io.druid.math.expr.ExprMacroTable;
 import io.druid.math.expr.Parser;
 import io.druid.segment.BaseDoubleColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -55,7 +55,7 @@ public abstract class SimpleDoubleAggregatorFactory extends AggregatorFactory
     this.name = name;
     this.fieldName = fieldName;
     this.expression = expression;
-    this.storeDoubleAsFloat = Column.storeDoubleAsFloat();
+    this.storeDoubleAsFloat = ColumnHolder.storeDoubleAsFloat();
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkArgument(
         fieldName == null ^ expression == null,

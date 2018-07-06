@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.Intervals;
 import io.druid.query.filter.IntervalDimFilter;
 import io.druid.query.filter.NotDimFilter;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public class FiltrationTest extends CalciteTestBase
     final Filtration filtration = Filtration.create(
         new NotDimFilter(
             new IntervalDimFilter(
-                Column.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME,
                 ImmutableList.of(Intervals.of("2000/2001"), Intervals.of("2002/2003")),
                 null
             )
@@ -52,7 +52,7 @@ public class FiltrationTest extends CalciteTestBase
     Assert.assertEquals(
         new NotDimFilter(
             new IntervalDimFilter(
-                Column.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME,
                 ImmutableList.of(Intervals.of("2000/2001"), Intervals.of("2002/2003")),
                 null
             )

@@ -34,12 +34,13 @@ import io.druid.query.filter.DimFilters;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import org.junit.Assert;
@@ -47,7 +48,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -91,10 +95,59 @@ public class ExtractionDimFilterTest
   private final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
   {
     @Override
-    public Indexed<String> getDimensionValues(String dimension)
+    public CloseableIndexed<String> getDimensionValues(String dimension)
     {
       final String[] vals = DIM_VALS.get(dimension);
-      return vals == null ? null : new ArrayIndexed<String>(vals, String.class);
+      if (vals == null) {
+        return null;
+      } else {
+        ArrayIndexed<String> indexed = new ArrayIndexed<>(vals, String.class);
+        return new CloseableIndexed<String>()
+        {
+          @Override
+          public Class<? extends String> getClazz()
+          {
+            return indexed.getClazz();
+          }
+
+          @Override
+          public int size()
+          {
+            return indexed.size();
+          }
+
+          @Nullable
+          @Override
+          public String get(int index)
+          {
+            return indexed.get(index);
+          }
+
+          @Override
+          public int indexOf(@Nullable String value)
+          {
+            return indexed.indexOf(value);
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("indexed", indexed);
+          }
+
+          @Override
+          public void close() throws IOException
+          {
+            // close nothing
+          }
+
+          @Override
+          public Iterator<String> iterator()
+          {
+            return indexed.iterator();
+          }
+        };
+      }
     }
 
     @Override

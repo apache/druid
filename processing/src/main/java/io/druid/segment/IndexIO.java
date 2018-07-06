@@ -45,7 +45,7 @@ import io.druid.java.util.common.io.smoosh.Smoosh;
 import io.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnConfig;
@@ -473,7 +473,7 @@ public class IndexIO
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
-      Map<String, Column> columns = Maps.newHashMap();
+      Map<String, ColumnHolder> columns = Maps.newHashMap();
 
       for (String dimension : index.getAvailableDimensions()) {
         ColumnBuilder builder = new ColumnBuilder()
@@ -540,7 +540,7 @@ public class IndexIO
       }
 
       columns.put(
-          Column.TIME_COLUMN_NAME,
+          ColumnHolder.TIME_COLUMN_NAME,
           new ColumnBuilder()
               .setType(ValueType.LONG)
               .setNumericColumnSupplier(
@@ -632,7 +632,7 @@ public class IndexIO
         }
       }
 
-      Map<String, Column> columns = Maps.newHashMap();
+      Map<String, ColumnHolder> columns = Maps.newHashMap();
 
       for (String columnName : cols) {
         if (Strings.isNullOrEmpty(columnName)) {
@@ -642,7 +642,7 @@ public class IndexIO
         columns.put(columnName, deserializeColumn(mapper, smooshedFiles.mapFile(columnName), smooshedFiles));
       }
 
-      columns.put(Column.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), smooshedFiles));
+      columns.put(ColumnHolder.TIME_COLUMN_NAME, deserializeColumn(mapper, smooshedFiles.mapFile("__time"), smooshedFiles));
 
       final QueryableIndex index = new SimpleQueryableIndex(
           dataInterval,
@@ -658,7 +658,7 @@ public class IndexIO
       return index;
     }
 
-    private Column deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)
+    private ColumnHolder deserializeColumn(ObjectMapper mapper, ByteBuffer byteBuffer, SmooshedFileMapper smooshedFiles)
         throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(

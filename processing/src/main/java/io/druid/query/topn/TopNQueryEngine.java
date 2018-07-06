@@ -33,7 +33,7 @@ import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.filter.Filters;
@@ -131,7 +131,7 @@ public class TopNQueryEngine
         // TimeExtractionTopNAlgorithm can work on any single-value dimension of type long.
         // Once we have arbitrary dimension types following check should be replaced by checking
         // that the column is of type long and single-value.
-        dimension.equals(Column.TIME_COLUMN_NAME)
+        dimension.equals(ColumnHolder.TIME_COLUMN_NAME)
         ) {
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting

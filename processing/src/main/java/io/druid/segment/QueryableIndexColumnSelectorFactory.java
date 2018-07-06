@@ -19,13 +19,12 @@
 
 package io.druid.segment;
 
-import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.io.Closer;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.column.BaseColumn;
-import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ReadableOffset;
@@ -79,28 +78,34 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    final Column columnDesc = index.getColumn(dimension);
-    if (columnDesc == null) {
+    final ColumnHolder columnHolder = index.getColumn(dimension);
+    if (columnHolder == null) {
       return DimensionSelectorUtils.constantSelector(null, extractionFn);
     }
 
-    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
       return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 
-    ValueType type = columnDesc.getCapabilities().getType();
+    ValueType type = columnHolder.getCapabilities().getType();
     if (type.isNumeric()) {
       return type.makeNumericWrappingDimensionSelector(makeColumnValueSelector(dimension), extractionFn);
     }
 
-    @SuppressWarnings("unchecked")
-    DictionaryEncodedColumn<String> column = (DictionaryEncodedColumn<String>)
-        columnCache.computeIfAbsent(dimension, d -> closer.register(columnDesc.getDictionaryEncoding()));
+    BaseColumn column = columnCache.computeIfAbsent(dimension, d -> {
+      BaseColumn col = columnHolder.getColumn();
+      if (col instanceof DictionaryEncodedColumn) {
+        return closer.register(col);
+      } else {
+        return null;
+      }
+    });
 
-    if (column == null) {
-      return DimensionSelectorUtils.constantSelector(null, extractionFn);
+    if (column instanceof DictionaryEncodedColumn) {
+      //noinspection unchecked
+      return ((DictionaryEncodedColumn<String>) column).makeDimensionSelector(offset, extractionFn);
     } else {
-      return column.makeDimensionSelector(offset, extractionFn);
+      return DimensionSelectorUtils.constantSelector(null, extractionFn);
     }
   }
 
@@ -111,31 +116,20 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
       return virtualColumns.makeColumnValueSelector(columnName, this);
     }
 
-    BaseColumn column = columnCache.get(columnName);
-
-    if (column == null) {
-      Column holder = index.getColumn(columnName);
-
+    BaseColumn column = columnCache.computeIfAbsent(columnName, name -> {
+      ColumnHolder holder = index.getColumn(name);
       if (holder != null) {
-        final ColumnCapabilities capabilities = holder.getCapabilities();
-
-        if (capabilities.isDictionaryEncoded()) {
-          column = holder.getDictionaryEncoding();
-        } else if (capabilities.getType() == ValueType.COMPLEX) {
-          column = holder.getComplexColumn();
-        } else if (capabilities.getType().isNumeric()) {
-          column = holder.getNumericColumn();
-        } else {
-          throw new ISE("Unknown column type: %s", capabilities.getType());
-        }
-        closer.register(column);
-        columnCache.put(columnName, column);
+        return closer.register(holder.getColumn());
       } else {
-        return NilColumnValueSelector.instance();
+        return null;
       }
-    }
+    });
 
-    return column.makeColumnValueSelector(offset);
+    if (column != null) {
+      return column.makeColumnValueSelector(offset);
+    } else {
+      return NilColumnValueSelector.instance();
+    }
   }
 
   @Override

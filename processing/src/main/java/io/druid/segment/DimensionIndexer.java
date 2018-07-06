@@ -22,7 +22,7 @@ package io.druid.segment;
 import io.druid.collections.bitmap.BitmapFactory;
 import io.druid.collections.bitmap.MutableBitmap;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexRowHolder;
 
@@ -160,7 +160,7 @@ public interface DimensionIndexer
    *
    * @return Sorted index of actual values
    */
-  Indexed<ActualType> getSortedIndexedValues();
+  CloseableIndexed<ActualType> getSortedIndexedValues();
 
 
   /**

@@ -39,7 +39,7 @@ import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.transform.TransformSpec;
@@ -92,7 +92,7 @@ public class IngestSegmentFirehose implements Firehose
                           public Sequence<InputRow> apply(final Cursor cursor)
                           {
                             final BaseLongColumnValueSelector timestampColumnSelector =
-                                cursor.getColumnSelectorFactory().makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+                                cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
 
                             final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                             for (String dim : dims) {

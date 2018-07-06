@@ -36,7 +36,7 @@ import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumn;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -94,7 +94,7 @@ public class ScanQueryEngine
     } else {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
-              Collections.singleton(legacy ? LEGACY_TIMESTAMP_KEY : Column.TIME_COLUMN_NAME),
+              Collections.singleton(legacy ? LEGACY_TIMESTAMP_KEY : ColumnHolder.TIME_COLUMN_NAME),
               Iterables.transform(
                   Arrays.asList(query.getVirtualColumns().getVirtualColumns()),
                   VirtualColumn::getOutputName
@@ -107,7 +107,7 @@ public class ScanQueryEngine
       allColumns.addAll(availableColumns);
 
       if (legacy) {
-        allColumns.remove(Column.TIME_COLUMN_NAME);
+        allColumns.remove(ColumnHolder.TIME_COLUMN_NAME);
       }
     }
 
@@ -145,7 +145,7 @@ public class ScanQueryEngine
 
                           if (legacy && column.equals(LEGACY_TIMESTAMP_KEY)) {
                             selector = cursor.getColumnSelectorFactory()
-                                             .makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+                                             .makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
                           } else {
                             selector = cursor.getColumnSelectorFactory().makeColumnValueSelector(column);
                           }

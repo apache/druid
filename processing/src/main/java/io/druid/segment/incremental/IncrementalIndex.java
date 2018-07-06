@@ -65,7 +65,7 @@ import io.druid.segment.NilColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -319,7 +319,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     //__time capabilities
     ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl();
     timeCapabilities.setType(ValueType.LONG);
-    columnCapabilities.put(Column.TIME_COLUMN_NAME, timeCapabilities);
+    columnCapabilities.put(ColumnHolder.TIME_COLUMN_NAME, timeCapabilities);
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();

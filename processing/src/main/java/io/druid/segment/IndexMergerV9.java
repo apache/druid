@@ -41,7 +41,7 @@ import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.java.util.common.io.smoosh.SmooshedWriter;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
@@ -436,7 +436,7 @@ public class IndexMergerV9 implements IndexMerger
         .setValueType(ValueType.LONG)
         .addSerde(createLongColumnPartSerde(timeWriter, indexSpec))
         .build();
-    makeColumn(v9Smoosher, Column.TIME_COLUMN_NAME, serdeficator);
+    makeColumn(v9Smoosher, ColumnHolder.TIME_COLUMN_NAME, serdeficator);
     log.info("Completed time column in %,d millis.", System.currentTimeMillis() - startTime);
     progress.stopSection(section);
   }

@@ -40,7 +40,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 
@@ -102,7 +102,7 @@ public class TimeBoundaryQueryRunnerFactory
             return null;
           }
           final BaseLongColumnValueSelector timestampColumnSelector =
-              cursor.getColumnSelectorFactory().makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+              cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
           final DateTime timestamp = DateTimes.utc(timestampColumnSelector.getLong());
           return new Result<>(adapter.getInterval().getStart(), timestamp);
         }

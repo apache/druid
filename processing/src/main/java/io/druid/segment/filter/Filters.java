@@ -47,15 +47,18 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionHandlerUtils;
 import io.druid.segment.IntIteratorUtils;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.Indexed;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -276,14 +279,18 @@ public class Filters
     Preconditions.checkNotNull(predicate, "predicate");
 
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    final Indexed<String> dimValues = selector.getDimensionValues(dimension);
-    if (dimValues == null || dimValues.size() == 0) {
-      return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
-    }
+    try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
+      if (dimValues == null || dimValues.size() == 0) {
+        return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
+      }
 
-    // Apply predicate to all dimension values and union the matching bitmaps
-    final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-    return makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues);
+      // Apply predicate to all dimension values and union the matching bitmaps
+      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+      return makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues);
+    }
+    catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
@@ -308,18 +315,24 @@ public class Filters
     Preconditions.checkNotNull(predicate, "predicate");
 
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    final Indexed<String> dimValues = indexSelector.getDimensionValues(dimension);
-    if (dimValues == null || dimValues.size() == 0) {
-      return predicate.apply(null) ? 1. : 0.;
-    }
+    try (final CloseableIndexed<String> dimValues = indexSelector.getDimensionValues(dimension)) {
+      if (dimValues == null || dimValues.size() == 0) {
+        return predicate.apply(null) ? 1. : 0.;
+      }
 
-    // Apply predicate to all dimension values and union the matching bitmaps
-    final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
-    return estimateSelectivity(
-        bitmapIndex,
-        IntIteratorUtils.toIntList(makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()),
-        indexSelector.getNumRows()
-    );
+      // Apply predicate to all dimension values and union the matching bitmaps
+      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
+      return estimateSelectivity(
+          bitmapIndex,
+          IntIteratorUtils.toIntList(
+              makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()
+          ),
+          indexSelector.getNumRows()
+      );
+    }
+    catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
@@ -440,9 +453,9 @@ public class Filters
   )
   {
     if (filter.supportsBitmapIndex(indexSelector)) {
-      final Column column = columnSelector.getColumn(dimension);
-      if (column != null) {
-        return !column.getCapabilities().hasMultipleValues();
+      final ColumnHolder columnHolder = columnSelector.getColumn(dimension);
+      if (columnHolder != null) {
+        return !columnHolder.getCapabilities().hasMultipleValues();
       }
     }
     return false;

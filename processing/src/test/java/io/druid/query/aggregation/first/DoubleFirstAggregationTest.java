@@ -27,7 +27,7 @@ import io.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import io.druid.query.aggregation.TestLongColumnSelector;
 import io.druid.query.aggregation.TestObjectColumnSelector;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -62,7 +62,7 @@ public class DoubleFirstAggregationTest
     valueSelector = new TestDoubleColumnSelectorImpl(doubleValues);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);

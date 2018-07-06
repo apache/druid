@@ -35,8 +35,8 @@ import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.GenericIndexed;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
@@ -155,7 +155,7 @@ public class DimensionPredicateFilterBenchmark
     selector = new BitmapIndexSelector()
     {
       @Override
-      public Indexed<String> getDimensionValues(String dimension)
+      public CloseableIndexed<String> getDimensionValues(String dimension)
       {
         return dictionary;
       }

@@ -41,7 +41,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.NilColumnValueSelector;
 import io.druid.segment.NullDimensionSelector;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
@@ -139,11 +139,11 @@ public class ExpressionSelectors
       final String column = Iterables.getOnlyElement(columns);
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
 
-      if (column.equals(Column.TIME_COLUMN_NAME)) {
+      if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
         // Optimization for expressions that hit the __time column and nothing else.
         // May be worth applying this optimization to all long columns?
         return new SingleLongInputCachingExpressionColumnValueSelector(
-            columnSelectorFactory.makeColumnValueSelector(Column.TIME_COLUMN_NAME),
+            columnSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
             expression
         );
       } else if (capabilities != null

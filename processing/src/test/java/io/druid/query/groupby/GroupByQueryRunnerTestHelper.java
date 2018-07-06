@@ -32,7 +32,7 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
@@ -76,7 +76,7 @@ public class GroupByQueryRunnerTestHelper
 
   public static List<Row> createExpectedRows(String[] columnNames, Object[]... values)
   {
-    int timeIndex = Arrays.asList(columnNames).indexOf(Column.TIME_COLUMN_NAME);
+    int timeIndex = Arrays.asList(columnNames).indexOf(ColumnHolder.TIME_COLUMN_NAME);
     Preconditions.checkArgument(timeIndex >= 0);
 
     List<Row> expected = Lists.newArrayList();

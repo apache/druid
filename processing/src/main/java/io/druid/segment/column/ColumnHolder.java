@@ -22,9 +22,11 @@ package io.druid.segment.column;
 import io.druid.java.util.common.StringUtils;
 import io.druid.segment.selector.settable.SettableColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  */
-public interface Column
+public interface ColumnHolder
 {
   String TIME_COLUMN_NAME = "__time";
   String DOUBLE_STORAGE_TYPE_PROPERTY = "druid.indexing.doubleStorage";
@@ -38,11 +40,10 @@ public interface Column
   ColumnCapabilities getCapabilities();
 
   int getLength();
-  DictionaryEncodedColumn getDictionaryEncoding();
-
-  NumericColumn getNumericColumn();
-  ComplexColumn getComplexColumn();
+  BaseColumn getColumn();
+  @Nullable
   BitmapIndex getBitmapIndex();
+  @Nullable
   SpatialIndex getSpatialIndex();
 
   /**

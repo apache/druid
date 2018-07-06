@@ -22,20 +22,24 @@ package io.druid.segment.column;
 import com.google.common.base.Supplier;
 import io.druid.segment.selector.settable.SettableColumnValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  */
-class SimpleColumn implements Column
+class SimpleColumnHolder implements ColumnHolder
 {
   private final ColumnCapabilities capabilities;
   private final Supplier<? extends BaseColumn> columnSupplier;
+  @Nullable
   private final Supplier<BitmapIndex> bitmapIndex;
+  @Nullable
   private final Supplier<SpatialIndex> spatialIndex;
 
-  SimpleColumn(
+  SimpleColumnHolder(
       ColumnCapabilities capabilities,
       Supplier<? extends BaseColumn> columnSupplier,
-      Supplier<BitmapIndex> bitmapIndex,
-      Supplier<SpatialIndex> spatialIndex
+      @Nullable Supplier<BitmapIndex> bitmapIndex,
+      @Nullable Supplier<SpatialIndex> spatialIndex
   )
   {
     this.capabilities = capabilities;
@@ -59,29 +63,19 @@ class SimpleColumn implements Column
   }
 
   @Override
-  public DictionaryEncodedColumn getDictionaryEncoding()
+  public BaseColumn getColumn()
   {
-    return (DictionaryEncodedColumn) columnSupplier.get();
+    return columnSupplier.get();
   }
 
-  @Override
-  public NumericColumn getNumericColumn()
-  {
-    return (NumericColumn) columnSupplier.get();
-  }
-
-  @Override
-  public ComplexColumn getComplexColumn()
-  {
-    return (ComplexColumn) columnSupplier.get();
-  }
-
+  @Nullable
   @Override
   public BitmapIndex getBitmapIndex()
   {
     return bitmapIndex == null ? null : bitmapIndex.get();
   }
 
+  @Nullable
   @Override
   public SpatialIndex getSpatialIndex()
   {

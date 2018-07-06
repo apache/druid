@@ -71,7 +71,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.Metadata;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SimpleQueryableIndex;
-import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -146,7 +146,7 @@ public class CompactionTaskTest
     DIMENSIONS = new HashMap<>();
     AGGREGATORS = new HashMap<>();
 
-    DIMENSIONS.put(Column.TIME_COLUMN_NAME, new LongDimensionSchema(Column.TIME_COLUMN_NAME));
+    DIMENSIONS.put(ColumnHolder.TIME_COLUMN_NAME, new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME));
     DIMENSIONS.put(TIMESTAMP_COLUMN, new LongDimensionSchema(TIMESTAMP_COLUMN));
     for (int i = 0; i < 5; i++) {
       final StringDimensionSchema schema = new StringDimensionSchema(
@@ -620,10 +620,10 @@ public class CompactionTaskTest
       for (Entry<DataSegment, File> entry : segmentFileMap.entrySet()) {
         final DataSegment segment = entry.getKey();
         final List<String> columnNames = new ArrayList<>(segment.getDimensions().size() + segment.getMetrics().size());
-        columnNames.add(Column.TIME_COLUMN_NAME);
+        columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
         columnNames.addAll(segment.getDimensions());
         columnNames.addAll(segment.getMetrics());
-        final Map<String, Column> columnMap = new HashMap<>(columnNames.size());
+        final Map<String, ColumnHolder> columnMap = new HashMap<>(columnNames.size());
         final List<AggregatorFactory> aggregatorFactories = new ArrayList<>(segment.getMetrics().size());
 
         for (String columnName : columnNames) {
@@ -691,7 +691,7 @@ public class CompactionTaskTest
     }
   }
 
-  private static Column createColumn(DimensionSchema dimensionSchema)
+  private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
     return new ColumnBuilder()
         .setType(IncrementalIndex.TYPE_MAP.get(dimensionSchema.getValueType()))
@@ -700,7 +700,7 @@ public class CompactionTaskTest
         .build();
   }
 
-  private static Column createColumn(AggregatorFactory aggregatorFactory)
+  private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
     return new ColumnBuilder()
         .setType(ValueType.fromString(aggregatorFactory.getTypeName()))
