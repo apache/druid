@@ -88,7 +88,7 @@ public class FunctionTest
   public void testStrlen()
   {
     assertExpr("strlen(x)", 3L);
-    assertExpr("strlen(nonexistent)", 0L);
+    assertExpr("strlen(nonexistent)", NullHandling.defaultLongValue());
   }
 
   @Test

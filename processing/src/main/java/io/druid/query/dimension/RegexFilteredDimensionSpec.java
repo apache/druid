@@ -22,7 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
@@ -76,7 +76,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
             @Override
             public boolean apply(@Nullable String input)
             {
-              return compiledRegex.matcher(Strings.nullToEmpty(input)).matches();
+              return compiledRegex.matcher(NullHandling.nullToEmptyIfNeeded(input)).matches();
             }
           }
       );
@@ -86,7 +86,8 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap();
     forwardMapping.defaultReturnValue(-1);
     for (int i = 0; i < selectorCardinality; i++) {
-      if (compiledRegex.matcher(Strings.nullToEmpty(selector.lookupName(i))).matches()) {
+      String val = NullHandling.nullToEmptyIfNeeded(selector.lookupName(i));
+      if (val != null && compiledRegex.matcher(val).matches()) {
         forwardMapping.put(i, count++);
       }
     }

@@ -56,7 +56,7 @@ public class LongMinAggregationTest
   @Test
   public void testLongMinAggregator()
   {
-    LongMinAggregator agg = (LongMinAggregator) longMinAggFactory.factorize(colSelectorFactory);
+    Aggregator agg = longMinAggFactory.factorize(colSelectorFactory);
 
     aggregate(selector, agg);
     aggregate(selector, agg);
@@ -71,9 +71,9 @@ public class LongMinAggregationTest
   @Test
   public void testLongMinBufferAggregator()
   {
-    LongMinBufferAggregator agg = (LongMinBufferAggregator) longMinAggFactory.factorizeBuffered(colSelectorFactory);
+    BufferAggregator agg = longMinAggFactory.factorizeBuffered(colSelectorFactory);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selector, agg, buffer, 0);
@@ -105,13 +105,13 @@ public class LongMinAggregationTest
     Assert.assertFalse(one.equals(two));
   }
 
-  private void aggregate(TestLongColumnSelector selector, LongMinAggregator agg)
+  private void aggregate(TestLongColumnSelector selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
   }
 
-  private void aggregate(TestLongColumnSelector selector, LongMinBufferAggregator agg, ByteBuffer buff, int position)
+  private void aggregate(TestLongColumnSelector selector, BufferAggregator agg, ByteBuffer buff, int position)
   {
     agg.aggregate(buff, position);
     selector.increment();

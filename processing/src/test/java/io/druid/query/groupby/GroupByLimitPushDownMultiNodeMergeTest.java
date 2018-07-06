@@ -561,7 +561,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         "d2", 13L,
         "a0", 2L
     );
-
+    System.out.println(results);
     Assert.assertEquals(4, results.size());
     Assert.assertEquals(expectedRow0, results.get(0));
     Assert.assertEquals(expectedRow1, results.get(1));

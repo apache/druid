@@ -67,6 +67,11 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
+      ExprEval eval = arg.eval(bindings);
+      if (eval.isNumericNull()) {
+        // Return null if the argument if null.
+        return ExprEval.of(null);
+      }
       return ExprEval.of(granularity.bucketEnd(DateTimes.utc(arg.eval(bindings).asLong())).getMillis());
     }
 

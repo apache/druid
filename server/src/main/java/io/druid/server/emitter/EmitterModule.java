@@ -19,7 +19,6 @@
 
 package io.druid.server.emitter;
 
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -34,14 +33,15 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.emitter.core.Emitter;
-import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Self;
 import io.druid.java.util.common.ISE;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.java.util.emitter.EmittingLogger;
+import io.druid.java.util.emitter.core.Emitter;
+import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
@@ -88,7 +88,7 @@ public class EmitterModule implements Module
     String version = getClass().getPackage().getImplementationVersion();
     extraServiceDimensions
         .addBinding("version")
-        .toInstance(Strings.nullToEmpty(version)); // Version is null during `mvn test`.
+        .toInstance(StringUtils.nullToEmptyNonDruidDataString(version)); // Version is null during `mvn test`.
   }
 
   @Provides

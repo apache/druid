@@ -21,8 +21,9 @@ package io.druid.server.lookup.jdbc;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.MetadataStorageConnectorConfig;
@@ -131,7 +132,7 @@ public class JdbcDataFetcher implements DataFetcher<String, String>
     if (pairs.isEmpty()) {
       return null;
     }
-    return Strings.nullToEmpty(pairs.get(0));
+    return NullHandling.nullToEmptyIfNeeded(pairs.get(0));
   }
 
   @Override

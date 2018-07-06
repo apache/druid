@@ -19,15 +19,15 @@
 
 package io.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.druid.java.util.common.StringUtils;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.concurrent.Execs;
+import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.Closer;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
@@ -383,7 +383,7 @@ public class JdbcExtractionNamespaceTest
         String key = e.getKey();
         String[] val = e.getValue();
         String field = val[0];
-        Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
+        Assert.assertEquals("non-null check", NullHandling.emptyToNullIfNeeded(field), NullHandling.emptyToNullIfNeeded(map.get(key)));
       }
       Assert.assertEquals("null check", null, map.get("baz"));
     }
@@ -413,9 +413,9 @@ public class JdbcExtractionNamespaceTest
         String filterVal = val[1];
 
         if (filterVal.equals("1")) {
-          Assert.assertEquals("non-null check", Strings.emptyToNull(field), Strings.emptyToNull(map.get(key)));
+          Assert.assertEquals("non-null check", NullHandling.emptyToNullIfNeeded(field), NullHandling.emptyToNullIfNeeded(map.get(key)));
         } else {
-          Assert.assertEquals("non-null check", null, Strings.emptyToNull(map.get(key)));
+          Assert.assertEquals("non-null check", null, NullHandling.emptyToNullIfNeeded(map.get(key)));
         }
       }
     }

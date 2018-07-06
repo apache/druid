@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.MapBasedRow;
 import io.druid.java.util.common.ByteBufferUtils;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -111,7 +112,7 @@ public class BufferHashGrouperTest
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, 2);
-    final int expectedMaxSize = 219;
+    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 219 : 210;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
@@ -139,7 +140,7 @@ public class BufferHashGrouperTest
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 2_000_000_000, 2);
-    final int expectedMaxSize = 40988516;
+    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 40988516 : 39141224;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
@@ -153,7 +154,7 @@ public class BufferHashGrouperTest
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, Integer.MAX_VALUE, 2);
-    final int expectedMaxSize = 44938972;
+    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 44938972 : 42955456;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
@@ -167,7 +168,7 @@ public class BufferHashGrouperTest
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, Integer.MAX_VALUE);
-    final int expectedMaxSize = 267;
+    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 267 : 258;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.druid.common.config.NullHandling;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.MapInputRowParser;
@@ -48,6 +49,7 @@ import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.After;
 import org.junit.Assert;
@@ -284,8 +286,13 @@ public class SchemaEvolutionTest
     );
 
     // Only nonexistent(4)
+    Map<String, Object> result = Maps.newHashMap();
+    result.put("a", NullHandling.defaultLongValue());
+    result.put("b", NullHandling.defaultDoubleValue());
+    result.put("c", NullHandling.defaultLongValue());
+    result.put("d", NullHandling.defaultDoubleValue());
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L, "d", 0.0)),
+        timeseriesResult(result),
         runQuery(query, factory, ImmutableList.of(index4))
     );
 
@@ -354,7 +361,14 @@ public class SchemaEvolutionTest
 
     // Only nonexistent(4)
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 0L, "b", 0.0, "c", 0L)),
+        timeseriesResult(TestHelper.createExpectedMap(
+            "a",
+            NullHandling.defaultLongValue(),
+            "b",
+            NullHandling.defaultDoubleValue(),
+            "c",
+            0L
+        )),
         runQuery(query, factory, ImmutableList.of(index4))
     );
 

@@ -59,11 +59,13 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @param selectorPlus dimension info containing the key offset, value selector, and dimension spec
    * @param resultMap result map for the group by query being served
    * @param key grouping key
+   * @param keyBufferPosition buffer position for the grouping key, added to support chaining multiple {@link ColumnSelectorStrategy}
    */
   void processValueFromGroupingKey(
       GroupByColumnSelectorPlus selectorPlus,
       ByteBuffer key,
-      Map<String, Object> resultMap
+      Map<String, Object> resultMap,
+      int keyBufferPosition
   );
 
   /**

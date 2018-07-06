@@ -23,6 +23,7 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.math.expr.Expr;
+import org.apache.commons.lang.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -73,7 +74,14 @@ public class ExprUtils
     } else {
       Chronology chronology = timeZone == null ? ISOChronology.getInstanceUTC() : ISOChronology.getInstance(timeZone);
       final Object value = originArg.eval(bindings).value();
-      origin = value != null ? new DateTime(value, chronology) : null;
+      if (value instanceof String && StringUtils.isEmpty((String) value)) {
+        // We get a blank string here, when sql compatible null handling is enabled
+        // and expression contains empty string for for origin
+        // e.g timestamp_floor(\"__time\",'PT1M','','UTC')
+        origin = null;
+      } else {
+        origin = value != null ? new DateTime(value, chronology) : null;
+      }
     }
 
     return new PeriodGranularity(period, origin, timeZone);

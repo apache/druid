@@ -228,6 +228,15 @@ public class GroupByStrategyV2 implements GroupByStrategy
 
     // Fudge timestamp, maybe.
     final DateTime fudgeTimestamp = getUniversalTimestamp(query);
+    ImmutableMap.Builder<String, Object> context = ImmutableMap.builder();
+    context.put("finalize", false);
+    context.put(GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2);
+    if (fudgeTimestamp != null) {
+      context.put(CTX_KEY_FUDGE_TIMESTAMP, String.valueOf(fudgeTimestamp.getMillis()));
+    }
+    context.put(CTX_KEY_OUTERMOST, false);
+    // the having spec shouldn't be passed down, so we need to convey the existing limit push down status
+    context.put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown());
 
     final GroupByQuery newQuery = new GroupByQuery(
         query.getDataSource(),
@@ -243,14 +252,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         query.getLimitSpec(),
         query.getContext()
     ).withOverriddenContext(
-        ImmutableMap.<String, Object>of(
-            "finalize", false,
-            GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
-            CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),
-            CTX_KEY_OUTERMOST, false,
-            // the having spec shouldn't be passed down, so we need to convey the existing limit push down status
-            GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, query.isApplyLimitPushDown()
-        )
+        context.build()
     );
 
     Sequence<Row> rowSequence = Sequences.map(

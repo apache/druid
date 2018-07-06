@@ -21,7 +21,6 @@ package io.druid.query.groupby.having;
 
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
-import io.druid.data.input.Row;
 import io.druid.java.util.common.ISE;
 import io.druid.query.aggregation.AggregatorFactory;
 
@@ -35,11 +34,8 @@ class HavingSpecMetricComparator
 {
   static final Pattern LONG_PAT = Pattern.compile("[-|+]?\\d+");
 
-  static int compare(Row row, String aggregationName, Number value, Map<String, AggregatorFactory> aggregators)
+  static int compare(String aggregationName, Number value, Map<String, AggregatorFactory> aggregators, Object metricValueObj)
   {
-
-    Object metricValueObj = row.getRaw(aggregationName);
-
     if (metricValueObj != null) {
       if (aggregators != null && aggregators.containsKey(aggregationName)) {
         metricValueObj = aggregators.get(aggregationName).finalizeComputation(metricValueObj);

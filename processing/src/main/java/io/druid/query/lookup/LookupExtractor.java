@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -40,12 +39,12 @@ public abstract class LookupExtractor
   /**
    * Apply a particular lookup methodology to the input string
    *
-   * @param key The value to apply the lookup to. May not be null
+   * @param key The value to apply the lookup to.
    *
-   * @return The lookup, or null key cannot have the lookup applied to it and should be treated as missing.
+   * @return The lookup, or null when key is `null` or cannot have the lookup applied to it and should be treated as missing.
    */
   @Nullable
-  public abstract String apply(@NotNull String key);
+  public abstract String apply(@Nullable String key);
 
   /**
    * @param keys set of keys to apply lookup for each element
@@ -71,15 +70,15 @@ public abstract class LookupExtractor
    * Provide the reverse mapping from a given value to a list of keys
    *
    * @param value the value to apply the reverse lookup
-   *              Null and empty are considered to be the same value = nullToEmpty(value)
    *
    * @return the list of keys that maps to value or empty list.
    * Note that for the case of a none existing value in the lookup we have to cases either return an empty list OR list with null element.
    * returning an empty list implies that user want to ignore such a lookup value.
    * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
+   * Null value maps to empty list.
    */
 
-  public abstract List<String> unapply(String value);
+  public abstract List<String> unapply(@Nullable String value);
 
   /**
    * @param values Iterable of values for which will perform reverse lookup

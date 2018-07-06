@@ -21,6 +21,7 @@ package io.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import io.druid.common.config.NullHandling;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.ArrayBasedIndexedInts;
@@ -47,9 +48,14 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
   }
 
   @Override
-  public void processValueFromGroupingKey(GroupByColumnSelectorPlus selectorPlus, ByteBuffer key, Map<String, Object> resultMap)
+  public void processValueFromGroupingKey(
+      GroupByColumnSelectorPlus selectorPlus,
+      ByteBuffer key,
+      Map<String, Object> resultMap,
+      int keyBufferPosition
+  )
   {
-    final int id = key.getInt(selectorPlus.getKeyBufferPosition());
+    final int id = key.getInt(keyBufferPosition);
 
     // GROUP_BY_MISSING_VALUE is used to indicate empty rows, which are omitted from the result map.
     if (id != GROUP_BY_MISSING_VALUE) {
@@ -59,7 +65,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
           value
       );
     } else {
-      resultMap.put(selectorPlus.getOutputName(), "");
+      resultMap.put(selectorPlus.getOutputName(), NullHandling.defaultStringValue());
     }
   }
 

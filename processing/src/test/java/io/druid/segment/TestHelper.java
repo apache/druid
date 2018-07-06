@@ -21,7 +21,9 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
@@ -315,12 +317,16 @@ public class TestHelper
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue instanceof Float || expectedValue instanceof Double) {
-        Assert.assertEquals(
-            StringUtils.format("%s: key[%s]", msg, key),
-            ((Number) expectedValue).doubleValue(),
-            ((Number) actualValue).doubleValue(),
-            Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
-        );
+        if (expectedValue == null) {
+          Assert.assertNull(actualValue);
+        } else {
+          Assert.assertEquals(
+              StringUtils.format("%s: key[%s]", msg, key),
+              ((Number) expectedValue).doubleValue(),
+              ((Number) actualValue).doubleValue(),
+              Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
+          );
+        }
       } else {
         Assert.assertEquals(
             StringUtils.format("%s: key[%s]", msg, key),
@@ -329,5 +335,17 @@ public class TestHelper
         );
       }
     }
+  }
+
+
+  public static Map<String, Object> createExpectedMap(Object... vals)
+  {
+    Preconditions.checkArgument(vals.length % 2 == 0);
+
+    Map<String, Object> theVals = Maps.newHashMap();
+    for (int i = 0; i < vals.length; i += 2) {
+      theVals.put(vals[i].toString(), vals[i + 1]);
+    }
+    return theVals;
   }
 }
