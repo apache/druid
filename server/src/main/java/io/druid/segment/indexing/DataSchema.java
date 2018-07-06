@@ -73,6 +73,7 @@ public class DataSchema
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
 
     Preconditions.checkArgument(!Strings.isNullOrEmpty(dataSource), "dataSource cannot be null or empty. Please provide a dataSource.");
+    Preconditions.checkArgument(!dataSource.contains("/"), "dataSource cannot contain the '/' character.");
     this.dataSource = dataSource;
 
     if (granularitySpec == null) {
