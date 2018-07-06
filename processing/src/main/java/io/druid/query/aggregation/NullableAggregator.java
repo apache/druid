@@ -25,10 +25,11 @@ import io.druid.segment.BaseNullableColumnValueSelector;
 import javax.annotation.Nullable;
 
 /**
- * The result of a NullableAggregator will be null if all the values to be aggregated are null values or no values are aggregated at all.
- * If any of the value is non-null, the result would be the aggregated value of the delegate aggregator.
- * Note that the delegate aggregator is not required to perform check for {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values
- * will be passed to the delegate aggregator. This class is only used when SQL compatible null handling is enabled.
+ * The result of a NullableAggregator will be null if all the values to be aggregated are null values
+ * or no values are aggregated at all. If any of the value is non-null, the result would be the aggregated
+ * value of the delegate aggregator. Note that the delegate aggregator is not required to perform check for
+ * {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values will be passed
+ * to the delegate aggregator. This class is only used when SQL compatible null handling is enabled.
  */
 @PublicApi
 public final class NullableAggregator implements Aggregator

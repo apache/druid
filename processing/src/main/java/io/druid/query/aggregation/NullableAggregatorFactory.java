@@ -94,10 +94,10 @@ public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValu
   );
 
   /**
-   * Creates an {@link AggregateCombiner} to fold rollup aggregation results from serveral "rows" of different indexes during
-   * index merging. AggregateCombiner implements the same logic as {@link #combine}, with the difference that it uses
-   * {@link ColumnValueSelector} and it's subinterfaces to get inputs and implements {@code
-   * ColumnValueSelector} to provide output.
+   * Creates an {@link AggregateCombiner} to fold rollup aggregation results from serveral "rows" of different indexes
+   * during index merging. AggregateCombiner implements the same logic as {@link #combine}, with the difference that it
+   * uses {@link ColumnValueSelector} and it's subinterfaces to get inputs and implements {@code ColumnValueSelector}
+   * to provide output.
    *
    * @see AggregateCombiner
    * @see io.druid.segment.IndexMerger
