@@ -153,4 +153,25 @@ public class TaskStatus
                   .add("duration", duration)
                   .toString();
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskStatus that = (TaskStatus) o;
+    return getDuration() == that.getDuration() &&
+           java.util.Objects.equals(getId(), that.getId()) &&
+           status == that.status;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return java.util.Objects.hash(getId(), status, getDuration());
+  }
 }
