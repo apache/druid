@@ -97,8 +97,9 @@ public abstract class LoadRule implements Rule
       final CoordinatorStats stats
   )
   {
-    // if primary replica already exists
-    if (!currentReplicants.isEmpty()) {
+    // if primary replica already exists or is loading
+    final int loading = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
+    if (!currentReplicants.isEmpty() || loading > 0) {
       assignReplicas(params, segment, stats, null);
     } else {
       final ServerHolder primaryHolderToLoad = assignPrimary(params, segment);
@@ -171,7 +172,6 @@ public abstract class LoadRule implements Rule
       if (targetReplicantsInTier <= 0) {
         continue;
       }
-
       final String tier = entry.getKey();
 
       final List<ServerHolder> holders = getFilteredHolders(
@@ -230,7 +230,7 @@ public abstract class LoadRule implements Rule
       final int numAssigned = assignReplicasForTier(
           tier,
           entry.getIntValue(),
-          currentReplicants.getOrDefault(tier, 0),
+          params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier(), tier),
           params,
           createLoadQueueSizeLimitingPredicate(params),
           segment
