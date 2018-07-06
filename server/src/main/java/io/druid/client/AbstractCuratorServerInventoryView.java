@@ -23,17 +23,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import io.druid.java.util.emitter.EmittingLogger;
-import io.druid.java.util.common.concurrent.Execs;
 import io.druid.curator.inventory.CuratorInventoryManager;
 import io.druid.curator.inventory.CuratorInventoryManagerStrategy;
 import io.druid.curator.inventory.InventoryManagerConfig;
 import io.druid.java.util.common.StringUtils;
+import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.LifecycleStart;
 import io.druid.java.util.common.lifecycle.LifecycleStop;
+import io.druid.java.util.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.ZKPaths;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -157,14 +156,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
           {
             log.info("Inventory Initialized");
             runSegmentCallbacks(
-                new Function<SegmentCallback, CallbackAction>()
-                {
-                  @Override
-                  public CallbackAction apply(SegmentCallback input)
-                  {
-                    return input.segmentViewInitialized();
-                  }
-                }
+                input -> input.segmentViewInitialized()
             );
           }
         }
@@ -233,15 +225,10 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   {
     for (final Map.Entry<SegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
       entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
-                segmentCallbackRemoved(entry.getKey());
-                segmentCallbacks.remove(entry.getKey());
-              }
+          () -> {
+            if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
+              segmentCallbackRemoved(entry.getKey());
+              segmentCallbacks.remove(entry.getKey());
             }
           }
       );
@@ -252,14 +239,9 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   {
     for (final Map.Entry<ServerRemovedCallback, Executor> entry : serverRemovedCallbacks.entrySet()) {
       entry.getValue().execute(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
-                serverRemovedCallbacks.remove(entry.getKey());
-              }
+          () -> {
+            if (CallbackAction.UNREGISTER == entry.getKey().serverRemoved(server)) {
+              serverRemovedCallbacks.remove(entry.getKey());
             }
           }
       );
@@ -286,14 +268,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     container.addDataSegment(inventory);
 
     runSegmentCallbacks(
-        new Function<SegmentCallback, CallbackAction>()
-        {
-          @Override
-          public CallbackAction apply(SegmentCallback input)
-          {
-            return input.segmentAdded(container.getMetadata(), inventory);
-          }
-        }
+        input -> input.segmentAdded(container.getMetadata(), inventory)
     );
   }
 
@@ -315,14 +290,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     container.removeDataSegment(inventoryKey);
 
     runSegmentCallbacks(
-        new Function<SegmentCallback, CallbackAction>()
-        {
-          @Override
-          public CallbackAction apply(SegmentCallback input)
-          {
-            return input.segmentRemoved(container.getMetadata(), segment);
-          }
-        }
+        input -> input.segmentRemoved(container.getMetadata(), segment)
     );
   }
 
@@ -330,11 +298,8 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
   {
     try {
-      String toServedSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(getInventoryManagerConfig().getInventoryPath(), serverKey),
-          segment.getIdentifier()
-      );
-      return curator.checkExists().forPath(toServedSegPath) != null;
+      DruidServer server = getInventoryValue(serverKey);
+      return server != null && server.getSegment(segment.getIdentifier()) != null;
     }
     catch (Exception ex) {
       throw Throwables.propagate(ex);
