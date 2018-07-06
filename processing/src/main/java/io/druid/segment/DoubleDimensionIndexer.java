@@ -166,7 +166,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   }
 
   @Override
-  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Double key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualList(Double key)
   {
     return key;
   }

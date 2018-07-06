@@ -404,15 +404,15 @@ public class HyperLogLogCollectorTest
     byte[] arr1 = new byte[HyperLogLogCollector.getLatestNumBytesForDenseStorage()];
     Arrays.fill(arr1, (byte) 0x11);
     ByteBuffer buffer1 = ByteBuffer.wrap(arr1);
-    buffer1.put(0, HLLCV1.VERSION);
+    buffer1.put(0, VersionOneHyperLogLogCollector.VERSION);
     buffer1.put(1, (byte) 0);
     buffer1.putShort(2, (short) (2047));
-    buffer1.put(HLLCV1.HEADER_NUM_BYTES, (byte) 0x1);
+    buffer1.put(VersionOneHyperLogLogCollector.HEADER_NUM_BYTES, (byte) 0x1);
 
     byte[] arr2 = new byte[HyperLogLogCollector.getLatestNumBytesForDenseStorage()];
     Arrays.fill(arr2, (byte) 0x11);
     ByteBuffer buffer2 = ByteBuffer.wrap(arr2);
-    buffer2.put(0, HLLCV1.VERSION);
+    buffer2.put(0, VersionOneHyperLogLogCollector.VERSION);
     buffer2.put(1, (byte) 0);
     buffer2.putShort(2, (short) (2048));
 
@@ -421,7 +421,7 @@ public class HyperLogLogCollectorTest
 
     ByteBuffer outBuffer = collector.toByteBuffer();
 
-    Assert.assertEquals(outBuffer.get(), HLLCV1.VERSION);
+    Assert.assertEquals(outBuffer.get(), VersionOneHyperLogLogCollector.VERSION);
     Assert.assertEquals(outBuffer.get(), 1);
     Assert.assertEquals(outBuffer.getShort(), 0);
     outBuffer.get();
@@ -479,7 +479,7 @@ public class HyperLogLogCollectorTest
     numNonZero += (short) ((HyperLogLogCollector.NUM_BYTES_FOR_BUCKETS - initialBytes.length) * numNonZeroInRemaining);
 
     ByteBuffer biggerOffset = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
-    biggerOffset.put(HLLCV1.VERSION);
+    biggerOffset.put(VersionOneHyperLogLogCollector.VERSION);
     biggerOffset.put((byte) offset);
     biggerOffset.putShort(numNonZero);
     biggerOffset.put((byte) 0);

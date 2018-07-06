@@ -26,11 +26,11 @@ import com.google.common.primitives.Longs;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.parsers.ParseException;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -68,14 +68,7 @@ public class Rows
       return Collections.emptyList();
     } else if (inputValue instanceof List) {
       // guava's toString function fails on null objects, so please do not use it
-      final List<Object> values = (List) inputValue;
-
-      final List<String> retVal = new ArrayList<>(values.size());
-      for (Object val : values) {
-        retVal.add(String.valueOf(val));
-      }
-
-      return retVal;
+      return ((List<?>) inputValue).stream().map(String::valueOf).collect(Collectors.toList());
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }

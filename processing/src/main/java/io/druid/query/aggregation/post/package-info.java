@@ -17,33 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.serde;
+@EverythingIsNonnullByDefault
+package io.druid.query.aggregation.post;
 
-import com.google.common.base.Supplier;
-import io.druid.collections.bitmap.ImmutableBitmap;
-import io.druid.segment.column.FloatsColumn;
-import io.druid.segment.column.GenericColumn;
-import io.druid.segment.data.CompressedColumnarFloatsSupplier;
-
-/**
-*/
-public class FloatGenericColumnSupplier implements Supplier<GenericColumn>
-{
-  private final CompressedColumnarFloatsSupplier column;
-  private final ImmutableBitmap nullValueBitmap;
-
-  public FloatGenericColumnSupplier(
-      CompressedColumnarFloatsSupplier column,
-      ImmutableBitmap nullValueBitmap
-  )
-  {
-    this.column = column;
-    this.nullValueBitmap = nullValueBitmap;
-  }
-
-  @Override
-  public GenericColumn get()
-  {
-    return FloatsColumn.create(column.get(), nullValueBitmap);
-  }
-}
+import io.druid.annotations.EverythingIsNonnullByDefault;

@@ -17,17 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment;
+@EverythingIsNonnullByDefault
+package io.druid.segment.data;
 
-import io.druid.guice.annotations.ExtensionPoint;
-import io.druid.segment.serde.Serializer;
-
-import java.io.IOException;
-
-@ExtensionPoint
-public interface GenericColumnSerializer extends Serializer
-{
-  void open() throws IOException;
-
-  void serialize(ColumnValueSelector selector) throws IOException;
-}
+import io.druid.annotations.EverythingIsNonnullByDefault;

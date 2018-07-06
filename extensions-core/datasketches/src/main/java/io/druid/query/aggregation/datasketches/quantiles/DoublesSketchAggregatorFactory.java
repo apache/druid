@@ -44,6 +44,8 @@ import java.util.Objects;
 
 public class DoublesSketchAggregatorFactory extends AggregatorFactory
 {
+  public static final Comparator<DoublesSketch> COMPARATOR =
+      Comparator.nullsFirst(Comparator.comparingLong(DoublesSketch::getN));
 
   private static final int DEFAULT_K = 128;
 
@@ -120,15 +122,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     return DoublesSketchOperations.deserialize(object);
   }
-
-  public static final Comparator<DoublesSketch> COMPARATOR = new Comparator<DoublesSketch>()
-  {
-    @Override
-    public int compare(DoublesSketch a, DoublesSketch b)
-    {
-      return Long.compare(a.getN(), b.getN());
-    }
-  };
 
   @Override
   public Comparator<DoublesSketch> getComparator()

@@ -35,7 +35,7 @@ public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
   protected final IndexSpec indexSpec;
   protected final SegmentWriteOutMedium segmentWriteOutMedium;
 
-  protected final GenericColumnSerializer serializer;
+  protected final ColumnSerializer serializer;
 
   NumericDimensionMergerV9(
       String dimensionName,
@@ -56,7 +56,7 @@ public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
     }
   }
 
-  abstract GenericColumnSerializer setupEncodedValueWriter();
+  abstract ColumnSerializer setupEncodedValueWriter();
 
   @Override
   public final void writeMergedValueDictionary(List<IndexableAdapter> adapters)

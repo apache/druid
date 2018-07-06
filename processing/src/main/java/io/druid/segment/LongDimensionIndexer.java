@@ -169,7 +169,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Long key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualList(Long key)
   {
     return key;
   }

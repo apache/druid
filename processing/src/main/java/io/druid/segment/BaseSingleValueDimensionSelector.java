@@ -17,14 +17,12 @@
  * under the License.
  */
 
-package io.druid.segment.virtual;
+package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.IdLookup;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ZeroIndexedInts;
 
@@ -34,6 +32,7 @@ import java.util.Objects;
 public abstract class BaseSingleValueDimensionSelector implements DimensionSelector
 {
   @CalledFromHotLoop
+  @Nullable
   protected abstract String getValue();
 
   @Override
@@ -51,11 +50,12 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   @Override
   public String lookupName(int id)
   {
+    assert id == 0;
     return getValue();
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final String value)
+  public ValueMatcher makeValueMatcher(final @Nullable String value)
   {
     return new ValueMatcher()
     {
@@ -108,13 +108,13 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
 
   @Nullable
   @Override
-  public Object getObject()
+  public String getObject()
   {
     return getValue();
   }
 
   @Override
-  public Class classOfObject()
+  public Class<String> classOfObject()
   {
     return String.class;
   }

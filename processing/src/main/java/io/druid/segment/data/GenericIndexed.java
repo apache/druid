@@ -93,10 +93,10 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
-  public static final ObjectStrategy<String> STRING_STRATEGY = new CacheableObjectStrategy<String>()
+  public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<String>()
   {
     @Override
-    public Class<? extends String> getClazz()
+    public Class<String> getClazz()
     {
       return String.class;
     }
@@ -109,7 +109,7 @@ public class GenericIndexed<T> implements Indexed<T>, Serializer
 
     @Override
     @Nullable
-    public byte[] toBytes(String val)
+    public byte[] toBytes(@Nullable String val)
     {
       return StringUtils.toUtf8Nullable(NullHandling.nullToEmptyIfNeeded(val));
     }

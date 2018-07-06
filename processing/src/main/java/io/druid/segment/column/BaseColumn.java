@@ -26,5 +26,5 @@ import java.io.Closeable;
 
 public interface BaseColumn extends Closeable
 {
-  ColumnValueSelector makeColumnValueSelector(ReadableOffset offset);
+  ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset);
 }

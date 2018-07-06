@@ -21,8 +21,8 @@ package io.druid.query.aggregation.variance;
 
 import com.google.common.collect.Ordering;
 import io.druid.data.input.InputRow;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
-import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -81,12 +81,10 @@ public class VarianceSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
   {
     final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   @Override
@@ -122,7 +120,7 @@ public class VarianceSerde extends ComplexMetricSerde
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }

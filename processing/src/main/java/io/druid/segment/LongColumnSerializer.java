@@ -33,7 +33,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Unsafe for concurrent use from multiple threads.
  */
-public class LongColumnSerializer implements GenericColumnSerializer
+public class LongColumnSerializer implements ColumnSerializer<Object>
 {
   public static LongColumnSerializer create(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -81,7 +81,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     writer.add(selector.getLong());
   }

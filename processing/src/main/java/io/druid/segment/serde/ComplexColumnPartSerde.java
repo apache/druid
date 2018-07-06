@@ -21,7 +21,7 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 
@@ -84,7 +84,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   public static class SerializerBuilder
   {
     private String typeName = null;
-    private GenericColumnSerializer delegate = null;
+    private ColumnSerializer delegate = null;
 
     public SerializerBuilder withTypeName(final String typeName)
     {
@@ -92,7 +92,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public SerializerBuilder withDelegate(final GenericColumnSerializer delegate)
+    public SerializerBuilder withDelegate(final ColumnSerializer delegate)
     {
       this.delegate = delegate;
       return this;

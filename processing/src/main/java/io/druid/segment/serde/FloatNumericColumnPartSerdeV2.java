@@ -35,15 +35,15 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  */
-public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
+public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
 {
   @JsonCreator
-  public static FloatGenericColumnPartSerdeV2 createDeserializer(
+  public static FloatNumericColumnPartSerdeV2 createDeserializer(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new FloatGenericColumnPartSerdeV2(
+    return new FloatNumericColumnPartSerdeV2(
         byteOrder,
         bitmapSerdeFactory != null ? bitmapSerdeFactory : new BitmapSerde.LegacyBitmapSerdeFactory(),
         null
@@ -51,13 +51,14 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
   }
 
   private final ByteOrder byteOrder;
+  @Nullable
   private Serializer serializer;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
-  private FloatGenericColumnPartSerdeV2(
+  private FloatNumericColumnPartSerdeV2(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
-      Serializer serializer
+      @Nullable Serializer serializer
   )
   {
     this.byteOrder = byteOrder;
@@ -106,28 +107,27 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
       return this;
     }
 
-    public FloatGenericColumnPartSerdeV2 build()
+    public FloatNumericColumnPartSerdeV2 build()
     {
-      return new FloatGenericColumnPartSerdeV2(
-          byteOrder, bitmapSerdeFactory,
-          new Serializer()
-          {
-            @Override
-            public long getSerializedSize() throws IOException
-            {
-              return delegate.getSerializedSize();
-            }
+      Serializer serializer = new Serializer()
+      {
+        @Override
+        public long getSerializedSize() throws IOException
+        {
+          return delegate.getSerializedSize();
+        }
 
-            @Override
-            public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
-            {
-              delegate.writeTo(channel, fileSmoosher);
-            }
-          }
-      );
+        @Override
+        public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
+        {
+          delegate.writeTo(channel, fileSmoosher);
+        }
+      };
+      return new FloatNumericColumnPartSerdeV2(byteOrder, bitmapSerdeFactory, serializer);
     }
   }
 
+  @Nullable
   @Override
   public Serializer getSerializer()
   {
@@ -153,7 +153,7 @@ public class FloatGenericColumnPartSerdeV2 implements ColumnPartSerde
       }
       builder.setType(ValueType.FLOAT)
              .setHasMultipleValues(false)
-             .setGenericColumn(new FloatGenericColumnSupplier(column, bitmap));
+             .setNumericColumnSupplier(new FloatNumericColumnSupplier(column, bitmap));
     };
   }
 }

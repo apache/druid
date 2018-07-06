@@ -19,10 +19,9 @@
 
 package io.druid.query.aggregation.histogram;
 
-import com.google.common.collect.Ordering;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
-import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -31,22 +30,13 @@ import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
 
 public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
 {
-  private static Ordering<ApproximateHistogram> comparator = new Ordering<ApproximateHistogram>()
-  {
-    @Override
-    public int compare(
-        ApproximateHistogram arg1, ApproximateHistogram arg2
-    )
-    {
-      return ApproximateHistogramAggregator.COMPARATOR.compare(arg1, arg2);
-    }
-  }.nullsFirst();
 
   @Override
   public String getTypeName()
@@ -94,22 +84,21 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
   {
-    final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    final GenericIndexed<ApproximateHistogram> column =
+        GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
+    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 
   @Override
-  public ObjectStrategy getObjectStrategy()
+  public ObjectStrategy<ApproximateHistogram> getObjectStrategy()
   {
     return new ObjectStrategy<ApproximateHistogram>()
     {
@@ -130,7 +119,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       public byte[] toBytes(ApproximateHistogram h)
       {
         if (h == null) {
-          return new byte[]{};
+          return ByteArrays.EMPTY_ARRAY;
         }
         return h.toBytes();
       }
@@ -138,7 +127,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       @Override
       public int compare(ApproximateHistogram o1, ApproximateHistogram o2)
       {
-        return comparator.compare(o1, o2);
+        return ApproximateHistogramAggregator.COMPARATOR.compare(o1, o2);
       }
     };
   }

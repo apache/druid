@@ -22,6 +22,7 @@ package io.druid.segment.virtual;
 import com.google.common.base.Supplier;
 import io.druid.common.guava.SettableSupplier;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseSingleValueDimensionSelector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.TestObjectColumnSelector;

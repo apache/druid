@@ -19,17 +19,14 @@
 
 package io.druid.segment.serde;
 
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
 import io.druid.collections.bitmap.ImmutableBitmap;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ColumnarDoubles;
-import io.druid.segment.data.CompressedColumnarDoublesSuppliers;
+import io.druid.segment.data.CompressedColumnarLongsSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -38,15 +35,15 @@ import java.nio.channels.WritableByteChannel;
 
 /**
  */
-public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
+public class LongNumericColumnPartSerdeV2 implements ColumnPartSerde
 {
   @JsonCreator
-  public static DoubleGenericColumnPartSerdeV2 getDoubleGenericColumnPartSerde(
+  public static LongNumericColumnPartSerdeV2 createDeserializer(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new DoubleGenericColumnPartSerdeV2(
+    return new LongNumericColumnPartSerdeV2(
         byteOrder,
         bitmapSerdeFactory != null ? bitmapSerdeFactory : new BitmapSerde.LegacyBitmapSerdeFactory(),
         null
@@ -54,18 +51,19 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
   }
 
   private final ByteOrder byteOrder;
-  private Serializer serialize;
+  @Nullable
+  private Serializer serializer;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
-  public DoubleGenericColumnPartSerdeV2(
+  private LongNumericColumnPartSerdeV2(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
-      Serializer serialize
+      @Nullable Serializer serializer
   )
   {
     this.byteOrder = byteOrder;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
-    this.serialize = serialize;
+    this.serializer = serializer;
   }
 
   @JsonProperty
@@ -109,33 +107,31 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
       return this;
     }
 
-    public DoubleGenericColumnPartSerdeV2 build()
+    public LongNumericColumnPartSerdeV2 build()
     {
-      return new DoubleGenericColumnPartSerdeV2(
-          byteOrder,
-          bitmapSerdeFactory,
-          new Serializer()
-          {
-            @Override
-            public long getSerializedSize() throws IOException
-            {
-              return delegate.getSerializedSize();
-            }
+      Serializer serializer = new Serializer()
+      {
+        @Override
+        public long getSerializedSize() throws IOException
+        {
+          return delegate.getSerializedSize();
+        }
 
-            @Override
-            public void writeTo(WritableByteChannel channel, FileSmoosher fileSmoosher) throws IOException
-            {
-              delegate.writeTo(channel, fileSmoosher);
-            }
-          }
-      );
+        @Override
+        public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+        {
+          delegate.writeTo(channel, smoosher);
+        }
+      };
+      return new LongNumericColumnPartSerdeV2(byteOrder, bitmapSerdeFactory, serializer);
     }
   }
 
+  @Nullable
   @Override
   public Serializer getSerializer()
   {
-    return serialize;
+    return serializer;
   }
 
   @Override
@@ -144,11 +140,10 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
     return (buffer, builder, columnConfig) -> {
       int offset = buffer.getInt();
       int initialPos = buffer.position();
-      final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
+      final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
           buffer,
           byteOrder
       );
-
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       if (buffer.hasRemaining()) {
@@ -156,9 +151,9 @@ public class DoubleGenericColumnPartSerdeV2 implements ColumnPartSerde
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
       }
-      builder.setType(ValueType.DOUBLE)
+      builder.setType(ValueType.LONG)
              .setHasMultipleValues(false)
-             .setGenericColumn(new DoubleGenericColumnSupplier(column, bitmap));
+             .setNumericColumnSupplier(new LongNumericColumnSupplier(column, bitmap));
     };
   }
 }

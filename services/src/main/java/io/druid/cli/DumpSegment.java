@@ -49,7 +49,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -65,10 +64,9 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.metadata.metadata.ListColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.BaseObjectColumnValueSelector;
-import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
@@ -87,16 +85,15 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.roaringbitmap.IntIterator;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Command(
     name = "dump-segment",
@@ -275,13 +272,11 @@ public class DumpSegment extends GuiceRunnable
                   @Override
                   public Object apply(Cursor cursor)
                   {
-                    final List<BaseObjectColumnValueSelector> selectors = Lists.newArrayList();
-
-                    for (String columnName : columnNames) {
-                      ColumnValueSelector selector =
-                          cursor.getColumnSelectorFactory().makeColumnValueSelector(columnName);
-                      selectors.add(new ListObjectSelector(selector));
-                    }
+                    ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                    final List<BaseObjectColumnValueSelector> selectors = columnNames
+                        .stream()
+                        .map(columnSelectorFactory::makeColumnValueSelector)
+                        .collect(Collectors.toList());
 
                     while (!cursor.isDone()) {
                       final Map<String, Object> row = Maps.newLinkedHashMap();
@@ -481,84 +476,17 @@ public class DumpSegment extends GuiceRunnable
   private static <T> Sequence<T> executeQuery(final Injector injector, final QueryableIndex index, final Query<T> query)
   {
     final QueryRunnerFactoryConglomerate conglomerate = injector.getInstance(QueryRunnerFactoryConglomerate.class);
-    final QueryRunnerFactory factory = conglomerate.findFactory(query);
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
-    final Sequence results = factory.getToolchest().mergeResults(
-        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner>of(runner))
-    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
-    return (Sequence<T>) results;
+    return factory
+        .getToolchest()
+        .mergeResults(factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner)))
+        .run(QueryPlus.wrap(query), Maps.newHashMap());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)
   {
-    sequence.accumulate(
-        null,
-        new Accumulator<Object, T>()
-        {
-          @Override
-          public Object accumulate(Object accumulated, T in)
-          {
-            return null;
-          }
-        }
-    );
+    sequence.accumulate(null, (accumulated, in) -> null);
   }
 
-  private static class ListObjectSelector implements ColumnValueSelector
-  {
-    private final ColumnValueSelector delegate;
-
-    private ListObjectSelector(ColumnValueSelector delegate)
-    {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public double getDouble()
-    {
-      return delegate.getDouble();
-    }
-
-    @Override
-    public float getFloat()
-    {
-      return delegate.getFloat();
-    }
-
-    @Override
-    public long getLong()
-    {
-      return delegate.getLong();
-    }
-
-    @Nullable
-    @Override
-    public Object getObject()
-    {
-      Object object = delegate.getObject();
-      if (object instanceof String[]) {
-        return Arrays.asList((String[]) object);
-      } else {
-        return object;
-      }
-    }
-
-    @Override
-    public Class classOfObject()
-    {
-      return Object.class;
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("delegate", delegate);
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      return delegate.isNull();
-    }
-  }
 }

@@ -44,6 +44,7 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.AbstractDimensionSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
@@ -58,7 +59,7 @@ import java.util.Map;
 
 public class CardinalityAggregatorTest
 {
-  public static class TestDimensionSelector implements DimensionSelector
+  public static class TestDimensionSelector extends AbstractDimensionSelector
   {
     private final List<Integer[]> column;
     private final Map<String, Integer> ids;
@@ -190,13 +191,6 @@ public class CardinalityAggregatorTest
           return ids.get(s);
         }
       };
-    }
-
-    @Nullable
-    @Override
-    public Object getObject()
-    {
-      return defaultGetObject();
     }
 
     @Override

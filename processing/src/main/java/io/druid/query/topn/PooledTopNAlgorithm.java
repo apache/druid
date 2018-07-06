@@ -755,11 +755,7 @@ public class PooledTopNAlgorithm
         }
 
 
-        resultBuilder.addEntry(
-            (Comparable) retVal,
-            i,
-            vals
-        );
+        resultBuilder.addEntry((Comparable) retVal, i, vals);
       }
     }
   }

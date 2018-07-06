@@ -17,43 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+@EverythingIsNonnullByDefault
+package io.druid.query.aggregation.variance;
 
-import io.druid.segment.data.Indexed;
-
-/**
-*/
-public class IndexedComplexColumn implements ComplexColumn
-{
-  private final Indexed column;
-  private final String typeName;
-
-  public IndexedComplexColumn(String typeName, Indexed column)
-  {
-    this.column = column;
-    this.typeName = typeName;
-  }
-
-  @Override
-  public Class<?> getClazz()
-  {
-    return column.getClazz();
-  }
-
-  @Override
-  public String getTypeName()
-  {
-    return typeName;
-  }
-
-  @Override
-  public Object getRowValue(int rowNum)
-  {
-    return column.get(rowNum);
-  }
-
-  @Override
-  public void close()
-  {
-  }
-}
+import io.druid.annotations.EverythingIsNonnullByDefault;

@@ -514,6 +514,7 @@ public class GroupByQuery extends BaseQuery<Row>
     }
   }
 
+  @Nullable
   private Comparator<Row> getTimeComparator(boolean granular)
   {
     if (Granularities.ALL.equals(getGranularity())) {

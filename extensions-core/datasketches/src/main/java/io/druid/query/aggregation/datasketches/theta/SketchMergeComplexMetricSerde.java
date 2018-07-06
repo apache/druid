@@ -19,10 +19,8 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.sketches.theta.Sketch;
 import io.druid.data.input.InputRow;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
-import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -30,12 +28,14 @@ import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
 {
-  private SketchObjectStrategy strategy = new SketchObjectStrategy();
+  private SketchHolderObjectStrategy strategy = new SketchHolderObjectStrategy();
 
   @Override
   public String getTypeName()
@@ -44,24 +44,22 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public ComplexMetricExtractor<?> getExtractor()
   {
-    return new ComplexMetricExtractor()
+    return new ComplexMetricExtractor<SketchHolder>()
     {
       @Override
-      public Class<?> extractedClass()
+      public Class<SketchHolder> extractedClass()
       {
-        return Object.class;
+        return SketchHolder.class;
       }
 
       @Override
-      public Object extractValue(InputRow inputRow, String metricName)
+      @Nullable
+      public SketchHolder extractValue(InputRow inputRow, String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        if (object == null) {
-          return object;
-        }
-        return SketchHolder.deserialize(object);
+        return object == null ? null : SketchHolder.deserialize(object);
       }
     };
   }
@@ -69,18 +67,18 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
   {
-    GenericIndexed<Sketch> ge = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
-    builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), ge));
+    GenericIndexed<SketchHolder> ge = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
+    builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), ge));
   }
 
   @Override
-  public ObjectStrategy<Sketch> getObjectStrategy()
+  public ObjectStrategy<SketchHolder> getObjectStrategy()
   {
     return strategy;
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }

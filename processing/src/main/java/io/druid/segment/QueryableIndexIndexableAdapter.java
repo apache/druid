@@ -199,18 +199,18 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     private final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
     private final int maxValidOffset = numRows - 1;
 
-    private final ColumnValueSelector offsetTimestampSelector;
-    private final ColumnValueSelector[] offsetDimensionValueSelectors;
-    private final ColumnValueSelector[] offsetMetricSelectors;
+    private final ColumnValueSelector<?> offsetTimestampSelector;
+    private final ColumnValueSelector<?>[] offsetDimensionValueSelectors;
+    private final ColumnValueSelector<?>[] offsetMetricSelectors;
 
     private final SettableLongColumnValueSelector rowTimestampSelector = new SettableLongColumnValueSelector();
-    private final SettableColumnValueSelector[] rowDimensionValueSelectors;
-    private final SettableColumnValueSelector[] rowMetricSelectors;
+    private final SettableColumnValueSelector<?>[] rowDimensionValueSelectors;
+    private final SettableColumnValueSelector<?>[] rowMetricSelectors;
     private final RowPointer rowPointer;
 
     private final SettableLongColumnValueSelector markedTimestampSelector = new SettableLongColumnValueSelector();
-    private final SettableColumnValueSelector[] markedDimensionValueSelectors;
-    private final SettableColumnValueSelector[] markedMetricSelectors;
+    private final SettableColumnValueSelector<?>[] markedDimensionValueSelectors;
+    private final SettableColumnValueSelector<?>[] markedMetricSelectors;
     private final TimeAndDimsPointer markedRowPointer;
 
     boolean first = true;
@@ -247,7 +247,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           .toArray(SettableColumnValueSelector[]::new);
       rowMetricSelectors = metricNames
           .stream()
-          .map(metric -> input.getColumn(metric).makeSettableColumnValueSelector())
+          .map(metric -> input.getColumn(metric).makeNewSettableColumnValueSelector())
           .toArray(SettableColumnValueSelector[]::new);
 
       rowPointer = new RowPointer(
@@ -266,7 +266,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           .toArray(SettableColumnValueSelector[]::new);
       markedMetricSelectors = metricNames
           .stream()
-          .map(metric -> input.getColumn(metric).makeSettableColumnValueSelector())
+          .map(metric -> input.getColumn(metric).makeNewSettableColumnValueSelector())
           .toArray(SettableColumnValueSelector[]::new);
       markedRowPointer = new TimeAndDimsPointer(
           markedTimestampSelector,

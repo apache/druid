@@ -28,7 +28,7 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.DictionaryEncodedColumn;
-import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.NumericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
@@ -122,7 +122,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   @Override
   public int getNumRows()
   {
-    try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
+    try (final NumericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getNumericColumn()) {
       return column.length();
     }
   }

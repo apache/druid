@@ -39,7 +39,7 @@ class LongsColumnWithNulls extends LongsColumn
   }
 
   @Override
-  public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset, nullValueBitmap);
   }

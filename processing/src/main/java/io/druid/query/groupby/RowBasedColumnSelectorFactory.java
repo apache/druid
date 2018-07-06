@@ -28,6 +28,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.BaseSingleValueDimensionSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionHandlerUtils;
@@ -40,7 +41,6 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.RangeIndexedInts;
-import io.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -74,17 +74,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
       @Nullable final Map<String, ValueType> rowSignature
   )
   {
-    return new RowBasedColumnSelectorFactory(
-        new Supplier<Row>()
-        {
-          @Override
-          public Row get()
-          {
-            return row.get();
-          }
-        },
-        rowSignature
-    );
+    return new RowBasedColumnSelectorFactory(row::get, rowSignature);
   }
 
   @Override
@@ -105,93 +95,12 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         throw new UnsupportedOperationException("time dimension must provide an extraction function");
       }
 
-      return new DimensionSelector()
+      return new BaseSingleValueDimensionSelector()
       {
         @Override
-        public IndexedInts getRow()
-        {
-          return ZeroIndexedInts.instance();
-        }
-
-        @Override
-        public ValueMatcher makeValueMatcher(final String value)
-        {
-          return new ValueMatcher()
-          {
-            @Override
-            public boolean matches()
-            {
-              String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
-              return Objects.equals(rowValue, value);
-            }
-
-            @Override
-            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-            {
-              inspector.visit("row", row);
-              inspector.visit("extractionFn", extractionFn);
-            }
-          };
-        }
-
-        @Override
-        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
-        {
-          return new ValueMatcher()
-          {
-            @Override
-            public boolean matches()
-            {
-              String rowValue = extractionFn.apply(row.get().getTimestampFromEpoch());
-              return predicate.apply(rowValue);
-            }
-
-            @Override
-            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-            {
-              inspector.visit("row", row);
-              inspector.visit("extractionFn", extractionFn);
-              inspector.visit("predicate", predicate);
-            }
-          };
-        }
-
-        @Override
-        public int getValueCardinality()
-        {
-          return DimensionSelector.CARDINALITY_UNKNOWN;
-        }
-
-        @Override
-        public String lookupName(int id)
+        protected String getValue()
         {
           return extractionFn.apply(row.get().getTimestampFromEpoch());
-        }
-
-        @Override
-        public boolean nameLookupPossibleInAdvance()
-        {
-          return false;
-        }
-
-        @Nullable
-        @Override
-        public IdLookup idLookup()
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public Object getObject()
-        {
-          return lookupName(0);
-        }
-
-        @Override
-        public Class classOfObject()
-        {
-          return String.class;
         }
 
         @Override
@@ -215,7 +124,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final String value)
+        public ValueMatcher makeValueMatcher(final @Nullable String value)
         {
           if (extractionFn == null) {
             return new ValueMatcher()
@@ -367,7 +276,7 @@ public class RowBasedColumnSelectorFactory implements ColumnSelectorFactory
           if (dimensionValues.size() == 1) {
             return dimensionValues.get(0);
           }
-          return dimensionValues.toArray(new String[0]);
+          return dimensionValues;
         }
 
         @Override

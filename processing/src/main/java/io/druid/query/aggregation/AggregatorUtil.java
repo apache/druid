@@ -37,6 +37,7 @@ import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.virtual.ExpressionSelectors;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -97,8 +98,8 @@ public class AggregatorUtil
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
-   * @param postAggregatorList List of postAggregator, there is a restriction that the list should be in an order
-   *                           such that all the dependencies of any given aggregator should occur before that aggregator.
+   * @param postAggregatorList List of postAggregator, there is a restriction that the list should be in an order such
+   *                           that all the dependencies of any given aggregator should occur before that aggregator.
    *                           See AggregatorUtilTest.testOutOfOrderPruneDependentPostAgg for example.
    * @param postAggName        name of the postAgg on which dependency is to be calculated
    *
@@ -109,7 +110,8 @@ public class AggregatorUtil
     LinkedList<PostAggregator> rv = Lists.newLinkedList();
     Set<String> deps = new HashSet<>();
     deps.add(postAggName);
-    // Iterate backwards to find the last calculated aggregate and add dependent aggregator as we find dependencies in reverse order
+    // Iterate backwards to find the last calculated aggregate and add dependent aggregator as we find dependencies in
+    // reverse order
     for (PostAggregator agg : Lists.reverse(postAggregatorList)) {
       if (deps.contains(agg.getName())) {
         rv.addFirst(agg); // add to the beginning of List
@@ -145,14 +147,14 @@ public class AggregatorUtil
         condensedAggs.add(aggregatorSpec);
       }
     }
-    return new Pair(condensedAggs, condensedPostAggs);
+    return new Pair<>(condensedAggs, condensedPostAggs);
   }
 
-  public static BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
+  static BaseFloatColumnValueSelector makeColumnValueSelectorWithFloatDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
-      final String fieldName,
-      final String fieldExpression,
+      @Nullable final String fieldName,
+      @Nullable final String fieldExpression,
       final float nullValue
   )
   {
@@ -189,11 +191,11 @@ public class AggregatorUtil
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
-  public static BaseLongColumnValueSelector makeColumnValueSelectorWithLongDefault(
+  static BaseLongColumnValueSelector makeColumnValueSelectorWithLongDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
-      final String fieldName,
-      final String fieldExpression,
+      @Nullable final String fieldName,
+      @Nullable final String fieldExpression,
       final long nullValue
   )
   {
@@ -230,11 +232,11 @@ public class AggregatorUtil
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
   }
 
-  public static BaseDoubleColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
+  static BaseDoubleColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
       final ColumnSelectorFactory metricFactory,
       final ExprMacroTable macroTable,
-      final String fieldName,
-      final String fieldExpression,
+      @Nullable final String fieldName,
+      @Nullable final String fieldExpression,
       final double nullValue
   )
   {

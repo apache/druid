@@ -25,27 +25,29 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.CompressedColumnarFloatsSupplier;
+import io.druid.segment.data.CompressedColumnarLongsSupplier;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
  */
-public class FloatGenericColumnPartSerde implements ColumnPartSerde
+public class LongNumericColumnPartSerde implements ColumnPartSerde
 {
   @JsonCreator
-  public static FloatGenericColumnPartSerde createDeserializer(
+  public static LongNumericColumnPartSerde createDeserializer(
       @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {
-    return new FloatGenericColumnPartSerde(byteOrder, null);
+    return new LongNumericColumnPartSerde(byteOrder, null);
   }
 
   private final ByteOrder byteOrder;
+  @Nullable
   private final Serializer serializer;
 
-  private FloatGenericColumnPartSerde(ByteOrder byteOrder, Serializer serializer)
+  private LongNumericColumnPartSerde(ByteOrder byteOrder, @Nullable Serializer serializer)
   {
     this.byteOrder = byteOrder;
     this.serializer = serializer;
@@ -79,12 +81,13 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
-    public FloatGenericColumnPartSerde build()
+    public LongNumericColumnPartSerde build()
     {
-      return new FloatGenericColumnPartSerde(byteOrder, delegate);
+      return new LongNumericColumnPartSerde(byteOrder, delegate);
     }
   }
 
+  @Nullable
   @Override
   public Serializer getSerializer()
   {
@@ -99,17 +102,17 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
       @Override
       public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
       {
-        final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
+        final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
             buffer,
             byteOrder
         );
-        builder.setType(ValueType.FLOAT)
+        LongNumericColumnSupplier columnSupplier = new LongNumericColumnSupplier(
+            column,
+            IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+        );
+        builder.setType(ValueType.LONG)
                .setHasMultipleValues(false)
-               .setGenericColumn(new FloatGenericColumnSupplier(
-                   column,
-                   IndexIO.LEGACY_FACTORY.getBitmapFactory()
-                                         .makeEmptyImmutableBitmap()
-               ));
+               .setNumericColumnSupplier(columnSupplier);
       }
     };
   }

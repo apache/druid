@@ -27,6 +27,7 @@ import io.druid.math.expr.Parser;
 import io.druid.segment.BaseLongColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -35,15 +36,17 @@ import java.util.Objects;
 public abstract class SimpleLongAggregatorFactory extends AggregatorFactory
 {
   protected final String name;
+  @Nullable
   protected final String fieldName;
+  @Nullable
   protected final String expression;
   protected final ExprMacroTable macroTable;
 
   public SimpleLongAggregatorFactory(
       ExprMacroTable macroTable,
       String name,
-      final String fieldName,
-      String expression
+      @Nullable final String fieldName,
+      @Nullable String expression
   )
   {
     this.macroTable = macroTable;
@@ -153,12 +156,14 @@ public abstract class SimpleLongAggregatorFactory extends AggregatorFactory
     return name;
   }
 
+  @Nullable
   @JsonProperty
   public String getFieldName()
   {
     return fieldName;
   }
 
+  @Nullable
   @JsonProperty
   public String getExpression()
   {

@@ -24,7 +24,7 @@ import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
 import io.druid.data.input.InputRow;
 import io.druid.java.util.common.IAE;
-import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -104,12 +104,12 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
     final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
-    builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   // support large columns
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }

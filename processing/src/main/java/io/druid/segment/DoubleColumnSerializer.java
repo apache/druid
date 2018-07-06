@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class DoubleColumnSerializer implements GenericColumnSerializer
+public class DoubleColumnSerializer implements ColumnSerializer<Object>
 {
   public static DoubleColumnSerializer create(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -73,7 +73,7 @@ public class DoubleColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     writer.add(selector.getDouble());
   }

@@ -127,7 +127,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (selector != null && !DimensionSelectorUtils.isNilSelector(selector)) {
+      if (!DimensionSelectorUtils.isNilSelector(selector)) {
         final IndexedInts row = selector.getRow();
         for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
           final String dimVal = selector.lookupName(row.get(i));

@@ -23,6 +23,8 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import io.druid.query.monomorphicprocessing.HotLoopCallee;
 
+import javax.annotation.Nullable;
+
 @PublicApi
 public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
@@ -31,6 +33,7 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
   int size();
 
   @CalledFromHotLoop
+  @Nullable
   T get(int index);
 
   /**
@@ -42,5 +45,5 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
    *
    * @return index of value, or a negative number
    */
-  int indexOf(T value);
+  int indexOf(@Nullable T value);
 }

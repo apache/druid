@@ -18,7 +18,6 @@
  */
 package io.druid.query.scan;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -34,7 +33,6 @@ import io.druid.query.QueryContexts;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.filter.Filter;
 import io.druid.segment.BaseObjectColumnValueSelector;
-import io.druid.segment.Cursor;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumn;
@@ -49,6 +47,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
@@ -124,21 +123,16 @@ public class ScanQueryEngine
     }
     final long limit = query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
     return Sequences.concat(
-        Sequences.map(
-            adapter.makeCursors(
-                filter,
-                intervals.get(0),
-                query.getVirtualColumns(),
-                Granularities.ALL,
-                query.isDescending(),
-                null
-            ),
-            new Function<Cursor, Sequence<ScanResultValue>>()
-            {
-              @Override
-              public Sequence<ScanResultValue> apply(final Cursor cursor)
-              {
-                return new BaseSequence<>(
+            adapter
+                .makeCursors(
+                    filter,
+                    intervals.get(0),
+                    query.getVirtualColumns(),
+                    Granularities.ALL,
+                    query.isDescending(),
+                    null
+                )
+                .map(cursor -> new BaseSequence<>(
                     new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
                     {
                       @Override
@@ -173,6 +167,9 @@ public class ScanQueryEngine
                           @Override
                           public ScanResultValue next()
                           {
+                            if (!hasNext()) {
+                              throw new NoSuchElementException();
+                            }
                             if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
                               throw new QueryInterruptedException(new TimeoutException());
                             }
@@ -208,9 +205,8 @@ public class ScanQueryEngine
                           private List<Object> rowsToCompactedList()
                           {
                             final List<Object> events = new ArrayList<>(batchSize);
-                            for (int i = 0; !cursor.isDone()
-                                            && i < batchSize
-                                            && offset < limit; cursor.advance(), i++, offset++) {
+                            final long iterLimit = Math.min(limit, offset + batchSize);
+                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
                               final List<Object> theEvent = new ArrayList<>(allColumns.size());
                               for (int j = 0; j < allColumns.size(); j++) {
                                 theEvent.add(getColumnValue(j));
@@ -223,9 +219,8 @@ public class ScanQueryEngine
                           private List<Map<String, Object>> rowsToList()
                           {
                             List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
-                            for (int i = 0; !cursor.isDone()
-                                            && i < batchSize
-                                            && offset < limit; cursor.advance(), i++, offset++) {
+                            final long iterLimit = Math.min(limit, offset + batchSize);
+                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
                               final Map<String, Object> theEvent = new LinkedHashMap<>();
                               for (int j = 0; j < allColumns.size(); j++) {
                                 theEvent.put(allColumns.get(j), getColumnValue(j));
@@ -256,10 +251,7 @@ public class ScanQueryEngine
                       {
                       }
                     }
-                );
-              }
-            }
-        )
+            ))
     );
   }
 }

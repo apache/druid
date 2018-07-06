@@ -21,20 +21,25 @@ package io.druid.segment;
 
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.virtual.BaseSingleValueDimensionSelector;
+
+import javax.annotation.Nullable;
 
 public class DoubleWrappingDimensionSelector extends BaseSingleValueDimensionSelector
 {
-
-  private final ExtractionFn extractionFn;
   private final BaseDoubleColumnValueSelector selector;
+  @Nullable
+  private final ExtractionFn extractionFn;
 
-  public DoubleWrappingDimensionSelector(BaseDoubleColumnValueSelector doubleColumnSelector, ExtractionFn extractionFn)
+  public DoubleWrappingDimensionSelector(
+      BaseDoubleColumnValueSelector doubleColumnSelector,
+      @Nullable ExtractionFn extractionFn
+  )
   {
     this.extractionFn = extractionFn;
     selector = doubleColumnSelector;
   }
 
+  @Nullable
   @Override
   protected String getValue()
   {

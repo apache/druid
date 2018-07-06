@@ -188,6 +188,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
               return extractor.extractedClass();
             }
 
+            @Nullable
             @Override
             public Object getObject()
             {
@@ -806,6 +807,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
+  @Nullable
   public DimensionDesc getDimension(String dimension)
   {
     synchronized (dimensionDescs) {
@@ -989,7 +991,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                   continue;
                 }
                 final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
+                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
                 theVals.put(dimensionName, rowVals);
               }
 

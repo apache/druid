@@ -123,7 +123,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
       selectors.put(
           agg.getName(),
-          new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
+          new OnheapIncrementalIndex.CachingColumnSelectorFactory(columnSelectorFactory, concurrentEventAdd)
       );
 
       if (i == 0) {

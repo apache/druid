@@ -50,7 +50,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2IntSortedMap;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -633,10 +632,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
           return null;
         }
 
-        return convertUnsortedEncodedKeyComponentToActualArrayOrList(
-            (int[]) dims[dimIndex],
-            DimensionIndexer.ARRAY
-        );
+        return convertUnsortedEncodedKeyComponentToActualList((int[]) dims[dimIndex]);
       }
 
       @SuppressWarnings("deprecation")
@@ -664,30 +660,22 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     return makeDimensionSelector(DefaultDimensionSpec.of(desc.getName()), currEntry, desc);
   }
 
+  @Nullable
   @Override
-  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(int[] key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualList(int[] key)
   {
-    if (key == null || key.length == 0) {
+    if (key.length == 0) {
       return null;
     }
     if (key.length == 1) {
-      return getActualValue(key[0], false);
+      return NullHandling.nullToEmptyIfNeeded(getActualValue(key[0], false));
     } else {
-      if (asList) {
-        List<Comparable> rowVals = new ArrayList<>(key.length);
-        for (int id : key) {
-          String val = getActualValue(id, false);
-          rowVals.add(NullHandling.nullToEmptyIfNeeded(val));
-        }
-        return rowVals;
-      } else {
-        String[] rowArray = new String[key.length];
-        for (int i = 0; i < key.length; i++) {
-          String val = getActualValue(key[i], false);
-          rowArray[i] = NullHandling.nullToEmptyIfNeeded(val);
-        }
-        return rowArray;
+      String[] rowArray = new String[key.length];
+      for (int i = 0; i < key.length; i++) {
+        String val = getActualValue(key[i], false);
+        rowArray[i] = NullHandling.nullToEmptyIfNeeded(val);
       }
+      return Arrays.asList(rowArray);
     }
   }
 

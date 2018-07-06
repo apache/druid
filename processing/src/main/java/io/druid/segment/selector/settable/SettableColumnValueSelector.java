@@ -27,7 +27,7 @@ import io.druid.segment.ColumnValueSelector;
  */
 public interface SettableColumnValueSelector<T> extends ColumnValueSelector<T>
 {
-  void setValueFrom(ColumnValueSelector selector);
+  void setValueFrom(ColumnValueSelector<?> selector);
 
   @Override
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)

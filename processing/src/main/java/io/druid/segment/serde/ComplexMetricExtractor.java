@@ -22,11 +22,15 @@ package io.druid.segment.serde;
 import io.druid.data.input.InputRow;
 import io.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
+
 /**
  */
 @ExtensionPoint
-public interface ComplexMetricExtractor
+public interface ComplexMetricExtractor<T>
 {
-  Class<?> extractedClass();
-  Object extractValue(InputRow inputRow, String metricName);
+  Class<? extends T> extractedClass();
+
+  @Nullable
+  T extractValue(InputRow inputRow, String metricName);
 }

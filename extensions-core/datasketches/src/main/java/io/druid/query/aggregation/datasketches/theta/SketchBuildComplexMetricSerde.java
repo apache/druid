@@ -27,13 +27,13 @@ import io.druid.segment.serde.ComplexMetricExtractor;
 public class SketchBuildComplexMetricSerde extends SketchMergeComplexMetricSerde
 {
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public ComplexMetricExtractor<?> getExtractor()
   {
-    return new ComplexMetricExtractor()
+    return new ComplexMetricExtractor<Object>()
     {
 
       @Override
-      public Class<?> extractedClass()
+      public Class<Object> extractedClass()
       {
         return Object.class;
       }

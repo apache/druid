@@ -36,7 +36,7 @@ import java.nio.ByteBuffer;
 /**
  * An immutable representation of an {@link RTree} for spatial indexing.
  */
-public final class ImmutableRTree
+public final class ImmutableRTree implements Comparable<ImmutableRTree>
 {
   private static final byte VERSION = 0x0;
 
@@ -61,7 +61,6 @@ public final class ImmutableRTree
 
   public ImmutableRTree(ByteBuffer data, BitmapFactory bitmapFactory)
   {
-    data = data.asReadOnlyBuffer();
     final int initPosition = data.position();
     Preconditions.checkArgument(data.get(initPosition) == VERSION, "Mismatching versions");
     this.numDims = data.getInt(1 + initPosition) & 0x7FFF;
@@ -75,7 +74,7 @@ public final class ImmutableRTree
       return empty();
     }
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[calcNumBytes(rTree)]);
+    ByteBuffer buffer = ByteBuffer.allocate(calcNumBytes(rTree));
 
     buffer.put(VERSION);
     buffer.putInt(rTree.getNumDims());
@@ -128,7 +127,7 @@ public final class ImmutableRTree
       return strategy.search(root, bound);
     } else {
       // If the dimension counts don't match (for example, if this is called on a blank `new ImmutableRTree()`)
-      return ImmutableList.<ImmutableBitmap>of();
+      return ImmutableList.of();
     }
   }
 
@@ -149,8 +148,21 @@ public final class ImmutableRTree
     }
   }
 
+  @Override
   public int compareTo(ImmutableRTree other)
   {
     return this.data.compareTo(other.data);
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    return obj instanceof ImmutableRTree && data.equals(((ImmutableRTree) obj).data);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return data.hashCode();
   }
 }

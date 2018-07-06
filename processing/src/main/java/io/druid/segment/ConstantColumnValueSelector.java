@@ -24,13 +24,13 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 public class ConstantColumnValueSelector<T> implements ColumnValueSelector<T>
 {
-  private long longValue;
-  private float floatValue;
-  private double doubleValue;
+  private final long longValue;
+  private final float floatValue;
+  private final double doubleValue;
 
-  private T objectValue;
+  private final T objectValue;
 
-  private Class<T> objectClass;
+  private final Class<T> objectClass;
 
   public ConstantColumnValueSelector(
       final long longValue,

@@ -46,7 +46,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.DictionaryEncodedColumn;
-import io.druid.segment.column.SimpleDictionaryEncodedColumn;
+import io.druid.segment.column.StringDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.CompressionFactory;
@@ -725,12 +725,12 @@ public class IndexMergerTestBase
     DictionaryEncodedColumn encodedColumn = index.getColumn("dim2").getDictionaryEncoding();
     Object obj;
     if (encodedColumn.hasMultipleValues()) {
-      Field field = SimpleDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
+      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);
     } else {
-      Field field = SimpleDictionaryEncodedColumn.class.getDeclaredField("column");
+      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("column");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);

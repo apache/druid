@@ -61,8 +61,8 @@ import io.druid.segment.data.VSizeColumnarMultiInts;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.DictionaryEncodedColumnSupplier;
-import io.druid.segment.serde.FloatGenericColumnSupplier;
-import io.druid.segment.serde.LongGenericColumnSupplier;
+import io.druid.segment.serde.FloatNumericColumnSupplier;
+import io.druid.segment.serde.LongNumericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
 import io.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Interval;
@@ -74,7 +74,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -267,18 +266,15 @@ public class IndexIO
           rp2.getTimestamp()
       );
     }
-    final Object[] dims1 = rp1.getDimensionValuesForDebug();
-    final Object[] dims2 = rp2.getDimensionValuesForDebug();
-    if (dims1.length != dims2.length) {
-      throw new SegmentValidationException(
-          "Dim lengths not equal %s vs %s",
-          Arrays.deepToString(dims1),
-          Arrays.deepToString(dims2)
-      );
+    final List<Object> dims1 = rp1.getDimensionValuesForDebug();
+    final List<Object> dims2 = rp2.getDimensionValuesForDebug();
+    if (dims1.size() != dims2.size()) {
+      throw new SegmentValidationException("Dim lengths not equal %s vs %s", dims1, dims2);
     }
     final List<String> dim1Names = adapter1.getDimensionNames();
     final List<String> dim2Names = adapter2.getDimensionNames();
-    for (int i = 0; i < dims1.length; ++i) {
+    int dimCount = dims1.size();
+    for (int i = 0; i < dimCount; ++i) {
       final String dim1Name = dim1Names.get(i);
       final String dim2Name = dim2Names.get(i);
 
@@ -295,22 +291,22 @@ public class IndexIO
         );
       }
 
-      Object vals1 = dims1[i];
-      Object vals2 = dims2[i];
+      Object vals1 = dims1.get(i);
+      Object vals2 = dims2.get(i);
       if (isNullRow(vals1) ^ isNullRow(vals2)) {
         throw notEqualValidationException(dim1Name, vals1, vals2);
       }
-      if (vals1 instanceof Object[] && vals2 instanceof Object[]) {
-        if (!Arrays.equals((Object[]) vals1, (Object[]) vals2)) {
-          throw notEqualValidationException(dim1Name, vals1, vals2);
-        }
-      } else if (vals1 instanceof Object[]) {
-        if (((Object[]) vals1).length != 1 || !Objects.equals(((Object[]) vals1)[0], vals2)) {
-          throw notEqualValidationException(dim1Name, vals1, vals2);
-        }
-      } else if (vals2 instanceof Object[]) {
-        if (((Object[]) vals2).length != 1 || !Objects.equals(((Object[]) vals2)[0], vals1)) {
-          throw notEqualValidationException(dim1Name, vals1, vals2);
+      boolean vals1IsList = vals1 instanceof List;
+      boolean vals2IsList = vals2 instanceof List;
+      if (vals1IsList ^ vals2IsList) {
+        if (vals1IsList) {
+          if (((List) vals1).size() != 1 || !Objects.equals(((List) vals1).get(0), vals2)) {
+            throw notEqualValidationException(dim1Name, vals1, vals2);
+          }
+        } else {
+          if (((List) vals2).size() != 1 || !Objects.equals(((List) vals2).get(0), vals1)) {
+            throw notEqualValidationException(dim1Name, vals1, vals2);
+          }
         }
       } else {
         if (!Objects.equals(vals1, vals2)) {
@@ -325,10 +321,13 @@ public class IndexIO
     if (row == null) {
       return true;
     }
-    if (!(row instanceof Object[])) {
+    if (!(row instanceof List)) {
       return false;
     }
-    for (Object v : (Object[]) row) {
+    List<?> rowAsList = (List<?>) row;
+    //noinspection ForLoopReplaceableByForEach -- in order to not create a garbage iterator object
+    for (int i = 0, rowSize = rowAsList.size(); i < rowSize; i++) {
+      Object v = rowAsList.get(i);
       //noinspection VariableNotUsedInsideIf
       if (v != null) {
         return false;
@@ -389,7 +388,7 @@ public class IndexIO
       Map<String, MetricHolder> metrics = Maps.newLinkedHashMap();
       for (String metric : availableMetrics) {
         final String metricFilename = makeMetricFile(inDir, metric, BYTE_ORDER).getName();
-        final MetricHolder holder = MetricHolder.fromByteBuffer(smooshedFiles.mapFile(metricFilename), smooshedFiles);
+        final MetricHolder holder = MetricHolder.fromByteBuffer(smooshedFiles.mapFile(metricFilename));
 
         if (!metric.equals(holder.getName())) {
           throw new ISE("Metric[%s] loaded up metric[%s] from disk.  File names do matter.", metric, holder.getName());
@@ -480,7 +479,7 @@ public class IndexIO
         ColumnBuilder builder = new ColumnBuilder()
             .setType(ValueType.STRING)
             .setHasMultipleValues(true)
-            .setDictionaryEncodedColumn(
+            .setDictionaryEncodedColumnSupplier(
                 new DictionaryEncodedColumnSupplier(
                     index.getDimValueLookup(dimension),
                     null,
@@ -511,8 +510,8 @@ public class IndexIO
               metric,
               new ColumnBuilder()
                   .setType(ValueType.FLOAT)
-                  .setGenericColumn(
-                      new FloatGenericColumnSupplier(
+                  .setNumericColumnSupplier(
+                      new FloatNumericColumnSupplier(
                           metricHolder.floatType,
                           LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
                       )
@@ -524,11 +523,8 @@ public class IndexIO
               metric,
               new ColumnBuilder()
                   .setType(ValueType.COMPLEX)
-                  .setComplexColumn(
-                      new ComplexColumnPartSupplier(
-                          metricHolder.getTypeName(),
-                          (GenericIndexed) metricHolder.complexType
-                      )
+                  .setComplexColumnSupplier(
+                      new ComplexColumnPartSupplier(metricHolder.getTypeName(), metricHolder.complexType)
                   )
                   .build()
           );
@@ -547,8 +543,8 @@ public class IndexIO
           Column.TIME_COLUMN_NAME,
           new ColumnBuilder()
               .setType(ValueType.LONG)
-              .setGenericColumn(
-                  new LongGenericColumnSupplier(
+              .setNumericColumnSupplier(
+                  new LongNumericColumnSupplier(
                       index.timestamps,
                       LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
                   )

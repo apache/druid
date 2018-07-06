@@ -341,6 +341,7 @@ public class InputRowSerde
             //its a complex metric
             Object val = agg.get();
             ComplexMetricSerde serde = getComplexMetricSerde(t);
+            //noinspection unchecked
             writeBytes(serde.toBytes(val), out);
           }
         }

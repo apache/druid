@@ -24,7 +24,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.segment.column.Column;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -60,11 +59,7 @@ public abstract class AbstractIndex
           sb.append(columnNames.get(i)).append('=');
           ColumnValueSelector selector = selectors.get(i);
           Object columnValue = selector.getObject();
-          if (columnValue instanceof Object[]) {
-            sb.append(Arrays.toString((Object[]) columnValue));
-          } else {
-            sb.append(columnValue);
-          }
+          sb.append(columnValue);
           sb.append(", ");
         }
         sb.setLength(sb.length() - 2);

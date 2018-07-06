@@ -169,7 +169,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
-  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Float key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualList(Float key)
   {
     return key;
   }

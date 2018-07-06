@@ -39,7 +39,7 @@ class FloatsColumnWithNulls extends FloatsColumn
   }
 
   @Override
-  public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset, nullValueBitmap);
   }

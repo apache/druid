@@ -40,7 +40,7 @@ public interface Column
   int getLength();
   DictionaryEncodedColumn getDictionaryEncoding();
 
-  GenericColumn getGenericColumn();
+  NumericColumn getNumericColumn();
   ComplexColumn getComplexColumn();
   BitmapIndex getBitmapIndex();
   SpatialIndex getSpatialIndex();
@@ -48,5 +48,5 @@ public interface Column
   /**
    * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.
    */
-  SettableColumnValueSelector makeSettableColumnValueSelector();
+  SettableColumnValueSelector makeNewSettableColumnValueSelector();
 }

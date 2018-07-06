@@ -25,6 +25,7 @@ import com.google.common.base.Predicates;
 import io.druid.java.util.common.IAE;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import io.druid.segment.AbstractDimensionSelector;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
@@ -36,7 +37,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import javax.annotation.Nullable;
 import java.util.BitSet;
 
-final class ForwardingFilteredDimensionSelector implements DimensionSelector, IdLookup
+final class ForwardingFilteredDimensionSelector extends AbstractDimensionSelector implements IdLookup
 {
   private final DimensionSelector selector;
   private final IdLookup baseIdLookup;
@@ -192,13 +193,6 @@ final class ForwardingFilteredDimensionSelector implements DimensionSelector, Id
   public int lookupId(String name)
   {
     return forwardMapping.get(baseIdLookup.lookupId(name));
-  }
-
-  @Nullable
-  @Override
-  public Object getObject()
-  {
-    return defaultGetObject();
   }
 
   @Override

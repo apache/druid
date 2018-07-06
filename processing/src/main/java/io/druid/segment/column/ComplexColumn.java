@@ -22,23 +22,42 @@ package io.druid.segment.column;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
 
 /**
- */
-public interface ComplexColumn extends BaseColumn
+*/
+public class ComplexColumn implements BaseColumn
 {
-  Class<?> getClazz();
-  String getTypeName();
-  Object getRowValue(int rowNum);
+  private final GenericIndexed<?> index;
+  private final String typeName;
+
+  public ComplexColumn(String typeName, GenericIndexed<?> index)
+  {
+    this.index = index;
+    this.typeName = typeName;
+  }
+
+  public Class<?> getClazz()
+  {
+    return index.getClazz();
+  }
+
+  public String getTypeName()
+  {
+    return typeName;
+  }
+
+  @Nullable
+  public Object getRowValue(int rowNum)
+  {
+    return index.get(rowNum);
+  }
 
   @Override
-  void close();
-
-  @Override
-  default ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+  public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return new ObjectColumnSelector()
     {
@@ -61,5 +80,11 @@ public interface ComplexColumn extends BaseColumn
         inspector.visit("column", ComplexColumn.this);
       }
     };
+  }
+
+  @Override
+  public void close()
+  {
+    // nothing to close
   }
 }

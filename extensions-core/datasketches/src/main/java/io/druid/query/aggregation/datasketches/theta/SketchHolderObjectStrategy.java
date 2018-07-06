@@ -21,30 +21,29 @@ package io.druid.query.aggregation.datasketches.theta;
 
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.theta.Sketch;
-import io.druid.java.util.common.IAE;
 import io.druid.segment.data.ObjectStrategy;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class SketchObjectStrategy implements ObjectStrategy
+public class SketchHolderObjectStrategy implements ObjectStrategy<SketchHolder>
 {
 
-  private static final byte[] EMPTY_BYTES = new byte[]{};
-
   @Override
-  public int compare(Object s1, Object s2)
+  public int compare(SketchHolder s1, SketchHolder s2)
   {
     return SketchHolder.COMPARATOR.compare(s1, s2);
   }
 
   @Override
-  public Class<?> getClazz()
+  public Class<SketchHolder> getClazz()
   {
-    return Object.class;
+    return SketchHolder.class;
   }
 
   @Override
-  public Object fromByteBuffer(ByteBuffer buffer, int numBytes)
+  public SketchHolder fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
     if (numBytes == 0) {
       return SketchHolder.EMPTY;
@@ -54,18 +53,16 @@ public class SketchObjectStrategy implements ObjectStrategy
   }
 
   @Override
-  public byte[] toBytes(Object obj)
+  public byte[] toBytes(@Nullable SketchHolder obj)
   {
-    if (obj instanceof SketchHolder) {
-      Sketch sketch = ((SketchHolder) obj).getSketch();
+    if (obj != null) {
+      Sketch sketch = obj.getSketch();
       if (sketch.isEmpty()) {
-        return EMPTY_BYTES;
+        return ByteArrays.EMPTY_ARRAY;
       }
       return sketch.toByteArray();
-    } else if (obj == null) {
-      return EMPTY_BYTES;
     } else {
-      throw new IAE("Unknown class[%s], toString[%s]", obj.getClass(), obj);
+      return ByteArrays.EMPTY_ARRAY;
     }
   }
 }

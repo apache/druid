@@ -19,12 +19,10 @@
 
 package io.druid.query.aggregation.hyperloglog;
 
-import com.google.common.collect.Ordering;
 import io.druid.data.input.InputRow;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.hll.HyperLogLogHash;
-import io.druid.segment.writeout.SegmentWriteOutMedium;
-import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
@@ -32,22 +30,16 @@ import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
+import io.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 import java.util.List;
 
 public class HyperUniquesSerde extends ComplexMetricSerde
 {
-  private static Ordering<HyperLogLogCollector> comparator = new Ordering<HyperLogLogCollector>()
-  {
-    @Override
-    public int compare(
-        HyperLogLogCollector arg1, HyperLogLogCollector arg2
-    )
-    {
-      return arg1.toByteBuffer().compareTo(arg2.toByteBuffer());
-    }
-  }.nullsFirst();
+  private static Comparator<HyperLogLogCollector> comparator =
+      Comparator.nullsFirst(Comparator.comparing(HyperLogLogCollector::toByteBuffer));
 
   private final HyperLogLogHash hyperLogLogHash;
 
@@ -63,9 +55,9 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   }
 
   @Override
-  public ComplexMetricExtractor getExtractor()
+  public ComplexMetricExtractor<HyperLogLogCollector> getExtractor()
   {
-    return new ComplexMetricExtractor()
+    return new ComplexMetricExtractor<HyperLogLogCollector>()
     {
       @Override
       public Class<HyperLogLogCollector> extractedClass()
@@ -103,7 +95,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   )
   {
     final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   @Override
@@ -148,7 +140,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }

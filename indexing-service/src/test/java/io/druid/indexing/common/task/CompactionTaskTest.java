@@ -695,7 +695,7 @@ public class CompactionTaskTest
   {
     return new ColumnBuilder()
         .setType(IncrementalIndex.TYPE_MAP.get(dimensionSchema.getValueType()))
-        .setDictionaryEncodedColumn(() -> null)
+        .setDictionaryEncodedColumnSupplier(() -> null)
         .setBitmapIndex(() -> null)
         .build();
   }

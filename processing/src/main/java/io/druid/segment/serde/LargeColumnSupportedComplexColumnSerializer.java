@@ -23,7 +23,7 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
@@ -31,33 +31,38 @@ import io.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-public class LargeColumnSupportedComplexColumnSerializer implements GenericColumnSerializer
+public class LargeColumnSupportedComplexColumnSerializer<T> implements ColumnSerializer<T>
 {
   @PublicApi
-  public static LargeColumnSupportedComplexColumnSerializer create(
+  public static <T> LargeColumnSupportedComplexColumnSerializer<T> create(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ObjectStrategy strategy
   )
   {
-    return new LargeColumnSupportedComplexColumnSerializer(segmentWriteOutMedium, filenameBase, strategy);
+    return new LargeColumnSupportedComplexColumnSerializer<>(segmentWriteOutMedium, filenameBase, strategy);
   }
 
-  public static LargeColumnSupportedComplexColumnSerializer createWithColumnSize(
+  public static <T> LargeColumnSupportedComplexColumnSerializer<T> createWithColumnSize(
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ObjectStrategy strategy,
       int columnSize
   )
   {
-    return new LargeColumnSupportedComplexColumnSerializer(segmentWriteOutMedium, filenameBase, strategy, columnSize);
+    return new LargeColumnSupportedComplexColumnSerializer<>(
+        segmentWriteOutMedium,
+        filenameBase,
+        strategy,
+        columnSize
+    );
   }
 
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ObjectStrategy strategy;
   private final int columnSize;
-  private GenericIndexedWriter writer;
+  private GenericIndexedWriter<T> writer;
 
   private LargeColumnSupportedComplexColumnSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -95,7 +100,7 @@ public class LargeColumnSupportedComplexColumnSerializer implements GenericColum
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<? extends T> selector) throws IOException
   {
     writer.write(selector.getObject());
   }

@@ -23,7 +23,7 @@ import io.druid.guice.annotations.PublicApi;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.GenericColumnSerializer;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.ObjectStrategy;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
@@ -31,7 +31,7 @@ import io.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-public class ComplexColumnSerializer implements GenericColumnSerializer
+public class ComplexColumnSerializer<T> implements ColumnSerializer<T>
 {
   @PublicApi
   public static ComplexColumnSerializer create(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy strategy)
@@ -60,7 +60,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<? extends T> selector) throws IOException
   {
     writer.write(selector.getObject());
   }

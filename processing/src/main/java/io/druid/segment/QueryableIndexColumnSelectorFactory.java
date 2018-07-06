@@ -85,7 +85,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
     }
 
     if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-      return new SingleScanTimeDimSelector(makeColumnValueSelector(dimension), extractionFn, descending);
+      return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 
     ValueType type = columnDesc.getCapabilities().getType();
@@ -124,7 +124,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
         } else if (capabilities.getType() == ValueType.COMPLEX) {
           column = holder.getComplexColumn();
         } else if (capabilities.getType().isNumeric()) {
-          column = holder.getGenericColumn();
+          column = holder.getNumericColumn();
         } else {
           throw new ISE("Unknown column type: %s", capabilities.getType());
         }

@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class FloatColumnSerializer implements GenericColumnSerializer
+public class FloatColumnSerializer implements ColumnSerializer<Object>
 {
   public static FloatColumnSerializer create(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -73,7 +73,7 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     writer.add(selector.getFloat());
   }

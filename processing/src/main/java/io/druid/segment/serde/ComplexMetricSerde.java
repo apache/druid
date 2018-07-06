@@ -21,8 +21,8 @@ package io.druid.segment.serde;
 
 import com.google.common.base.Function;
 import io.druid.guice.annotations.ExtensionPoint;
+import io.druid.segment.ColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
-import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.data.ObjectStrategy;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
@@ -110,9 +110,9 @@ public abstract class ComplexMetricSerde
    * For large column (i.e columns greater than Integer.MAX) use
    * (@link LargeColumnSupportedComplexColumnSerializer)
    *
-   * @return an instance of GenericColumnSerializer used for serialization.
+   * @return an instance of ColumnSerializer used for serialization.
    */
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public ColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
     return ComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }

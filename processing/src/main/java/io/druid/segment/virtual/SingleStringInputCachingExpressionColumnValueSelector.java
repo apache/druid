@@ -44,7 +44,9 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
   private final DimensionSelector selector;
   private final Expr expression;
   private final Expr.ObjectBinding bindings;
+  @Nullable
   private final ExprEval[] arrayEvalCache;
+  @Nullable
   private final LruEvalCache lruEvalCache;
 
   public SingleStringInputCachingExpressionColumnValueSelector(

@@ -17,10 +17,7 @@
  * under the License.
  */
 
-package io.druid.segment.data;
+@EverythingIsNonnullByDefault
+package io.druid.segment.column;
 
-/**
- * Implementing CacheableObjectStrategy instead of ObjectSrategy indicates
- * that a column scan may cache the results of {@link #fromByteBuffer}.
- */
-public interface CacheableObjectStrategy<T> extends ObjectStrategy<T> {}
+import io.druid.annotations.EverythingIsNonnullByDefault;

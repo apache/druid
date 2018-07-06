@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.ValueMatcher;
@@ -31,7 +32,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class SingleScanTimeDimSelector implements DimensionSelector
+/**
+ * A special {@link DimensionSelector} for projected time columns
+ * - it assumes time values are scanned once and values are grouped together
+ *   (i.e. we never revisit a timestamp we have seen before, unless it is the same as the last accessed one)
+ * - it also applies and caches extraction function values at the {@link DimensionSelector} level to speed things up
+ */
+public class SingleScanTimeDimensionSelector implements DimensionSelector
 {
   private final ExtractionFn extractionFn;
   private final BaseLongColumnValueSelector selector;
@@ -43,17 +50,13 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   private long currentTimestamp = Long.MIN_VALUE;
   private int index = -1;
 
-
-  // Use a special DimSelector for projected time columns
-  // - it assumes time values are scanned once and values are grouped together
-  //   (i.e. we never revisit a timestamp we have seen before, unless it is the same as the last accessed one)
-  // - it also applies and caches extraction function values at the DimSelector level to speed things up
-  public SingleScanTimeDimSelector(BaseLongColumnValueSelector selector, ExtractionFn extractionFn, boolean descending)
+  public SingleScanTimeDimensionSelector(
+      BaseLongColumnValueSelector selector,
+      @Nullable ExtractionFn extractionFn,
+      boolean descending
+  )
   {
-    if (extractionFn == null) {
-      throw new UnsupportedOperationException("time dimension must provide an extraction function");
-    }
-
+    Preconditions.checkNotNull(extractionFn, "time dimension must provide an extraction function");
     this.extractionFn = extractionFn;
     this.selector = selector;
     this.descending = descending;
@@ -67,7 +70,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(final String value)
+  public ValueMatcher makeValueMatcher(final @Nullable String value)
   {
     return new ValueMatcher()
     {
@@ -80,7 +83,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
-        inspector.visit("selector", SingleScanTimeDimSelector.this);
+        inspector.visit("selector", SingleScanTimeDimensionSelector.this);
       }
     };
   }
@@ -99,7 +102,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
-        inspector.visit("selector", SingleScanTimeDimSelector.this);
+        inspector.visit("selector", SingleScanTimeDimensionSelector.this);
         inspector.visit("predicate", predicate);
       }
     };
@@ -174,13 +177,13 @@ public class SingleScanTimeDimSelector implements DimensionSelector
 
   @Nullable
   @Override
-  public Object getObject()
+  public String getObject()
   {
     return currentValue;
   }
 
   @Override
-  public Class classOfObject()
+  public Class<String> classOfObject()
   {
     return String.class;
   }

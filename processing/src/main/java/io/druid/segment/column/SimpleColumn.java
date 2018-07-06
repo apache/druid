@@ -27,25 +27,19 @@ import io.druid.segment.selector.settable.SettableColumnValueSelector;
 class SimpleColumn implements Column
 {
   private final ColumnCapabilities capabilities;
-  private final Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn;
-  private final Supplier<GenericColumn> genericColumn;
-  private final Supplier<ComplexColumn> complexColumn;
+  private final Supplier<? extends BaseColumn> columnSupplier;
   private final Supplier<BitmapIndex> bitmapIndex;
   private final Supplier<SpatialIndex> spatialIndex;
 
   SimpleColumn(
       ColumnCapabilities capabilities,
-      Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn,
-      Supplier<GenericColumn> genericColumn,
-      Supplier<ComplexColumn> complexColumn,
+      Supplier<? extends BaseColumn> columnSupplier,
       Supplier<BitmapIndex> bitmapIndex,
       Supplier<SpatialIndex> spatialIndex
   )
   {
     this.capabilities = capabilities;
-    this.dictionaryEncodedColumn = dictionaryEncodedColumn;
-    this.genericColumn = genericColumn;
-    this.complexColumn = complexColumn;
+    this.columnSupplier = columnSupplier;
     this.bitmapIndex = bitmapIndex;
     this.spatialIndex = spatialIndex;
   }
@@ -59,7 +53,7 @@ class SimpleColumn implements Column
   @Override
   public int getLength()
   {
-    try (final GenericColumn column = genericColumn.get()) {
+    try (final NumericColumn column = (NumericColumn) columnSupplier.get()) {
       return column.length();
     }
   }
@@ -67,19 +61,19 @@ class SimpleColumn implements Column
   @Override
   public DictionaryEncodedColumn getDictionaryEncoding()
   {
-    return dictionaryEncodedColumn == null ? null : dictionaryEncodedColumn.get();
+    return (DictionaryEncodedColumn) columnSupplier.get();
   }
 
   @Override
-  public GenericColumn getGenericColumn()
+  public NumericColumn getNumericColumn()
   {
-    return genericColumn == null ? null : genericColumn.get();
+    return (NumericColumn) columnSupplier.get();
   }
 
   @Override
   public ComplexColumn getComplexColumn()
   {
-    return complexColumn == null ? null : complexColumn.get();
+    return (ComplexColumn) columnSupplier.get();
   }
 
   @Override
@@ -95,8 +89,8 @@ class SimpleColumn implements Column
   }
 
   @Override
-  public SettableColumnValueSelector makeSettableColumnValueSelector()
+  public SettableColumnValueSelector makeNewSettableColumnValueSelector()
   {
-    return getCapabilities().getType().makeSettableColumnValueSelector();
+    return getCapabilities().getType().makeNewSettableColumnValueSelector();
   }
 }

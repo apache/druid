@@ -39,6 +39,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.ContainsSearchQuerySpec;
+import io.druid.segment.AbstractDimensionSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.DimensionSelector;
@@ -95,7 +96,7 @@ public class FilteredAggregatorTest
 
         if (dimensionName.equals("dim")) {
           return dimensionSpec.decorate(
-              new DimensionSelector()
+              new AbstractDimensionSelector()
               {
                 @Override
                 public IndexedInts getRow()
@@ -165,13 +166,6 @@ public class FilteredAggregatorTest
                       }
                     }
                   };
-                }
-
-                @Nullable
-                @Override
-                public Object getObject()
-                {
-                  return defaultGetObject();
                 }
 
                 @Override

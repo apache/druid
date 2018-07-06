@@ -33,6 +33,7 @@ import io.druid.query.expression.ExprUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.BaseObjectColumnValueSelector;
+import io.druid.segment.BaseSingleValueDimensionSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
 import io.druid.segment.ConstantColumnValueSelector;

@@ -39,8 +39,8 @@ import io.druid.segment.column.BaseColumn;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.NumericColumn;
 import io.druid.segment.column.ComplexColumn;
-import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.Offset;
 import io.druid.segment.data.ReadableOffset;
@@ -120,7 +120,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMinTime()
   {
-    try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
+    try (final NumericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getNumericColumn()) {
       return DateTimes.utc(column.getLongSingleValueRow(0));
     }
   }
@@ -128,7 +128,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public DateTime getMaxTime()
   {
-    try (final GenericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn()) {
+    try (final NumericColumn column = index.getColumn(Column.TIME_COLUMN_NAME).getNumericColumn()) {
       return DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
   }
@@ -371,7 +371,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       // Column caches shared amongst all cursors in this sequence.
       final Map<String, BaseColumn> columnCache = new HashMap<>();
 
-      final GenericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
+      final NumericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getNumericColumn();
 
       final Closer closer = Closer.create();
       closer.register(timestamps);
@@ -537,13 +537,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public abstract static class TimestampCheckingOffset extends Offset
   {
     final Offset baseOffset;
-    final GenericColumn timestamps;
+    final NumericColumn timestamps;
     final long timeLimit;
     final boolean allWithinThreshold;
 
     TimestampCheckingOffset(
         Offset baseOffset,
-        GenericColumn timestamps,
+        NumericColumn timestamps,
         long timeLimit,
         boolean allWithinThreshold
     )
@@ -614,7 +614,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     AscendingTimestampCheckingOffset(
         Offset baseOffset,
-        GenericColumn timestamps,
+        NumericColumn timestamps,
         long timeLimit,
         boolean allWithinThreshold
     )
@@ -647,7 +647,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     DescendingTimestampCheckingOffset(
         Offset baseOffset,
-        GenericColumn timestamps,
+        NumericColumn timestamps,
         long timeLimit,
         boolean allWithinThreshold
     )

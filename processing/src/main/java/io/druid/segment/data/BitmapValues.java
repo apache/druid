@@ -23,7 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntIterators;
 
 /**
- * Doesn't extend {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidential for-each iteration with boxing.
+ * Doesn't extend {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidental for-each iteration with boxing.
  */
 public interface BitmapValues
 {

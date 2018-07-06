@@ -41,7 +41,7 @@ import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.NumericColumn;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.joda.time.Interval;
 
@@ -166,7 +166,7 @@ public class UseIndexesStrategy extends SearchStrategy
     if (!interval.contains(segment.getDataInterval())) {
       final MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
       final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-      try (final GenericColumn timeValues = timeColumn.getGenericColumn()) {
+      try (final NumericColumn timeValues = timeColumn.getNumericColumn()) {
 
         int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
         int endIndex = Math.min(
@@ -189,7 +189,7 @@ public class UseIndexesStrategy extends SearchStrategy
     return timeFilteredBitmap;
   }
 
-  private static int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
+  private static int getStartIndexOfTime(NumericColumn timeValues, long time, boolean inclusive)
   {
     int low = 0;
     int high = timeValues.length() - 1;

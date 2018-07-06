@@ -30,9 +30,8 @@ public class ColumnBuilder
   private ValueType type = null;
   private boolean hasMultipleValues = false;
 
-  private Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn = null;
-  private Supplier<GenericColumn> genericColumn = null;
-  private Supplier<ComplexColumn> complexColumn = null;
+  private Supplier<? extends BaseColumn> columnSupplier = null;
+  private boolean dictionaryEncoded = false;
   private Supplier<BitmapIndex> bitmapIndex = null;
   private Supplier<SpatialIndex> spatialIndex = null;
   private SmooshedFileMapper fileMapper = null;
@@ -60,21 +59,22 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setDictionaryEncodedColumn(Supplier<DictionaryEncodedColumn> dictionaryEncodedColumn)
+  public ColumnBuilder setDictionaryEncodedColumnSupplier(Supplier<? extends DictionaryEncodedColumn<?>> columnSupplier)
   {
-    this.dictionaryEncodedColumn = dictionaryEncodedColumn;
+    this.columnSupplier = columnSupplier;
+    this.dictionaryEncoded = true;
     return this;
   }
 
-  public ColumnBuilder setGenericColumn(Supplier<GenericColumn> genericColumn)
+  public ColumnBuilder setComplexColumnSupplier(Supplier<? extends ComplexColumn> columnSupplier)
   {
-    this.genericColumn = genericColumn;
+    this.columnSupplier = columnSupplier;
     return this;
   }
 
-  public ColumnBuilder setComplexColumn(Supplier<ComplexColumn> complexColumn)
+  public ColumnBuilder setNumericColumnSupplier(Supplier<? extends NumericColumn> columnSupplier)
   {
-    this.complexColumn = complexColumn;
+    this.columnSupplier = columnSupplier;
     return this;
   }
 
@@ -97,13 +97,11 @@ public class ColumnBuilder
     return new SimpleColumn(
         new ColumnCapabilitiesImpl()
             .setType(type)
-            .setDictionaryEncoded(dictionaryEncodedColumn != null)
+            .setDictionaryEncoded(dictionaryEncoded)
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
             .setHasMultipleValues(hasMultipleValues),
-        dictionaryEncodedColumn,
-        genericColumn,
-        complexColumn,
+        columnSupplier,
         bitmapIndex,
         spatialIndex
     );

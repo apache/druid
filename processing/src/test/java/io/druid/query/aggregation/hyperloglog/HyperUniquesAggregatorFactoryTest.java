@@ -22,7 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import io.druid.hll.HLLCV0;
+import io.druid.hll.VersionZeroHyperLogLogCollector;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -47,7 +47,7 @@ public class HyperUniquesAggregatorFactoryTest
   public void testDeserializeV0()
   {
     Object v0 = aggregatorFactory.deserialize(V0_BASE64);
-    Assert.assertEquals("deserialized value is HLLCV0", HLLCV0.class, v0.getClass());
+    Assert.assertEquals("deserialized value is VersionZeroHyperLogLogCollector", VersionZeroHyperLogLogCollector.class, v0.getClass());
   }
 
   @Test

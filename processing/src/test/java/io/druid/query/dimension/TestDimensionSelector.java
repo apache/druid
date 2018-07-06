@@ -22,7 +22,7 @@ package io.druid.query.dimension;
 import com.google.common.base.Predicate;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import io.druid.segment.DimensionSelector;
+import io.druid.segment.AbstractDimensionSelector;
 import io.druid.segment.DimensionSelectorUtils;
 import io.druid.segment.IdLookup;
 import io.druid.segment.data.IndexedInts;
@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
  * encoding 0 -> a, 1 -> b, ...
  * row -> [c,e,g]
  */
-class TestDimensionSelector implements DimensionSelector
+class TestDimensionSelector extends AbstractDimensionSelector
 {
   public static final TestDimensionSelector instance = new TestDimensionSelector();
 
@@ -92,13 +92,6 @@ class TestDimensionSelector implements DimensionSelector
         return name.charAt(0) - 'a';
       }
     };
-  }
-
-  @Nullable
-  @Override
-  public Object getObject()
-  {
-    return defaultGetObject();
   }
 
   @Override

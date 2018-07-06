@@ -17,20 +17,33 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment.serde;
 
-import io.druid.query.monomorphicprocessing.CalledFromHotLoop;
-import io.druid.query.monomorphicprocessing.HotLoopCallee;
+import com.google.common.base.Supplier;
+import io.druid.collections.bitmap.ImmutableBitmap;
+import io.druid.segment.column.FloatsColumn;
+import io.druid.segment.column.NumericColumn;
+import io.druid.segment.data.CompressedColumnarFloatsSupplier;
 
 /**
- */
-public interface GenericColumn extends BaseColumn, HotLoopCallee
+*/
+public class FloatNumericColumnSupplier implements Supplier<NumericColumn>
 {
-  int length();
+  private final CompressedColumnarFloatsSupplier column;
+  private final ImmutableBitmap nullValueBitmap;
 
-  @CalledFromHotLoop
-  long getLongSingleValueRow(int rowNum);
+  public FloatNumericColumnSupplier(
+      CompressedColumnarFloatsSupplier column,
+      ImmutableBitmap nullValueBitmap
+  )
+  {
+    this.column = column;
+    this.nullValueBitmap = nullValueBitmap;
+  }
 
   @Override
-  void close();
+  public NumericColumn get()
+  {
+    return FloatsColumn.create(column.get(), nullValueBitmap);
+  }
 }

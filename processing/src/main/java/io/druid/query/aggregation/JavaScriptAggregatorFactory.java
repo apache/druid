@@ -32,6 +32,7 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.segment.BaseObjectColumnValueSelector;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
@@ -338,11 +339,11 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
             if (arg != null && arg.getClass().isArray()) {
               // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
               // may have other issues too. Let's just copy the array and wrap that.
-              final Object[] arrayAsObjectArray = new Object[Array.getLength(arg)];
-              for (int j = 0; j < Array.getLength(arg); j++) {
-                arrayAsObjectArray[j] = Array.get(arg, j);
-              }
-              args[i + 1] = cx.newArray(scope, arrayAsObjectArray);
+              args[i + 1] = cx.newArray(scope, arrayToObjectArray(arg));
+            } else if (arg instanceof List) {
+              // Using toArray(Object[]), instead of just toArray(), because Arrays.asList()'s impl and similar List
+              // impls could clone the underlying array in toArray(), that could be not Object[], but e. g. String[].
+              args[i + 1] = cx.newArray(scope, ((List) arg).toArray(ObjectArrays.EMPTY_ARRAY));
             } else {
               args[i + 1] = Context.javaToJS(arg, scope);
             }
@@ -351,6 +352,15 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
 
         final Object res = fnAggregate.call(cx, scope, scope, args);
         return Context.toNumber(res);
+      }
+
+      private Object[] arrayToObjectArray(Object array)
+      {
+        final Object[] objectArray = new Object[Array.getLength(array)];
+        for (int j = 0; j < Array.getLength(array); j++) {
+          objectArray[j] = Array.get(array, j);
+        }
+        return objectArray;
       }
 
       @Override
