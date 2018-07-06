@@ -21,7 +21,10 @@ package io.druid.server.coordinator;
 
 import io.druid.timeline.DataSegment;
 
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Random;
 
 public class RandomBalancerStrategy implements BalancerStrategy
@@ -52,6 +55,12 @@ public class RandomBalancerStrategy implements BalancerStrategy
   public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders)
   {
     return sampler.getRandomBalancerSegmentHolder(serverHolders);
+  }
+
+  @Override
+  public Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
+  {
+    return serverHolders.stream().sorted(Comparator.comparingDouble(o -> new Random().nextDouble())).iterator();
   }
 
   @Override
