@@ -22,6 +22,7 @@ package io.druid.segment.loading;
 import com.google.common.collect.ImmutableMap;
 import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,6 +33,34 @@ import java.util.Arrays;
  */
 public class StorageLocationTest
 {
+  @Test
+  public void testStorageLocationFreePercent()
+  {
+    // free space ignored only maxSize matters
+    StorageLocation locationPlain = fakeLocation(100_000, 5_000, 10_000, null);
+    Assert.assertTrue(locationPlain.canHandle(makeSegment("2012/2013", 9_000)));
+    Assert.assertFalse(locationPlain.canHandle(makeSegment("2012/2013", 11_000)));
+
+    // enough space available maxSize is the limit
+    StorageLocation locationFree = fakeLocation(100_000, 25_000, 10_000, 10.0);
+    Assert.assertTrue(locationFree.canHandle(makeSegment("2012/2013", 9_000)));
+    Assert.assertFalse(locationFree.canHandle(makeSegment("2012/2013", 11_000)));
+
+    // disk almost full percentage is the limit
+    StorageLocation locationFull = fakeLocation(100_000, 15_000, 10_000, 10.0);
+    Assert.assertTrue(locationFull.canHandle(makeSegment("2012/2013", 4_000)));
+    Assert.assertFalse(locationFull.canHandle(makeSegment("2012/2013", 6_000)));
+  }
+
+  private StorageLocation fakeLocation(long total, long free, long max, Double percent)
+  {
+    File file = EasyMock.mock(File.class);
+    EasyMock.expect(file.getTotalSpace()).andReturn(total).anyTimes();
+    EasyMock.expect(file.getFreeSpace()).andReturn(free).anyTimes();
+    EasyMock.replay(file);
+    return new StorageLocation(file, max, percent);
+  }
+
   @Test
   public void testStorageLocation() throws Exception
   {
