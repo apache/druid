@@ -21,7 +21,7 @@ package io.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
+import io.druid.java.util.common.StringUtils;
 
 import javax.validation.constraints.Min;
 import java.util.Objects;
@@ -56,7 +56,7 @@ public class LookupConfig
       @JsonProperty("snapshotWorkingDir") String snapshotWorkingDir
   )
   {
-    this.snapshotWorkingDir = Strings.nullToEmpty(snapshotWorkingDir);
+    this.snapshotWorkingDir = StringUtils.nullToEmptyNonDruidDataString(snapshotWorkingDir);
   }
 
   public String getSnapshotWorkingDir()

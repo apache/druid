@@ -139,7 +139,7 @@ public class SingleStringInputCachingExpressionColumnValueSelector implements Co
   @Override
   public boolean isNull()
   {
-    return eval().isNull();
+    return eval().isNumericNull();
   }
 
   public static class LruEvalCache

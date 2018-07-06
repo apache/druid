@@ -140,11 +140,10 @@ public class EvalTest
     Assert.assertEquals(1271055781L, evalLong("unix_timestamp('2010-04-12T07:03:01')", bindings));
     Assert.assertEquals(1271023381L, evalLong("unix_timestamp('2010-04-12T07:03:01+09:00')", bindings));
     Assert.assertEquals(1271023381L, evalLong("unix_timestamp('2010-04-12T07:03:01.419+09:00')", bindings));
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals("NULL", eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString());
-    } else {
-      Assert.assertEquals("", eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString());
-    }
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? "NULL" : "",
+        eval("nvl(if(x == 9223372036854775807, '', 'x'), 'NULL')", bindings).asString()
+    );
     Assert.assertEquals("x", eval("nvl(if(x == 9223372036854775806, '', 'x'), 'NULL')", bindings).asString());
   }
 

@@ -150,6 +150,6 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public boolean isNull()
   {
-    return getObject().isNull();
+    return getObject().isNumericNull();
   }
 }

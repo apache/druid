@@ -21,11 +21,12 @@ package io.druid.server.lookup;
 
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.server.lookup.cache.loading.LoadingCache;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -62,15 +63,19 @@ public class LoadingLookup extends LookupExtractor
 
 
   @Override
-  public String apply(final String key)
+  public String apply(@Nullable final String key)
   {
-    if (key == null) {
+    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
+    if (keyEquivalent == null) {
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       return null;
     }
+
     final String presentVal;
     try {
-      presentVal = loadingCache.get(key, new ApplyCallable(key));
-      return Strings.emptyToNull(presentVal);
+      presentVal = loadingCache.get(keyEquivalent, new ApplyCallable(keyEquivalent));
+      return NullHandling.emptyToNullIfNeeded(presentVal);
     }
     catch (ExecutionException e) {
       LOGGER.debug("value not found for key [%s]", key);
@@ -79,15 +84,18 @@ public class LoadingLookup extends LookupExtractor
   }
 
   @Override
-  public List<String> unapply(final String value)
+  public List<String> unapply(@Nullable final String value)
   {
-    // null value maps to empty list
-    if (value == null) {
+    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
+    if (valueEquivalent == null) {
+      // valueEquivalent is null only for SQL Compatible Null Behavior
+      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+      // null value maps to empty list when SQL Compatible
       return Collections.EMPTY_LIST;
     }
     final List<String> retList;
     try {
-      retList = reverseLoadingCache.get(value, new UnapplyCallable(value));
+      retList = reverseLoadingCache.get(valueEquivalent, new UnapplyCallable(valueEquivalent));
       return retList;
     }
     catch (ExecutionException e) {
@@ -131,8 +139,9 @@ public class LoadingLookup extends LookupExtractor
     @Override
     public String call()
     {
+      // When SQL compatible null handling is disabled,
       // avoid returning null and return an empty string to cache it.
-      return Strings.nullToEmpty(dataFetcher.fetch(key));
+      return NullHandling.nullToEmptyIfNeeded(dataFetcher.fetch(key));
     }
   }
 

@@ -20,6 +20,7 @@
 package io.druid.query.expression;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.java.util.common.DateTimes;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
@@ -84,8 +85,8 @@ public class ExprMacroTest
   public void testTimestampCeil()
   {
     assertExpr("timestamp_ceil(t, 'P1M')", DateTimes.of("2000-03-01").getMillis());
-    assertExpr("timestamp_ceil(t, 'P1D','','America/Los_Angeles')", DateTimes.of("2000-02-03T08").getMillis());
-    assertExpr("timestamp_ceil(t, 'P1D','',CityOfAngels)", DateTimes.of("2000-02-03T08").getMillis());
+    assertExpr("timestamp_ceil(t, 'P1D',null,'America/Los_Angeles')", DateTimes.of("2000-02-03T08").getMillis());
+    assertExpr("timestamp_ceil(t, 'P1D',null,CityOfAngels)", DateTimes.of("2000-02-03T08").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D','1970-01-01T01','Etc/UTC')", DateTimes.of("2000-02-04T01").getMillis());
   }
 
@@ -93,8 +94,8 @@ public class ExprMacroTest
   public void testTimestampFloor()
   {
     assertExpr("timestamp_floor(t, 'P1M')", DateTimes.of("2000-02-01").getMillis());
-    assertExpr("timestamp_floor(t, 'P1D','','America/Los_Angeles')", DateTimes.of("2000-02-02T08").getMillis());
-    assertExpr("timestamp_floor(t, 'P1D','',CityOfAngels)", DateTimes.of("2000-02-02T08").getMillis());
+    assertExpr("timestamp_floor(t, 'P1D',null,'America/Los_Angeles')", DateTimes.of("2000-02-02T08").getMillis());
+    assertExpr("timestamp_floor(t, 'P1D',null,CityOfAngels)", DateTimes.of("2000-02-02T08").getMillis());
     assertExpr("timestamp_floor(t, 'P1D','1970-01-01T01','Etc/UTC')", DateTimes.of("2000-02-03T01").getMillis());
   }
 
@@ -122,12 +123,12 @@ public class ExprMacroTest
     assertExpr("timestamp_parse(tstr)", DateTimes.of("2000-02-03T04:05:06").getMillis());
     assertExpr("timestamp_parse(tstr_sql)", DateTimes.of("2000-02-03T04:05:06").getMillis());
     assertExpr(
-        "timestamp_parse(tstr_sql,'','America/Los_Angeles')",
+        "timestamp_parse(tstr_sql,null,'America/Los_Angeles')",
         DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
     );
     assertExpr("timestamp_parse('2000-02-03')", DateTimes.of("2000-02-03").getMillis());
     assertExpr("timestamp_parse('2000-02')", DateTimes.of("2000-02-01").getMillis());
-    assertExpr("timestamp_parse('')", null);
+    assertExpr("timestamp_parse(null)", null);
     assertExpr("timestamp_parse('z2000')", null);
     assertExpr("timestamp_parse(tstr_sql,'yyyy-MM-dd HH:mm:ss')", DateTimes.of("2000-02-03T04:05:06").getMillis());
     assertExpr("timestamp_parse('02/03/2000','MM/dd/yyyy')", DateTimes.of("2000-02-03").getMillis());
@@ -148,36 +149,39 @@ public class ExprMacroTest
   @Test
   public void testTrim()
   {
-    assertExpr("trim('')", null);
+    String emptyString = NullHandling.replaceWithDefault() ? null : "";
+    assertExpr("trim('')", emptyString);
     assertExpr("trim(concat(' ',x,' '))", "foo");
     assertExpr("trim(spacey)", "hey there");
     assertExpr("trim(spacey, '')", "  hey there  ");
     assertExpr("trim(spacey, 'he ')", "y ther");
-    assertExpr("trim(spacey, spacey)", null);
+    assertExpr("trim(spacey, spacey)", emptyString);
     assertExpr("trim(spacey, substring(spacey, 0, 4))", "y ther");
   }
 
   @Test
   public void testLTrim()
   {
-    assertExpr("ltrim('')", null);
+    String emptyString = NullHandling.replaceWithDefault() ? null : "";
+    assertExpr("ltrim('')", emptyString);
     assertExpr("ltrim(concat(' ',x,' '))", "foo ");
     assertExpr("ltrim(spacey)", "hey there  ");
     assertExpr("ltrim(spacey, '')", "  hey there  ");
     assertExpr("ltrim(spacey, 'he ')", "y there  ");
-    assertExpr("ltrim(spacey, spacey)", null);
+    assertExpr("ltrim(spacey, spacey)", emptyString);
     assertExpr("ltrim(spacey, substring(spacey, 0, 4))", "y there  ");
   }
 
   @Test
   public void testRTrim()
   {
-    assertExpr("rtrim('')", null);
+    String emptyString = NullHandling.replaceWithDefault() ? null : "";
+    assertExpr("rtrim('')", emptyString);
     assertExpr("rtrim(concat(' ',x,' '))", " foo");
     assertExpr("rtrim(spacey)", "  hey there");
     assertExpr("rtrim(spacey, '')", "  hey there  ");
     assertExpr("rtrim(spacey, 'he ')", "  hey ther");
-    assertExpr("rtrim(spacey, spacey)", null);
+    assertExpr("rtrim(spacey, spacey)", emptyString);
     assertExpr("rtrim(spacey, substring(spacey, 0, 4))", "  hey ther");
   }
 

@@ -84,7 +84,7 @@ public class DruidRexExecutor implements RexExecutor
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
           literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
         } else if (sqlTypeName == SqlTypeName.DATE) {
-          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+          if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
             throw new IAE("Illegal DATE constant: %s", constExp);
           }
 
@@ -95,7 +95,7 @@ public class DruidRexExecutor implements RexExecutor
               )
           );
         } else if (sqlTypeName == SqlTypeName.TIMESTAMP) {
-          if (!constExp.getType().isNullable() && exprResult.isNull()) {
+          if (!constExp.getType().isNullable() && exprResult.isNumericNull()) {
             throw new IAE("Illegal TIMESTAMP constant: %s", constExp);
           }
 

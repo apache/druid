@@ -168,7 +168,7 @@ public class AggregatorUtil
         public float getFloat()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : (float) exprEval.asDouble();
+          return exprEval.isNumericNull() ? nullValue : (float) exprEval.asDouble();
         }
 
         @Override
@@ -181,7 +181,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionFloatColumnSelector();
@@ -209,7 +209,7 @@ public class AggregatorUtil
         public long getLong()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : exprEval.asLong();
+          return exprEval.isNumericNull() ? nullValue : exprEval.asLong();
         }
 
         @Override
@@ -222,7 +222,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionLongColumnSelector();
@@ -250,7 +250,7 @@ public class AggregatorUtil
         public double getDouble()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull() ? nullValue : exprEval.asDouble();
+          return exprEval.isNumericNull() ? nullValue : exprEval.asDouble();
         }
 
         @Override
@@ -263,7 +263,7 @@ public class AggregatorUtil
         public boolean isNull()
         {
           final ExprEval exprEval = baseSelector.getObject();
-          return exprEval.isNull();
+          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionDoubleColumnSelector();

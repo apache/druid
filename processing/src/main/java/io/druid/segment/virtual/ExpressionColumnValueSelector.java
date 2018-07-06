@@ -82,6 +82,6 @@ public class ExpressionColumnValueSelector implements ColumnValueSelector<ExprEv
   @Override
   public boolean isNull()
   {
-    return getObject().isNull();
+    return getObject().isNumericNull();
   }
 }

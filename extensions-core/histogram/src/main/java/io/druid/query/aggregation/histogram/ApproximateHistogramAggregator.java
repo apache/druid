@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.histogram;
 
 import com.google.common.primitives.Longs;
+import io.druid.common.config.NullHandling;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.BaseFloatColumnValueSelector;
 
@@ -59,7 +60,9 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.getFloat());
+    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      histogram.offer(selector.getFloat());
+    }
   }
 
   @Override

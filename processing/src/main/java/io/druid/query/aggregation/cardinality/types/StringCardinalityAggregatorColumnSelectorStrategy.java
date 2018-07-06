@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.cardinality.types;
 
 import com.google.common.hash.Hasher;
+import io.druid.common.config.NullHandling;
 import io.druid.hll.HyperLogLogCollector;
 import io.druid.query.aggregation.cardinality.CardinalityAggregator;
 import io.druid.segment.DimensionSelector;
@@ -40,20 +41,34 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
     if (size == 1) {
       final String value = dimSelector.lookupName(row.get(0));
-      hasher.putUnencodedChars(nullToSpecial(value));
+      if (NullHandling.replaceWithDefault() || value != null) {
+        hasher.putUnencodedChars(nullToSpecial(value));
+      }
     } else if (size != 0) {
+      boolean hasNonNullValue = false;
       final String[] values = new String[size];
       for (int i = 0; i < size; ++i) {
         final String value = dimSelector.lookupName(row.get(i));
+        // SQL standard spec does not count null values,
+        // Skip counting null values when we are not replacing null with default value.
+        // A special value for null in case null handling is configured to use empty string for null.
+        if (NullHandling.sqlCompatible() && !hasNonNullValue && value != null) {
+          hasNonNullValue = true;
+        }
         values[i] = nullToSpecial(value);
       }
-      // Values need to be sorted to ensure consistent multi-value ordering across different segments
-      Arrays.sort(values);
-      for (int i = 0; i < size; ++i) {
-        if (i != 0) {
-          hasher.putChar(CARDINALITY_AGG_SEPARATOR);
+      // SQL standard spec does not count null values,
+      // Skip counting null values when we are not replacing null with default value.
+      // A special value for null in case null handling is configured to use empty string for null.
+      if (NullHandling.replaceWithDefault() || hasNonNullValue) {
+        // Values need to be sorted to ensure consistent multi-value ordering across different segments
+        Arrays.sort(values);
+        for (int i = 0; i < size; ++i) {
+          if (i != 0) {
+            hasher.putChar(CARDINALITY_AGG_SEPARATOR);
+          }
+          hasher.putUnencodedChars(values[i]);
         }
-        hasher.putUnencodedChars(values[i]);
       }
     }
   }
@@ -65,7 +80,12 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
     for (int i = 0, rowSize = row.size(); i < rowSize; i++) {
       int index = row.get(i);
       final String value = dimSelector.lookupName(index);
-      collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());
+      // SQL standard spec does not count null values,
+      // Skip counting null values when we are not replacing null with default value.
+      // A special value for null in case null handling is configured to use empty string for null.
+      if (NullHandling.replaceWithDefault() || value != null) {
+        collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());
+      }
     }
   }
 

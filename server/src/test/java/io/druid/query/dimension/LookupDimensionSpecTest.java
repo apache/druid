@@ -22,8 +22,8 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import io.druid.common.config.NullHandling;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -31,6 +31,7 @@ import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactoryContainer;
 import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.lookup.MapLookupExtractorFactory;
+import io.druid.segment.TestHelper;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.easymock.EasyMock;
@@ -127,11 +128,11 @@ public class LookupDimensionSpecTest
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true),
-            ImmutableMap.of("not there", "")
+            TestHelper.createExpectedMap("not there", null)
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", null, false, null, "lookupName", LOOKUP_REF_MANAGER, true),
-            ImmutableMap.of("not there", "")
+            TestHelper.createExpectedMap("not there", null)
         },
         new Object[]{
             new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, null,
@@ -162,7 +163,10 @@ public class LookupDimensionSpecTest
   public void testApply(DimensionSpec dimensionSpec, Map<String, String> map)
   {
     for (Map.Entry<String, String> entry : map.entrySet()) {
-      Assert.assertEquals(Strings.emptyToNull(entry.getValue()), dimensionSpec.getExtractionFn().apply(entry.getKey()));
+      Assert.assertEquals(
+          NullHandling.emptyToNullIfNeeded(entry.getValue()),
+          dimensionSpec.getExtractionFn().apply(entry.getKey())
+      );
     }
   }
 

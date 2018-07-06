@@ -22,8 +22,8 @@ package io.druid.server.listener.announcer;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import io.druid.java.util.common.StringUtils;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.utils.ZKPaths;
 
@@ -93,7 +93,7 @@ public class ListeningAnnouncerConfig
   {
     return ZKPaths.makePath(
         getListenersPath(), Preconditions.checkNotNull(
-            Strings.emptyToNull(listenerName), "Listener name cannot be null"
+            StringUtils.emptyToNullNonDruidDataString(listenerName), "Listener name cannot be null"
         )
     );
   }
