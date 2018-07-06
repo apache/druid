@@ -71,11 +71,6 @@ public class VirtualColumns implements Cacheable
     }
   }
 
-  public static VirtualColumns create(VirtualColumn...virtualColumns)
-  {
-    return create(Lists.newArrayList(virtualColumns));
-  }
-
   @JsonCreator
   public static VirtualColumns create(List<VirtualColumn> virtualColumns)
   {
