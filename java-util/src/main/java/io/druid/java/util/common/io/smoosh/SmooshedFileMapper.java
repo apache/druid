@@ -20,7 +20,6 @@
 package io.druid.java.util.common.io.smoosh;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -143,6 +142,9 @@ public class SmooshedFileMapper implements Closeable
   {
     Throwable thrown = null;
     for (MappedByteBuffer mappedByteBuffer : buffersList) {
+      if (mappedByteBuffer == null) {
+        continue;
+      }
       try {
         ByteBufferUtils.unmap(mappedByteBuffer);
       }
@@ -154,6 +156,9 @@ public class SmooshedFileMapper implements Closeable
         }
       }
     }
-    Throwables.propagateIfPossible(thrown);
+    buffersList.clear();
+    if (thrown != null) {
+      throw new RuntimeException(thrown);
+    }
   }
 }
