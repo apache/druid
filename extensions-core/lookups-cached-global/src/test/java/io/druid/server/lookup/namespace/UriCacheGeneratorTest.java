@@ -507,7 +507,7 @@ public class UriCacheGeneratorTest
     Assert.assertNotNull(generator.generateCache(extractionNamespace, null, null, scheduler));
   }
 
-  @Test(timeout = 10_000)
+  @Test(timeout = 60_000L)
   public void testDeleteOnScheduleFail() throws Exception
   {
     Assert.assertNull(scheduler.scheduleAndWait(

@@ -81,7 +81,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testLoadDrop() throws Exception
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());

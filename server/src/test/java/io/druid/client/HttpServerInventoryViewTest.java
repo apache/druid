@@ -67,7 +67,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class HttpServerInventoryViewTest
 {
-  @Test(timeout = 10000)
+  @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();

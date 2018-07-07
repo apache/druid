@@ -57,7 +57,7 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
   }
 
   // This task reproduces the races described in https://github.com/druid-io/druid/issues/2842
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testConcurrency() throws Exception
   {
     rtrTestUtils.makeWorker("worker0", 3);

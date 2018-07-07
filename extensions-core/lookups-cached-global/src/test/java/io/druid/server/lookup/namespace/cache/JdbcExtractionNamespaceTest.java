@@ -362,7 +362,7 @@ public class JdbcExtractionNamespaceTest
     Thread.sleep(2);
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testMappingWithoutFilter()
       throws InterruptedException
   {
@@ -389,7 +389,7 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  @Test(timeout = 20_000L)
+  @Test(timeout = 60_000L)
   public void testMappingWithFilter()
       throws InterruptedException
   {
@@ -421,7 +421,7 @@ public class JdbcExtractionNamespaceTest
     }
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testSkipOld()
       throws InterruptedException
   {

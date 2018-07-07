@@ -80,7 +80,7 @@ public class StreamingMergeSortedGrouperTest
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testEmptyIterator()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
@@ -91,13 +91,13 @@ public class StreamingMergeSortedGrouperTest
     Assert.assertTrue(!grouper.iterator(true).hasNext());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testStreamingAggregateWithLargeBuffer() throws ExecutionException, InterruptedException
   {
     testStreamingAggregate(1024);
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testStreamingAggregateWithMinimumBuffer() throws ExecutionException, InterruptedException
   {
     testStreamingAggregate(60);

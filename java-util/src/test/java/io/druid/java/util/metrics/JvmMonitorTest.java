@@ -31,7 +31,7 @@ import java.util.List;
 public class JvmMonitorTest
 {
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testGcCounts() throws InterruptedException
   {
     GcTrackingEmitter emitter = new GcTrackingEmitter();

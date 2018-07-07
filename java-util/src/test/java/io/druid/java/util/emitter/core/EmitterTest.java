@@ -367,7 +367,7 @@ public class EmitterTest
     Assert.assertTrue("httpClient.succeeded()", httpClient.succeeded());
   }
 
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testFailedEmission() throws Exception
   {
     final UnitEvent event1 = new UnitEvent("test", 1);

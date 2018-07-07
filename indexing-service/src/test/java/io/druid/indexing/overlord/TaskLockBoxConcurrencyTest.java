@@ -82,7 +82,7 @@ public class TaskLockBoxConcurrencyTest
     service.shutdownNow();
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testDoInCriticalSectionWithDifferentTasks()
       throws ExecutionException, InterruptedException, EntryExistsException
   {
@@ -163,7 +163,7 @@ public class TaskLockBoxConcurrencyTest
     Assert.assertTrue(result.isRevoked());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testDoInCriticalSectionWithOverlappedIntervals() throws Exception
   {
     final List<Interval> intervals = ImmutableList.of(

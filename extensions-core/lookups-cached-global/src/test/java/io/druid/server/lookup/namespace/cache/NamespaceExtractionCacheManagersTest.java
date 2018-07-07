@@ -70,7 +70,7 @@ public class NamespaceExtractionCacheManagersTest
     manager = createCacheManager.apply(lifecycle);
   }
 
-  @Test(timeout = 30000L)
+  @Test(timeout = 60_000L)
   public void testRacyCreation() throws Exception
   {
     final int concurrentThreads = 10;
@@ -116,7 +116,7 @@ public class NamespaceExtractionCacheManagersTest
   /**
    * Tests that even if CacheHandler.close() wasn't called, the cache is cleaned up when it becomes unreachable.
    */
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testCacheCloseForgotten() throws InterruptedException
   {
     Assert.assertEquals(0, manager.cacheCount());

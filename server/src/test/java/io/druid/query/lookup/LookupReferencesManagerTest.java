@@ -434,7 +434,7 @@ public class LookupReferencesManagerTest
     Assert.assertTrue(state.getToDrop().contains("one"));
   }
 
-  @Test(timeout = 20000)
+  @Test(timeout = 60_000L)
   public void testRealModeWithMainThread() throws Exception
   {
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
