@@ -674,7 +674,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       return null;
     }
     if (key.length == 1) {
-      return NullHandling.nullToEmptyIfNeeded(getActualValue(key[0], false));
+      return getActualValue(key[0], false);
     } else {
       String[] rowArray = new String[key.length];
       for (int i = 0; i < key.length; i++) {

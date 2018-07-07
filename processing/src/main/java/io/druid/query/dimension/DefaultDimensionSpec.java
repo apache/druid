@@ -21,17 +21,17 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import io.druid.java.util.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  */
@@ -49,18 +49,9 @@ public class DefaultDimensionSpec implements DimensionSpec
 
   public static List<DimensionSpec> toSpec(Iterable<String> dimensionNames)
   {
-    return Lists.newArrayList(
-        Iterables.transform(
-            dimensionNames, new Function<String, DimensionSpec>()
-            {
-              @Override
-              public DimensionSpec apply(String input)
-              {
-                return new DefaultDimensionSpec(input, input);
-              }
-            }
-        )
-    );
+    return StreamSupport.stream(dimensionNames.spliterator(), false)
+                        .map(input -> new DefaultDimensionSpec(input, input))
+                        .collect(Collectors.toList());
   }
 
   private static final byte CACHE_TYPE_ID = 0x0;
@@ -71,8 +62,8 @@ public class DefaultDimensionSpec implements DimensionSpec
   @JsonCreator
   public DefaultDimensionSpec(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("outputName") String outputName,
-      @JsonProperty("outputType") ValueType outputType
+      @JsonProperty("outputName") @Nullable String outputName,
+      @JsonProperty("outputType") @Nullable ValueType outputType
   )
   {
     this.dimension = dimension;
@@ -82,10 +73,7 @@ public class DefaultDimensionSpec implements DimensionSpec
     this.outputName = outputName == null ? dimension : outputName;
   }
 
-  public DefaultDimensionSpec(
-      String dimension,
-      String outputName
-  )
+  public DefaultDimensionSpec(String dimension, String outputName)
   {
     this(dimension, outputName, ValueType.STRING);
   }

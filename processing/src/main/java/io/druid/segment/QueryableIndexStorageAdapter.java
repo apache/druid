@@ -37,11 +37,11 @@ import io.druid.query.filter.Filter;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.column.BaseColumn;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnHolder;
+import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.NumericColumn;
-import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.Offset;
 import io.druid.segment.data.ReadableOffset;
@@ -101,6 +101,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public int getDimensionCardinality(String dimension)
   {
     ColumnHolder columnHolder = index.getColumn(dimension);
+    if (columnHolder == null) {
+      return 0;
+    }
     try (BaseColumn col = columnHolder.getColumn()) {
       if (!(col instanceof DictionaryEncodedColumn)) {
         return Integer.MAX_VALUE;

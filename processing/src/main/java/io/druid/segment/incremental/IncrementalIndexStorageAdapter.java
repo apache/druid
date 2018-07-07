@@ -33,11 +33,12 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionIndexer;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.Metadata;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.VirtualColumns;
-import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnHolder;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -94,8 +95,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return 0;
     }
 
-    DimensionIndexer indexer = index.getDimension(dimension).getIndexer();
-    return indexer.getCardinality();
+    DimensionIndexer indexer = desc.getIndexer();
+    int cardinality = indexer.getCardinality();
+    return cardinality != DimensionSelector.CARDINALITY_UNKNOWN ? cardinality : Integer.MAX_VALUE;
   }
 
   @Override

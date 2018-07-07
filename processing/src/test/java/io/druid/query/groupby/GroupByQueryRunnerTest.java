@@ -7221,24 +7221,17 @@ public class GroupByQueryRunnerTest
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
 
-    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
-                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec(
-                                         "null_column",
-                                         "alias"
-                                     )))
-                                     .setAggregatorSpecs(
-                                         Arrays.asList(
-                                             QueryRunnerTestHelper.rowsCount,
-                                             new LongSumAggregatorFactory("idx", "index")
-                                         ))
-                                     .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(new ExtractionDimFilter(
-                                         "null_column",
-                                         "EMPTY",
-                                         lookupExtractionFn,
-                                         null
-                                     )).build();
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("null_column", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setDimFilter(new ExtractionDimFilter("null_column", "EMPTY", lookupExtractionFn, null))
+        .build();
     List<Row> expectedResults = Arrays
         .asList(
             GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
