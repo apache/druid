@@ -17,7 +17,7 @@
  * under the License.
  */
 
-ackage io.druid.query.filter;
+package io.druid.query.filter;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
