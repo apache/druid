@@ -670,7 +670,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   @Override
   public Object convertUnsortedEncodedKeyComponentToActualList(int[] key)
   {
-    if (key.length == 0) {
+    if (key == null || key.length == 0) {
       return null;
     }
     if (key.length == 1) {
