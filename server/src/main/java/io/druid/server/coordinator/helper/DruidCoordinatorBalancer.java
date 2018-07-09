@@ -94,7 +94,6 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
   )
   {
     final BalancerStrategy strategy = params.getBalancerStrategy();
-    final int maxSegmentsToMove = params.getCoordinatorDynamicConfig().getMaxSegmentsToMove();
 
     currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());
 
@@ -122,9 +121,12 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       return;
     }
 
+    final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
+    final int maxIterations = 2 * maxSegmentsToMove;
+
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     long unmoved = 0L;
-    for (int moved = 0; (moved + unmoved) < maxSegmentsToMove;) {
+    for (int moved = 0, iter = 0; (moved + unmoved) < maxSegmentsToMove; iter++) {
       final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(toMoveFrom);
 
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
@@ -143,6 +145,10 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
           log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getSegment().getIdentifier());
           unmoved++;
         }
+      }
+      if (iter >= maxIterations) {
+        log.info("Unable to select %d remaining candidate segments out of %d total to balance after %d iterations, ending run.", (maxSegmentsToMove - moved - unmoved), maxSegmentsToMove, iter);
+        break;
       }
     }
 
