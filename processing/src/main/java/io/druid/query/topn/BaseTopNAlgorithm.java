@@ -19,6 +19,7 @@
 
 package io.druid.query.topn;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.Pair;
 import io.druid.query.aggregation.Aggregator;
@@ -29,6 +30,7 @@ import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IdLookup;
+import io.druid.segment.StorageAdapter;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -62,11 +64,11 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     return aggregators;
   }
 
-  protected final Capabilities capabilities;
+  protected final StorageAdapter storageAdapter;
 
-  protected BaseTopNAlgorithm(Capabilities capabilities)
+  protected BaseTopNAlgorithm(StorageAdapter storageAdapter)
   {
-    this.capabilities = capabilities;
+    this.storageAdapter = storageAdapter;
   }
 
   @Override
@@ -134,7 +136,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
    * This function currently handles TopNs on long and float columns, which do not provide cardinality or an ID lookup.
    * When cardinality is unknown, process everything in one pass.
    * Existing implementations of makeDimValSelector() require cardinality as well, so the DimValSelector is not used.
-   * @param params TopN parameters from run()
+   *
+   * @param params        TopN parameters from run()
    * @param resultBuilder Result builder from run()
    */
   private void runWithCardinalityUnknown(
@@ -162,9 +165,9 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
   /**
    * Skip invalid value, calculate length to have enough valid value to process or hit the end.
    *
-   * @param dimValSelector  the dim value selector which record value is valid or invalid.
-   * @param numProcessed    the start position to process
-   * @param numToProcess    the number of valid value to process
+   * @param dimValSelector the dim value selector which record value is valid or invalid.
+   * @param numProcessed   the start position to process
+   * @param numToProcess   the number of valid value to process
    *
    * @return the length between which have enough valid value to process or hit the end.
    */
@@ -206,9 +209,14 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     Aggregator[][] expansionAggs;
     int cardinality;
 
-    public AggregatorArrayProvider(DimensionSelector dimSelector, TopNQuery query, int cardinality, Capabilities capabilities)
+    public AggregatorArrayProvider(
+        DimensionSelector dimSelector,
+        TopNQuery query,
+        int cardinality,
+        StorageAdapter storageAdapter
+    )
     {
-      super(dimSelector, query, capabilities);
+      super(dimSelector, query, storageAdapter);
 
       this.expansionAggs = new Aggregator[cardinality][];
       this.cardinality = cardinality;
@@ -236,17 +244,17 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
     private final IdLookup idLookup;
     private final TopNQuery query;
-    private final Capabilities capabilities;
+    private final StorageAdapter storageAdapter;
 
     public BaseArrayProvider(
         DimensionSelector dimSelector,
         TopNQuery query,
-        Capabilities capabilities
+        StorageAdapter storageAdapter
     )
     {
       this.idLookup = dimSelector.idLookup();
       this.query = query;
-      this.capabilities = capabilities;
+      this.storageAdapter = storageAdapter;
 
       previousStop = null;
       ignoreAfterThreshold = false;
@@ -261,6 +269,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     @Override
     public void skipTo(String previousStop)
     {
+      Capabilities capabilities = storageAdapter.getCapabilities();
       if (capabilities.dimensionValuesSorted()) {
         this.previousStop = previousStop;
       }
@@ -284,7 +293,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       keepOnlyN = n;
     }
 
-    protected Pair<Integer, Integer> computeStartEnd(int cardinality)
+    @VisibleForTesting
+    public Pair<Integer, Integer> computeStartEnd(int cardinality)
     {
       int startIndex = ignoreFirstN;
 
@@ -305,7 +315,9 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       int endIndex = Math.min(ignoreFirstN + keepOnlyN, cardinality);
 
-      if (ignoreAfterThreshold && query.getDimensionsFilter() == null) {
+      if (ignoreAfterThreshold &&
+          query.getDimensionsFilter() == null &&
+          query.getIntervals().stream().anyMatch(interval -> interval.contains(storageAdapter.getInterval()))) {
         endIndex = Math.min(endIndex, startIndex + query.getThreshold());
       }
 
