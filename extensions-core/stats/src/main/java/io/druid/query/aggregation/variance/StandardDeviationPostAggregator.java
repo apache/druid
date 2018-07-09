@@ -107,7 +107,8 @@ public class StandardDeviationPostAggregator implements PostAggregator
     return "StandardDeviationPostAggregator{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
-           ", isVariancePop='" + isVariancePop + '\'' +
+           ", estimator='" + estimator + '\'' +
+           ", isVariancePop=" + isVariancePop +
            '}';
   }
 
@@ -116,6 +117,7 @@ public class StandardDeviationPostAggregator implements PostAggregator
   {
     return new CacheKeyBuilder(PostAggregatorIds.VARIANCE_STANDARD_DEVIATION)
         .appendString(fieldName)
+        .appendString(estimator)
         .appendBoolean(isVariancePop)
         .build();
   }
