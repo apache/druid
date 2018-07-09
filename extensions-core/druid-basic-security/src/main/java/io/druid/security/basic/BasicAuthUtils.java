@@ -117,7 +117,7 @@ public class BasicAuthUtils
   }
 
   @Nullable
-  public static String getBasicUserSecretFromHttpReq(HttpServletRequest httpReq)
+  public static String getEncodedUserSecretFromHttpReq(HttpServletRequest httpReq)
   {
     String authHeader = httpReq.getHeader("Authorization");
 
@@ -133,8 +133,12 @@ public class BasicAuthUtils
       return null;
     }
 
-    String encodedUserSecret = authHeader.substring(6);
+    return authHeader.substring(6);
+  }
 
+  @Nullable
+  public static String decodeUserSecret(String encodedUserSecret)
+  {
     try {
       return StringUtils.fromUtf8(Base64.getDecoder().decode(encodedUserSecret));
     }
