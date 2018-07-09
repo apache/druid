@@ -126,23 +126,33 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     long unmoved = 0L;
-    for (int moved = 0, iter = 0; (moved + unmoved) < maxSegmentsToMove; iter++) {
+
+    for (int moved = 0, iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
       final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(toMoveFrom);
 
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
-        final List<ServerHolder> toMoveToWithLoadQueueCapacity =
+
+        final List<ServerHolder> toMoveToWithLoadQueueCapacityAndNotServingSegment =
             toMoveTo.stream()
-                    .filter(s -> maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)
+                    .filter(s -> (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad) && !s.isServingSegment(segmentToMove.getSegment()))
                     .collect(Collectors.toList());
 
-        final ServerHolder destinationHolder =
-            strategy.findNewSegmentHomeBalancer(segmentToMove.getSegment(), toMoveToWithLoadQueueCapacity);
+        if (toMoveToWithLoadQueueCapacityAndNotServingSegment.size() > 0) {
+          final ServerHolder destinationHolder =
+              strategy.findNewSegmentHomeBalancer(
+                  segmentToMove.getSegment(),
+                  toMoveToWithLoadQueueCapacityAndNotServingSegment
+              );
 
-        if (destinationHolder != null) {
-          moveSegment(segmentToMove, destinationHolder.getServer(), params);
-          moved++;
+          if (destinationHolder != null) {
+            moveSegment(segmentToMove, destinationHolder.getServer(), params);
+            moved++;
+          } else {
+            log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getSegment().getIdentifier());
+            unmoved++;
+          }
         } else {
-          log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getSegment().getIdentifier());
+          log.info("No valid movement destinations for segment [%s].", segmentToMove.getSegment().getIdentifier());
           unmoved++;
         }
       }
