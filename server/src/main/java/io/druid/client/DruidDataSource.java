@@ -90,6 +90,14 @@ public class DruidDataSource
     return new ImmutableDruidDataSource(name, properties, idToSegmentMap);
   }
 
+  // For performance reasons, make sure we check for the existence of a segment using containsSegment(),
+  // which performs a key-based lookup, instead of calling contains() on the collection returned by
+  // dataSource.getSegments(). In Map values collections, the contains() method is a linear scan.
+  public boolean containsSegment(DataSegment segment)
+  {
+    return idToSegmentMap.containsKey(segment.getIdentifier());
+  }
+
   @Override
   public String toString()
   {
