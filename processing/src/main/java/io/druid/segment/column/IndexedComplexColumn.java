@@ -53,6 +53,12 @@ public class IndexedComplexColumn implements ComplexColumn
   }
 
   @Override
+  public int getLength()
+  {
+    return column.size();
+  }
+
+  @Override
   public void close()
   {
   }

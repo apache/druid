@@ -33,6 +33,7 @@ public interface ComplexColumn extends BaseColumn
   Class<?> getClazz();
   String getTypeName();
   Object getRowValue(int rowNum);
+  int getLength();
 
   @Override
   void close();
