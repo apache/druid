@@ -68,7 +68,10 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseLongColumnValueSelector selector)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      BaseLongColumnValueSelector selector
+  )
   {
     return new LongSumBufferAggregator(selector);
   }

@@ -26,10 +26,11 @@ import io.druid.segment.ColumnValueSelector;
 import javax.annotation.Nullable;
 
 /**
- * The result of a NullableAggregateCombiner will be null if all the values to be combined are null values or no values are combined at all.
- * If any of the value is non-null, the result would be the value of the delegate combiner.
- * Note that the delegate combiner is not required to perform check for {@link BaseNullableColumnValueSelector#isNull()} on the selector as only non-null values
- * will be passed to the delegate combiner. This class is only used when SQL compatible null handling is enabled.
+ * The result of a NullableAggregateCombiner will be null if all the values to be combined are null values or no values
+ * are combined at all. If any of the value is non-null, the result would be the value of the delegate combiner.
+ * Note that the delegate combiner is not required to perform check for {@link BaseNullableColumnValueSelector#isNull()}
+ * on the selector as only non-null values will be passed to the delegate combiner.
+ * This class is only used when SQL compatible null handling is enabled.
  */
 @PublicApi
 public final class NullableAggregateCombiner<T> implements AggregateCombiner<T>

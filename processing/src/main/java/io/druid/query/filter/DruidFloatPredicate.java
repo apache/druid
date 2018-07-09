@@ -23,8 +23,8 @@ package io.druid.query.filter;
  * Note: this is not a {@link io.druid.guice.annotations.PublicApi} or an
  * {@link io.druid.guice.annotations.ExtensionPoint} of Druid.
  */
-// All implementations are currently lambda expressions and intellij inspections wrongly complains about unused variable.
-// SupressWarnings can be removed once https://youtrack.jetbrains.com/issue/IDEA-191743 is resolved.
+// All implementations are currently lambda expressions and intellij inspections wrongly complains about unused
+// variable. SupressWarnings can be removed once https://youtrack.jetbrains.com/issue/IDEA-191743 is resolved.
 @SuppressWarnings("unused")
 public interface DruidFloatPredicate
 {

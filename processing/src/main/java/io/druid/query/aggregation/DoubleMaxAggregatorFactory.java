@@ -68,7 +68,10 @@ public class DoubleMaxAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      BaseDoubleColumnValueSelector selector
+  )
   {
     return new DoubleMaxBufferAggregator(selector);
   }

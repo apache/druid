@@ -68,7 +68,10 @@ public class DoubleMinAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      BaseDoubleColumnValueSelector selector
+  )
   {
     return new DoubleMinBufferAggregator(selector);
   }

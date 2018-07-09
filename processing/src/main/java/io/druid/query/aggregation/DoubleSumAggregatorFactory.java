@@ -68,7 +68,10 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  protected BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory, BaseDoubleColumnValueSelector selector)
+  protected BufferAggregator factorizeBuffered(
+      ColumnSelectorFactory metricFactory,
+      BaseDoubleColumnValueSelector selector
+  )
   {
     return new DoubleSumBufferAggregator(selector);
   }

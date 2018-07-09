@@ -282,7 +282,11 @@ public class InDimFilter implements DimFilter
     }
 
     builder.append(" IN (")
-           .append(Joiner.on(", ").join(Iterables.transform(values, input -> StringUtils.nullToEmptyNonDruidDataString(input))))
+           .append(
+               Joiner.on(", ").join(
+                   Iterables.transform(values, input -> StringUtils.nullToEmptyNonDruidDataString(input))
+               )
+           )
            .append(")");
     return builder.toString();
   }
