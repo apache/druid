@@ -386,13 +386,13 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         );
         return;
       }
-      actionCompleted();
       log.info(
           "Server[%s] done processing %s of segment [%s]",
           basePath,
           currentlyProcessing.getType() == LOAD ? "load" : "drop",
           path
       );
+      actionCompleted();
     }
   }
 
