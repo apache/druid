@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -85,16 +84,11 @@ public class ResetCluster extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
-            );
-            JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
-          }
+        binder -> {
+          JsonConfigProvider.bindInstance(
+              binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
+          );
+          JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
         },
         new IndexingServiceTaskLogsModule()
     );

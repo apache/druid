@@ -363,13 +363,13 @@ public class PullDependencies implements Runnable
                 String scope = node.getDependency().getScope();
                 if (scope != null) {
                   scope = StringUtils.toLowerCase(scope);
-                  if (scope.equals("provided")) {
+                  if ("provided".equals(scope)) {
                     return false;
                   }
-                  if (scope.equals("test")) {
+                  if ("test".equals(scope)) {
                     return false;
                   }
-                  if (scope.equals("system")) {
+                  if ("system".equals(scope)) {
                     return false;
                   }
                 }
@@ -508,7 +508,7 @@ public class PullDependencies implements Runnable
     if (!useProxy) {
       return new DefaultTeslaAether(
           localRepository,
-          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
+          remoteRepositories.toArray(new Repository[0])
       );
     }
 

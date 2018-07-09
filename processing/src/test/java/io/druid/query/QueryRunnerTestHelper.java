@@ -240,7 +240,7 @@ public class QueryRunnerTestHelper
   static {
     List<String> list = new ArrayList(Arrays.asList(expectedFullOnIndexValues));
     Collections.reverse(list);
-    expectedFullOnIndexValuesDesc = list.toArray(new String[list.size()]);
+    expectedFullOnIndexValuesDesc = list.toArray(new String[0]);
   }
 
   public static final DateTime earliest = DateTimes.of("2011-01-12");

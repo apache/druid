@@ -201,6 +201,6 @@ public abstract class AggregatorFactory implements Cacheable
 
     return mergedAggregators == null
            ? null
-           : mergedAggregators.values().toArray(new AggregatorFactory[mergedAggregators.size()]);
+           : mergedAggregators.values().toArray(new AggregatorFactory[0]);
   }
 }

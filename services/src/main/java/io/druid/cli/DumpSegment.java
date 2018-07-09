@@ -49,7 +49,6 @@ import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.logger.Logger;
@@ -491,17 +490,7 @@ public class DumpSegment extends GuiceRunnable
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)
   {
-    sequence.accumulate(
-        null,
-        new Accumulator<Object, T>()
-        {
-          @Override
-          public Object accumulate(Object accumulated, T in)
-          {
-            return null;
-          }
-        }
-    );
+    sequence.accumulate(null, (accumulated, in) -> null);
   }
 
   private static class ListObjectSelector implements ColumnValueSelector

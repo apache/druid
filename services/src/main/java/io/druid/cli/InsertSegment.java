@@ -22,7 +22,6 @@ package io.druid.cli;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -77,16 +76,9 @@ public class InsertSegment extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
-            );
-          }
-        }
+        binder -> JsonConfigProvider.bindInstance(
+            binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
+        )
     );
   }
 
@@ -137,6 +129,4 @@ public class InsertSegment extends GuiceRunnable
       indexerMetadataStorageCoordinator.updateSegmentMetadata(segmentsAlreadyExist);
     }
   }
-
-  
 }

@@ -325,12 +325,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       final AggregatorFactory[] aggs1 = arg1.getAggregators() != null
                                         ? arg1.getAggregators()
                                               .values()
-                                              .toArray(new AggregatorFactory[arg1.getAggregators().size()])
+                                              .toArray(new AggregatorFactory[0])
                                         : null;
       final AggregatorFactory[] aggs2 = arg2.getAggregators() != null
                                         ? arg2.getAggregators()
                                               .values()
-                                              .toArray(new AggregatorFactory[arg2.getAggregators().size()])
+                                              .toArray(new AggregatorFactory[0])
                                         : null;
       final AggregatorFactory[] merged = AggregatorFactory.mergeAggregators(Arrays.asList(aggs1, aggs2));
       if (merged != null) {

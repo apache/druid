@@ -42,6 +42,6 @@ public class DruidSysMonitor extends SysMonitor
       dirs.add(loc.getPath().toString());
     }
 
-    addDirectoriesToMonitor(dirs.toArray(new String[dirs.size()]));
+    addDirectoriesToMonitor(dirs.toArray(new String[0]));
   }
 }

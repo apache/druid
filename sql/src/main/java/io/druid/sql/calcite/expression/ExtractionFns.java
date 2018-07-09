@@ -100,7 +100,7 @@ public class ExtractionFns
         extractionFns.add(g);
       }
 
-      return new CascadeExtractionFn(extractionFns.toArray(new ExtractionFn[extractionFns.size()]));
+      return new CascadeExtractionFn(extractionFns.toArray(new ExtractionFn[0]));
     }
   }
 }

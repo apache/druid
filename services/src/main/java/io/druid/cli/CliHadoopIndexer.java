@@ -96,7 +96,7 @@ public class CliHadoopIndexer implements Runnable
         driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
       }
 
-      final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[driverURLs.size()]), null);
+      final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[0]), null);
       Thread.currentThread().setContextClassLoader(loader);
 
       final List<URL> jobUrls = Lists.newArrayList();

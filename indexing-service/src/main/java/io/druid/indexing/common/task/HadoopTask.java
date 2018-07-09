@@ -164,7 +164,7 @@ public abstract class HadoopTask extends AbstractTask
     }
 
     final ClassLoader classLoader = new URLClassLoader(
-        localClassLoaderURLs.toArray(new URL[localClassLoaderURLs.size()]),
+        localClassLoaderURLs.toArray(new URL[0]),
         null
     );
 

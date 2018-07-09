@@ -20,7 +20,6 @@
 package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -74,40 +73,35 @@ public class CreateTables extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            JsonConfigProvider.bindInstance(
-                binder, Key.get(MetadataStorageConnectorConfig.class), new MetadataStorageConnectorConfig()
+        binder -> {
+          JsonConfigProvider.bindInstance(
+              binder, Key.get(MetadataStorageConnectorConfig.class), new MetadataStorageConnectorConfig()
+              {
+                @Override
+                public String getConnectURI()
                 {
-                  @Override
-                  public String getConnectURI()
-                  {
-                    return connectURI;
-                  }
-
-                  @Override
-                  public String getUser()
-                  {
-                    return user;
-                  }
-
-                  @Override
-                  public String getPassword()
-                  {
-                    return password;
-                  }
+                  return connectURI;
                 }
-            );
-            JsonConfigProvider.bindInstance(
-                binder, Key.get(MetadataStorageTablesConfig.class), MetadataStorageTablesConfig.fromBase(base)
-            );
-            JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
-            );
-          }
+
+                @Override
+                public String getUser()
+                {
+                  return user;
+                }
+
+                @Override
+                public String getPassword()
+                {
+                  return password;
+                }
+              }
+          );
+          JsonConfigProvider.bindInstance(
+              binder, Key.get(MetadataStorageTablesConfig.class), MetadataStorageTablesConfig.fromBase(base)
+          );
+          JsonConfigProvider.bindInstance(
+              binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
+          );
         }
     );
   }
