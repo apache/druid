@@ -41,6 +41,7 @@ import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.BitmapValues;
 import io.druid.segment.data.ByteBufferWriter;
+import io.druid.segment.data.CloseableIndexed;
 import io.druid.segment.data.ColumnarIntsSerializer;
 import io.druid.segment.data.ColumnarMultiIntsSerializer;
 import io.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
@@ -62,6 +63,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -667,8 +669,12 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
       if (dimConversion != null) {
         seekers[i] = new IndexSeekerWithConversion((IntBuffer) dimConversion.asReadOnlyBuffer().rewind());
       } else {
-        Indexed<String> dimValueLookup = adapters.get(i).getDimValueLookup(dimension);
-        seekers[i] = new IndexSeekerWithoutConversion(dimValueLookup == null ? 0 : dimValueLookup.size());
+        try (CloseableIndexed<String> dimValueLookup = adapters.get(i).getDimValueLookup(dimension)) {
+          seekers[i] = new IndexSeekerWithoutConversion(dimValueLookup == null ? 0 : dimValueLookup.size());
+        }
+        catch (IOException e) {
+          throw new UncheckedIOException(e);
+        }
       }
     }
     return seekers;
