@@ -35,7 +35,7 @@ public abstract class ThreadRenamingCallable<T> implements Callable<T>
   }
 
   @Override
-  public final T call()
+  public final T call() throws Exception
   {
     final Thread currThread = Thread.currentThread();
     String currName = currThread.getName();
@@ -48,5 +48,5 @@ public abstract class ThreadRenamingCallable<T> implements Callable<T>
     }
   }
 
-  public abstract T doCall();
+  public abstract T doCall() throws Exception;
 }
