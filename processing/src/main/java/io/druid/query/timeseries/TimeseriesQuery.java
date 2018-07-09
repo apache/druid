@@ -22,6 +22,7 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.java.util.common.granularity.Granularity;
 import io.druid.query.BaseQuery;
@@ -52,6 +53,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  private final int limit;
 
   @JsonCreator
   public TimeseriesQuery(
@@ -63,6 +65,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
+      @JsonProperty("limit") int limit,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -76,6 +79,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );
+    this.limit = (limit == 0) ? Integer.MAX_VALUE : limit;
+    Preconditions.checkArgument(this.limit > 0, "limit must be greater than 0");
   }
 
   @Override
@@ -118,6 +123,12 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;
+  }
+
+  @JsonProperty("limit")
+  public int getLimit()
+  {
+    return limit;
   }
 
   public boolean isGrandTotal()
@@ -171,6 +182,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
            ", granularity='" + getGranularity() + '\'' +
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
+           ", limit=" + limit +
            ", context=" + getContext() +
            '}';
   }
@@ -188,7 +200,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       return false;
     }
     final TimeseriesQuery that = (TimeseriesQuery) o;
-    return Objects.equals(virtualColumns, that.virtualColumns) &&
+    return limit == that.limit &&
+           Objects.equals(virtualColumns, that.virtualColumns) &&
            Objects.equals(dimFilter, that.dimFilter) &&
            Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
            Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
@@ -197,6 +210,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), virtualColumns, dimFilter, aggregatorSpecs, postAggregatorSpecs);
+    return Objects.hash(super.hashCode(), virtualColumns, dimFilter, aggregatorSpecs, postAggregatorSpecs, limit);
   }
 }

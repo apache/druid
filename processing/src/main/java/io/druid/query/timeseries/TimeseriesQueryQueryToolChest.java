@@ -107,12 +107,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           Map<String, Object> context
       )
       {
-        return super.doRun(
+        int limit = ((TimeseriesQuery) queryPlus.getQuery()).getLimit();
+        Sequence<Result<TimeseriesResultValue>> result = super.doRun(
             baseRunner,
             // Don't do post aggs until makePostComputeManipulatorFn() is called
             queryPlus.withQuery(((TimeseriesQuery) queryPlus.getQuery()).withPostAggregatorSpecs(ImmutableList.of())),
             context
         );
+        if (limit < Integer.MAX_VALUE) {
+          return result.limit(limit);
+        }
+        return result;
       }
 
       @Override
@@ -264,6 +269,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             .appendCacheable(query.getDimensionsFilter())
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheable(query.getVirtualColumns())
+            .appendInt(query.getLimit())
             .build();
       }
 

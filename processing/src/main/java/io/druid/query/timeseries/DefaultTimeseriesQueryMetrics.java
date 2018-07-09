@@ -35,9 +35,16 @@ public class DefaultTimeseriesQueryMetrics extends DefaultQueryMetrics<Timeserie
   public void query(TimeseriesQuery query)
   {
     super.query(query);
+    limit(query);
     numMetrics(query);
     numComplexMetrics(query);
     granularity(query);
+  }
+
+  @Override
+  public void limit(TimeseriesQuery query)
+  {
+    setDimension("limit", String.valueOf(query.getLimit()));
   }
 
   @Override

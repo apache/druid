@@ -46,7 +46,16 @@ public class TimeseriesQueryEngine
     }
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+    final int limit = query.getLimit();
+    Sequence<Result<TimeseriesResultValue>> result = generateTimeseriesResult(adapter, query, filter);
+    if (limit < Integer.MAX_VALUE) {
+      return result.limit(limit);
+    }
+    return result;
+  }
 
+  private Sequence<Result<TimeseriesResultValue>> generateTimeseriesResult(StorageAdapter adapter, TimeseriesQuery query, Filter filter)
+  {
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
@@ -81,7 +90,6 @@ public class TimeseriesQueryEngine
                 }
                 cursor.advance();
               }
-
               TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
 
               for (int i = 0; i < aggregatorSpecs.size(); i++) {
