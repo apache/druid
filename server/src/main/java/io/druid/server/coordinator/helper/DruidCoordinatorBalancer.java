@@ -93,8 +93,11 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       CoordinatorStats stats
   )
   {
-    final BalancerStrategy strategy = params.getBalancerStrategy();
 
+    if (params.getAvailableSegments().size() == 0) {
+      log.info("Metadata segments are not available. Cannot balance.");
+      return;
+    }
     currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());
 
     if (!currentlyMovingSegments.get(tier).isEmpty()) {
@@ -116,14 +119,15 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       numSegments += sourceHolder.getServer().getSegments().size();
     }
 
+
     if (numSegments == 0) {
       log.info("No segments found.  Cannot balance.");
       return;
     }
 
+    final BalancerStrategy strategy = params.getBalancerStrategy();
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
     final int maxIterations = 2 * maxSegmentsToMove;
-
     final int maxToLoad = params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue();
     long unmoved = 0L;
 

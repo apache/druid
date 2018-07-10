@@ -142,7 +142,7 @@ public class ImmutableDruidServer
 
     ImmutableDruidServer that = (ImmutableDruidServer) o;
 
-    if (metadata.equals(that.metadata)) {
+    if (!metadata.equals(that.metadata)) {
       return false;
     }
 
