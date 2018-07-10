@@ -66,7 +66,7 @@ public class CreateTables extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         // It's unknown why those modules are required in CreateTables, and if all of those modules are required or not.
         // Maybe some of those modules could be removed.
         // See https://github.com/druid-io/druid/pull/4429#discussion_r123602930
@@ -75,7 +75,9 @@ public class CreateTables extends GuiceRunnable
         new QueryRunnerFactoryModule(),
         binder -> {
           JsonConfigProvider.bindInstance(
-              binder, Key.get(MetadataStorageConnectorConfig.class), new MetadataStorageConnectorConfig()
+              binder,
+              Key.get(MetadataStorageConnectorConfig.class),
+              new MetadataStorageConnectorConfig()
               {
                 @Override
                 public String getConnectURI()
@@ -97,10 +99,14 @@ public class CreateTables extends GuiceRunnable
               }
           );
           JsonConfigProvider.bindInstance(
-              binder, Key.get(MetadataStorageTablesConfig.class), MetadataStorageTablesConfig.fromBase(base)
+              binder,
+              Key.get(MetadataStorageTablesConfig.class),
+              MetadataStorageTablesConfig.fromBase(base)
           );
           JsonConfigProvider.bindInstance(
-              binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
+              binder,
+              Key.get(DruidNode.class, Self.class),
+              new DruidNode("tools", "localhost", -1, null, true, false)
           );
         }
     );

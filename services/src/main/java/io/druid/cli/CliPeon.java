@@ -84,7 +84,6 @@ import io.druid.segment.loading.OmniDataSegmentArchiver;
 import io.druid.segment.loading.OmniDataSegmentKiller;
 import io.druid.segment.loading.OmniDataSegmentMover;
 import io.druid.segment.loading.SegmentLoaderConfig;
-import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
@@ -243,7 +242,7 @@ public class CliPeon extends GuiceRunnable
             // configuration of other parameters, but I don't think that's actually a problem.
             // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
             binder.bind(SegmentLoaderConfig.class)
-                  .toInstance(new SegmentLoaderConfig().withLocations(Collections.<StorageLocationConfig>emptyList()));
+                  .toInstance(new SegmentLoaderConfig().withLocations(Collections.emptyList()));
             binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);

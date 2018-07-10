@@ -76,7 +76,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/internal-hadoop-indexer");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);

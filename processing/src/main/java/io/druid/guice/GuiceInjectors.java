@@ -36,7 +36,7 @@ public class GuiceInjectors
 {
   public static Collection<Module> makeDefaultStartupModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new DruidGuiceExtensions(),
         new JacksonModule(),
         new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),

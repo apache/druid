@@ -72,7 +72,7 @@ public class CaffeineCacheTest
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig();
     Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -385,7 +385,7 @@ public class CaffeineCacheTest
     properties.put(keyPrefix + ".cacheExecutorFactory", "single_thread");
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+        ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -416,7 +416,7 @@ public class CaffeineCacheTest
     properties.put(keyPrefix + ".cacheExecutorFactory", "CoMmON_FjP");
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+        ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -444,7 +444,7 @@ public class CaffeineCacheTest
     final Properties properties = new Properties();
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(
+        ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);

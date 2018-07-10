@@ -117,7 +117,7 @@ public class IndexMergerV9 implements IndexMerger
 
     List<Metadata> metadataList = Lists.transform(adapters, IndexableAdapter::getMetadata);
 
-    Metadata segmentMetadata;
+    final Metadata segmentMetadata;
     if (metricAggs != null) {
       AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
       for (int i = 0; i < metricAggs.length; i++) {
@@ -777,7 +777,7 @@ public class IndexMergerV9 implements IndexMerger
 
     log.info("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
     return merge(
-        Collections.<IndexableAdapter>singletonList(
+        Collections.singletonList(
             new IncrementalIndexAdapter(
                 dataInterval,
                 index,

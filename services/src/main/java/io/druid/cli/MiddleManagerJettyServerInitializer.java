@@ -80,7 +80,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
     AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
-    List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
+    final List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
     AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());

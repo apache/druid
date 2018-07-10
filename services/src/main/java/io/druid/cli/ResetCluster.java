@@ -77,7 +77,7 @@ public class ResetCluster extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         // It's unknown if those modules are required in ResetCluster.
         // Maybe some of those modules could be removed.
         // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498
@@ -86,7 +86,9 @@ public class ResetCluster extends GuiceRunnable
         new QueryRunnerFactoryModule(),
         binder -> {
           JsonConfigProvider.bindInstance(
-              binder, Key.get(DruidNode.class, Self.class), new DruidNode("tools", "localhost", -1, null, true, false)
+              binder,
+              Key.get(DruidNode.class, Self.class),
+              new DruidNode("tools", "localhost", -1, null, true, false)
           );
           JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
         },
