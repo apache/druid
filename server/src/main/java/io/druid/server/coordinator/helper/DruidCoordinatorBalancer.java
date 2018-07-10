@@ -132,9 +132,17 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
       if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
 
+        // we want to leave the server the segment is currently on in the list...
+        // but filter out replicas that are already serving the segment, and servers with a full load queue
         final List<ServerHolder> toMoveToWithLoadQueueCapacityAndNotServingSegment =
             toMoveTo.stream()
-                    .filter(s -> (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad) && !s.isServingSegment(segmentToMove.getSegment()))
+                    .filter(s ->
+                                s.getServer().equals(segmentToMove.getFromServer()) ||
+                                (
+                                    (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad) &&
+                                    !s.isServingSegment(segmentToMove.getSegment())
+                                )
+                    )
                     .collect(Collectors.toList());
 
         if (toMoveToWithLoadQueueCapacityAndNotServingSegment.size() > 0) {
@@ -144,7 +152,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
                   toMoveToWithLoadQueueCapacityAndNotServingSegment
               );
 
-          if (destinationHolder != null) {
+          if (destinationHolder != null && !destinationHolder.getServer().equals(segmentToMove.getFromServer())) {
             moveSegment(segmentToMove, destinationHolder.getServer(), params);
             moved++;
           } else {
@@ -152,12 +160,18 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
             unmoved++;
           }
         } else {
-          log.info("No valid movement destinations for segment [%s].", segmentToMove.getSegment().getIdentifier());
+          log.info(
+              "No valid movement destinations for segment [%s].",
+              segmentToMove.getSegment().getIdentifier()
+          );
           unmoved++;
         }
       }
       if (iter >= maxIterations) {
-        log.info("Unable to select %d remaining candidate segments out of %d total to balance after %d iterations, ending run.", (maxSegmentsToMove - moved - unmoved), maxSegmentsToMove, iter);
+        log.info(
+            "Unable to select %d remaining candidate segments out of %d total to balance after %d iterations, ending run.",
+            (maxSegmentsToMove - moved - unmoved), maxSegmentsToMove, iter
+        );
         break;
       }
     }
