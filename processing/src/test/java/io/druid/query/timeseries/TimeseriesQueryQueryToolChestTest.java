@@ -79,6 +79,7 @@ public class TimeseriesQueryQueryToolChestTest
                     new LongSumAggregatorFactory("metric0", "metric0")
                 ),
                 ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
+                0,
                 null
             )
         );

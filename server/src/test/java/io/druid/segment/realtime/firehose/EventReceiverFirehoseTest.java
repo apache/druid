@@ -241,7 +241,7 @@ public class EventReceiverFirehoseTest
             );
   }
 
-  @Test(timeout = 40_000L)
+  @Test(timeout = 60_000L)
   public void testShutdownWithPrevTime() throws Exception
   {
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
@@ -261,7 +261,7 @@ public class EventReceiverFirehoseTest
     }
   }
 
-  @Test(timeout = 40_000L)
+  @Test(timeout = 60_000L)
   public void testShutdown() throws Exception
   {
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))

@@ -40,7 +40,7 @@ public class CuratorUtilsTest extends CuratorTestBase
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testCreateIfNotExists() throws Exception
   {
     curator.start();
@@ -65,7 +65,7 @@ public class CuratorUtilsTest extends CuratorTestBase
     Assert.assertEquals("baz", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testCreateIfNotExistsPayloadTooLarge() throws Exception
   {
     curator.start();
@@ -89,7 +89,7 @@ public class CuratorUtilsTest extends CuratorTestBase
     Assert.assertNull(curator.checkExists().forPath("/foo/bar"));
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testCreateOrSet() throws Exception
   {
     curator.start();
@@ -116,7 +116,7 @@ public class CuratorUtilsTest extends CuratorTestBase
     Assert.assertEquals("qux", StringUtils.fromUtf8(curator.getData().forPath("/foo/bar")));
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testCreateOrSetPayloadTooLarge() throws Exception
   {
     curator.start();

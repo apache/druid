@@ -1642,7 +1642,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testRunWithOffsetOutOfRangeExceptionAndPause() throws Exception
   {
     final KafkaIndexTask task = createTask(
@@ -1672,7 +1672,7 @@ public class KafkaIndexTaskTest
     }
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testRunWithOffsetOutOfRangeExceptionAndNextOffsetGreaterThanLeastAvailable() throws Exception
   {
     resetOffsetAutomatically = true;

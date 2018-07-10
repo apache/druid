@@ -126,7 +126,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     driver.close();
   }
 
-  @Test(timeout = 2000L)
+  @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
@@ -204,7 +204,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
   }
 
-  @Test(timeout = 5000L, expected = TimeoutException.class)
+  @Test(timeout = 60_000L, expected = TimeoutException.class)
   public void testHandoffTimeout() throws Exception
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();

@@ -119,7 +119,7 @@ public class CompressionStrategyTest
     Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testConcurrency() throws Exception
   {
     final int numThreads = 20;

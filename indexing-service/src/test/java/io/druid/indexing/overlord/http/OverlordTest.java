@@ -31,8 +31,8 @@ import io.druid.curator.discovery.NoopServiceAnnouncer;
 import io.druid.discovery.DruidLeaderSelector;
 import io.druid.indexer.TaskLocation;
 import io.druid.indexer.TaskState;
-import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexer.TaskStatus;
+import io.druid.indexer.TaskStatusPlus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
@@ -199,7 +199,7 @@ public class OverlordTest
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
-  @Test()
+  @Test(timeout = 60_000L)
   public void testOverlordRun() throws Exception
   {
     // basic task master lifecycle test

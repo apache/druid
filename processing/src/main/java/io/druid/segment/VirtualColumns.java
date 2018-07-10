@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.java.util.common.Cacheable;
@@ -69,11 +68,6 @@ public class VirtualColumns implements Cacheable
     } else {
       return Pair.of(columnName.substring(0, i), columnName.substring(i + 1));
     }
-  }
-
-  public static VirtualColumns create(VirtualColumn...virtualColumns)
-  {
-    return create(Lists.newArrayList(virtualColumns));
   }
 
   @JsonCreator

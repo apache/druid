@@ -329,7 +329,7 @@ public class SegmentAnalyzer
           return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null, null, null);
         }
 
-        final int length = column.getLength();
+        final int length = complexColumn.getLength();
         for (int i = 0; i < length; ++i) {
           size += inputSizeFn.apply(complexColumn.getRowValue(i));
         }

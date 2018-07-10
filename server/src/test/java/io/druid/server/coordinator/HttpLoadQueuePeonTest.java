@@ -98,7 +98,7 @@ public class HttpLoadQueuePeonTest
     }
   };
 
-  @Test(timeout = 10000)
+  @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
     HttpLoadQueuePeon httpLoadQueuePeon = new HttpLoadQueuePeon(
@@ -135,7 +135,7 @@ public class HttpLoadQueuePeonTest
     httpLoadQueuePeon.stop();
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 60_000L)
   public void testLoadDropAfterStop() throws Exception
   {
     HttpLoadQueuePeon httpLoadQueuePeon = new HttpLoadQueuePeon(

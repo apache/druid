@@ -180,7 +180,7 @@ public class CacheSchedulerTest
     lifecycle.stop();
   }
 
-  @Test(timeout = 10_000)
+  @Test(timeout = 60_000L)
   public void testSimpleSubmission() throws InterruptedException
   {
     UriExtractionNamespace namespace = new UriExtractionNamespace(
@@ -199,7 +199,7 @@ public class CacheSchedulerTest
     Assert.assertEquals("val", cache.get("key"));
   }
 
-  @Test(timeout = 10_000)
+  @Test(timeout = 60_000L)
   public void testPeriodicUpdatesScheduled() throws InterruptedException
   {
     final int repeatCount = 5;
@@ -233,7 +233,7 @@ public class CacheSchedulerTest
   }
 
 
-  @Test(timeout = 10_000) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
+  @Test(timeout = 60_000L) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
   public void testConcurrentAddDelete() throws InterruptedException
   {
     final int threads = 10;
@@ -306,7 +306,7 @@ public class CacheSchedulerTest
     checkNoMoreRunning();
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testSimpleDelete() throws InterruptedException
   {
     testDelete();
@@ -355,7 +355,7 @@ public class CacheSchedulerTest
     );
   }
 
-  @Test(timeout = 10_000)
+  @Test(timeout = 60_000L)
   public void testShutdown()
       throws InterruptedException
   {
@@ -389,7 +389,7 @@ public class CacheSchedulerTest
     Assert.assertTrue(cacheManager.scheduledExecutorService().isTerminated());
   }
 
-  @Test(timeout = 10_000)
+  @Test(timeout = 60_000L)
   public void testRunCount() throws InterruptedException
   {
     final int numWaits = 5;
@@ -415,7 +415,7 @@ public class CacheSchedulerTest
    * Tests that even if entry.close() wasn't called, the scheduled task is cancelled when the entry becomes
    * unreachable.
    */
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testEntryCloseForgotten() throws InterruptedException
   {
     scheduleDanglingEntry();

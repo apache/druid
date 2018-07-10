@@ -163,7 +163,7 @@ public class WorkerTaskManagerTest
     workerTaskManager.stop();
   }
 
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testTaskRun() throws Exception
   {
     Task task1 = createNoopTask("task1-assigned-via-assign-dir");

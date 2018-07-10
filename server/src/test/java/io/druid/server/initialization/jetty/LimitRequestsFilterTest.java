@@ -33,7 +33,7 @@ import java.util.concurrent.CountDownLatch;
  */
 public class LimitRequestsFilterTest
 {
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
     LimitRequestsFilter filter = new LimitRequestsFilter(2);

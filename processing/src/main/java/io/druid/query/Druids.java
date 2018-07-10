@@ -105,6 +105,7 @@ public class Druids
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
     private Map<String, Object> context;
+    private int limit;
 
     private TimeseriesQueryBuilder()
     {
@@ -116,6 +117,7 @@ public class Druids
       granularity = Granularities.ALL;
       aggregatorSpecs = Lists.newArrayList();
       postAggregatorSpecs = Lists.newArrayList();
+      limit = 0;
       context = null;
     }
 
@@ -130,6 +132,7 @@ public class Druids
           granularity,
           aggregatorSpecs,
           postAggregatorSpecs,
+          limit,
           context
       );
     }
@@ -145,6 +148,7 @@ public class Druids
           .granularity(query.getGranularity())
           .aggregators(query.getAggregatorSpecs())
           .postAggregators(query.getPostAggregatorSpecs())
+          .limit(query.getLimit())
           .context(query.getContext());
     }
 
@@ -252,6 +256,12 @@ public class Druids
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
       context = c;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder limit(int lim)
+    {
+      limit = lim;
       return this;
     }
   }

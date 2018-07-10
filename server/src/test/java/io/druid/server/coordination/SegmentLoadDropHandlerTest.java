@@ -449,7 +449,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertTrue(infoDir.delete());
   }
 
-  @Test(timeout = 1000L)
+  @Test(timeout = 60_000L)
   public void testProcessBatch() throws Exception
   {
     segmentLoadDropHandler.start();

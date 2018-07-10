@@ -2415,4 +2415,36 @@ public class TimeseriesQueryRunnerTest
     TestHelper.assertExpectedResults(expectedResults, results2);
 
   }
+
+  @Test
+  public void testTimeseriesWithLimit()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .limit(10)
+                                  .build();
+
+    // Must create a toolChest so we can run mergeResults.
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest(
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+
+    // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
+    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
+        toolChest.mergeResults(runner),
+        toolChest
+    );
+
+    final List list = finalRunner.run(QueryPlus.wrap(query), CONTEXT).toList();
+    Assert.assertEquals(10, list.size());
+  }
 }

@@ -69,7 +69,7 @@ public class OverlordBlinkLeadershipTest
    * org.apache.curator.framework.recipes.leader.LeaderSelectorListener#takeLeadership} implementation in
    * {@link TaskMaster} and start it again.
    */
-  @Test(timeout = 10_000)
+  @Test(timeout = 60_000L)
   public void testOverlordBlinkLeadership()
   {
     try {

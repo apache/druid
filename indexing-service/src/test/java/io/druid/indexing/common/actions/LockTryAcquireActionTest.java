@@ -67,7 +67,7 @@ public class LockTryAcquireActionTest
     Assert.assertEquals(expected.getInterval(), actual.getInterval());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testWithLockType()
   {
     final Task task = NoopTask.create();
@@ -81,7 +81,7 @@ public class LockTryAcquireActionTest
     Assert.assertNotNull(lock);
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testWithoutLockType()
   {
     final Task task = NoopTask.create();

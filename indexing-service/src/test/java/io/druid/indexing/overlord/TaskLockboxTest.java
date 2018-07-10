@@ -408,7 +408,7 @@ public class TaskLockboxTest
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testAcquireLockAfterRevoked() throws EntryExistsException, InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");

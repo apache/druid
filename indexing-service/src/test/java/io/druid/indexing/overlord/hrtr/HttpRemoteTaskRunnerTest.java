@@ -79,7 +79,7 @@ public class HttpRemoteTaskRunnerTest
   Simulates startup of Overlord and Workers being discovered with no previously known tasks. Fresh tasks are given
   and expected to be completed.
    */
-  @Test(timeout = 30000L)
+  @Test(timeout = 60_000L)
   public void testFreshStart() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -167,7 +167,7 @@ public class HttpRemoteTaskRunnerTest
   Simulates one task not getting acknowledged to be running after assigning it to a worker. But, other tasks are
   successfully assigned to other worker and get completed.
    */
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testOneStuckTaskAssignmentDoesntBlockOthers() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -254,7 +254,7 @@ public class HttpRemoteTaskRunnerTest
   /*
   Simulates restart of the Overlord where taskRunner, on start, discovers workers with prexisting tasks.
    */
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testTaskRunnerRestart() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -399,7 +399,7 @@ public class HttpRemoteTaskRunnerTest
 
   }
 
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testWorkerDisapperAndReappearBeforeItsCleanup() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -562,7 +562,7 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertTrue(future2.get().isSuccess());
   }
 
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testWorkerDisapperAndReappearAfterItsCleanup() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
@@ -725,7 +725,7 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertTrue(taskRunner.run(task2).get().isFailure());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testMarkWorkersLazy() throws Exception
   {
     TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
