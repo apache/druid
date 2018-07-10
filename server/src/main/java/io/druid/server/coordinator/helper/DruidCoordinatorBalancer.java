@@ -128,41 +128,35 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     long unmoved = 0L;
 
     for (int moved = 0, iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
-      final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(toMoveFrom);
+      final BalancerSegmentHolder segmentToMoveHolder = strategy.pickSegmentToMove(toMoveFrom);
 
-      if (segmentToMove != null && params.getAvailableSegments().contains(segmentToMove.getSegment())) {
-
+      if (segmentToMoveHolder != null && params.getAvailableSegments().contains(segmentToMoveHolder.getSegment())) {
+        final DataSegment segmentToMove = segmentToMoveHolder.getSegment();
+        final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer();
         // we want to leave the server the segment is currently on in the list...
         // but filter out replicas that are already serving the segment, and servers with a full load queue
         final List<ServerHolder> toMoveToWithLoadQueueCapacityAndNotServingSegment =
             toMoveTo.stream()
-                    .filter(s ->
-                                s.getServer().equals(segmentToMove.getFromServer()) ||
-                                (
-                                    (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad) &&
-                                    !s.isServingSegment(segmentToMove.getSegment())
-                                )
-                    )
+                    .filter(s -> s.getServer().equals(fromServer) ||
+                                 (!s.isServingSegment(segmentToMove) &&
+                                  (maxToLoad <= 0 || s.getNumberOfSegmentsInQueue() < maxToLoad)))
                     .collect(Collectors.toList());
 
         if (toMoveToWithLoadQueueCapacityAndNotServingSegment.size() > 0) {
           final ServerHolder destinationHolder =
-              strategy.findNewSegmentHomeBalancer(
-                  segmentToMove.getSegment(),
-                  toMoveToWithLoadQueueCapacityAndNotServingSegment
-              );
+              strategy.findNewSegmentHomeBalancer(segmentToMove, toMoveToWithLoadQueueCapacityAndNotServingSegment);
 
-          if (destinationHolder != null && !destinationHolder.getServer().equals(segmentToMove.getFromServer())) {
-            moveSegment(segmentToMove, destinationHolder.getServer(), params);
+          if (destinationHolder != null && !destinationHolder.getServer().equals(fromServer)) {
+            moveSegment(segmentToMoveHolder, destinationHolder.getServer(), params);
             moved++;
           } else {
-            log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getSegment().getIdentifier());
+            log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getIdentifier());
             unmoved++;
           }
         } else {
           log.info(
               "No valid movement destinations for segment [%s].",
-              segmentToMove.getSegment().getIdentifier()
+              segmentToMove.getIdentifier()
           );
           unmoved++;
         }
