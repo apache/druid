@@ -164,7 +164,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
   }
 
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testDeleteBroadcast() throws Exception
   {
     CountDownLatch latch = new CountDownLatch(2);

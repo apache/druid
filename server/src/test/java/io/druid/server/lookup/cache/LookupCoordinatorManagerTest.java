@@ -1028,7 +1028,7 @@ public class LookupCoordinatorManagerTest
   }
 
 
-  @Test(timeout = 2_000)
+  @Test(timeout = 60_000L)
   public void testLookupManagementLoop() throws Exception
   {
     Map<String, LookupExtractorFactoryMapContainer> lookup1 = ImmutableMap.of(

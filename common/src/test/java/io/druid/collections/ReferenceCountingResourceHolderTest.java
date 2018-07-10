@@ -83,7 +83,7 @@ public class ReferenceCountingResourceHolderTest
           });
   }
 
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testResourceHandlerClearedByJVM() throws InterruptedException
   {
     long initialLeakedResources = ReferenceCountingResourceHolder.leakedResources();
@@ -92,7 +92,7 @@ public class ReferenceCountingResourceHolderTest
     verifyCleanerRun(released, initialLeakedResources);
   }
 
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testResourceHandlerWithReleaserClearedByJVM() throws InterruptedException
   {
     long initialLeakedResources = ReferenceCountingResourceHolder.leakedResources();

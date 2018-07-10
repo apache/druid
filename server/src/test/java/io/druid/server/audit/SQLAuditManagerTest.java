@@ -64,7 +64,7 @@ public class SQLAuditManagerTest
     );
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testAuditEntrySerde() throws IOException
   {
     AuditEntry entry = new AuditEntry(
@@ -83,7 +83,7 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, serde);
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testCreateAuditEntry() throws IOException
   {
     AuditEntry entry = new AuditEntry(
@@ -109,7 +109,7 @@ public class SQLAuditManagerTest
 
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testFetchAuditHistory()
   {
     AuditEntry entry = new AuditEntry(
@@ -135,7 +135,7 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, auditEntries.get(1));
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByKeyAndTypeWithLimit()
   {
     AuditEntry entry1 = new AuditEntry(
@@ -171,7 +171,7 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry1, auditEntries.get(0));
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testFetchAuditHistoryByTypeWithLimit()
   {
     AuditEntry entry1 = new AuditEntry(

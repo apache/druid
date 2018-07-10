@@ -136,7 +136,7 @@ public class NamespacedExtractorModuleTest
     }
   }
 
-  @Test//(timeout = 10_000)
+  @Test//(timeout = 60_000L)
   public void testDeleteNamespaces() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();

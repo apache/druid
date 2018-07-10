@@ -133,7 +133,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     tearDownServerAndCurator();
   }
   
-  @Test(timeout = 10 * 1000)
+  @Test(timeout = 60_000L)
   public void testOptimize() throws InterruptedException
   {
     // insert datasource metadata

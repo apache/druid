@@ -414,7 +414,7 @@ public class AppenderatorTest
     }
   }
 
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testTotalRowCount() throws Exception
   {
     try (final AppenderatorTester tester = new AppenderatorTester(3, true)) {

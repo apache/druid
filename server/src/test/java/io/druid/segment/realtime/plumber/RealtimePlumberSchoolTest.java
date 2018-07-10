@@ -248,13 +248,13 @@ public class RealtimePlumberSchoolTest
     FileUtils.deleteDirectory(tmpDir);
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testPersist() throws Exception
   {
     testPersist(null);
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testPersistWithCommitMetadata() throws Exception
   {
     final Object commitMetadata = "dummyCommitMetadata";
@@ -309,7 +309,7 @@ public class RealtimePlumberSchoolTest
     plumber.finishJob();
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testPersistFails() throws Exception
   {
     Sink sink = new Sink(
@@ -356,7 +356,7 @@ public class RealtimePlumberSchoolTest
     Assert.assertEquals(1, metrics.failedPersists());
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testPersistHydrantGaps() throws Exception
   {
     final Object commitMetadata = "dummyCommitMetadata";
@@ -461,7 +461,7 @@ public class RealtimePlumberSchoolTest
     Assert.assertEquals(0, restoredPlumber2.getSinks().size());
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testDimOrderInheritance() throws Exception
   {
     final Object commitMetadata = "dummyCommitMetadata";

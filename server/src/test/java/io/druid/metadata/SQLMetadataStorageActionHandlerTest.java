@@ -217,7 +217,7 @@ public class SQLMetadataStorageActionHandlerTest
     }
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testRepeatInsert() throws Exception
   {
     final String entryId = "abcd";

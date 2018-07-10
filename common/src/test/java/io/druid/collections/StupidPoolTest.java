@@ -68,7 +68,7 @@ public class StupidPoolTest
     resourceHolderObj.get();
   }
 
-  @Test(timeout = 60_000)
+  @Test(timeout = 60_000L)
   public void testResourceHandlerClearedByJVM() throws InterruptedException
   {
     String leakedString = createDanglingObjectHandler();

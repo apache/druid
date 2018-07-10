@@ -199,7 +199,7 @@ public class OverlordTest
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
-  @Test(timeout = 2000L)
+  @Test(timeout = 60_000L)
   public void testOverlordRun() throws Exception
   {
     // basic task master lifecycle test

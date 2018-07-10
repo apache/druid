@@ -376,7 +376,7 @@ public class RealtimeManagerTest
     Assert.assertEquals(0, plumber2.getPersistCount());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testNormalStop() throws InterruptedException
   {
     final TestFirehose firehose = new TestFirehose(rows.iterator());
@@ -421,7 +421,7 @@ public class RealtimeManagerTest
     Assert.assertTrue(plumber2.isFinishedJob());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 60_000L)
   public void testStopByInterruption()
   {
     final SleepingFirehose firehose = new SleepingFirehose();
@@ -454,7 +454,7 @@ public class RealtimeManagerTest
     Assert.assertFalse(plumber.isFinishedJob());
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testQueryWithInterval() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
@@ -532,7 +532,7 @@ public class RealtimeManagerTest
     }
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testQueryWithSegmentSpec() throws InterruptedException
   {
     List<Row> expectedResults = Arrays.asList(
@@ -611,7 +611,7 @@ public class RealtimeManagerTest
 
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testQueryWithMultipleSegmentSpec() throws InterruptedException
   {
 

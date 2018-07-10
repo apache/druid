@@ -180,7 +180,7 @@ public class GroupByQueryRunnerFailureTest
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner));
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 60_000L)
   public void testNotEnoughMergeBuffersOnQueryable()
   {
     expectedException.expect(QueryInterruptedException.class);
@@ -209,7 +209,7 @@ public class GroupByQueryRunnerFailureTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 60_000L)
   public void testResourceLimitExceededOnBroker()
   {
     expectedException.expect(ResourceLimitExceededException.class);
@@ -247,7 +247,7 @@ public class GroupByQueryRunnerFailureTest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
   }
 
-  @Test(timeout = 10000, expected = InsufficientResourcesException.class)
+  @Test(timeout = 60_000L, expected = InsufficientResourcesException.class)
   public void testInsufficientResourcesOnBroker()
   {
     final GroupByQuery query = GroupByQuery

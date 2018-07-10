@@ -215,7 +215,7 @@ public class WorkerTaskMonitorTest
     testingCluster.stop();
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testRunTask() throws Exception
   {
     Assert.assertTrue(
@@ -271,7 +271,7 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(TaskState.SUCCESS, taskAnnouncement.getTaskStatus().getStatusCode());
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testGetAnnouncements() throws Exception
   {
     cf.create()
@@ -309,7 +309,7 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(DUMMY_NODE.getPlaintextPort(), announcements.get(0).getTaskLocation().getPort());
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testRestartCleansOldStatus() throws Exception
   {
     task = TestTasks.unending("test");
@@ -345,7 +345,7 @@ public class WorkerTaskMonitorTest
     Assert.assertEquals(TaskState.FAILED, announcements.get(0).getTaskStatus().getStatusCode());
   }
 
-  @Test(timeout = 30_000L)
+  @Test(timeout = 60_000L)
   public void testStatusAnnouncementsArePersistent() throws Exception
   {
     cf.create()

@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class ConcurrentAwaitableCounterTest
 {
 
-  @Test(timeout = 1000)
+  @Test(timeout = 60_000L)
   public void smokeTest() throws InterruptedException
   {
     ConcurrentAwaitableCounter counter = new ConcurrentAwaitableCounter();

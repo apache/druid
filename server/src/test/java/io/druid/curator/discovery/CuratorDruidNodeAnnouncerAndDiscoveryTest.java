@@ -52,7 +52,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     setupServerAndCurator();
   }
 
-  @Test(timeout = 5000)
+  @Test(timeout = 60_000L)
   public void testAnnouncementAndDiscovery() throws Exception
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();

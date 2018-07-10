@@ -58,7 +58,7 @@ public class ChainedExecutionQueryRunnerTest
     neverRelease.lock();
   }
   
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testQueryCancellation() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
@@ -182,7 +182,7 @@ public class ChainedExecutionQueryRunnerTest
     EasyMock.verify(watcher);
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 60_000L)
   public void testQueryTimeout() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(

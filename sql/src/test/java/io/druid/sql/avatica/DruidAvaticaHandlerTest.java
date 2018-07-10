@@ -551,7 +551,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
 
-  @Test(timeout = 90000)
+  @Test(timeout = 90_000L)
   public void testConcurrentQueries() throws Exception
   {
     final List<ListenableFuture<Integer>> futures = new ArrayList<>();
