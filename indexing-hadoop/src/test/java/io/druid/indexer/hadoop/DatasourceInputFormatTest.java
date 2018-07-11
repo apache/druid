@@ -81,7 +81,7 @@ public class DatasourceInputFormatTest
                 "test1",
                 Intervals.of("2000/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "local",
                     "path", "/tmp/index1.zip"
                 ),
@@ -97,7 +97,7 @@ public class DatasourceInputFormatTest
                 "test1",
                 Intervals.of("2050/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "hdfs",
                     "path", "/tmp/index2.zip"
                 ),
@@ -113,7 +113,7 @@ public class DatasourceInputFormatTest
                 "test1",
                 Intervals.of("2030/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "hdfs",
                     "path", "/tmp/index3.zip"
                 ),
@@ -132,7 +132,7 @@ public class DatasourceInputFormatTest
                 "test2",
                 Intervals.of("2000/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "local",
                     "path", "/tmp/index4.zip"
                 ),
@@ -373,7 +373,7 @@ public class DatasourceInputFormatTest
                 "test1",
                 Intervals.of("2000/3000"),
                 "ver",
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "local",
                     "path", tmpFile.getPath()
                 ),

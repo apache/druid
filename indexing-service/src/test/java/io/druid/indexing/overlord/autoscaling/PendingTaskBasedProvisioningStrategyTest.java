@@ -112,19 +112,19 @@ public class PendingTaskBasedProvisioningStrategyTest
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList());
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     // No pending tasks
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Lists.<Task>newArrayList()
+        Lists.newArrayList()
     );
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ImmutableWorkerInfo>emptyList()
+        Collections.emptyList()
     );
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("aNode"))
+        new AutoScalingData(Lists.newArrayList("aNode"))
     ).times(3);
     EasyMock.replay(runner, autoScaler);
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -143,12 +143,12 @@ public class PendingTaskBasedProvisioningStrategyTest
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList());
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     // No pending tasks
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Lists.<Task>newArrayList()
+        Lists.newArrayList()
     );
     // 1 node already running, only provision 2 more.
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -158,7 +158,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     );
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("aNode"))
+        new AutoScalingData(Lists.newArrayList("aNode"))
     ).times(2);
     EasyMock.replay(runner, autoScaler);
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -177,23 +177,23 @@ public class PendingTaskBasedProvisioningStrategyTest
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList());
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     // No pending tasks
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Lists.<Task>newArrayList()
+        Lists.newArrayList()
     );
     // 1 node already running, only provision 2 more.
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.<ImmutableWorkerInfo>asList(
+        Arrays.asList(
             new TestZkWorker(testTask).toImmutable(),
             new TestZkWorker(testTask, "http", "h1", "n1", INVALID_VERSION).toImmutable() // Invalid version node
         )
     );
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("aNode"))
+        new AutoScalingData(Lists.newArrayList("aNode"))
     ).times(2);
     EasyMock.replay(runner, autoScaler);
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -212,19 +212,19 @@ public class PendingTaskBasedProvisioningStrategyTest
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList()).times(2);
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("fake"))
+        new AutoScalingData(Lists.newArrayList("fake"))
     );
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Collections.<Task>singletonList(
+        Collections.singletonList(
             NoopTask.create()
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.<ImmutableWorkerInfo>asList(
+        Arrays.asList(
             new TestZkWorker(testTask).toImmutable(),
             new TestZkWorker(testTask, "http", "h1", "n1", INVALID_VERSION).toImmutable() // Invalid version node
         )
@@ -269,17 +269,17 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2).times(1);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList()).times(2);
-    EasyMock.expect(autoScaler.terminateWithIds(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScaler.terminateWithIds(EasyMock.anyObject()))
             .andReturn(null);
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("fake"))
+        new AutoScalingData(Lists.newArrayList("fake"))
     );
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Collections.<Task>singletonList(
+        Collections.singletonList(
             NoopTask.create()
         )
     ).times(2);
@@ -325,10 +325,10 @@ public class PendingTaskBasedProvisioningStrategyTest
   public void testDoSuccessfulTerminate()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
             .andReturn(Lists.<String>newArrayList());
-    EasyMock.expect(autoScaler.terminate(EasyMock.<List<String>>anyObject())).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList())
+    EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(
+        new AutoScalingData(Lists.newArrayList())
     );
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -350,7 +350,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     ).times(2);
     EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(Collections.singletonList(new TestZkWorker(testTask).getWorker()));
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.newArrayList());
     EasyMock.replay(runner);
 
     Provisioner provisioner = strategy.makeProvisioner(runner);
@@ -369,10 +369,10 @@ public class PendingTaskBasedProvisioningStrategyTest
   public void testSomethingTerminating()
   {
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(1);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
-            .andReturn(Lists.<String>newArrayList("ip")).times(2);
-    EasyMock.expect(autoScaler.terminate(EasyMock.<List<String>>anyObject())).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("ip"))
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Lists.newArrayList("ip")).times(2);
+    EasyMock.expect(autoScaler.terminate(EasyMock.anyObject())).andReturn(
+        new AutoScalingData(Lists.newArrayList("ip"))
     );
     EasyMock.replay(autoScaler);
 
@@ -382,7 +382,7 @@ public class PendingTaskBasedProvisioningStrategyTest
             new TestZkWorker(testTask).toImmutable()
         )
     ).times(2);
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList()).times(2);
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.newArrayList()).times(2);
     EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(Collections.singletonList(new TestZkWorker(testTask).toImmutable().getWorker()));
     EasyMock.replay(runner);
@@ -413,8 +413,8 @@ public class PendingTaskBasedProvisioningStrategyTest
   {
     EasyMock.reset(autoScaler);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
-            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Lists.newArrayList("ip"));
     EasyMock.replay(autoScaler);
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
@@ -431,7 +431,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     ).times(2);
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
 
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.newArrayList());
     EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(Collections.emptyList());
     EasyMock.replay(runner);
@@ -445,8 +445,8 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.reset(autoScaler);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
-            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Lists.newArrayList("ip"));
     EasyMock.replay(autoScaler);
 
     boolean provisionedSomething = provisioner.doProvision();
@@ -462,12 +462,12 @@ public class PendingTaskBasedProvisioningStrategyTest
     // Don't terminate anything
     EasyMock.reset(autoScaler);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
-            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Lists.newArrayList("ip"));
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Collections.<Task>emptyList()
+        Collections.emptyList()
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
         Collections.singletonList(
@@ -476,7 +476,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     ).times(3);
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig()).times(2);
 
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.newArrayList());
     EasyMock.expect(runner.markWorkersLazy(EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(Collections.emptyList());
     EasyMock.replay(runner);
@@ -490,8 +490,8 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.reset(autoScaler);
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(2);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
-            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Lists.newArrayList("ip"));
     EasyMock.replay(autoScaler);
     boolean provisionedSomething = provisioner.doProvision();
     Assert.assertFalse(provisionedSomething);
@@ -501,14 +501,14 @@ public class PendingTaskBasedProvisioningStrategyTest
     // Increase minNumWorkers
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(3);
     EasyMock.expect(autoScaler.getMaxNumWorkers()).andReturn(5);
-    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.<List<String>>anyObject()))
-            .andReturn(Lists.<String>newArrayList("ip"));
+    EasyMock.expect(autoScaler.ipToIdLookup(EasyMock.anyObject()))
+            .andReturn(Lists.newArrayList("ip"));
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("h3"))
+        new AutoScalingData(Lists.newArrayList("h3"))
     );
     // Should provision two new workers
     EasyMock.expect(autoScaler.provision()).andReturn(
-        new AutoScalingData(Lists.<String>newArrayList("h4"))
+        new AutoScalingData(Lists.newArrayList("h4"))
     );
     EasyMock.replay(autoScaler);
     provisionedSomething = provisioner.doProvision();
@@ -525,7 +525,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Collections.<Task>singletonList(
+        Collections.singletonList(
             NoopTask.create()
         )
     ).times(1);

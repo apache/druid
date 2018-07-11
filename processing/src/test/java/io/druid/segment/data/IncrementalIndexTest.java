@@ -251,7 +251,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2")
+            ImmutableMap.of("dim1", "1", "dim2", "2")
         )
     );
 
@@ -259,7 +259,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2"),
-            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4")
+            ImmutableMap.of("dim1", "3", "dim2", "4")
         )
     );
   }
@@ -350,7 +350,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2", "dim3"),
-            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
+            ImmutableMap.of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
         )
     );
 
@@ -358,7 +358,7 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             timestamp,
             Arrays.asList("dim1", "dim2", "dim3"),
-            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
+            ImmutableMap.of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
         )
     );
 
@@ -795,21 +795,21 @@ public class IncrementalIndexTest
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871670000L,
             Arrays.asList("name", "table"),
-            ImmutableMap.<String, Object>of("name", "name2", "table", "table")
+            ImmutableMap.of("name", "name2", "table", "table")
         )
     );
     index.add(
         new MapBasedInputRow(
             1481871600000L,
             Arrays.asList("name", "host"),
-            ImmutableMap.<String, Object>of("name", "name1", "host", "host")
+            ImmutableMap.of("name", "name1", "host", "host")
         )
     );
 

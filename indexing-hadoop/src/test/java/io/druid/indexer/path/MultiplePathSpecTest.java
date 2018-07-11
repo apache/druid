@@ -35,7 +35,7 @@ public class MultiplePathSpecTest
   public void testSerde() throws Exception
   {
     PathSpec expected = new MultiplePathSpec(
-        Lists.<PathSpec>newArrayList(
+        Lists.newArrayList(
             new StaticPathSpec("/tmp/path1", null),
             new StaticPathSpec("/tmp/path2", TextInputFormat.class)
         )

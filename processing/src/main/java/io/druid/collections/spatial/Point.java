@@ -38,7 +38,7 @@ public class Point extends Node
     super(
         coords,
         Arrays.copyOf(coords, coords.length),
-        Lists.<Node>newArrayList(),
+        Lists.newArrayList(),
         true,
         null,
         makeBitmap(entry, bitmapFactory)
@@ -51,7 +51,7 @@ public class Point extends Node
 
   public Point(float[] coords, MutableBitmap entry)
   {
-    super(coords, Arrays.copyOf(coords, coords.length), Lists.<Node>newArrayList(), true, null, entry);
+    super(coords, Arrays.copyOf(coords, coords.length), Lists.newArrayList(), true, null, entry);
 
     this.coords = coords;
     this.bitmap = entry;

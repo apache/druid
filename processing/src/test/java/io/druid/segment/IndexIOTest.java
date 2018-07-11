@@ -87,12 +87,12 @@ public class IndexIOTest
   public static Iterable<Object[]> constructionFeeder()
   {
 
-    final Map<String, Object> map = ImmutableMap.<String, Object>of();
+    final Map<String, Object> map = ImmutableMap.of();
 
-    final Map<String, Object> map00 = ImmutableMap.<String, Object>of(
-        "dim0", ImmutableList.<String>of("dim00", "dim01")
+    final Map<String, Object> map00 = ImmutableMap.of(
+        "dim0", ImmutableList.of("dim00", "dim01")
     );
-    final Map<String, Object> map10 = ImmutableMap.<String, Object>of(
+    final Map<String, Object> map10 = ImmutableMap.of(
         "dim1", "dim10"
     );
     final Map<String, Object> map0null = new HashMap<>();
@@ -101,8 +101,8 @@ public class IndexIOTest
     final Map<String, Object> map1null = new HashMap<>();
     map1null.put("dim1", null);
 
-    final Map<String, Object> mapAll = ImmutableMap.<String, Object>of(
-        "dim0", ImmutableList.<String>of("dim00", "dim01"),
+    final Map<String, Object> mapAll = ImmutableMap.of(
+        "dim0", ImmutableList.of("dim00", "dim01"),
         "dim1", "dim10"
     );
 
@@ -110,9 +110,9 @@ public class IndexIOTest
         map, map00, map10, map0null, map1null, mapAll
     );
 
-    return Iterables.<Object[]>concat(
+    return Iterables.concat(
         // First iterable tests permutations of the maps which are expected to be equal
-        Iterables.<Object[]>concat(
+        Iterables.concat(
             new Iterable<Iterable<Object[]>>()
             {
               @Override
@@ -156,7 +156,7 @@ public class IndexIOTest
             }
         ),
         // Second iterable tests combinations of the maps which may or may not be equal
-        Iterables.<Object[]>concat(
+        Iterables.concat(
             new Iterable<Iterable<Object[]>>()
             {
               @Override

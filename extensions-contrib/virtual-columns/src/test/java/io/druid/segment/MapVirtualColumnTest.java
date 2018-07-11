@@ -158,7 +158,7 @@ public class MapVirtualColumnTest
   {
     Druids.SelectQueryBuilder builder = testBuilder();
 
-    List<Map> expectedResults = Arrays.<Map>asList(
+    List<Map> expectedResults = Arrays.asList(
         mapOf(
             "dim", "a",
             "params.key1", "value1",

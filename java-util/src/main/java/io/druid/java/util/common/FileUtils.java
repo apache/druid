@@ -107,7 +107,7 @@ public class FileUtils
 
     public FileCopyResult(File... files)
     {
-      this(files == null ? ImmutableList.<File>of() : Arrays.asList(files));
+      this(files == null ? ImmutableList.of() : Arrays.asList(files));
     }
 
     public FileCopyResult(Collection<File> files)

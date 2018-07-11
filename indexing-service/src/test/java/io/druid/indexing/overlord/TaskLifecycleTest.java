@@ -243,7 +243,7 @@ public class TaskLifecycleTest
     return new MapBasedInputRow(
         DateTimes.of(dt).getMillis(),
         ImmutableList.of("dim1", "dim2"),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "dim1", dim1,
             "dim2", dim2,
             "met", met
@@ -791,7 +791,7 @@ public class TaskLifecycleTest
     final File tmpSegmentDir = temporaryFolder.newFolder();
 
     List<DataSegment> expectedUnusedSegments = Lists.transform(
-        ImmutableList.<String>of(
+        ImmutableList.of(
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-04/2011-04-05"
@@ -806,7 +806,7 @@ public class TaskLifecycleTest
                                 .dataSource("test_kill_task")
                                 .interval(interval)
                                 .loadSpec(
-                                    ImmutableMap.<String, Object>of(
+                                    ImmutableMap.of(
                                         "type",
                                         "local",
                                         "path",
@@ -821,8 +821,8 @@ public class TaskLifecycleTest
                                     )
                                 )
                                 .version("2011-04-6T16:52:46.119-05:00")
-                                .dimensions(ImmutableList.<String>of())
-                                .metrics(ImmutableList.<String>of())
+                                .dimensions(ImmutableList.of())
+                                .metrics(ImmutableList.of())
                                 .shardSpec(NoneShardSpec.instance())
                                 .binaryVersion(9)
                                 .size(0)

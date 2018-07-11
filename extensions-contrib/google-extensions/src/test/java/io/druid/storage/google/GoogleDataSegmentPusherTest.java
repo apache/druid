@@ -79,8 +79,8 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         Intervals.of("2015/2016"),
         "0",
         Maps.newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         new NoneShardSpec(),
         0,
         size

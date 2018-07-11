@@ -54,8 +54,8 @@ public class BenchmarkSchemas
             false,
             4,
             null,
-            Arrays.<Object>asList("Hello", "World", "Foo", "Bar", "Baz"),
-            Arrays.<Double>asList(0.2, 0.25, 0.15, 0.10, 0.3)
+            Arrays.asList("Hello", "World", "Foo", "Bar", "Baz"),
+            Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
         ),
         BenchmarkColumnSchema.makeEnumerated(
             "dimMultivalEnumerated2",
@@ -63,8 +63,8 @@ public class BenchmarkSchemas
             false,
             3,
             null,
-            Arrays.<Object>asList("Apple", "Orange", "Xylophone", "Corundum", null),
-            Arrays.<Double>asList(0.2, 0.25, 0.15, 0.10, 0.3)
+            Arrays.asList("Apple", "Orange", "Xylophone", "Corundum", null),
+            Arrays.asList(0.2, 0.25, 0.15, 0.10, 0.3)
         ),
         BenchmarkColumnSchema.makeSequential("dimMultivalSequentialWithNulls", ValueType.STRING, false, 8, 0.15, 1, 11),
         BenchmarkColumnSchema.makeSequential("dimHyperUnique", ValueType.STRING, false, 1, null, 0, 100000),

@@ -54,7 +54,7 @@ public class SQLMetadataSegmentManagerTest
       "wikipedia",
       Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000"),
       "2012-03-16T00:36:30.848Z",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "type", "s3_zip",
           "bucket", "test",
           "key", "wikipedia/index/y=2012/m=03/d=15/2012-03-16T00:36:30.848Z/0/index.zip"
@@ -70,7 +70,7 @@ public class SQLMetadataSegmentManagerTest
       "wikipedia",
       Intervals.of("2012-01-05T00:00:00.000/2012-01-06T00:00:00.000"),
       "2012-01-06T22:19:12.565Z",
-      ImmutableMap.<String, Object>of(
+      ImmutableMap.of(
           "type", "s3_zip",
           "bucket", "test",
           "key", "wikipedia/index/y=2012/m=01/d=05/2012-01-06T22:19:12.565Z/0/index.zip"

@@ -662,7 +662,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   public Collection<TaskRunnerWorkItem> getKnownTasks()
   {
     synchronized (tasks) {
-      return Lists.<TaskRunnerWorkItem>newArrayList(tasks.values());
+      return Lists.newArrayList(tasks.values());
     }
   }
 
@@ -692,7 +692,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
     }
 
-    return Optional.<ByteSource>of(
+    return Optional.of(
         new ByteSource()
         {
           @Override

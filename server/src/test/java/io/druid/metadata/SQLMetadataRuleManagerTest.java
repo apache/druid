@@ -96,9 +96,9 @@ public class SQLMetadataRuleManagerTest
   @Test
   public void testRuleInsert()
   {
-    List<Rule> rules = Collections.<Rule>singletonList(
+    List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
-            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
             DruidServer.DEFAULT_TIER,
             DruidServer.DEFAULT_NUM_REPLICANTS
         )
@@ -120,9 +120,9 @@ public class SQLMetadataRuleManagerTest
   @Test
   public void testAuditEntryCreated() throws Exception
   {
-    List<Rule> rules = Collections.<Rule>singletonList(
+    List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
-            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
             DruidServer.DEFAULT_TIER,
             DruidServer.DEFAULT_NUM_REPLICANTS
         )
@@ -158,9 +158,9 @@ public class SQLMetadataRuleManagerTest
   @Test
   public void testFetchAuditEntriesForAllDataSources() throws Exception
   {
-    List<Rule> rules = Collections.<Rule>singletonList(
+    List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
-            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
             DruidServer.DEFAULT_TIER,
             DruidServer.DEFAULT_NUM_REPLICANTS
         )

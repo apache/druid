@@ -53,7 +53,7 @@ public class LookupCoordinatorResourceTest
   private static final String LOOKUP_NAME = "lookupName";
   private static final LookupExtractorFactoryMapContainer SINGLE_LOOKUP = new LookupExtractorFactoryMapContainer(
       "v0",
-      ImmutableMap.<String, Object>of()
+      ImmutableMap.of()
   );
   private static final Map<String, LookupExtractorFactoryMapContainer> SINGLE_LOOKUP_MAP = ImmutableMap.of(
       LOOKUP_NAME,
@@ -795,7 +795,7 @@ public class LookupCoordinatorResourceTest
     final String tier = "some tier";
     final LookupCoordinatorManager lookupCoordinatorManager = EasyMock.createStrictMock(LookupCoordinatorManager.class);
     final Map<String, Map<String, Map<String, Object>>> retVal =
-        ImmutableMap.<String, Map<String, Map<String, Object>>>of();
+        ImmutableMap.of();
     EasyMock.expect(lookupCoordinatorManager.getKnownLookups()).andReturn(SINGLE_TIER_MAP).once();
     EasyMock.replay(lookupCoordinatorManager);
     final LookupCoordinatorResource lookupCoordinatorResource = new LookupCoordinatorResource(

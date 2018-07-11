@@ -65,7 +65,7 @@ public class OnheapIncrementalIndexTest
               index.add(new MapBasedInputRow(
                   0,
                   Lists.newArrayList("billy"),
-                  ImmutableMap.<String, Object>of("billy", random.nextLong(), "max", 1)
+                  ImmutableMap.of("billy", random.nextLong(), "max", 1)
               ));
             }
           }
@@ -123,7 +123,7 @@ public class OnheapIncrementalIndexTest
     index.add(new MapBasedInputRow(
             0,
             Lists.newArrayList("billy"),
-            ImmutableMap.<String, Object>of("billy", 1, "max", 1)
+            ImmutableMap.of("billy", 1, "max", 1)
     ));
 
     // override the aggregators with the mocks

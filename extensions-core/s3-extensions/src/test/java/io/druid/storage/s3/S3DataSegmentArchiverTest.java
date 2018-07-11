@@ -74,10 +74,10 @@ public class S3DataSegmentArchiverTest
       .builder()
       .binaryVersion(1)
       .dataSource("dataSource")
-      .dimensions(ImmutableList.<String>of())
+      .dimensions(ImmutableList.of())
       .interval(Intervals.of("2015/2016"))
       .version("version")
-      .loadSpec(ImmutableMap.<String, Object>of(
+      .loadSpec(ImmutableMap.of(
           "type",
           S3StorageDruidModule.SCHEME,
           S3DataSegmentPuller.BUCKET,
@@ -98,7 +98,7 @@ public class S3DataSegmentArchiverTest
   public void testSimpleArchive() throws Exception
   {
     final DataSegment archivedSegment = SOURCE_SEGMENT
-        .withLoadSpec(ImmutableMap.<String, Object>of(
+        .withLoadSpec(ImmutableMap.of(
             "type",
             S3StorageDruidModule.SCHEME,
             S3DataSegmentPuller.BUCKET,
@@ -135,7 +135,7 @@ public class S3DataSegmentArchiverTest
   public void testSimpleRestore() throws Exception
   {
     final DataSegment archivedSegment = SOURCE_SEGMENT
-        .withLoadSpec(ImmutableMap.<String, Object>of(
+        .withLoadSpec(ImmutableMap.of(
             "type",
             S3StorageDruidModule.SCHEME,
             S3DataSegmentPuller.BUCKET,

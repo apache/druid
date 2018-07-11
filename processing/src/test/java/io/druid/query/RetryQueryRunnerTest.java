@@ -157,7 +157,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -205,7 +205,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -288,7 +288,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -306,7 +306,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )
@@ -321,7 +321,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.<String, Object>newHashMap()
+                              Maps.newHashMap()
                           )
                       )
                   )

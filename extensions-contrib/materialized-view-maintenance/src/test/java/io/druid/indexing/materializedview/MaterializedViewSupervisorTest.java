@@ -132,7 +132,7 @@ public class MaterializedViewSupervisorTest
             "base",
             Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
             "2015-01-02",
-            ImmutableMap.<String, Object>of(),
+            ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
             new HashBasedNumberedShardSpec(0, 1, null, null),
@@ -143,7 +143,7 @@ public class MaterializedViewSupervisorTest
             "base",
             Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
             "2015-01-03",
-            ImmutableMap.<String, Object>of(),
+            ImmutableMap.of(),
             ImmutableList.of("dim1", "dim2"),
             ImmutableList.of("m1"),
             new HashBasedNumberedShardSpec(0, 1, null, null),
@@ -153,8 +153,8 @@ public class MaterializedViewSupervisorTest
     );
     indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
-    expect(taskMaster.getTaskRunner()).andReturn(Optional.<TaskRunner>absent()).anyTimes();
-    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.<Task>of()).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = supervisor.checkSegments();
     Map<Interval, List<DataSegment>> expectedSegments = Maps.newHashMap();
     expectedSegments.put(
@@ -164,7 +164,7 @@ public class MaterializedViewSupervisorTest
                 "base", 
                 Intervals.of("2015-01-01T00Z/2015-01-02T00Z"), 
                 "2015-01-02", 
-                ImmutableMap.<String, Object>of(), 
+                ImmutableMap.of(),
                 ImmutableList.of("dim1", "dim2"), 
                 ImmutableList.of("m1"), 
                 new HashBasedNumberedShardSpec(0, 1, null, null),

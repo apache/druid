@@ -145,7 +145,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     metadataStorageCoordinator.insertDataSourceMetadata(dataSource, metadata);
     // insert base datasource segments 
     List<Boolean> baseResult = Lists.transform(
-        ImmutableList.<String>of(
+        ImmutableList.of(
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-03/2011-04-04",
@@ -172,7 +172,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     );
     // insert derivative segments
     List<Boolean> derivativeResult = Lists.transform(
-        ImmutableList.<String>of(
+        ImmutableList.of(
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-03/2011-04-04"
@@ -248,7 +248,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         .dataSource(name)
         .interval(Intervals.of(intervalStr))
         .loadSpec(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "type",
                 "local",
                 "path",
@@ -257,7 +257,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         )
         .version(version)
         .dimensions(dims)
-        .metrics(ImmutableList.<String>of("cost"))
+        .metrics(ImmutableList.of("cost"))
         .shardSpec(NoneShardSpec.instance())
         .binaryVersion(9)
         .size(size)

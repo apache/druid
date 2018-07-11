@@ -243,7 +243,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
         query.getLimitSpec(),
         query.getContext()
     ).withOverriddenContext(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "finalize", false,
             GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
             CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis()),

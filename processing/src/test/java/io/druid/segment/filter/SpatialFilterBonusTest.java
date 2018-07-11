@@ -128,7 +128,7 @@ public class SpatialFilterBonusTest
                         Collections.singletonList(
                             new SpatialDimensionSchema(
                                 "dim.geo",
-                                Lists.<String>newArrayList()
+                                Lists.newArrayList()
                             )
                         )
                     )
@@ -142,7 +142,7 @@ public class SpatialFilterBonusTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-01").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-01").toString(),
                 "dim", "foo",
                 "dim.geo", "0.0,0.0",
@@ -154,7 +154,7 @@ public class SpatialFilterBonusTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-02").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-02").toString(),
                 "dim", "foo",
                 "dim.geo", "1.0,3.0",
@@ -166,7 +166,7 @@ public class SpatialFilterBonusTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-03").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-03").toString(),
                 "dim", "foo",
                 "dim.geo", "4.0,2.0",
@@ -178,7 +178,7 @@ public class SpatialFilterBonusTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-04").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-04").toString(),
                 "dim", "foo",
                 "dim.geo", "7.0,3.0",
@@ -190,7 +190,7 @@ public class SpatialFilterBonusTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "8.0,6.0",
@@ -202,7 +202,7 @@ public class SpatialFilterBonusTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
@@ -230,7 +230,7 @@ public class SpatialFilterBonusTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-01").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "boo",
                   "dim.geo", coord,
@@ -276,7 +276,7 @@ public class SpatialFilterBonusTest
                           Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
-                                  Lists.<String>newArrayList()
+                                  Lists.newArrayList()
                               )
                           )
                       )
@@ -300,7 +300,7 @@ public class SpatialFilterBonusTest
                           Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
-                                  Lists.<String>newArrayList()
+                                  Lists.newArrayList()
                               )
                           )
                       )
@@ -323,7 +323,7 @@ public class SpatialFilterBonusTest
                           Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
-                                  Lists.<String>newArrayList()
+                                  Lists.newArrayList()
                               )
                           )
                       )
@@ -338,7 +338,7 @@ public class SpatialFilterBonusTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-01").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "foo",
                   "dim.geo", "0.0,0.0",
@@ -350,7 +350,7 @@ public class SpatialFilterBonusTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-02").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-02").toString(),
                   "dim", "foo",
                   "dim.geo", "1.0,3.0",
@@ -362,7 +362,7 @@ public class SpatialFilterBonusTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-03").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-03").toString(),
                   "dim", "foo",
                   "dim.geo", "4.0,2.0",
@@ -374,7 +374,7 @@ public class SpatialFilterBonusTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
@@ -386,7 +386,7 @@ public class SpatialFilterBonusTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-04").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-04").toString(),
                   "dim", "foo",
                   "dim.geo", "7.0,3.0",
@@ -398,7 +398,7 @@ public class SpatialFilterBonusTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "8.0,6.0",
@@ -414,7 +414,7 @@ public class SpatialFilterBonusTest
             new MapBasedInputRow(
                 DateTimes.of("2013-01-01").getMillis(),
                 DIMS,
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "timestamp", DateTimes.of("2013-01-01").toString(),
                     "dim", "boo",
                     "dim.geo", StringUtils.format(
@@ -486,7 +486,7 @@ public class SpatialFilterBonusTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )
@@ -538,7 +538,7 @@ public class SpatialFilterBonusTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )

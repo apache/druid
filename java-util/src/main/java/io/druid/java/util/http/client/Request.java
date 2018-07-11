@@ -50,7 +50,7 @@ public class Request
   private final HttpMethod method;
   private final URL url;
   private final Multimap<String, String> headers = Multimaps.newListMultimap(
-      Maps.<String, Collection<String>>newHashMap(),
+      Maps.newHashMap(),
       new Supplier<List<String>>()
       {
         @Override

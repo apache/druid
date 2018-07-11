@@ -61,7 +61,7 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
         smileMapper,
         httpClient,
         druidNodeDiscoveryProvider,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue(),
+        Predicates.alwaysTrue(),
         config
     );
   }

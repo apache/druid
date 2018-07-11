@@ -467,7 +467,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("dimA", null)
         ))
         .setAggregatorSpecs(
@@ -557,7 +557,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("dimA", null)
         ))
         .setAggregatorSpecs(
@@ -573,7 +573,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         )
         .setGranularity(Granularities.ALL)
         .setContext(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
               GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN,
               true
             )

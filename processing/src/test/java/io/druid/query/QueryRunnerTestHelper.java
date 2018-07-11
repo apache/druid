@@ -163,7 +163,7 @@ public class QueryRunnerTestHelper
   );
   public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
       "cardinality",
-      Collections.<DimensionSpec>singletonList(new DefaultDimensionSpec("quality", "quality")),
+      Collections.singletonList(new DefaultDimensionSpec("quality", "quality")),
       false
   );
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);

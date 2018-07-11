@@ -36,7 +36,7 @@ public interface SegmentWriteOutMediumFactory
 {
   static Set<SegmentWriteOutMediumFactory> builtInFactories()
   {
-    return ImmutableSet.<SegmentWriteOutMediumFactory>of(
+    return ImmutableSet.of(
         TmpFileSegmentWriteOutMediumFactory.instance(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );

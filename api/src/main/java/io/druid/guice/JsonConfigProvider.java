@@ -154,7 +154,7 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
       supplierKey = Key.get(supType);
     }
 
-    binder.bind(supplierKey).toInstance(Suppliers.<T>ofInstance(instance));
+    binder.bind(supplierKey).toInstance(Suppliers.ofInstance(instance));
   }
 
   public static <T> JsonConfigProvider<T> of(String propertyBase, Class<T> classToProvide)

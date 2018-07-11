@@ -130,7 +130,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specPost(spec, request);
@@ -180,7 +180,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(supervisorIds, response.getEntity());
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specGetAll(request);
@@ -196,7 +196,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.getSupervisorSpec("my-id")).andReturn(Optional.of(spec));
-    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id-2")).andReturn(Optional.<SupervisorSpec>absent());
+    EasyMock.expect(supervisorManager.getSupervisorSpec("my-id-2")).andReturn(Optional.absent());
     replayAll();
 
     Response response = supervisorResource.specGet("my-id");
@@ -211,7 +211,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specGet("my-id");
@@ -227,7 +227,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(supervisorManager.getSupervisorStatus("my-id")).andReturn(Optional.of(report));
-    EasyMock.expect(supervisorManager.getSupervisorStatus("my-id-2")).andReturn(Optional.<SupervisorReport>absent());
+    EasyMock.expect(supervisorManager.getSupervisorStatus("my-id-2")).andReturn(Optional.absent());
     replayAll();
 
     Response response = supervisorResource.specGetStatus("my-id");
@@ -242,7 +242,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specGetStatus("my-id");
@@ -271,7 +271,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.shutdown("my-id");
@@ -364,7 +364,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specGetAllHistory(request);
@@ -506,7 +506,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specGetAllHistory(request);
@@ -577,7 +577,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specGetHistory(request, "id1");
@@ -703,7 +703,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.specGetHistory(request, "id1");
@@ -736,7 +736,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     resetAll();
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.<SupervisorManager>absent());
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
     response = supervisorResource.shutdown("my-id");

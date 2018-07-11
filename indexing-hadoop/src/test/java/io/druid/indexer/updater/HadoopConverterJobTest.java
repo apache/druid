@@ -180,13 +180,13 @@ public class HadoopConverterJobTest
                 new UniformGranularitySpec(
                     Granularities.MONTH,
                     Granularities.DAY,
-                    ImmutableList.<Interval>of(interval)
+                    ImmutableList.of(interval)
                 ),
                 null,
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type", "static",
                     "paths", tmpInputFile.getAbsolutePath()
                 ),
@@ -302,7 +302,7 @@ public class HadoopConverterJobTest
             oldSemgments,
             true,
             tmpDir.toURI(),
-            ImmutableMap.<String, String>of(),
+            ImmutableMap.of(),
             null,
             tmpSegmentDir.toURI().toString()
         )
@@ -351,12 +351,12 @@ public class HadoopConverterJobTest
       Assert.assertEquals(oldSegment.getDataSource(), newSegment.getDataSource());
       Assert.assertEquals(oldSegment.getInterval(), newSegment.getInterval());
       Assert.assertEquals(
-          Sets.<String>newHashSet(oldSegment.getMetrics()),
-          Sets.<String>newHashSet(newSegment.getMetrics())
+          Sets.newHashSet(oldSegment.getMetrics()),
+          Sets.newHashSet(newSegment.getMetrics())
       );
       Assert.assertEquals(
-          Sets.<String>newHashSet(oldSegment.getDimensions()),
-          Sets.<String>newHashSet(newSegment.getDimensions())
+          Sets.newHashSet(oldSegment.getDimensions()),
+          Sets.newHashSet(newSegment.getDimensions())
       );
       Assert.assertEquals(oldSegment.getVersion() + "_converted", newSegment.getVersion());
       Assert.assertTrue(oldSegment.getSize() < newSegment.getSize());
@@ -408,7 +408,7 @@ public class HadoopConverterJobTest
             oldSemgments,
             true,
             tmpDir.toURI(),
-            ImmutableMap.<String, String>of(),
+            ImmutableMap.of(),
             null,
             tmpSegmentDir.toURI().toString()
         )

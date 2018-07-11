@@ -369,7 +369,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
     catch (CallbackFailedException e) {
       if (txnFailure.get()) {
-        return new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false);
+        return new SegmentPublishResult(ImmutableSet.of(), false);
       } else {
         throw e;
       }
@@ -1136,7 +1136,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 .bind("end", interval.getEnd().toString())
                 .map(ByteArrayMapper.FIRST)
                 .fold(
-                    Lists.<DataSegment>newArrayList(),
+                    Lists.newArrayList(),
                     new Folder3<List<DataSegment>, byte[]>()
                     {
                       @Override

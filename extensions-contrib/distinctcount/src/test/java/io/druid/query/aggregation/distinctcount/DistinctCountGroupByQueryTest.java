@@ -74,21 +74,21 @@ public class DistinctCountGroupByQueryTest
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "0", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp + 1,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "1", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "1", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp + 2,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "2", client_type, "android")
+            ImmutableMap.of(visitor_id, "2", client_type, "android")
         )
     );
 
@@ -96,7 +96,7 @@ public class DistinctCountGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(
-            Collections.<DimensionSpec>singletonList(
+            Collections.singletonList(
                 new DefaultDimensionSpec(
                     client_type,
                     client_type

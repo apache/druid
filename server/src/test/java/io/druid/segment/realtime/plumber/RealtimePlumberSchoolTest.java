@@ -173,7 +173,7 @@ public class RealtimePlumberSchoolTest
     );
 
     announcer = EasyMock.createMock(DataSegmentAnnouncer.class);
-    announcer.announceSegment(EasyMock.<DataSegment>anyObject());
+    announcer.announceSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
 
     segmentPublisher = EasyMock.createNiceMock(SegmentPublisher.class);
@@ -185,9 +185,9 @@ public class RealtimePlumberSchoolTest
             .anyTimes();
     EasyMock.expect(
         handoffNotifier.registerSegmentHandoffCallback(
-            EasyMock.<SegmentDescriptor>anyObject(),
-            EasyMock.<Executor>anyObject(),
-            EasyMock.<Runnable>anyObject()
+            EasyMock.anyObject(),
+            EasyMock.anyObject(),
+            EasyMock.anyObject()
         )
     ).andReturn(true).anyTimes();
 
@@ -218,7 +218,7 @@ public class RealtimePlumberSchoolTest
 
     realtimePlumberSchool = new RealtimePlumberSchool(
         emitter,
-        new DefaultQueryRunnerFactoryConglomerate(Maps.<Class<? extends Query>, QueryRunnerFactory>newHashMap()),
+        new DefaultQueryRunnerFactoryConglomerate(Maps.newHashMap()),
         dataSegmentPusher,
         announcer,
         segmentPublisher,
@@ -470,7 +470,7 @@ public class RealtimePlumberSchoolTest
 
   private void testDimOrderInheritanceHelper(final Object commitMetadata) throws Exception
   {
-    List<List<String>> expectedDims = ImmutableList.<List<String>>of(
+    List<List<String>> expectedDims = ImmutableList.of(
         ImmutableList.of("dimD"),
         ImmutableList.of("dimC"),
         ImmutableList.of("dimA"),

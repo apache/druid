@@ -85,7 +85,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory(name));
+    return Collections.singletonList(new CountAggregatorFactory(name));
   }
 
   @Override

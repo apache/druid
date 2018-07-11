@@ -104,7 +104,7 @@ public class AmbariMetricsEmitterConfig
         druidToTimelineEventConverter,
         "Event converter can not be null"
     );
-    this.alertEmitters = alertEmitters == null ? Collections.<String>emptyList() : alertEmitters;
+    this.alertEmitters = alertEmitters == null ? Collections.emptyList() : alertEmitters;
     this.emitWaitTime = emitWaitTime == null ? 0 : emitWaitTime;
     this.waitForEventTime = waitForEventTime == null ? DEFAULT_GET_TIMEOUT : waitForEventTime;
   }

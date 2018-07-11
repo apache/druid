@@ -65,7 +65,7 @@ public class TopNQueryTest
         .threshold(4)
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(
@@ -75,7 +75,7 @@ public class TopNQueryTest
                 )
             )
         )
-        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
     String json = jsonMapper.writeValueAsString(query);
@@ -102,7 +102,7 @@ public class TopNQueryTest
         .threshold(2)
         .intervals(fullOnInterval.getIntervals())
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(

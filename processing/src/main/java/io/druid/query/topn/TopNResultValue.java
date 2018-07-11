@@ -41,7 +41,7 @@ public class TopNResultValue implements Iterable<DimensionAndMetricValueExtracto
       List<?> value
   )
   {
-    this.value = (value == null) ? Lists.<DimensionAndMetricValueExtractor>newArrayList() : Lists.transform(
+    this.value = (value == null) ? Lists.newArrayList() : Lists.transform(
         value,
         new Function<Object, DimensionAndMetricValueExtractor>()
         {

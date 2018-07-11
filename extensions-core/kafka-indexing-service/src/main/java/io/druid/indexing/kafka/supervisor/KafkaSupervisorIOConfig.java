@@ -77,10 +77,10 @@ public class KafkaSupervisorIOConfig
     this.useEarliestOffset = useEarliestOffset != null ? useEarliestOffset : false;
     this.completionTimeout = defaultDuration(completionTimeout, "PT30M");
     this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
-                                      ? Optional.<Duration>absent()
+                                      ? Optional.absent()
                                       : Optional.of(lateMessageRejectionPeriod.toStandardDuration());
     this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
-                                       ? Optional.<Duration>absent()
+                                       ? Optional.absent()
                                        : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : false;
   }

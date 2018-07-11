@@ -140,7 +140,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       }
     }
 
-    final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(Lists.<ListenableFuture<?>>newLinkedList());
+    final Collection<ListenableFuture<?>> cacheFutures = Collections.synchronizedList(Lists.newLinkedList());
     if (populateCache) {
       final Function cacheFn = strategy.prepareForSegmentLevelCache();
 

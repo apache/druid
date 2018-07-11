@@ -135,7 +135,7 @@ public class SchemalessIndexTest
           return index;
         }
       } else {
-        entry = Maps.<Integer, QueryableIndex>newHashMap();
+        entry = Maps.newHashMap();
         incrementalIndexes.put(index1, entry);
       }
 
@@ -247,7 +247,7 @@ public class SchemalessIndexTest
           return index;
         }
       } else {
-        entry = Maps.<Integer, QueryableIndex>newHashMap();
+        entry = Maps.newHashMap();
         mergedIndexes.put(index1, entry);
       }
 
@@ -323,7 +323,7 @@ public class SchemalessIndexTest
   public QueryableIndex getMergedIncrementalIndexDiffMetrics()
   {
     return getMergedIncrementalIndex(
-        Arrays.<Pair<String, AggregatorFactory[]>>asList(
+        Arrays.asList(
             new Pair<String, AggregatorFactory[]>("druid.sample.json.top", METRIC_AGGS_NO_UNIQ),
             new Pair<String, AggregatorFactory[]>("druid.sample.json.bottom", METRIC_AGGS)
         )

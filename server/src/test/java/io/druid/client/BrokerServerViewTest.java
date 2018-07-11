@@ -157,7 +157,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews();
 
     final List<DruidServer> druidServers = Lists.transform(
-        ImmutableList.<String>of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
+        ImmutableList.of("locahost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
         new Function<String, DruidServer>()
         {
           @Override
@@ -181,7 +181,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     }
 
     final List<DataSegment> segments = Lists.transform(
-        ImmutableList.<Pair<String, String>>of(
+        ImmutableList.of(
             Pair.of("2011-04-01/2011-04-03", "v1"),
             Pair.of("2011-04-03/2011-04-06", "v1"),
             Pair.of("2011-04-01/2011-04-09", "v2"),
@@ -295,7 +295,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
+        Predicates.alwaysTrue()
     )
     {
       @Override
@@ -352,7 +352,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                       .dataSource("test_broker_server_view")
                       .interval(Intervals.of(intervalStr))
                       .loadSpec(
-                          ImmutableMap.<String, Object>of(
+                          ImmutableMap.of(
                               "type",
                               "local",
                               "path",
@@ -360,8 +360,8 @@ public class BrokerServerViewTest extends CuratorTestBase
                           )
                       )
                       .version(version)
-                      .dimensions(ImmutableList.<String>of())
-                      .metrics(ImmutableList.<String>of())
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
                       .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(0)

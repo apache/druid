@@ -323,9 +323,9 @@ public class IngestSegmentFirehoseFactoryTest
             new JSONParseSpec(
                 new TimestampSpec(TIME_COLUMN, "auto", null),
                 new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
-                    ImmutableList.<SpatialDimensionSchema>of()
+                    ImmutableList.of()
                 ),
                 null,
                 null
@@ -445,7 +445,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   private static Map<String, Object> buildRow(Long ts)
   {
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         TIME_COLUMN, ts,
         DIM_NAME, DIM_VALUE,
         DIM_FLOAT_NAME, METRIC_FLOAT_VALUE,
@@ -461,7 +461,7 @@ public class IngestSegmentFirehoseFactoryTest
         DATA_SOURCE_NAME,
         Intervals.ETERNITY,
         DATA_SOURCE_VERSION,
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type", "local",
             "path", persistDir.getAbsolutePath()
         ),

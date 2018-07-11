@@ -35,7 +35,7 @@ public class AggregatorFactoryTest
   public void testMergeAggregators()
   {
     Assert.assertNull(AggregatorFactory.mergeAggregators(null));
-    Assert.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.<AggregatorFactory[]>of()));
+    Assert.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.of()));
 
     List<AggregatorFactory[]> aggregatorsToBeMerged = new ArrayList<>();
 

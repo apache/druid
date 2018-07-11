@@ -57,15 +57,15 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     return ImmutableList.copyOf(
         Iterables.concat(
-            getRequestPaths(OverlordResource.class, ImmutableList.<Class<?>>of(
+            getRequestPaths(OverlordResource.class, ImmutableList.of(
                 TaskStorageQueryAdapter.class,
                 AuthorizerMapper.class
                             )
             ),
-            getRequestPaths(WorkerResource.class, ImmutableList.<Class<?>>of(
+            getRequestPaths(WorkerResource.class, ImmutableList.of(
                 AuthorizerMapper.class
             )),
-            getRequestPaths(SupervisorResource.class, ImmutableList.<Class<?>>of(
+            getRequestPaths(SupervisorResource.class, ImmutableList.of(
                 SupervisorManager.class,
                 AuthorizerMapper.class
                             )

@@ -48,6 +48,6 @@ public class FilteredSingleServerInventoryViewProvider implements FilteredServer
   @Override
   public SingleServerInventoryView get()
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysFalse());
+    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.alwaysFalse());
   }
 }

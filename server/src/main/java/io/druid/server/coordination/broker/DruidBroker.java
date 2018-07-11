@@ -64,7 +64,7 @@ public class DruidBroker
           }
         },
         // We are not interested in any segment callbacks except view initialization
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysFalse()
+        Predicates.alwaysFalse()
     );
   }
 

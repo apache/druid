@@ -483,8 +483,8 @@ public class DumpSegment extends GuiceRunnable
     final QueryRunnerFactory factory = conglomerate.findFactory(query);
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
     final Sequence results = factory.getToolchest().mergeResults(
-        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner>of(runner))
-    ).run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner))
+    ).run(QueryPlus.wrap(query), Maps.newHashMap());
     return (Sequence<T>) results;
   }
 

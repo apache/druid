@@ -51,7 +51,7 @@ public class AsyncQueryRunnerTest
     query = Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .intervals("2014/2015")
-              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")))
+              .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")))
               .build();
   }
   

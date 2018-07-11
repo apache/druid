@@ -352,7 +352,7 @@ public class InitializationTest
         return rootHadoopDependenciesDir.getAbsolutePath();
       }
     };
-    Initialization.getHadoopDependencyFilesToLoad(ImmutableList.<String>of(), config);
+    Initialization.getHadoopDependencyFilesToLoad(ImmutableList.of(), config);
   }
 
   @Test(expected = ISE.class)

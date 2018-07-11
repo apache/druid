@@ -79,7 +79,7 @@ public class MaterializedViewQueryTest
         .threshold(4)
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonDoubleAggregators,
                     Lists.newArrayList(
@@ -89,7 +89,7 @@ public class MaterializedViewQueryTest
                 )
             )
         )
-        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
     MaterializedViewQuery query = new MaterializedViewQuery(topNQuery, optimizer);
     String json = jsonMapper.writeValueAsString(query);

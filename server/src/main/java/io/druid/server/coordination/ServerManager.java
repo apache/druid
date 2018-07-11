@@ -242,7 +242,7 @@ public class ServerManager implements QuerySegmentWalker
                 );
 
                 if (entry == null) {
-                  return Collections.<QueryRunner<T>>singletonList(
+                  return Collections.singletonList(
                       new ReportTimelineMissingSegmentQueryRunner<T>(input));
                 }
 

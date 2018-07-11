@@ -79,7 +79,7 @@ import java.util.zip.GZIPOutputStream;
 public class UriCacheGeneratorTest
 {
   private static final String FAKE_SCHEME = "wabblywoo";
-  private static final Map<String, SearchableVersionedDataFinder> FINDERS = ImmutableMap.<String, SearchableVersionedDataFinder>of(
+  private static final Map<String, SearchableVersionedDataFinder> FINDERS = ImmutableMap.of(
       "file",
       new LocalFileTimestampVersionFinder(),
       FAKE_SCHEME,
@@ -285,7 +285,7 @@ public class UriCacheGeneratorTest
     final ObjectMapper mapper = new DefaultObjectMapper();
     try (OutputStream ostream = outStreamSupplier.apply(tmpFile);
          OutputStreamWriter out = new OutputStreamWriter(ostream, StandardCharsets.UTF_8)) {
-      out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of(
+      out.write(mapper.writeValueAsString(ImmutableMap.of(
           "boo",
           "bar",
           "foo",

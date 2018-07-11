@@ -80,7 +80,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                   {
                     TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
                     QueryRunner<Row> newRunner = factory.mergeRunners(
-                        MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(input)
+                        MoreExecutors.sameThreadExecutor(), ImmutableList.of(input)
                     );
                     QueryToolChest toolChest = factory.getToolchest();
 

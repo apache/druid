@@ -102,7 +102,7 @@ public class SpecificSegmentQueryRunnerTest
                                   .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(Intervals.of("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
@@ -179,7 +179,7 @@ public class SpecificSegmentQueryRunnerTest
                                   .granularity(Granularities.ALL)
                                   .intervals(ImmutableList.of(Intervals.of("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new CountAggregatorFactory("rows")
                                       )
                                   )

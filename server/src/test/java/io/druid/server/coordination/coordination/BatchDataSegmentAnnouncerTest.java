@@ -359,9 +359,9 @@ public class BatchDataSegmentAnnouncerTest
                           )
                       )
                       .version(DateTimes.nowUtc().toString())
-                      .dimensions(ImmutableList.<String>of("dim1", "dim2"))
-                      .metrics(ImmutableList.<String>of("met1", "met2"))
-                      .loadSpec(ImmutableMap.<String, Object>of("type", "local"))
+                      .dimensions(ImmutableList.of("dim1", "dim2"))
+                      .metrics(ImmutableList.of("met1", "met2"))
+                      .loadSpec(ImmutableMap.of("type", "local"))
                       .build();
   }
 

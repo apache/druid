@@ -95,7 +95,7 @@ public class GoogleTaskLogs implements TaskLogs
 
       final long length = storage.size(config.getBucket(), taskKey);
 
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override

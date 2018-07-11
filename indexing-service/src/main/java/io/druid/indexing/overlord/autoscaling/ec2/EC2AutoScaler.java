@@ -186,7 +186,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   public AutoScalingData terminate(List<String> ips)
   {
     if (ips.isEmpty()) {
-      return new AutoScalingData(Lists.<String>newArrayList());
+      return new AutoScalingData(Lists.newArrayList());
     }
 
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
@@ -227,7 +227,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   public AutoScalingData terminateWithIds(List<String> ids)
   {
     if (ids.isEmpty()) {
-      return new AutoScalingData(Lists.<String>newArrayList());
+      return new AutoScalingData(Lists.newArrayList());
     }
 
     try {

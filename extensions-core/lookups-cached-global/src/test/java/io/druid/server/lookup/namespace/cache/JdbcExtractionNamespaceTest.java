@@ -195,7 +195,7 @@ public class JdbcExtractionNamespaceTest
             NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
             scheduler = new CacheScheduler(
                 noopServiceEmitter,
-                ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+                ImmutableMap.of(
                     JdbcExtractionNamespace.class,
                     new CacheGenerator<JdbcExtractionNamespace>()
                     {

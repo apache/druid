@@ -98,7 +98,7 @@ public class QueryHostFinderTest
     Server server = queryRunner.findServer(
         new TimeBoundaryQuery(
             new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Collections.<Interval>singletonList(Intervals.of("2011-08-31/2011-09-01"))),
+            new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-08-31/2011-09-01"))),
             null,
             null,
             null

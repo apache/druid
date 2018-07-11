@@ -55,7 +55,7 @@ public class CursorOnlyStrategy extends SearchStrategy
   {
     final StorageAdapter adapter = segment.asStorageAdapter();
     final List<DimensionSpec> dimensionSpecs = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
-    return ImmutableList.<SearchQueryExecutor>of(new CursorBasedExecutor(
+    return ImmutableList.of(new CursorBasedExecutor(
         query,
         segment,
         filter,

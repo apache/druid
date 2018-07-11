@@ -511,7 +511,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new ExpressionVirtualColumn("d1:v", "timestamp_extract(\"__time\",'MONTH','UTC')", ValueType.LONG, TestExprMacroTable.INSTANCE),
             new ExpressionVirtualColumn("d2:v", "timestamp_extract(\"__time\",'DAY','UTC')", ValueType.LONG, TestExprMacroTable.INSTANCE)
         )
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG),
             new DefaultDimensionSpec("d1:v", "d1", ValueType.LONG),
             new DefaultDimensionSpec("d2:v", "d2", ValueType.LONG)
@@ -618,7 +618,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("dimA", "dimA"),
             new ExtractionDimensionSpec(
                 Column.TIME_COLUMN_NAME,

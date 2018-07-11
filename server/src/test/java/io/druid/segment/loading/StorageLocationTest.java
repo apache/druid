@@ -109,7 +109,7 @@ public class StorageLocationTest
         "test",
         Intervals.of(intervalString),
         "1",
-        ImmutableMap.<String, Object>of(),
+        ImmutableMap.of(),
         Collections.singletonList("d"),
         Collections.singletonList("m"),
         null,

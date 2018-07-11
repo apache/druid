@@ -61,7 +61,7 @@ public class RabbitMQFirehoseFactoryTest
         10,
         11,
         12,
-        ImmutableMap.<String, Object>of("hi", "bye")
+        ImmutableMap.of("hi", "bye")
     );
 
     RabbitMQFirehoseFactory factory = new RabbitMQFirehoseFactory(

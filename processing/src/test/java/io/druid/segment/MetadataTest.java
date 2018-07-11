@@ -67,7 +67,7 @@ public class MetadataTest
   public void testMerge()
   {
     Assert.assertNull(Metadata.merge(null, null));
-    Assert.assertNull(Metadata.merge(ImmutableList.<Metadata>of(), null));
+    Assert.assertNull(Metadata.merge(ImmutableList.of(), null));
 
     List<Metadata> metadataToBeMerged = new ArrayList<>();
 

@@ -47,7 +47,7 @@ public class HadoopConverterTaskSerDeTest
   private static final String DATA_SOURCE = "datasource";
   private static final Interval INTERVAL = Intervals.of("2010/2011");
   private static final String SEGMENT_VERSION = "some version";
-  private static final Map<String, Object> LOAD_SPEC = ImmutableMap.<String, Object>of("someKey", "someVal");
+  private static final Map<String, Object> LOAD_SPEC = ImmutableMap.of("someKey", "someVal");
   private static final List<String> DIMENSIONS = ImmutableList.of("dim1", "dim2");
   private static final List<String> METRICS = ImmutableList.of("metric1", "metric2");
   private static final ShardSpec SHARD_SPEC = NoneShardSpec.instance();

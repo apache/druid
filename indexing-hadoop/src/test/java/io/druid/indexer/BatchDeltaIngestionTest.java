@@ -94,7 +94,7 @@ public class BatchDeltaIngestionTest
               DataSegment.class
           )
           .withLoadSpec(
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "type",
                   "local",
                   "path",
@@ -113,7 +113,7 @@ public class BatchDeltaIngestionTest
     List<WindowedDataSegment> segments = ImmutableList.of(new WindowedDataSegment(SEGMENT, INTERVAL_FULL));
 
     HadoopDruidIndexerConfig config = makeHadoopDruidIndexerConfig(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "dataSource",
             "ingestionSpec",
@@ -130,19 +130,19 @@ public class BatchDeltaIngestionTest
     );
 
     List<ImmutableMap<String, Object>> expectedRows = ImmutableList.of(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T00:00:00.000Z"),
             "host", ImmutableList.of("a.example.com"),
             "visited_sum", 100L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T01:00:00.000Z"),
             "host", ImmutableList.of("b.example.com"),
             "visited_sum", 150L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T02:00:00.000Z"),
             "host", ImmutableList.of("c.example.com"),
             "visited_sum", 200L,
@@ -174,7 +174,7 @@ public class BatchDeltaIngestionTest
         new HyperUniquesAggregatorFactory("unique_hosts2", "unique_hosts")
     };
 
-    Map<String, Object> inputSpec = ImmutableMap.<String, Object>of(
+    Map<String, Object> inputSpec = ImmutableMap.of(
         "type",
         "dataSource",
         "ingestionSpec",
@@ -198,19 +198,19 @@ public class BatchDeltaIngestionTest
     );
 
     List<ImmutableMap<String, Object>> expectedRows = ImmutableList.of(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T00:00:00.000Z"),
             "host", ImmutableList.of("a.example.com"),
             "visited_sum2", 100L,
             "unique_hosts2", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T01:00:00.000Z"),
             "host", ImmutableList.of("b.example.com"),
             "visited_sum2", 150L,
             "unique_hosts2", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T02:00:00.000Z"),
             "host", ImmutableList.of("c.example.com"),
             "visited_sum2", 200L,
@@ -233,7 +233,7 @@ public class BatchDeltaIngestionTest
     List<WindowedDataSegment> segments = ImmutableList.of(new WindowedDataSegment(SEGMENT, INTERVAL_PARTIAL));
 
     HadoopDruidIndexerConfig config = makeHadoopDruidIndexerConfig(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "dataSource",
             "ingestionSpec",
@@ -250,13 +250,13 @@ public class BatchDeltaIngestionTest
     );
 
     List<ImmutableMap<String, Object>> expectedRows = ImmutableList.of(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T00:00:00.000Z"),
             "host", ImmutableList.of("a.example.com"),
             "visited_sum", 100L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T01:00:00.000Z"),
             "host", ImmutableList.of("b.example.com"),
             "visited_sum", 150L,
@@ -303,12 +303,12 @@ public class BatchDeltaIngestionTest
     List<WindowedDataSegment> segments = ImmutableList.of(new WindowedDataSegment(SEGMENT, INTERVAL_FULL));
 
     HadoopDruidIndexerConfig config = makeHadoopDruidIndexerConfig(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type",
             "multi",
             "children",
             ImmutableList.of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "type",
                     "dataSource",
                     "ingestionSpec",
@@ -333,19 +333,19 @@ public class BatchDeltaIngestionTest
     );
 
     List<ImmutableMap<String, Object>> expectedRows = ImmutableList.of(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T00:00:00.000Z"),
             "host", ImmutableList.of("a.example.com"),
             "visited_sum", 190L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T01:00:00.000Z"),
             "host", ImmutableList.of("b.example.com"),
             "visited_sum", 175L,
             "unique_hosts", 1.0d
         ),
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "time", DateTimes.of("2014-10-22T02:00:00.000Z"),
             "host", ImmutableList.of("c.example.com"),
             "visited_sum", 270L,
@@ -371,7 +371,7 @@ public class BatchDeltaIngestionTest
   ) throws Exception
   {
     IndexGeneratorJob job = new IndexGeneratorJob(config);
-    Assert.assertTrue(JobHelper.runJobs(ImmutableList.<Jobby>of(job), config));
+    Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
 
     File segmentFolder = new File(
         StringUtils.format(
@@ -501,7 +501,7 @@ public class BatchDeltaIngestionTest
     );
 
     config.setShardSpecs(
-        ImmutableMap.<Long, List<HadoopyShardSpec>>of(
+        ImmutableMap.of(
             INTERVAL_FULL.getStartMillis(),
             ImmutableList.of(
                 new HadoopyShardSpec(

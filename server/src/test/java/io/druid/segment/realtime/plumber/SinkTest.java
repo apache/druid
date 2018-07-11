@@ -251,7 +251,7 @@ public class SinkTest
     int rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.<String, Object>of("field1", "value1", "dedupColumn", "v1")
+        ImmutableMap.of("field1", "value1", "dedupColumn", "v1")
     ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
@@ -259,7 +259,7 @@ public class SinkTest
     rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.<String, Object>of("field1", "value2")
+        ImmutableMap.of("field1", "value2")
     ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
@@ -267,21 +267,21 @@ public class SinkTest
     rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.<String, Object>of("field1", "value3")
+        ImmutableMap.of("field1", "value3")
     ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
     rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.<String, Object>of("field1", "value4", "dedupColumn", "v2")
+        ImmutableMap.of("field1", "value4", "dedupColumn", "v2")
     ), false).getRowCount();
     Assert.assertTrue(rows > 0);
 
     rows = sink.add(new MapBasedInputRow(
         DateTimes.of("2013-01-01"),
         ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.<String, Object>of("field1", "value5", "dedupColumn", "v1")
+        ImmutableMap.of("field1", "value5", "dedupColumn", "v1")
     ), false).getRowCount();
     Assert.assertTrue(rows == -2);
   }

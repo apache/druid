@@ -54,7 +54,7 @@ public class LocatedSegmentDescriptor
     this.version = version;
     this.partitionNumber = partitionNumber;
     this.size = size;
-    this.locations = locations == null ? ImmutableList.<DruidServerMetadata>of() : locations;
+    this.locations = locations == null ? ImmutableList.of() : locations;
   }
 
   public LocatedSegmentDescriptor(SegmentDescriptor descriptor, long size, List<DruidServerMetadata> candidates)

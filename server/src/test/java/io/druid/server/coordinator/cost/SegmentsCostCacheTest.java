@@ -185,8 +185,8 @@ public class SegmentsCostCacheTest
         interval,
         UUID.randomUUID().toString(),
         new ConcurrentHashMap<>(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         null,
         0,
         size

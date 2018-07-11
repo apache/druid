@@ -77,7 +77,7 @@ public class SegmentReplicantLookup
   public Map<String, Integer> getClusterTiers(String segmentId)
   {
     Map<String, Integer> retVal = segmentsInCluster.row(segmentId);
-    return (retVal == null) ? Maps.<String, Integer>newHashMap() : retVal;
+    return (retVal == null) ? Maps.newHashMap() : retVal;
   }
 
   public int getLoadedReplicants(String segmentId)

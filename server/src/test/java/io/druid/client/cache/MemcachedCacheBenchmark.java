@@ -83,7 +83,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
 
 
     cache = new MemcachedCache(
-        Suppliers.<ResourceHolder<MemcachedClientIF>>ofInstance(
+        Suppliers.ofInstance(
             StupidResourceHolder.create(client)
         ),
         new MemcachedCacheConfig()

@@ -59,7 +59,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -71,7 +71,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r2 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah2",
                     "foo2"
@@ -83,7 +83,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> expected = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -107,7 +107,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -119,7 +119,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r2 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah2",
                     "foo2"
@@ -131,7 +131,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> expected = new Result<SearchResultValue>(
         Granularities.DAY.bucketStart(currTime),
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -155,7 +155,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -179,7 +179,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -191,7 +191,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r2 = new Result<SearchResultValue>(
         currTime.plusHours(2),
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah2",
                     "foo2"
@@ -203,7 +203,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> expected = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -318,7 +318,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -342,7 +342,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah",
                     "foo"
@@ -354,7 +354,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r2 = new Result<SearchResultValue>(
         currTime,
         new SearchResultValue(
-            ImmutableList.<SearchHit>of(
+            ImmutableList.of(
                 new SearchHit(
                     "blah2",
                     "foo2"
@@ -374,7 +374,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
             currTime,
             new SearchResultValue(
-                    ImmutableList.<SearchHit>of(
+                    ImmutableList.of(
                             new SearchHit(
                                     "blah",
                                     "foo"
@@ -386,7 +386,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> r2 = new Result<SearchResultValue>(
             currTime,
             new SearchResultValue(
-                    ImmutableList.<SearchHit>of(
+                    ImmutableList.of(
                             new SearchHit(
                                     "blah",
                                     "foo",

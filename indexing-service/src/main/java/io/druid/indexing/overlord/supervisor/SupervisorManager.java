@@ -63,7 +63,7 @@ public class SupervisorManager
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    return supervisor == null ? Optional.<SupervisorSpec>absent() : Optional.fromNullable(supervisor.rhs);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.rhs);
   }
 
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)

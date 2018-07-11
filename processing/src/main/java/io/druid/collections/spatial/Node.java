@@ -46,7 +46,7 @@ public class Node
     this(
         minCoordinates,
         maxCoordinates,
-        Lists.<Node>newArrayList(),
+        Lists.newArrayList(),
         isLeaf,
         null,
         bitmapFactory.makeEmptyMutableBitmap()

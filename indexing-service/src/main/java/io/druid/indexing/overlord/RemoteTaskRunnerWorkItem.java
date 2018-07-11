@@ -43,7 +43,7 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
       String dataSource
   )
   {
-    this(taskId, taskType, SettableFuture.<TaskStatus>create(), worker, location, dataSource);
+    this(taskId, taskType, SettableFuture.create(), worker, location, dataSource);
   }
 
   private RemoteTaskRunnerWorkItem(

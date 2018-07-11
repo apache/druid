@@ -68,7 +68,7 @@ public class GroupByQueryRunnerFactoryTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("tags", "tags")))
         .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
         .build();
 

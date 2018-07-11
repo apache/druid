@@ -112,7 +112,7 @@ public class OrcHadoopInputRowParserTest
                 null
             ),
             new DimensionsSpec(
-                ImmutableList.<DimensionSchema>of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
+                ImmutableList.of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
                 null,
                 null
             )
@@ -134,7 +134,7 @@ public class OrcHadoopInputRowParserTest
             null
         ),
         new DimensionsSpec(
-            ImmutableList.<DimensionSchema>of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
+            ImmutableList.of(new StringDimensionSchema("col1"), new StringDimensionSchema("col2")),
             null,
             null
         )

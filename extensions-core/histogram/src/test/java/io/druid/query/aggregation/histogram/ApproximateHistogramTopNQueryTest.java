@@ -115,7 +115,7 @@ public class ApproximateHistogramTopNQueryTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
@@ -127,7 +127,7 @@ public class ApproximateHistogramTopNQueryTest
             )
         )
         .postAggregators(
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 QueryRunnerTestHelper.addRowsIndexConstant,
                 QueryRunnerTestHelper.dependentPostAgg,
                 new QuantilePostAggregator("quantile", "apphisto", 0.5f)

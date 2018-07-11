@@ -95,7 +95,7 @@ public class AlertEvent implements Event
       String description
   )
   {
-    this(DateTimes.nowUtc(), service, host, Severity.DEFAULT, description, ImmutableMap.<String, Object>of());
+    this(DateTimes.nowUtc(), service, host, Severity.DEFAULT, description, ImmutableMap.of());
   }
 
   public DateTime getCreatedTime()

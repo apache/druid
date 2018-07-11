@@ -114,7 +114,7 @@ public class SqlQuery
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.resultFormat = resultFormat == null ? ResultFormat.OBJECT : resultFormat;
-    this.context = context == null ? ImmutableMap.<String, Object>of() : context;
+    this.context = context == null ? ImmutableMap.of() : context;
   }
 
   @JsonProperty

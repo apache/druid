@@ -102,7 +102,7 @@ public class AzureTaskLogs implements TaskLogs
         return Optional.absent();
       }
 
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override

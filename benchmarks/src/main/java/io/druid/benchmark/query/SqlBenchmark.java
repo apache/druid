@@ -126,12 +126,12 @@ public class SqlBenchmark
         .setDataSource("foo")
         .setInterval(Intervals.ETERNITY)
         .setDimensions(
-            Arrays.<DimensionSpec>asList(
+            Arrays.asList(
                 new DefaultDimensionSpec("dimZipf", "d0"),
                 new DefaultDimensionSpec("dimSequential", "d1")
             )
         )
-        .setAggregatorSpecs(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("c")))
+        .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("c")))
         .setGranularity(Granularities.ALL)
         .build();
 

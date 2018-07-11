@@ -140,7 +140,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.overwriteFiles = overwriteFiles;
     this.ignoreInvalidRows = ignoreInvalidRows;
     this.jobProperties = (jobProperties == null
-                          ? ImmutableMap.<String, String>of()
+                          ? ImmutableMap.of()
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
     this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();

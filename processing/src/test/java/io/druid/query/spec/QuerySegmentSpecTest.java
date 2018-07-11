@@ -85,17 +85,17 @@ public class QuerySegmentSpecTest
 
             "segments", ImmutableList
             .<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "itvl", "2011-07-01/2011-10-10",
                     "ver", "1",
                     "part", 0
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "itvl", "2011-07-01/2011-10-10",
                     "ver", "1",
                     "part", 1
                 ),
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "itvl", "2011-11-01/2011-11-10",
                     "ver", "2",
                     "part", 10

@@ -320,7 +320,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     // Setup MetadataSegmentManager
     DruidDataSource[] druidDataSources = {
-        new DruidDataSource(dataSource, Collections.<String, String>emptyMap())
+        new DruidDataSource(dataSource, Collections.emptyMap())
     };
     final DataSegment dataSegment = new DataSegment(
         dataSource,
@@ -578,7 +578,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
         dataSource, interval, "dummy_version", new ConcurrentHashMap<>(),
-        Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, 0L
+        Lists.newArrayList(), Lists.newArrayList(), null, 0, 0L
     );
     return segment;
   }

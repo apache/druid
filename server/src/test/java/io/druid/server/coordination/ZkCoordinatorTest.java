@@ -89,7 +89,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         "test",
         Intervals.of("P1d/2011-04-02"),
         "v0",
-        ImmutableMap.<String, Object>of("version", "v0", "interval", Intervals.of("P1d/2011-04-02"), "cacheDir", "/no"),
+        ImmutableMap.of("version", "v0", "interval", Intervals.of("P1d/2011-04-02"), "cacheDir", "/no"),
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
         NoneShardSpec.instance(),

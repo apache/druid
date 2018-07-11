@@ -113,7 +113,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         ImmutableMap.of(
@@ -127,7 +127,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         ImmutableMap.of(
@@ -163,7 +163,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,
@@ -174,7 +174,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         ImmutableMap.of(
@@ -202,7 +202,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,
@@ -213,7 +213,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,
@@ -232,7 +232,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         ImmutableMap.of(
@@ -246,7 +246,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         ImmutableMap.of(
@@ -314,7 +314,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,
@@ -325,7 +325,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,
@@ -336,7 +336,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis3 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,
@@ -347,7 +347,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis4 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,
@@ -358,7 +358,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis5 = new SegmentAnalysis(
         "id",
         null,
-        Maps.<String, ColumnAnalysis>newHashMap(),
+        Maps.newHashMap(),
         0,
         0,
         null,

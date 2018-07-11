@@ -67,9 +67,9 @@ public class DataSourceTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("quality", "alias")))
         .setAggregatorSpecs(
-            Arrays.<AggregatorFactory>asList(
+            Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
                 new LongSumAggregatorFactory("idx", "index")
             )

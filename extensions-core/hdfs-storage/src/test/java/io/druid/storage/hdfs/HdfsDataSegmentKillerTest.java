@@ -211,7 +211,7 @@ public class HdfsDataSegmentKillerTest
         "dataSource",
         Intervals.of("2000/3000"),
         "ver",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type", "hdfs",
             "path", path
         ),

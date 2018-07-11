@@ -61,7 +61,7 @@ public class ThriftInputRowParserTest
   public void setUp()
   {
     parseSpec = new JSONParseSpec(new TimestampSpec("date", "auto", null),
-                                  new DimensionsSpec(Lists.<DimensionSchema>newArrayList(
+                                  new DimensionsSpec(Lists.newArrayList(
                                       new StringDimensionSchema("title"),
                                       new StringDimensionSchema("lastName")
                                   ), null, null),

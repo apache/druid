@@ -46,7 +46,7 @@ public class IntervalChunkingQueryRunnerTest
   {
     queryBuilder = Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Lists.<AggregatorFactory>newArrayList(new CountAggregatorFactory("count")));
+              .aggregators(Lists.newArrayList(new CountAggregatorFactory("count")));
   }
 
   @Before
@@ -77,7 +77,7 @@ public class IntervalChunkingQueryRunnerTest
   @Test
   public void testChunking()
   {
-    Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-01-11T00:00:00.000").context(ImmutableMap.<String, Object>of("chunkPeriod", "P1D")).build();
+    Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-01-11T00:00:00.000").context(ImmutableMap.of("chunkPeriod", "P1D")).build();
 
     executors.execute(EasyMock.anyObject(Runnable.class));
     EasyMock.expectLastCall().times(10);
@@ -94,7 +94,7 @@ public class IntervalChunkingQueryRunnerTest
   @Test
   public void testChunkingOnMonths()
   {
-    Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-02-11T00:00:00.000").context(ImmutableMap.<String, Object>of("chunkPeriod", "P1M")).build();
+    Query query = queryBuilder.intervals("2015-01-01T00:00:00.000/2015-02-11T00:00:00.000").context(ImmutableMap.of("chunkPeriod", "P1M")).build();
 
     executors.execute(EasyMock.anyObject(Runnable.class));
     EasyMock.expectLastCall().times(2);

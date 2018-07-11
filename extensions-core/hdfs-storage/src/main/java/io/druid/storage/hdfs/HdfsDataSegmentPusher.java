@@ -215,7 +215,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
-    return ImmutableMap.<String, Object>of("type", "hdfs", "path", finalIndexZipFilePath.toString());
+    return ImmutableMap.of("type", "hdfs", "path", finalIndexZipFilePath.toString());
   }
 
   /**

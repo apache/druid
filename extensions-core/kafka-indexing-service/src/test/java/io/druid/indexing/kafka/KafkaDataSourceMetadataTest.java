@@ -27,7 +27,7 @@ import java.util.Map;
 
 public class KafkaDataSourceMetadataTest
 {
-  private static final KafkaDataSourceMetadata KM0 = KM("foo", ImmutableMap.<Integer, Long>of());
+  private static final KafkaDataSourceMetadata KM0 = KM("foo", ImmutableMap.of());
   private static final KafkaDataSourceMetadata KM1 = KM("foo", ImmutableMap.of(0, 2L, 1, 3L));
   private static final KafkaDataSourceMetadata KM2 = KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L));
   private static final KafkaDataSourceMetadata KM3 = KM("foo", ImmutableMap.of(0, 2L, 2, 5L));
@@ -103,12 +103,12 @@ public class KafkaDataSourceMetadataTest
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.<Integer, Long>of()),
+        KM("foo", ImmutableMap.of()),
         KM0.minus(KM2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.<Integer, Long>of()),
+        KM("foo", ImmutableMap.of()),
         KM1.minus(KM2)
     );
 
@@ -118,7 +118,7 @@ public class KafkaDataSourceMetadataTest
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.<Integer, Long>of()),
+        KM("foo", ImmutableMap.of()),
         KM2.minus(KM2)
     );
   }

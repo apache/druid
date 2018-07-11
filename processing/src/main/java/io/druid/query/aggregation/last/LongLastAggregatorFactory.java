@@ -151,7 +151,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(new LongLastAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new LongLastAggregatorFactory(fieldName, fieldName));
   }
 
   @Override

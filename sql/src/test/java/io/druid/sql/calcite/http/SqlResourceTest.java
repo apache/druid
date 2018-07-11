@@ -180,7 +180,7 @@ public class SqlResourceTest extends CalciteTestBase
         new SqlQuery(
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
             SqlQuery.ResultFormat.OBJECT,
-            ImmutableMap.<String, Object>of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles")
+            ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles")
         )
     ).rhs;
 
@@ -283,7 +283,7 @@ public class SqlResourceTest extends CalciteTestBase
         new SqlQuery(
             "SELECT DISTINCT dim1 FROM foo",
             SqlQuery.ResultFormat.OBJECT,
-            ImmutableMap.<String, Object>of("maxMergingDictionarySize", 1)
+            ImmutableMap.of("maxMergingDictionarySize", 1)
         )
     ).lhs;
 
@@ -305,7 +305,7 @@ public class SqlResourceTest extends CalciteTestBase
       output.write(baos);
       return Pair.of(
           null,
-          JSON_MAPPER.<T>readValue(baos.toByteArray(), typeReference)
+          JSON_MAPPER.readValue(baos.toByteArray(), typeReference)
       );
     } else {
       return Pair.of(

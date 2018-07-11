@@ -144,7 +144,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-01").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-01").toString(),
                 "dim", "foo",
                 "lat", 0.0f,
@@ -157,7 +157,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-02").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-02").toString(),
                 "dim", "foo",
                 "lat", 1.0f,
@@ -170,7 +170,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-03").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-03").toString(),
                 "dim", "foo",
                 "lat", 4.0f,
@@ -183,7 +183,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-04").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-04").toString(),
                 "dim", "foo",
                 "lat", 7.0f,
@@ -196,7 +196,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "lat", 8.0f,
@@ -209,7 +209,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "lat", "_mmx.unknown",
@@ -222,7 +222,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "dim", "foo",
                 "dim.geo", "_mmx.unknown",
@@ -234,7 +234,7 @@ public class SpatialFilterTest
         new MapBasedInputRow(
             DateTimes.of("2013-01-05").getMillis(),
             DIMS,
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "timestamp", DateTimes.of("2013-01-05").toString(),
                 "lat2", 0.0f,
                 "long2", 0.0f,
@@ -250,7 +250,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-01").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "boo",
                   "lat", (float) (rand.nextFloat() * 10 + 10.0),
@@ -364,7 +364,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-01").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-01").toString(),
                   "dim", "foo",
                   "lat", 0.0f,
@@ -377,7 +377,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-02").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-02").toString(),
                   "dim", "foo",
                   "lat", 1.0f,
@@ -390,7 +390,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-03").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-03").toString(),
                   "dim", "foo",
                   "lat", 4.0f,
@@ -403,7 +403,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "lat", "_mmx.unknown",
@@ -416,7 +416,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "dim.geo", "_mmx.unknown",
@@ -428,7 +428,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-04").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-04").toString(),
                   "dim", "foo",
                   "lat", 7.0f,
@@ -441,7 +441,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "dim", "foo",
                   "lat", 8.0f,
@@ -454,7 +454,7 @@ public class SpatialFilterTest
           new MapBasedInputRow(
               DateTimes.of("2013-01-05").getMillis(),
               DIMS,
-              ImmutableMap.<String, Object>of(
+              ImmutableMap.of(
                   "timestamp", DateTimes.of("2013-01-05").toString(),
                   "lat2", 0.0f,
                   "long2", 0.0f,
@@ -470,7 +470,7 @@ public class SpatialFilterTest
             new MapBasedInputRow(
                 DateTimes.of("2013-01-01").getMillis(),
                 DIMS,
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "timestamp", DateTimes.of("2013-01-01").toString(),
                     "dim", "boo",
                     "lat", (float) (rand.nextFloat() * 10 + 10.0),
@@ -542,7 +542,7 @@ public class SpatialFilterTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )
@@ -595,7 +595,7 @@ public class SpatialFilterTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )
@@ -647,7 +647,7 @@ public class SpatialFilterTest
                                       )
                                   )
                                   .aggregators(
-                                      Arrays.<AggregatorFactory>asList(
+                                      Arrays.asList(
                                           new CountAggregatorFactory("rows"),
                                           new LongSumAggregatorFactory("val", "val")
                                       )

@@ -107,7 +107,7 @@ public class ClientInfoResource
     for (DruidServer server : serverInventoryView.getInventory()) {
       for (DruidDataSource dataSource : server.getDataSources()) {
         if (!dataSourceMap.containsKey(dataSource.getName())) {
-          dataSourceMap.put(dataSource.getName(), Lists.<DataSegment>newArrayList());
+          dataSourceMap.put(dataSource.getName(), Lists.newArrayList());
         }
         List<DataSegment> segments = dataSourceMap.get(dataSource.getName());
         segments.addAll(dataSource.getSegments());
@@ -143,7 +143,7 @@ public class ClientInfoResource
   )
   {
     if (full == null) {
-      return ImmutableMap.<String, Object>of(
+      return ImmutableMap.of(
           KEY_DIMENSIONS, getDatasourceDimensions(dataSourceName, interval),
           KEY_METRICS, getDatasourceMetrics(dataSourceName, interval)
       );

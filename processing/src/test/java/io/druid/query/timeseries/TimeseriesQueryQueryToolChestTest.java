@@ -32,7 +32,6 @@ import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
@@ -78,7 +77,7 @@ public class TimeseriesQueryQueryToolChestTest
                     new CountAggregatorFactory("metric1"),
                     new LongSumAggregatorFactory("metric0", "metric0")
                 ),
-                ImmutableList.<PostAggregator>of(new ConstantPostAggregator("post", 10)),
+                ImmutableList.of(new ConstantPostAggregator("post", 10)),
                 0,
                 null
             )

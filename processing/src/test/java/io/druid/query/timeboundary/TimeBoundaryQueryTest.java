@@ -54,7 +54,7 @@ public class TimeBoundaryQueryTest
                                           .dataSource("foo")
                                           .intervals("2013/2014")
                                           .context(
-                                              ImmutableMap.<String, Object>of(
+                                              ImmutableMap.of(
                                                   "priority",
                                                   1,
                                                   "useCache",
@@ -92,7 +92,7 @@ public class TimeBoundaryQueryTest
                                           .dataSource("foo")
                                           .intervals("2013/2014")
                                           .context(
-                                              ImmutableMap.<String, Object>of(
+                                              ImmutableMap.of(
                                                   "priority",
                                                   "1",
                                                   "useCache",

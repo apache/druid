@@ -128,7 +128,7 @@ public class SchemalessTestSimpleTest
                                   .granularity(allGran)
                                   .intervals(fullOnInterval)
                                   .aggregators(
-                                      Lists.<AggregatorFactory>newArrayList(
+                                      Lists.newArrayList(
                                           Iterables.concat(
                                               commonAggregators,
                                               Lists.newArrayList(
@@ -175,7 +175,7 @@ public class SchemalessTestSimpleTest
         .threshold(3)
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonAggregators,
                     Lists.newArrayList(
@@ -185,14 +185,14 @@ public class SchemalessTestSimpleTest
                 )
             )
         )
-        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<DimensionAndMetricValueExtractor>asList(
+                Arrays.asList(
                     new DimensionAndMetricValueExtractor(
                         ImmutableMap.<String, Object>builder()
                             .put("market", "spot")
@@ -250,7 +250,7 @@ public class SchemalessTestSimpleTest
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),

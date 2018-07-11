@@ -81,7 +81,7 @@ public class TimeseriesQueryRunnerBonusTest
         new MapBasedInputRow(
             DateTimes.of("2012-01-01T00:00:00Z").getMillis(),
             ImmutableList.of("dim1"),
-            ImmutableMap.<String, Object>of("dim1", "x")
+            ImmutableMap.of("dim1", "x")
         )
     );
 
@@ -96,7 +96,7 @@ public class TimeseriesQueryRunnerBonusTest
         new MapBasedInputRow(
             DateTimes.of("2012-01-01T00:00:00Z").getMillis(),
             ImmutableList.of("dim1"),
-            ImmutableMap.<String, Object>of("dim1", "y")
+            ImmutableMap.of("dim1", "y")
         )
     );
 

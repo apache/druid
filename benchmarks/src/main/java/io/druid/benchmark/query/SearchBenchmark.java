@@ -403,7 +403,7 @@ public class SearchBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return queryResult.toList();
   }
 
@@ -470,7 +470,7 @@ public class SearchBenchmark
 
     Sequence<Result<SearchResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        Maps.<String, Object>newHashMap()
+        Maps.newHashMap()
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
 

@@ -478,8 +478,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     return new ImmutableWorkerInfo(
         new Worker(scheme, host, "-2", capacity, version),
         0,
-        Sets.<String>newHashSet(),
-        Sets.<String>newHashSet(),
+        Sets.newHashSet(),
+        Sets.newHashSet(),
         DateTimes.nowUtc()
     );
   }

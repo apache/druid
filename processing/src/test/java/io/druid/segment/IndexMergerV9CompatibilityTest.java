@@ -96,27 +96,27 @@ public class IndexMergerV9CompatibilityTest
     indexIO = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory);
     events = new ArrayList<>();
 
-    final Map<String, Object> map1 = ImmutableMap.<String, Object>of(
-        DIMS.get(0), ImmutableList.<String>of("dim00", "dim01"),
+    final Map<String, Object> map1 = ImmutableMap.of(
+        DIMS.get(0), ImmutableList.of("dim00", "dim01"),
         DIMS.get(1), "dim10"
     );
 
     final List<String> nullList = Collections.singletonList(null);
 
-    final Map<String, Object> map2 = ImmutableMap.<String, Object>of(
+    final Map<String, Object> map2 = ImmutableMap.of(
         DIMS.get(0), nullList,
         DIMS.get(1), "dim10"
     );
 
 
-    final Map<String, Object> map3 = ImmutableMap.<String, Object>of(
+    final Map<String, Object> map3 = ImmutableMap.of(
         DIMS.get(0),
-        ImmutableList.<String>of("dim00", "dim01")
+        ImmutableList.of("dim00", "dim01")
     );
 
-    final Map<String, Object> map4 = ImmutableMap.<String, Object>of();
+    final Map<String, Object> map4 = ImmutableMap.of();
 
-    final Map<String, Object> map5 = ImmutableMap.<String, Object>of(DIMS.get(1), "dim10");
+    final Map<String, Object> map5 = ImmutableMap.of(DIMS.get(1), "dim10");
 
     final Map<String, Object> map6 = new HashMap<>();
     map6.put(DIMS.get(1), null); // ImmutableMap cannot take null

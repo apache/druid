@@ -47,8 +47,8 @@ public class HadoopTaskTest
     final HadoopTask task = new HadoopTask(
         "taskId",
         "dataSource",
-        ImmutableList.<String>of(),
-        ImmutableMap.<String, Object>of()
+        ImmutableList.of(),
+        ImmutableMap.of()
     )
     {
       @Override

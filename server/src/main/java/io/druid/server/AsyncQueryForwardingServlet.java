@@ -253,7 +253,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 DateTimes.nowUtc(),
                 request.getRemoteAddr(),
                 null,
-                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", errorMessage))
+                new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
             )
         );
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -486,7 +486,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         "query/time",
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
@@ -517,7 +517,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         "success",
                         false,
                         "exception",

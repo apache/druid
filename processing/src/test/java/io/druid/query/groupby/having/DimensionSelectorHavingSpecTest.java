@@ -51,7 +51,7 @@ public class DimensionSelectorHavingSpecTest
   {
     HavingSpec dimHavingSpec = new DimensionSelectorHavingSpec("dim", "v", null);
 
-    Map<String, Object> dimSelectMap = ImmutableMap.<String, Object>of(
+    Map<String, Object> dimSelectMap = ImmutableMap.of(
         "type", "dimSelector",
         "dimension", "dim",
         "value", "v"

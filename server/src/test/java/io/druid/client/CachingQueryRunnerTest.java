@@ -142,7 +142,7 @@ public class CachingQueryRunnerTest
                                     .granularity(QueryRunnerTestHelper.dayGran)
                                     .intervals(QueryRunnerTestHelper.firstToThird)
                                     .aggregators(
-                                        Arrays.<AggregatorFactory>asList(
+                                        Arrays.asList(
                                             QueryRunnerTestHelper.rowsCount,
                                             new LongSumAggregatorFactory(
                                                 "idx",
@@ -157,13 +157,13 @@ public class CachingQueryRunnerTest
       Result row1 = new Result(
           DateTimes.of("2011-04-01"),
           new TimeseriesResultValue(
-              ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+              ImmutableMap.of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
           )
       );
       Result row2 = new Result<>(
           DateTimes.of("2011-04-02"),
           new TimeseriesResultValue(
-              ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+              ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
           )
       );
       List<Result> expectedResults;

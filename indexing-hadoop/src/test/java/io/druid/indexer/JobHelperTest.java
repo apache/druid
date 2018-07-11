@@ -99,7 +99,7 @@ public class JobHelperTest
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
-                ImmutableMap.<String, Object>of(
+                ImmutableMap.of(
                     "paths",
                     dataFile.getCanonicalPath(),
                     "type",
@@ -167,13 +167,13 @@ public class JobHelperTest
         "test1",
         Intervals.of("2000/3000"),
         "ver",
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             "type", "google",
             "bucket", "test-test",
             "path", "tmp/foo:bar/index1.zip"
         ),
-        ImmutableList.<String>of(),
-        ImmutableList.<String>of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
         NoneShardSpec.instance(),
         9,
         1024

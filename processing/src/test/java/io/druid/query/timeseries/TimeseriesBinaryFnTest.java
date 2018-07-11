@@ -51,7 +51,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 1L,
                 "index", 2L
             )
@@ -60,7 +60,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> result2 = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 2L,
                 "index", 3L
             )
@@ -70,7 +70,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 3L,
                 "index", 5L
             )
@@ -93,7 +93,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 1L,
                 "index", 2L
             )
@@ -102,7 +102,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> result2 = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 2L,
                 "index", 3L
             )
@@ -112,7 +112,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
         Granularities.DAY.bucketStart(currTime),
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 3L,
                 "index", 5L
             )
@@ -135,7 +135,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 1L,
                 "index", 2L
             )
@@ -161,7 +161,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> result1 = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 1L,
                 "index", 2L
             )
@@ -170,7 +170,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> result2 = new Result<TimeseriesResultValue>(
         currTime.plusHours(2),
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 2L,
                 "index", 3L
             )
@@ -180,7 +180,7 @@ public class TimeseriesBinaryFnTest
     Result<TimeseriesResultValue> expected = new Result<TimeseriesResultValue>(
         currTime,
         new TimeseriesResultValue(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 "rows", 3L,
                 "index", 5L
             )

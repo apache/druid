@@ -60,7 +60,7 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
     return new HttpServerInventoryView(
         smileMapper, httpClient,
         druidNodeDiscoveryProvider,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysFalse(),
+        Predicates.alwaysFalse(),
         config
     );
   }

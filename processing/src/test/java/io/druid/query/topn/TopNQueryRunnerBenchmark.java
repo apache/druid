@@ -71,7 +71,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
       .threshold(4)
       .intervals(QueryRunnerTestHelper.fullOnInterval)
       .aggregators(
-          Lists.<AggregatorFactory>newArrayList(
+          Lists.newArrayList(
               Iterables.concat(
                   QueryRunnerTestHelper.commonDoubleAggregators,
                   Lists.newArrayList(
@@ -81,7 +81,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
               )
           )
       )
-      .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+      .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
       .build();
   private static final Map<TestCases, QueryRunner> testCaseMap = Maps.newHashMap();
 

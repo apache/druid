@@ -81,9 +81,9 @@ public class ReservoirSegmentSamplerTest
         "datasource1",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         11L
@@ -92,9 +92,9 @@ public class ReservoirSegmentSamplerTest
         "datasource1",
         new Interval(start2, start2.plusHours(1)),
         version.toString(),
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         7L
@@ -103,9 +103,9 @@ public class ReservoirSegmentSamplerTest
         "datasource2",
         new Interval(start1, start1.plusHours(1)),
         version.toString(),
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         4L
@@ -114,9 +114,9 @@ public class ReservoirSegmentSamplerTest
         "datasource2",
         new Interval(start2, start2.plusHours(1)),
         version.toString(),
-        Maps.<String, Object>newHashMap(),
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        Maps.newHashMap(),
+        Lists.newArrayList(),
+        Lists.newArrayList(),
         NoneShardSpec.instance(),
         0,
         8L
@@ -124,19 +124,19 @@ public class ReservoirSegmentSamplerTest
 
     segments = Lists.newArrayList(segment1, segment2, segment3, segment4);
 
-    segmentsMap1 = ImmutableMap.<String, DataSegment>of(
+    segmentsMap1 = ImmutableMap.of(
         "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
         segment1
     );
-    segmentsMap2 = ImmutableMap.<String, DataSegment>of(
+    segmentsMap2 = ImmutableMap.of(
         "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
         segment2
     );
-    segmentsMap3 = ImmutableMap.<String, DataSegment>of(
+    segmentsMap3 = ImmutableMap.of(
         "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
         segment3
     );
-    segmentsMap4 = ImmutableMap.<String, DataSegment>of(
+    segmentsMap4 = ImmutableMap.of(
         "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
         segment4
     );
@@ -150,7 +150,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer1.getSegments()).andReturn(segmentsMap1).anyTimes();
-    EasyMock.expect(druidServer1.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer1.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
     EasyMock.expect(druidServer2.getName()).andReturn("2").atLeastOnce();
@@ -158,7 +158,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer2.getSegments()).andReturn(segmentsMap2).anyTimes();
-    EasyMock.expect(druidServer2.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
     EasyMock.expect(druidServer3.getName()).andReturn("3").atLeastOnce();
@@ -166,7 +166,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer3.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer3.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer3.getSegments()).andReturn(segmentsMap3).anyTimes();
-    EasyMock.expect(druidServer3.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer3.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer3);
 
     EasyMock.expect(druidServer4.getName()).andReturn("4").atLeastOnce();
@@ -174,7 +174,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer4.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer4.getMaxSize()).andReturn(100L).atLeastOnce();
     EasyMock.expect(druidServer4.getSegments()).andReturn(segmentsMap4).anyTimes();
-    EasyMock.expect(druidServer4.getSegment(EasyMock.<String>anyObject())).andReturn(null).anyTimes();
+    EasyMock.expect(druidServer4.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer4);
 
     EasyMock.expect(holder1.getServer()).andReturn(druidServer1).anyTimes();

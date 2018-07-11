@@ -322,7 +322,7 @@ public class GroupByMultiSegmentTest
         .builder()
         .setDataSource("blah")
         .setQuerySegmentSpec(intervalSpec)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(
+        .setDimensions(Lists.newArrayList(
             new DefaultDimensionSpec("dimA", null)
         ))
         .setAggregatorSpecs(

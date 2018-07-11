@@ -149,7 +149,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
     return new CacheStrategy<Result<SearchResultValue>, Object, SearchQuery>()
     {
       private final List<DimensionSpec> dimensionSpecs =
-          query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
+          query.getDimensions() != null ? query.getDimensions() : Collections.emptyList();
       private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
           Lists.transform(dimensionSpecs, DimensionSpec::getOutputName) : Collections.emptyList();
 
@@ -168,7 +168,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
         final byte[] granularityBytes = query.getGranularity().getCacheKey();
 
         final List<DimensionSpec> dimensionSpecs =
-            query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
+            query.getDimensions() != null ? query.getDimensions() : Collections.emptyList();
         final byte[][] dimensionsBytes = new byte[dimensionSpecs.size()][];
         int dimensionsBytesSize = 0;
         int index = 0;
@@ -425,7 +425,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
               return new Result<SearchResultValue>(
                   input.getTimestamp(),
                   new SearchResultValue(
-                      Lists.<SearchHit>newArrayList(
+                      Lists.newArrayList(
                           Iterables.limit(input.getValue(), query.getLimit())
                       )
                   )

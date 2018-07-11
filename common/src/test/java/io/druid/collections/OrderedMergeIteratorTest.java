@@ -42,7 +42,7 @@ public class OrderedMergeIteratorTest
     iterators.add(Arrays.asList(4, 6, 8).iterator());
 
     OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         iterators.iterator()
     );
 
@@ -58,7 +58,7 @@ public class OrderedMergeIteratorTest
     iterators.add(Arrays.asList(2, 8).iterator());
 
     OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         iterators.iterator()
     );
 
@@ -74,7 +74,7 @@ public class OrderedMergeIteratorTest
     iterators.add(Arrays.asList(4, 6).iterator());
 
     OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         iterators.iterator()
     );
 
@@ -160,7 +160,7 @@ public class OrderedMergeIteratorTest
     );
 
     OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         iterators.iterator()
     );
 
@@ -172,7 +172,7 @@ public class OrderedMergeIteratorTest
   {
     final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
     OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         iterators.iterator()
     );
     iter.next();
@@ -183,7 +183,7 @@ public class OrderedMergeIteratorTest
   {
     final ArrayList<Iterator<Integer>> iterators = Lists.newArrayList();
     OrderedMergeIterator<Integer> iter = new OrderedMergeIterator<Integer>(
-        Ordering.<Integer>natural(),
+        Ordering.natural(),
         iterators.iterator()
     );
     iter.remove();

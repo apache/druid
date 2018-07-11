@@ -327,7 +327,7 @@ public class TimeseriesBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return queryResult.toList();
   }
 
@@ -411,7 +411,7 @@ public class TimeseriesBenchmark
 
     Sequence<Result<TimeseriesResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        Maps.<String, Object>newHashMap()
+        Maps.newHashMap()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
 

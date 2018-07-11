@@ -145,7 +145,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @SuppressWarnings("JavadocReference")
   private Map<String, Object> makeLoadSpec(String bucket, String key)
   {
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         "type",
         "s3_zip",
         "bucket",

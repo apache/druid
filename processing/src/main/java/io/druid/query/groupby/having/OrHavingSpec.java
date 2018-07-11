@@ -39,7 +39,7 @@ public class OrHavingSpec extends BaseHavingSpec
   @JsonCreator
   public OrHavingSpec(@JsonProperty("havingSpecs") List<HavingSpec> havingSpecs)
   {
-    this.havingSpecs = havingSpecs == null ? ImmutableList.<HavingSpec>of() : havingSpecs;
+    this.havingSpecs = havingSpecs == null ? ImmutableList.of() : havingSpecs;
   }
 
   @JsonProperty("havingSpecs")

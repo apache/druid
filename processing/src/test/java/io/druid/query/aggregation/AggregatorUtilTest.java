@@ -42,12 +42,12 @@ public class AggregatorUtilTest
   public void testPruneDependentPostAgg()
   {
     PostAggregator agg1 = new ArithmeticPostAggregator(
-        "abc", "+", Lists.<PostAggregator>newArrayList(
+        "abc", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("2", 2L)
     )
     );
     PostAggregator dependency1 = new ArithmeticPostAggregator(
-        "dep1", "+", Lists.<PostAggregator>newArrayList(
+        "dep1", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("4", 4L)
     )
     );
@@ -56,7 +56,7 @@ public class AggregatorUtilTest
     PostAggregator aggregator = new ArithmeticPostAggregator(
         "finalAgg",
         "+",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator("dep1", "dep1"),
             new FieldAccessPostAggregator("dep2", "dep2")
         )
@@ -77,12 +77,12 @@ public class AggregatorUtilTest
   public void testOutOfOrderPruneDependentPostAgg()
   {
     PostAggregator agg1 = new ArithmeticPostAggregator(
-        "abc", "+", Lists.<PostAggregator>newArrayList(
+        "abc", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("2", 2L)
     )
     );
     PostAggregator dependency1 = new ArithmeticPostAggregator(
-        "dep1", "+", Lists.<PostAggregator>newArrayList(
+        "dep1", "+", Lists.newArrayList(
         new ConstantPostAggregator("1", 1L), new ConstantPostAggregator("4", 4L)
     )
     );
@@ -91,7 +91,7 @@ public class AggregatorUtilTest
     PostAggregator aggregator = new ArithmeticPostAggregator(
         "finalAgg",
         "+",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator("dep1", "dep1"),
             new FieldAccessPostAggregator("dep2", "dep2")
         )
@@ -112,7 +112,7 @@ public class AggregatorUtilTest
   public void testCondenseAggregators()
   {
 
-    ArrayList<AggregatorFactory> aggregatorFactories = Lists.<AggregatorFactory>newArrayList(
+    ArrayList<AggregatorFactory> aggregatorFactories = Lists.newArrayList(
         Iterables.concat(
             QueryRunnerTestHelper.commonDoubleAggregators,
             Lists.newArrayList(
@@ -122,7 +122,7 @@ public class AggregatorUtilTest
         )
     );
 
-    List<PostAggregator> postAggregatorList = Arrays.<PostAggregator>asList(
+    List<PostAggregator> postAggregatorList = Arrays.asList(
         QueryRunnerTestHelper.addRowsIndexConstant,
         QueryRunnerTestHelper.dependentPostAgg
     );
@@ -151,7 +151,7 @@ public class AggregatorUtilTest
     AggregatorFactory agg1 = new DoubleSumAggregatorFactory("agg1", "value");
     AggregatorFactory agg2 = new DoubleSumAggregatorFactory("agg2", "count");
     PostAggregator postAgg1 = new ArithmeticPostAggregator(
-        null, "*", Lists.<PostAggregator>newArrayList(
+        null, "*", Lists.newArrayList(
         new FieldAccessPostAggregator(
             null,
             "agg1"
@@ -162,7 +162,7 @@ public class AggregatorUtilTest
     PostAggregator postAgg2 = new ArithmeticPostAggregator(
         "postAgg",
         "/",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator(
                 null,
                 "agg1"
@@ -186,7 +186,7 @@ public class AggregatorUtilTest
     AggregatorFactory agg1 = new DoubleSumAggregatorFactory("Agg1", "value");
     AggregatorFactory agg2 = new DoubleSumAggregatorFactory("Agg2", "count");
     PostAggregator postAgg1 = new ArithmeticPostAggregator(
-        null, "*", Lists.<PostAggregator>newArrayList(
+        null, "*", Lists.newArrayList(
         new FieldAccessPostAggregator(
             null,
             "Agg1"
@@ -197,7 +197,7 @@ public class AggregatorUtilTest
     PostAggregator postAgg2 = new ArithmeticPostAggregator(
         "postAgg",
         "/",
-        Lists.<PostAggregator>newArrayList(
+        Lists.newArrayList(
             new FieldAccessPostAggregator(
                 null,
                 "Agg1"

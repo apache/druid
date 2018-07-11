@@ -121,7 +121,7 @@ public class TestIndex
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
-      Collections.<VirtualColumn>singletonList(
+      Collections.singletonList(
           new ExpressionVirtualColumn("expr", "index + 10", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );

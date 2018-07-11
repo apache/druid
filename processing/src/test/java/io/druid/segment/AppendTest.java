@@ -322,7 +322,7 @@ public class AppendTest
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
                         .put("rows", 3L)
@@ -368,7 +368,7 @@ public class AppendTest
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
                         .put("rows", 3L)
@@ -460,7 +460,7 @@ public class AppendTest
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(qualityDimension, "automotive"),
                     new SearchHit(placementDimension, "mezzanine"),
@@ -483,7 +483,7 @@ public class AppendTest
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(placementDimension, "mezzanine"),
                     new SearchHit(marketDimension, "total_market")
@@ -505,7 +505,7 @@ public class AppendTest
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementDimension, "mezzanine"),
                     new SearchHit(marketDimension, "total_market")
                 )
@@ -526,7 +526,7 @@ public class AppendTest
         new Result<SearchResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Arrays.asList(
                     new SearchHit(placementishDimension, "a"),
                     new SearchHit(placementDimension, "mezzanine"),
                     new SearchHit(marketDimension, "total_market")
@@ -566,7 +566,7 @@ public class AppendTest
                                   .intervals(fullOnInterval)
                                   .filters(marketDimension, "breakstuff")
                                   .aggregators(
-                                      Lists.<AggregatorFactory>newArrayList(
+                                      Lists.newArrayList(
                                           Iterables.concat(
                                               commonAggregators,
                                               Lists.newArrayList(
@@ -590,7 +590,7 @@ public class AppendTest
                  .granularity(allGran)
                  .intervals(fullOnInterval)
                  .aggregators(
-                     Lists.<AggregatorFactory>newArrayList(
+                     Lists.newArrayList(
                          Iterables.concat(
                              commonAggregators,
                              Lists.newArrayList(
@@ -617,7 +617,7 @@ public class AppendTest
                      )
                  )
                  .aggregators(
-                     Lists.<AggregatorFactory>newArrayList(
+                     Lists.newArrayList(
                          Iterables.concat(
                              commonAggregators,
                              Lists.newArrayList(
@@ -641,7 +641,7 @@ public class AppendTest
         .threshold(3)
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonAggregators,
                     Lists.newArrayList(
@@ -651,7 +651,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
   }
 
@@ -671,7 +671,7 @@ public class AppendTest
         )
         .intervals(fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     commonAggregators,
                     Lists.newArrayList(
@@ -681,7 +681,7 @@ public class AppendTest
                 )
             )
         )
-        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(addRowsIndexConstant))
         .build();
   }
 

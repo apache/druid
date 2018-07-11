@@ -75,7 +75,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage
             }
             return new FileUtils.FileCopyResult(tmpFile);
           },
-          Predicates.<Throwable>alwaysTrue(),
+          Predicates.alwaysTrue(),
           10
       );
     }

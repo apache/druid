@@ -70,8 +70,8 @@ public class DelimitedParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            Lists.<String>newArrayList(),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList(),
+            Lists.newArrayList()
         ),
         ",",
         " ",
@@ -93,8 +93,8 @@ public class DelimitedParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a,", "b")),
-            Lists.<String>newArrayList(),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList(),
+            Lists.newArrayList()
         ),
         ",",
         null,
@@ -116,8 +116,8 @@ public class DelimitedParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b")),
-            Lists.<String>newArrayList(),
-            Lists.<SpatialDimensionSchema>newArrayList()
+            Lists.newArrayList(),
+            Lists.newArrayList()
         ),
         ",",
         null,

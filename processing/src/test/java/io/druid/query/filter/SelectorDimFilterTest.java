@@ -67,10 +67,10 @@ public class SelectorDimFilterTest
   {
     SelectorDimFilter selectorDimFilter = new SelectorDimFilter("abc", "d", null);
     DimFilter filter = new AndDimFilter(
-        Collections.<DimFilter>singletonList(
+        Collections.singletonList(
             new OrDimFilter(
-                Collections.<DimFilter>singletonList(
-                    new AndDimFilter(Arrays.<DimFilter>asList(selectorDimFilter, null))
+                Collections.singletonList(
+                    new AndDimFilter(Arrays.asList(selectorDimFilter, null))
                 )
             )
         )

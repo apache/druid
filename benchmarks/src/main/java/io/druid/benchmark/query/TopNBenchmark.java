@@ -308,7 +308,7 @@ public class TopNBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return queryResult.toList();
   }
 
@@ -372,7 +372,7 @@ public class TopNBenchmark
 
     Sequence<Result<TopNResultValue>> queryResult = theRunner.run(
         QueryPlus.wrap(query),
-        Maps.<String, Object>newHashMap()
+        Maps.newHashMap()
     );
     List<Result<TopNResultValue>> results = queryResult.toList();
 

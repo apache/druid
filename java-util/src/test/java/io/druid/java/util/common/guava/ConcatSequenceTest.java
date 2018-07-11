@@ -67,7 +67,7 @@ public class ConcatSequenceTest
     testAll(
         Arrays.asList(
             Arrays.asList(1, 2, 3, 4, 5),
-            Collections.<Integer>emptyList(),
+            Collections.emptyList(),
             Arrays.asList(6, 7, 8),
             Arrays.asList(9, 10, 11, 12)
         )
@@ -80,10 +80,10 @@ public class ConcatSequenceTest
     testAll(
         Arrays.asList(
             Arrays.asList(1, 2, 3, 4, 5),
-            Collections.<Integer>emptyList(),
+            Collections.emptyList(),
             Arrays.asList(6, 7, 8),
             Arrays.asList(9, 10, 11, 12),
-            Collections.<Integer>emptyList()
+            Collections.emptyList()
         )
     );
   }
@@ -93,9 +93,9 @@ public class ConcatSequenceTest
   {
     testAll(
         Arrays.asList(
-            Collections.<Integer>emptyList(),
+            Collections.emptyList(),
             Arrays.asList(1, 2, 3, 4, 5),
-            Collections.<Integer>emptyList(),
+            Collections.emptyList(),
             Arrays.asList(6, 7, 8),
             Arrays.asList(9, 10, 11, 12)
         )

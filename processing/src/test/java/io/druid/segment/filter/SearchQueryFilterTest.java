@@ -64,12 +64,12 @@ public class SearchQueryFilterTest extends BaseFilterTest
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "abdef", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc")).get(0)
+      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "abdef", "dim2", ImmutableList.of("c"))).get(0),
+      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
   );
 
   public SearchQueryFilterTest(
@@ -112,7 +112,7 @@ public class SearchQueryFilterTest extends BaseFilterTest
     assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("1"), null), ImmutableList.of("1", "3"));
     assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("def"), null), ImmutableList.of("4"));
     assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("abc"), null), ImmutableList.of("5"));
-    assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ab"), null), ImmutableList.<String>of("4", "5"));
+    assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ab"), null), ImmutableList.of("4", "5"));
   }
 
   @Test
@@ -122,26 +122,26 @@ public class SearchQueryFilterTest extends BaseFilterTest
     assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue("a"), null), ImmutableList.of("0", "3"));
     assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue("b"), null), ImmutableList.of("0"));
     assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue("c"), null), ImmutableList.of("4"));
-    assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue("d"), null), ImmutableList.<String>of());
+    assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue("d"), null), ImmutableList.of());
   }
 
   @Test
   public void testMissingColumnSpecifiedInDimensionList()
   {
-    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue(""), null), ImmutableList.<String>of());
-    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("a"), null), ImmutableList.<String>of());
-    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("b"), null), ImmutableList.<String>of());
-    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("c"), null), ImmutableList.<String>of());
+    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue(""), null), ImmutableList.of());
+    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("a"), null), ImmutableList.of());
+    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("b"), null), ImmutableList.of());
+    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("c"), null), ImmutableList.of());
   }
 
 
   @Test
   public void testMissingColumnNotSpecifiedInDimensionList()
   {
-    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue(""), null), ImmutableList.<String>of());
-    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("a"), null), ImmutableList.<String>of());
-    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("b"), null), ImmutableList.<String>of());
-    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("c"), null), ImmutableList.<String>of());
+    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue(""), null), ImmutableList.of());
+    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("a"), null), ImmutableList.of());
+    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("b"), null), ImmutableList.of());
+    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("c"), null), ImmutableList.of());
   }
 
 
@@ -152,15 +152,15 @@ public class SearchQueryFilterTest extends BaseFilterTest
     ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
     assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ANYMORE"), changeNullFn), ImmutableList.of("0"));
-    assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ab"), changeNullFn), ImmutableList.<String>of("4", "5"));
+    assertFilterMatches(new SearchQueryDimFilter("dim1", specForValue("ab"), changeNullFn), ImmutableList.of("4", "5"));
 
     assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue("ANYMORE"), changeNullFn), ImmutableList.of("1", "2", "5"));
     assertFilterMatches(new SearchQueryDimFilter("dim2", specForValue("a"), changeNullFn), ImmutableList.of("0", "3"));
 
     assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("ANYMORE"), changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
-    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("a"), changeNullFn), ImmutableList.<String>of());
+    assertFilterMatches(new SearchQueryDimFilter("dim3", specForValue("a"), changeNullFn), ImmutableList.of());
 
     assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("ANYMORE"), changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
-    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("a"), changeNullFn), ImmutableList.<String>of());
+    assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("a"), changeNullFn), ImmutableList.of());
   }
 }

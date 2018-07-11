@@ -176,7 +176,7 @@ public class LookupCoordinatorManager
   )
   {
     return updateLookups(
-        ImmutableMap.<String, Map<String, LookupExtractorFactoryMapContainer>>of(tier, ImmutableMap.of(lookupName, spec)),
+        ImmutableMap.of(tier, ImmutableMap.of(lookupName, spec)),
         auditInfo
     );
   }

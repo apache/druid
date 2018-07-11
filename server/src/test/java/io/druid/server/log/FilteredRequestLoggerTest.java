@@ -41,7 +41,7 @@ public class FilteredRequestLoggerTest
     );
     RequestLogLine requestLogLine = EasyMock.createMock(RequestLogLine.class);
     EasyMock.expect(requestLogLine.getQueryStats())
-            .andReturn(new QueryStats(ImmutableMap.<String, Object>of("query/time", 100)))
+            .andReturn(new QueryStats(ImmutableMap.of("query/time", 100)))
             .once();
     EasyMock.replay(requestLogLine, delegate);
     logger.log(requestLogLine);
@@ -59,10 +59,10 @@ public class FilteredRequestLoggerTest
     );
     RequestLogLine requestLogLine = EasyMock.createMock(RequestLogLine.class);
     EasyMock.expect(requestLogLine.getQueryStats())
-            .andReturn(new QueryStats(ImmutableMap.<String, Object>of("query/time", 10000)))
+            .andReturn(new QueryStats(ImmutableMap.of("query/time", 10000)))
             .once();
     EasyMock.expect(requestLogLine.getQueryStats())
-            .andReturn(new QueryStats(ImmutableMap.<String, Object>of("query/time", 1000)))
+            .andReturn(new QueryStats(ImmutableMap.of("query/time", 1000)))
             .once();
     EasyMock.replay(requestLogLine, delegate);
     logger.log(requestLogLine);

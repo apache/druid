@@ -305,7 +305,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -373,7 +373,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -441,7 +441,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -558,7 +558,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -610,7 +610,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -672,7 +672,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -730,7 +730,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -788,7 +788,7 @@ public class SegmentMetadataQueryTest
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
                 )
@@ -836,7 +836,7 @@ public class SegmentMetadataQueryTest
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/druid-io/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+                Lists.newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )
         ),
         toolChest
@@ -845,7 +845,7 @@ public class SegmentMetadataQueryTest
     TestHelper.assertExpectedObjects(
         ImmutableList.of(bySegmentResult, bySegmentResult),
         myRunner.run(
-            QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true))),
+            QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of("bySegment", true))),
             Maps.newHashMap()
         ),
         "failed SegmentMetadata bySegment query"

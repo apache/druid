@@ -140,7 +140,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
       Map<String, Object> context
   )
   {
-    return Collections.<Task>singleton(
+    return Collections.singleton(
         new ConverterSubTask(
             ImmutableList.copyOf(segments),
             this,

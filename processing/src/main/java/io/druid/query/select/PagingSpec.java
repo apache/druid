@@ -68,7 +68,7 @@ public class PagingSpec
       @JacksonInject SelectQueryConfig config
   )
   {
-    this.pagingIdentifiers = pagingIdentifiers == null ? Maps.<String, Integer>newHashMap() : pagingIdentifiers;
+    this.pagingIdentifiers = pagingIdentifiers == null ? Maps.newHashMap() : pagingIdentifiers;
     this.threshold = threshold;
 
     boolean defaultFromNext = config.getEnableFromNextDefault();

@@ -232,7 +232,7 @@ public class AppenderatorTester implements AutoCloseable
         indexIO,
         indexMerger,
         new DefaultQueryRunnerFactoryConglomerate(
-            ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
+            ImmutableMap.of(
                 TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
                     new TimeseriesQueryQueryToolChest(
                         new IntervalChunkingQueryRunnerDecorator(

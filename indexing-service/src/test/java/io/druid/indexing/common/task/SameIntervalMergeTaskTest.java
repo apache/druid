@@ -81,7 +81,7 @@ public class SameIntervalMergeTaskTest
   @Test
   public void testRun() throws Exception
   {
-    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
+    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
     final SameIntervalMergeTask task = new SameIntervalMergeTask(
         null,
         "foo",

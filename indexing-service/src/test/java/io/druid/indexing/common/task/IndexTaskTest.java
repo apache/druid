@@ -536,8 +536,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
+                    Lists.newArrayList(),
+                    Lists.newArrayList()
                 ),
                 null,
                 null,
@@ -588,8 +588,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.<String>newArrayList(),
-                    Lists.<SpatialDimensionSchema>newArrayList()
+                    Lists.newArrayList(),
+                    Lists.newArrayList()
                 ),
                 null,
                 Arrays.asList("time", "dim", "val"),
@@ -797,8 +797,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -850,8 +850,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -941,8 +941,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             null
@@ -1062,8 +1062,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1176,8 +1176,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1345,8 +1345,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.<String>newArrayList(),
-                Lists.<SpatialDimensionSchema>newArrayList()
+                Lists.newArrayList(),
+                Lists.newArrayList()
             ),
             null,
             Arrays.asList("time", "", ""),

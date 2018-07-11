@@ -185,7 +185,7 @@ public class MultiSegmentScanQueryTest
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                     .intervals(SelectQueryRunnerTest.I_0112_0114)
                     .batchSize(batchSize)
-                    .columns(Collections.<String>emptyList())
+                    .columns(Collections.emptyList())
                     .legacy(false)
                     .limit(limit);
   }

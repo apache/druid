@@ -103,7 +103,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("dim1", "dim1")),
+        Lists.newArrayList(new DefaultDimensionSpec("dim1", "dim1")),
         byRow
     );
 

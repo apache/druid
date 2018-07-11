@@ -100,7 +100,7 @@ public class CaffeineCacheTest
     final String uuid = UUID.randomUUID().toString();
     System.setProperty(uuid + ".type", "caffeine");
     final Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
@@ -170,7 +170,7 @@ public class CaffeineCacheTest
     result = cache.getBulk(Lists.newArrayList(missingKey));
     Assert.assertEquals(result.size(), 0);
 
-    result = cache.getBulk(Lists.<Cache.NamedKey>newArrayList());
+    result = cache.getBulk(Lists.newArrayList());
     Assert.assertEquals(result.size(), 0);
   }
 

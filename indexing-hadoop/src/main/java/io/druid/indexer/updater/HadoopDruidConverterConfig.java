@@ -128,7 +128,7 @@ public class HadoopDruidConverterConfig
     this.segments = segments;
     this.validate = validate == null ? false : validate;
     this.hadoopProperties = hadoopProperties == null
-                            ? ImmutableMap.<String, String>of()
+                            ? ImmutableMap.of()
                             : ImmutableMap.copyOf(hadoopProperties);
     this.jobPriority = jobPriority;
     this.segmentOutputPath = Preconditions.checkNotNull(segmentOutputPath, "segmentOutputPath");

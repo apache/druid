@@ -61,7 +61,7 @@ public class BenchmarkDataGeneratorTest
             false,
             1,
             null,
-            Arrays.<Object>asList("Hello", "World", "Foo", "Bar")
+            Arrays.asList("Hello", "World", "Foo", "Bar")
         )
     );
 
@@ -111,7 +111,7 @@ public class BenchmarkDataGeneratorTest
             false,
             4,
             null,
-            Arrays.<Object>asList("Hello", "World", "Foo", "Bar")
+            Arrays.asList("Hello", "World", "Foo", "Bar")
         )
     );
 
@@ -233,7 +233,7 @@ public class BenchmarkDataGeneratorTest
             false,
             1,
             null,
-            Arrays.<Object>asList("1-Hello", "2-World", "3-Foo", "4-Bar", "5-BA5EBA11", "6-Rocky", "7-Mango", "8-Contango"),
+            Arrays.asList("1-Hello", "2-World", "3-Foo", "4-Bar", "5-BA5EBA11", "6-Rocky", "7-Mango", "8-Contango"),
             1.0
         )
     );
@@ -262,8 +262,8 @@ public class BenchmarkDataGeneratorTest
             false,
             1,
             null,
-            Arrays.<Object>asList("Hello", "World", "Foo", "Bar"),
-            Arrays.<Double>asList(0.5, 0.25, 0.15, 0.10)
+            Arrays.asList("Hello", "World", "Foo", "Bar"),
+            Arrays.asList(0.5, 0.25, 0.15, 0.10)
         )
     );
 
@@ -374,7 +374,7 @@ public class BenchmarkDataGeneratorTest
             false,
             1,
             null,
-            Arrays.<Object>asList("Hello", "World", "Foo", "Bar")
+            Arrays.asList("Hello", "World", "Foo", "Bar")
         )
     );
 

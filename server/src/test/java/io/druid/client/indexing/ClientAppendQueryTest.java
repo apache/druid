@@ -35,7 +35,7 @@ public class ClientAppendQueryTest
   private ClientAppendQuery clientAppendQuery;
   private static final String DATA_SOURCE = "data_source";
   private final DateTime start = DateTimes.nowUtc();
-  private List<DataSegment> segments = Lists.<DataSegment>newArrayList(
+  private List<DataSegment> segments = Lists.newArrayList(
       new DataSegment(DATA_SOURCE, new Interval(start, start.plus(1)), start.toString(), null,
                       null, null, null, 0, 0));
 

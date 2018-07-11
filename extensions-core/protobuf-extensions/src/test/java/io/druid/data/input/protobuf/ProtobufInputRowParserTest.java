@@ -60,7 +60,7 @@ public class ProtobufInputRowParserTest
   {
     parseSpec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(Lists.<DimensionSchema>newArrayList(
+        new DimensionsSpec(Lists.newArrayList(
             new StringDimensionSchema("event"),
             new StringDimensionSchema("id"),
             new StringDimensionSchema("someOtherId"),

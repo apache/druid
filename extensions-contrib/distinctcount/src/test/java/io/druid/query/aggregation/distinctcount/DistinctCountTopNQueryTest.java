@@ -84,21 +84,21 @@ public class DistinctCountTopNQueryTest
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "0", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "0", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "1", client_type, "iphone")
+            ImmutableMap.of(visitor_id, "1", client_type, "iphone")
         )
     );
     index.add(
         new MapBasedInputRow(
             timestamp,
             Lists.newArrayList(visitor_id, client_type),
-            ImmutableMap.<String, Object>of(visitor_id, "2", client_type, "android")
+            ImmutableMap.of(visitor_id, "2", client_type, "android")
         )
     );
 
@@ -124,12 +124,12 @@ public class DistinctCountTopNQueryTest
             time,
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         client_type, "iphone",
                         "UV", 2L,
                         "rows", 2L
                     ),
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         client_type, "android",
                         "UV", 1L,
                         "rows", 1L

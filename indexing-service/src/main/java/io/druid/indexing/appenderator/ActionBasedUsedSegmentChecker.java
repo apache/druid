@@ -52,7 +52,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
     final Map<String, Set<SegmentIdentifier>> identifiersByDataSource = Maps.newTreeMap();
     for (SegmentIdentifier identifier : identifiers) {
       if (!identifiersByDataSource.containsKey(identifier.getDataSource())) {
-        identifiersByDataSource.put(identifier.getDataSource(), Sets.<SegmentIdentifier>newHashSet());
+        identifiersByDataSource.put(identifier.getDataSource(), Sets.newHashSet());
       }
       identifiersByDataSource.get(identifier.getDataSource()).add(identifier);
     }

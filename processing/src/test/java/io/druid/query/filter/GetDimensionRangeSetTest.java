@@ -81,8 +81,8 @@ public class GetDimensionRangeSetTest
       null
   );
 
-  private static final RangeSet all = rangeSet(ImmutableList.of(Range.<String>all()));
-  private static final RangeSet empty = rangeSet(ImmutableList.<Range<String>>of());
+  private static final RangeSet all = rangeSet(ImmutableList.of(Range.all()));
+  private static final RangeSet empty = rangeSet(ImmutableList.of());
 
   @Test
   public void testSimpleFilter()

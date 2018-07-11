@@ -102,9 +102,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 return null;
               }
 
-              final List<Rule> defaultRules = Collections.<Rule>singletonList(
+              final List<Rule> defaultRules = Collections.singletonList(
                   new ForeverLoadRule(
-                      ImmutableMap.<String, Integer>of(
+                      ImmutableMap.of(
                           DruidServer.DEFAULT_TIER,
                           DruidServer.DEFAULT_NUM_REPLICANTS
                       )
@@ -171,7 +171,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     Preconditions.checkNotNull(config.getPollDuration().toStandardDuration());
 
     this.rules = new AtomicReference<>(
-        ImmutableMap.<String, List<Rule>>of()
+        ImmutableMap.of()
     );
   }
 
@@ -219,7 +219,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         return;
       }
 
-      rules.set(ImmutableMap.<String, List<Rule>>of());
+      rules.set(ImmutableMap.of());
 
       future.cancel(false);
       future = null;
@@ -259,7 +259,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                           try {
                             return Pair.of(
                                 r.getString("dataSource"),
-                                jsonMapper.<List<Rule>>readValue(
+                                jsonMapper.readValue(
                                     r.getBytes("payload"), new TypeReference<List<Rule>>()
                                     {
                                     }
@@ -273,7 +273,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       }
                   )
                                .fold(
-                                   Maps.<String, List<Rule>>newHashMap(),
+                                   Maps.newHashMap(),
                                    new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
                                    {
                                      @Override
@@ -330,7 +330,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   public List<Rule> getRules(final String dataSource)
   {
     List<Rule> retVal = rules.get().get(dataSource);
-    return retVal == null ? Lists.<Rule>newArrayList() : retVal;
+    return retVal == null ? Lists.newArrayList() : retVal;
   }
 
   @Override

@@ -76,7 +76,7 @@ public class HadoopDruidIndexerConfigTest
             null,
             jsonMapper
         ),
-        new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
+        new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
         new HadoopTuningConfig(
             null,
             null,
@@ -104,7 +104,7 @@ public class HadoopDruidIndexerConfigTest
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
-    final ImmutableMap<String, Object> values = ImmutableMap.<String, Object>of(
+    final ImmutableMap<String, Object> values = ImmutableMap.of(
         "Dim1",
         "1",
         "DiM2",
@@ -143,12 +143,12 @@ public class HadoopDruidIndexerConfigTest
             null,
             jsonMapper
         ),
-        new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
+        new HadoopIOConfig(ImmutableMap.of("paths", "bar", "type", "static"), null, null),
         new HadoopTuningConfig(
             null,
             null,
             null,
-            ImmutableMap.<Long, List<HadoopyShardSpec>>of(DateTimes.of("2010-01-01T01:00:00").getMillis(),
+            ImmutableMap.of(DateTimes.of("2010-01-01T01:00:00").getMillis(),
                                                               Lists.newArrayList(new HadoopyShardSpec(
                                                                   NoneShardSpec.instance(),
                                                                   1
@@ -181,7 +181,7 @@ public class HadoopDruidIndexerConfigTest
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
-    final ImmutableMap<String, Object> values = ImmutableMap.<String, Object>of(
+    final ImmutableMap<String, Object> values = ImmutableMap.of(
         "Dim1",
         "1",
         "DiM2",

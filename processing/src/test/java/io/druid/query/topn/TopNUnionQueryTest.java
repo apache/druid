@@ -100,7 +100,7 @@ public class TopNUnionQueryTest
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     QueryRunnerTestHelper.commonDoubleAggregators,
                     Lists.newArrayList(
@@ -111,7 +111,7 @@ public class TopNUnionQueryTest
             )
         )
         .postAggregators(
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 QueryRunnerTestHelper.addRowsIndexConstant,
                 QueryRunnerTestHelper.dependentPostAgg,
                 QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg

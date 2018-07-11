@@ -182,7 +182,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null)
           ))
           .setAggregatorSpecs(
@@ -195,7 +195,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("metLongUniform", null),
               new DefaultDimensionSpec("metFloatNormal", null)
           ))
@@ -209,7 +209,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("metLongUniform", null)
           ))
           .setAggregatorSpecs(
@@ -222,7 +222,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("metFloatNormal", null)
           ))
           .setAggregatorSpecs(
@@ -249,7 +249,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null),
               new DefaultDimensionSpec("dimZipf", null)
           ))
@@ -263,7 +263,7 @@ public class GroupByTypeInterfaceBenchmark
           .builder()
           .setDataSource(subqueryA)
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null)
           ))
           .setAggregatorSpecs(

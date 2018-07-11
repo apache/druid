@@ -190,7 +190,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null),
               new DefaultDimensionSpec("dimZipf", null)
               //new DefaultDimensionSpec("dimUniform", null),
@@ -219,7 +219,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null),
               new DefaultDimensionSpec("dimZipf", null)
           ))
@@ -233,7 +233,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource(subqueryA)
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", null)
           ))
           .setAggregatorSpecs(
@@ -309,7 +309,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.STRING)
           ))
           .setAggregatorSpecs(
@@ -336,7 +336,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.LONG)
           ))
           .setAggregatorSpecs(
@@ -363,7 +363,7 @@ public class GroupByBenchmark
           .builder()
           .setDataSource("blah")
           .setQuerySegmentSpec(intervalSpec)
-          .setDimensions(Lists.<DimensionSpec>newArrayList(
+          .setDimensions(Lists.newArrayList(
               new DefaultDimensionSpec("dimSequential", "dimSequential", ValueType.FLOAT)
           ))
           .setAggregatorSpecs(
@@ -575,7 +575,7 @@ public class GroupByBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return queryResult.toList();
   }
 
@@ -650,7 +650,7 @@ public class GroupByBenchmark
     );
 
     final GroupByQuery spillingQuery = query.withOverriddenContext(
-        ImmutableMap.<String, Object>of("bufferGrouperMaxSize", 4000)
+        ImmutableMap.of("bufferGrouperMaxSize", 4000)
     );
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), Maps.newHashMap());
     List<Row> results = queryResult.toList();
@@ -679,7 +679,7 @@ public class GroupByBenchmark
         (QueryToolChest) toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     List<Row> results = queryResult.toList();
 
     for (Row result : results) {

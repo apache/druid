@@ -55,7 +55,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
-    this.breaksList = (breaksList == null) ? Lists.<Float>newArrayList() : breaksList;
+    this.breaksList = (breaksList == null) ? Lists.newArrayList() : breaksList;
     this.breaks = new float[this.breaksList.size()];
     for (int i = 0; i < this.breaksList.size(); ++i) {
       this.breaks[i] = this.breaksList.get(i);
@@ -137,7 +137,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(
+    return Collections.singletonList(
         new HistogramAggregatorFactory(fieldName, fieldName, breaksList));
   }
 

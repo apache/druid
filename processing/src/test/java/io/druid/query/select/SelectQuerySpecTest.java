@@ -82,8 +82,8 @@ public class SelectQuerySpecTest
         true,
         null,
         QueryRunnerTestHelper.allGran,
-        DefaultDimensionSpec.toSpec(Arrays.<String>asList("market", "quality")),
-        Collections.<String>singletonList("index"),
+        DefaultDimensionSpec.toSpec(Arrays.asList("market", "quality")),
+        Collections.singletonList("index"),
         null,
         new PagingSpec(null, 3, null),
         null
@@ -126,8 +126,8 @@ public class SelectQuerySpecTest
         true,
         null,
         QueryRunnerTestHelper.allGran,
-        DefaultDimensionSpec.toSpec(Arrays.<String>asList("market", "quality")),
-        Collections.<String>singletonList("index"),
+        DefaultDimensionSpec.toSpec(Arrays.asList("market", "quality")),
+        Collections.singletonList("index"),
         null,
         new PagingSpec(null, 3, null),
         null

@@ -54,7 +54,7 @@ public class BatchServerInventoryViewProvider implements ServerInventoryViewProv
         zkPaths,
         curator,
         jsonMapper,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
+        Predicates.alwaysTrue()
     );
   }
 }

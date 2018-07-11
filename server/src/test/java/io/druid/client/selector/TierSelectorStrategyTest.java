@@ -121,9 +121,9 @@ public class TierSelectorStrategyTest
             "test",
             Intervals.of("2013-01-01/2013-01-02"),
             DateTimes.of("2013-01-01").toString(),
-            Maps.<String, Object>newHashMap(),
-            Lists.<String>newArrayList(),
-            Lists.<String>newArrayList(),
+            Maps.newHashMap(),
+            Lists.newArrayList(),
+            Lists.newArrayList(),
             NoneShardSpec.instance(),
             0,
             0L

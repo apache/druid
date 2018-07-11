@@ -55,7 +55,7 @@ public class QueryableModule implements DruidModule
   @Override
   public List<Module> getJacksonModules()
   {
-    return Collections.<Module>singletonList(
+    return Collections.singletonList(
         new SimpleModule("QueryableModule")
             .registerSubtypes(
                 EmittingRequestLoggerProvider.class,

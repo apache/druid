@@ -57,7 +57,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class ExtractionDimFilterTest
 {
-  private static final Map<String, String[]> DIM_VALS = ImmutableMap.<String, String[]>of(
+  private static final Map<String, String[]> DIM_VALS = ImmutableMap.of(
       "foo", new String[]{"foo1", "foo2", "foo3"},
       "bar", new String[]{"bar1"},
       "baz", new String[]{"foo1"}

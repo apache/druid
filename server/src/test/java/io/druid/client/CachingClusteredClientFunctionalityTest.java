@@ -73,7 +73,7 @@ public class CachingClusteredClientFunctionalityTest
   @Before
   public void setUp()
   {
-    timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
+    timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
     client = makeClient(MoreExecutors.sameThreadExecutor());
@@ -90,10 +90,10 @@ public class CachingClusteredClientFunctionalityTest
                                                         .dataSource("test")
                                                         .intervals("2015-01-02/2015-01-03")
                                                         .granularity("day")
-                                                        .aggregators(Collections.<AggregatorFactory>singletonList(
+                                                        .aggregators(Collections.singletonList(
                                                             new CountAggregatorFactory(
                                                                 "rows")))
-                                                        .context(ImmutableMap.<String, Object>of(
+                                                        .context(ImmutableMap.of(
                                                             "uncoveredIntervalsLimit",
                                                             3
                                                         ));

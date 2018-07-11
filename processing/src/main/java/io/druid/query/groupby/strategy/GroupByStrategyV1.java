@@ -199,7 +199,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
     final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
         .setAggregatorSpecs(Lists.newArrayList(aggs))
         .setInterval(subquery.getIntervals())
-        .setPostAggregatorSpecs(Lists.<PostAggregator>newArrayList())
+        .setPostAggregatorSpecs(Lists.newArrayList())
         .build();
 
     final GroupByQuery outerQuery = new GroupByQuery.Builder(query)
@@ -208,7 +208,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
 
     final IncrementalIndex innerQueryResultIndex = GroupByQueryHelper.makeIncrementalIndex(
         innerQuery.withOverriddenContext(
-            ImmutableMap.<String, Object>of(
+            ImmutableMap.of(
                 GroupByQueryHelper.CTX_KEY_SORT_RESULTS, true
             )
         ),

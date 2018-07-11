@@ -67,7 +67,7 @@ public class LoggingRequestLogger implements RequestLogger
           MDC.put("descending", Boolean.toString(query.isDescending()));
           if (setContextMDC) {
             final Iterable<Map.Entry<String, Object>> entries = query.getContext() == null
-                                                                ? ImmutableList.<Map.Entry<String, Object>>of()
+                                                                ? ImmutableList.of()
                                                                 : query.getContext().entrySet();
             for (Map.Entry<String, Object> entry : entries) {
               MDC.put(entry.getKey(), entry.getValue() == null ? "NULL" : entry.getValue().toString());

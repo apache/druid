@@ -161,8 +161,8 @@ public class SelectBenchmark
       Druids.SelectQueryBuilder queryBuilderA =
           Druids.newSelectQueryBuilder()
                 .dataSource(new TableDataSource("blah"))
-                .dimensionSpecs(DefaultDimensionSpec.toSpec(Collections.<String>emptyList()))
-                .metrics(Collections.<String>emptyList())
+                .dimensionSpecs(DefaultDimensionSpec.toSpec(Collections.emptyList()))
+                .metrics(Collections.emptyList())
                 .intervals(intervalSpec)
                 .granularity(Granularities.ALL)
                 .descending(false);
@@ -268,7 +268,7 @@ public class SelectBenchmark
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
     return queryResult.toList();
   }
 

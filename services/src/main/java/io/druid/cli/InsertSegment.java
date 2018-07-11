@@ -69,7 +69,7 @@ public class InsertSegment extends GuiceRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         // It's unknown if those modules are required in InsertSegment.
         // Maybe some of those modules could be removed.
         // See https://github.com/druid-io/druid/pull/4429#discussion_r123603498

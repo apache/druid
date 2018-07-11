@@ -216,7 +216,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                                .first();
 
             return Optional.fromNullable(
-                res == null ? null : jsonMapper.<EntryType>readValue(res, entryType)
+                res == null ? null : jsonMapper.readValue(res, entryType)
             );
           }
         }
@@ -241,7 +241,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                                .first();
 
             return Optional.fromNullable(
-                res == null ? null : jsonMapper.<StatusType>readValue(res, statusType)
+                res == null ? null : jsonMapper.readValue(res, statusType)
             );
           }
         }
@@ -273,11 +273,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                       {
                         try {
                           return Pair.of(
-                              jsonMapper.<EntryType>readValue(
+                              jsonMapper.readValue(
                                   r.getBytes("payload"),
                                   entryType
                               ),
-                              jsonMapper.<StatusType>readValue(
+                              jsonMapper.readValue(
                                   r.getBytes("status_payload"),
                                   statusType
                               )
@@ -541,7 +541,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 .bind("entryId", entryId)
                 .map(ByteArrayMapper.FIRST)
                 .fold(
-                    Lists.<LogType>newLinkedList(),
+                    Lists.newLinkedList(),
                     new Folder3<List<LogType>, byte[]>()
                     {
                       @Override
@@ -551,7 +551,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                       {
                         try {
                           list.add(
-                              jsonMapper.<LogType>readValue(
+                              jsonMapper.readValue(
                                   bytes, logType
                               )
                           );
@@ -598,7 +598,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                                  try {
                                    return Pair.of(
                                        r.getLong("id"),
-                                       jsonMapper.<LockType>readValue(
+                                       jsonMapper.readValue(
                                            r.getBytes("lock_payload"),
                                            lockType
                                        )
@@ -617,7 +617,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                              }
                          )
                          .fold(
-                             Maps.<Long, LockType>newLinkedHashMap(),
+                             Maps.newLinkedHashMap(),
                              new Folder3<Map<Long, LockType>, Pair<Long, LockType>>()
                              {
                                @Override

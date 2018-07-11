@@ -39,10 +39,10 @@ public class QueryManager implements QueryWatcher
   public QueryManager()
   {
     this.queries = Multimaps.synchronizedSetMultimap(
-        HashMultimap.<String, ListenableFuture>create()
+        HashMultimap.create()
     );
     this.queryDatasources = Multimaps.synchronizedSetMultimap(
-        HashMultimap.<String, String>create()
+        HashMultimap.create()
     );
   }
 

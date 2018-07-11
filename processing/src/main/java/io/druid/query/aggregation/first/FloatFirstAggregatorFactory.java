@@ -162,7 +162,7 @@ public class FloatFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(new FloatFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new FloatFirstAggregatorFactory(fieldName, fieldName));
   }
 
   @Override

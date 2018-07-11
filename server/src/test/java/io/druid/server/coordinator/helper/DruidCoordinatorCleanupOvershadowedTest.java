@@ -100,7 +100,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
             .andReturn(ImmutableList.of(druidDataSource))
             .anyTimes();
     EasyMock.expect(druidDataSource.getSegments())
-            .andReturn(ImmutableSet.<DataSegment>of(segmentV1, segmentV2))
+            .andReturn(ImmutableSet.of(segmentV1, segmentV2))
             .anyTimes();
     EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
     coordinator.removeSegment(segmentV1);

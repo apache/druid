@@ -157,7 +157,7 @@ public class CacheSchedulerTest
     };
     scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
-        ImmutableMap.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>of(
+        ImmutableMap.of(
             UriExtractionNamespace.class,
             cacheGenerator
         ),

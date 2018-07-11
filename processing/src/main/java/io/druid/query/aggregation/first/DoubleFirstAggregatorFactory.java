@@ -164,7 +164,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(new DoubleFirstAggregatorFactory(fieldName, fieldName));
+    return Collections.singletonList(new DoubleFirstAggregatorFactory(fieldName, fieldName));
   }
 
   @Override

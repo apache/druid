@@ -54,7 +54,7 @@ public class SingleServerInventoryProvider implements ServerInventoryViewProvide
         zkPaths,
         curator,
         jsonMapper,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
+        Predicates.alwaysTrue()
     );
   }
 }

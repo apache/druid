@@ -202,7 +202,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI uri)
   {
-    return ImmutableMap.<String, Object>of(
+    return ImmutableMap.of(
         "type",
         AzureStorageDruidModule.SCHEME,
         "containerName",

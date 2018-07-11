@@ -228,7 +228,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                     new QuantilePostAggregator("a7", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a8", "a8:agg", 0.50f)
                 )
-                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
+                .context(ImmutableMap.of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
@@ -291,7 +291,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 )
-                .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", true))
+                .context(ImmutableMap.of("skipEmptyBuckets", true))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );

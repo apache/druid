@@ -130,7 +130,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   @Override
   public Map<String, Object> makeLoadSpec(URI finalIndexZipFilePath)
   {
-    return ImmutableMap.<String, Object>of("type", "local", "path", finalIndexZipFilePath.getPath());
+    return ImmutableMap.of("type", "local", "path", finalIndexZipFilePath.getPath());
   }
 
   private String makeIntermediateDir()

@@ -141,7 +141,7 @@ public class ScanQueryRunnerTest
   {
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Collections.<String>emptyList())
+                    .columns(Collections.emptyList())
                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                     .limit(3)
                     .legacy(legacy);
@@ -421,7 +421,7 @@ public class ScanQueryRunnerTest
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
     Iterable<ScanResultValue> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), Maps.<String, Object>newHashMap())
+        .run(QueryPlus.wrap(query), Maps.newHashMap())
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -469,7 +469,7 @@ public class ScanQueryRunnerTest
         .intervals(I_0112_0114)
         .filters(
             new AndDimFilter(
-                Arrays.<DimFilter>asList(
+                Arrays.asList(
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null),
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo", null)
                 )

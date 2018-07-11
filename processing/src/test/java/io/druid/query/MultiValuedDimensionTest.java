@@ -103,7 +103,7 @@ public class MultiValuedDimensionTest
   public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        ImmutableList.<Module>of(),
+        ImmutableList.of(),
         config,
         null
     );
@@ -156,12 +156,12 @@ public class MultiValuedDimensionTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("tags", "tags")))
         .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.<Segment>of(
+        ImmutableList.of(
             new QueryableIndexSegment("sid1", queryableIndex),
             new IncrementalIndexSegment(incrementalIndex, "sid2")
         ),
@@ -190,13 +190,13 @@ public class MultiValuedDimensionTest
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
-        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
+        .setDimensions(Lists.newArrayList(new DefaultDimensionSpec("tags", "tags")))
         .setAggregatorSpecs(Collections.singletonList(new CountAggregatorFactory("count")))
         .setDimFilter(new SelectorDimFilter("tags", "t3", null))
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.<Segment>of(
+        ImmutableList.of(
             new QueryableIndexSegment("sid1", queryableIndex),
             new IncrementalIndexSegment(incrementalIndex, "sid2")
         ),
@@ -223,7 +223,7 @@ public class MultiValuedDimensionTest
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
         .setGranularity(Granularities.ALL)
         .setDimensions(
-            Lists.<DimensionSpec>newArrayList(
+            Lists.newArrayList(
                 new RegexFilteredDimensionSpec(
                     new DefaultDimensionSpec("tags", "tags"),
                     "t3"
@@ -235,7 +235,7 @@ public class MultiValuedDimensionTest
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.<Segment>of(
+        ImmutableList.of(
             new QueryableIndexSegment("sid1", queryableIndex),
             new IncrementalIndexSegment(incrementalIndex, "sid2")
         ),
@@ -286,7 +286,7 @@ public class MultiValuedDimensionTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Collections.<Map<String, Object>>singletonList(
-                    ImmutableMap.<String, Object>of(
+                    ImmutableMap.of(
                         "tags", "t3",
                         "count", 2L
                     )

@@ -213,7 +213,7 @@ public class SearchQueryRunnerWithCaseTest
     Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
 
     searchQuery = builder.query("business").build();
-    expectedResults.put(qualityDimension, Sets.<String>newHashSet());
+    expectedResults.put(qualityDimension, Sets.newHashSet());
     checkSearchQuery(searchQuery, expectedResults);
   }
 

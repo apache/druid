@@ -243,8 +243,8 @@ public class KafkaIndexTaskTest
                       null,
                       null
                   ),
-                  new JSONPathSpec(true, ImmutableList.<JSONPathFieldSpec>of()),
-                  ImmutableMap.<String, Boolean>of()
+                  new JSONPathSpec(true, ImmutableList.of()),
+                  ImmutableMap.of()
               ),
               StandardCharsets.UTF_8.name()
           ),
@@ -1957,7 +1957,7 @@ public class KafkaIndexTaskTest
       }
     };
     return new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>of(
+        ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
@@ -2181,7 +2181,7 @@ public class KafkaIndexTaskTest
     CompressionUtils.unzip(
         Files.asByteSource(new File(indexBasePath.listFiles()[0], "index.zip")),
         outputLocation,
-        Predicates.<Throwable>alwaysFalse(),
+        Predicates.alwaysFalse(),
         false
     );
     IndexIO indexIO = new TestUtils().getTestIndexIO();
@@ -2202,7 +2202,7 @@ public class KafkaIndexTaskTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(DATA_SCHEMA.getDataSource())
                                   .aggregators(
-                                      ImmutableList.<AggregatorFactory>of(
+                                      ImmutableList.of(
                                           new LongSumAggregatorFactory("rows", "rows")
                                       )
                                   ).granularity(Granularities.ALL)

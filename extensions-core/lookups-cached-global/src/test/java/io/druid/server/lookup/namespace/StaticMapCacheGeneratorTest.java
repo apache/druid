@@ -50,7 +50,7 @@ public class StaticMapCacheGeneratorTest
     NoopServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
     scheduler = new CacheScheduler(
         noopServiceEmitter,
-        Collections.<Class<? extends ExtractionNamespace>, CacheGenerator<?>>emptyMap(),
+        Collections.emptyMap(),
         new OnHeapNamespaceExtractionCacheManager(lifecycle, noopServiceEmitter, new NamespaceExtractionConfig())
     );
   }

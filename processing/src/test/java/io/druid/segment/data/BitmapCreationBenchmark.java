@@ -51,7 +51,7 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   @Parameterized.Parameters
   public static List<Class<? extends BitmapSerdeFactory>[]> factoryClasses()
   {
-    return Arrays.<Class<? extends BitmapSerdeFactory>[]>asList(
+    return Arrays.asList(
         (Class<? extends BitmapSerdeFactory>[]) Collections.<Class<? extends BitmapSerdeFactory>>singletonList(
             ConciseBitmapSerdeFactory.class
         ).toArray(),

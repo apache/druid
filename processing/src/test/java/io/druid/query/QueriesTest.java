@@ -41,17 +41,17 @@ public class QueriesTest
   @Test
   public void testVerifyAggregations()
   {
-    List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
+    List<AggregatorFactory> aggFactories = Arrays.asList(
         new CountAggregatorFactory("count"),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
 
-    List<PostAggregator> postAggs = Collections.<PostAggregator>singletonList(
+    List<PostAggregator> postAggs = Collections.singletonList(
         new ArithmeticPostAggregator(
             "addStuff",
             "+",
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 new FieldAccessPostAggregator("idx", "idx"),
                 new FieldAccessPostAggregator("count", "count")
             )
@@ -73,17 +73,17 @@ public class QueriesTest
   @Test
   public void testVerifyAggregationsMissingVal()
   {
-    List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
+    List<AggregatorFactory> aggFactories = Arrays.asList(
         new CountAggregatorFactory("count"),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
 
-    List<PostAggregator> postAggs = Collections.<PostAggregator>singletonList(
+    List<PostAggregator> postAggs = Collections.singletonList(
         new ArithmeticPostAggregator(
             "addStuff",
             "+",
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 new FieldAccessPostAggregator("idx", "idx2"),
                 new FieldAccessPostAggregator("count", "count")
             )
@@ -105,17 +105,17 @@ public class QueriesTest
   @Test
   public void testVerifyAggregationsMultiLevel()
   {
-    List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
+    List<AggregatorFactory> aggFactories = Arrays.asList(
         new CountAggregatorFactory("count"),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
 
-    List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
+    List<PostAggregator> postAggs = Arrays.asList(
         new ArithmeticPostAggregator(
             "divideStuff",
             "/",
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 new ArithmeticPostAggregator(
                     "addStuff",
                     "+",
@@ -137,7 +137,7 @@ public class QueriesTest
         new ArithmeticPostAggregator(
             "addStuff",
             "+",
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 new FieldAccessPostAggregator("divideStuff", "divideStuff"),
                 new FieldAccessPostAggregator("count", "count")
             )
@@ -159,17 +159,17 @@ public class QueriesTest
   @Test
   public void testVerifyAggregationsMultiLevelMissingVal()
   {
-    List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
+    List<AggregatorFactory> aggFactories = Arrays.asList(
         new CountAggregatorFactory("count"),
         new DoubleSumAggregatorFactory("idx", "index"),
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
 
-    List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
+    List<PostAggregator> postAggs = Arrays.asList(
         new ArithmeticPostAggregator(
             "divideStuff",
             "/",
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 new ArithmeticPostAggregator(
                     "addStuff",
                     "+",
@@ -191,7 +191,7 @@ public class QueriesTest
         new ArithmeticPostAggregator(
             "addStuff",
             "+",
-            Arrays.<PostAggregator>asList(
+            Arrays.asList(
                 new FieldAccessPostAggregator("divideStuff", "divideStuff"),
                 new FieldAccessPostAggregator("count", "count")
             )

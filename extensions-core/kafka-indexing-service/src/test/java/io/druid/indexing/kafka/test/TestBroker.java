@@ -65,7 +65,7 @@ public class TestBroker implements Closeable
     this.directory = directory == null ? Files.createTempDir() : directory;
     this.directoryCleanup = directory == null;
     this.id = id;
-    this.brokerProps = brokerProps == null ? ImmutableMap.<String, String>of() : brokerProps;
+    this.brokerProps = brokerProps == null ? ImmutableMap.of() : brokerProps;
   }
 
   public void start()

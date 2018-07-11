@@ -34,7 +34,7 @@ public class TimestampSpecTest
     TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd", null);
     Assert.assertEquals(
         DateTimes.of("2014-03-01"),
-        spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", "2014-03-01"))
+        spec.extractTimestamp(ImmutableMap.of("TIMEstamp", "2014-03-01"))
     );
   }
 
@@ -44,7 +44,7 @@ public class TimestampSpecTest
     TimestampSpec spec = new TimestampSpec(null, null, DateTimes.EPOCH);
     Assert.assertEquals(
         DateTimes.of("1970-01-01"),
-        spec.extractTimestamp(ImmutableMap.<String, Object>of("dim", "foo"))
+        spec.extractTimestamp(ImmutableMap.of("dim", "foo"))
     );
   }
 
@@ -64,7 +64,7 @@ public class TimestampSpecTest
     DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(ISODateTimeFormat.dateHourMinuteSecond());
 
     for (String date : dates) {
-      DateTime dateTime = spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", date));
+      DateTime dateTime = spec.extractTimestamp(ImmutableMap.of("TIMEstamp", date));
       DateTime expectedDateTime = formatter.parse(date);
       Assert.assertEquals(expectedDateTime, dateTime);
     }

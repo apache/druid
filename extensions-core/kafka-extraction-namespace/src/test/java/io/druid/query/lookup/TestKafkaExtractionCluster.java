@@ -330,7 +330,7 @@ public class TestKafkaExtractionCluster
     checkServer();
 
     assertUpdated(null, "foo");
-    assertReverseUpdated(ImmutableList.<String>of(), "foo");
+    assertReverseUpdated(ImmutableList.of(), "foo");
 
     long events = factory.getCompletedEventCount();
 

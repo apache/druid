@@ -77,7 +77,7 @@ public class VarianceTopNQueryTest
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
         .aggregators(
-            Lists.<AggregatorFactory>newArrayList(
+            Lists.newArrayList(
                 Iterables.concat(
                     VarianceTestHelper.commonPlusVarAggregators,
                     Lists.newArrayList(
@@ -87,7 +87,7 @@ public class VarianceTopNQueryTest
                 )
             )
         )
-        .postAggregators(Collections.<PostAggregator>singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -144,7 +144,7 @@ public class VarianceTopNQueryTest
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
     final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
         QueryPlus.wrap(query),
-        ImmutableMap.<String, Object>of()
+        ImmutableMap.of()
     );
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;

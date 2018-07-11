@@ -178,7 +178,7 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     );
-    factory.getMapRef().set(ImmutableMap.<String, String>of());
+    factory.getMapRef().set(ImmutableMap.of());
 
     final LookupExtractor extractor = factory.get();
 
@@ -196,13 +196,13 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     );
-    factory1.getMapRef().set(ImmutableMap.<String, String>of());
+    factory1.getMapRef().set(ImmutableMap.of());
     final KafkaLookupExtractorFactory factory2 = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC + "b",
         DEFAULT_PROPERTIES
     );
-    factory2.getMapRef().set(ImmutableMap.<String, String>of());
+    factory2.getMapRef().set(ImmutableMap.of());
 
     Assert.assertFalse(Arrays.equals(factory1.get().getCacheKey(), factory2.get().getCacheKey()));
   }
@@ -218,7 +218,7 @@ public class KafkaLookupExtractorFactoryTest
 
     Assert.assertTrue(factory.replaces(null));
 
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.<String, String>of(), false)));
+    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(), false)));
     Assert.assertFalse(factory.replaces(factory));
     Assert.assertFalse(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
@@ -463,7 +463,7 @@ public class KafkaLookupExtractorFactoryTest
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
-        ImmutableMap.<String, String>of()
+        ImmutableMap.of()
     );
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());

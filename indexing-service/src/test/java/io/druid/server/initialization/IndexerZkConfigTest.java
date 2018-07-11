@@ -143,7 +143,7 @@ public class IndexerZkConfigTest
 
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(simpleZkConfigModule)
+        ImmutableList.of(simpleZkConfigModule)
     );
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
@@ -164,7 +164,7 @@ public class IndexerZkConfigTest
   {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(simpleZkConfigModule)
+        ImmutableList.of(simpleZkConfigModule)
     );
     JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
 
@@ -197,7 +197,7 @@ public class IndexerZkConfigTest
     System.setProperty(indexerPropertyKey, overrideValue); // Set it here so that the binding picks it up
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(simpleZkConfigModule)
+        ImmutableList.of(simpleZkConfigModule)
     );
     propertyValues.clear();
     propertyValues.setProperty(indexerPropertyKey, overrideValue); // Have to set it here as well annoyingly enough
@@ -229,7 +229,7 @@ public class IndexerZkConfigTest
   {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
-        ImmutableList.<Module>of(simpleZkConfigModule)
+        ImmutableList.of(simpleZkConfigModule)
     );
     propertyValues.setProperty(zkServiceConfigString + ".base", "/druid/metrics");
 

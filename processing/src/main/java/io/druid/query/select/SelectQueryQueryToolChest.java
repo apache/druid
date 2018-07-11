@@ -162,7 +162,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     return new CacheStrategy<Result<SelectResultValue>, Object, SelectQuery>()
     {
       private final List<DimensionSpec> dimensionSpecs =
-          query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
+          query.getDimensions() != null ? query.getDimensions() : Collections.emptyList();
       private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
           Lists.transform(dimensionSpecs, DimensionSpec::getOutputName) : Collections.emptyList();
 
@@ -180,7 +180,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         final byte[] granularityBytes = query.getGranularity().getCacheKey();
 
         final List<DimensionSpec> dimensionSpecs =
-            query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
+            query.getDimensions() != null ? query.getDimensions() : Collections.emptyList();
         final byte[][] dimensionsBytes = new byte[dimensionSpecs.size()][];
         int dimensionsBytesSize = 0;
         int index = 0;

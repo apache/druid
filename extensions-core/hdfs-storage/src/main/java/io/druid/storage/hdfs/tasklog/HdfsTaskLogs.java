@@ -103,7 +103,7 @@ public class HdfsTaskLogs implements TaskLogs
   {
     final FileSystem fs = path.getFileSystem(hadoopConfig);
     if (fs.exists(path)) {
-      return Optional.<ByteSource>of(
+      return Optional.of(
           new ByteSource()
           {
             @Override

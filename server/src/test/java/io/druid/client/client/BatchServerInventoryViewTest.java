@@ -180,7 +180,7 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
+        Predicates.alwaysTrue()
     );
 
     batchServerInventoryView.start();
@@ -308,7 +308,7 @@ public class BatchServerInventoryViewTest
     EasyMock
         .expect(
             callback.segmentAdded(
-                EasyMock.<DruidServerMetadata>anyObject(),
+                EasyMock.anyObject(),
                 EasyMock.cmp(makeSegment(INITIAL_SEGMENTS + 2), dataSegmentComparator, LogicalOperator.EQUAL)
             )
         )
@@ -318,7 +318,7 @@ public class BatchServerInventoryViewTest
     EasyMock
         .expect(
             callback.segmentRemoved(
-                EasyMock.<DruidServerMetadata>anyObject(),
+                EasyMock.anyObject(),
                 EasyMock.cmp(makeSegment(INITIAL_SEGMENTS + 2), dataSegmentComparator, LogicalOperator.EQUAL)
             )
         )
@@ -489,7 +489,7 @@ public class BatchServerInventoryViewTest
           )
       );
     }
-    final List<BatchDataSegmentAnnouncer> announcers = Futures.<BatchDataSegmentAnnouncer>allAsList(futures).get();
+    final List<BatchDataSegmentAnnouncer> announcers = Futures.allAsList(futures).get();
     Assert.assertEquals(INITIAL_SEGMENTS * 2, testSegments.size());
     waitForSync(batchServerInventoryView, testSegments);
 

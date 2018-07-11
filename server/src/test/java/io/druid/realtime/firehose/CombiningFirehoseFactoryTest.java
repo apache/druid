@@ -50,7 +50,7 @@ public class CombiningFirehoseFactoryTest
     List<InputRow> list1 = Arrays.asList(makeRow(1, 1), makeRow(2, 2));
     List<InputRow> list2 = Arrays.asList(makeRow(3, 3), makeRow(4, 4), makeRow(5, 5));
     FirehoseFactory combiningFactory = new CombiningFirehoseFactory(
-        Arrays.<FirehoseFactory>asList(
+        Arrays.asList(
             new ListFirehoseFactory(list1),
             new ListFirehoseFactory(list2)
         )

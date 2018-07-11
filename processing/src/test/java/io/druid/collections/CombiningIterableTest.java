@@ -43,7 +43,7 @@ public class CombiningIterableTest
         new Result<Object>(DateTimes.of("2011-01-01"), 2L)
     );
 
-    Iterable<Result<Object>> expectedResults = Collections.<Result<Object>>singletonList(
+    Iterable<Result<Object>> expectedResults = Collections.singletonList(
         new Result<Object>(DateTimes.of("2011-01-01"), 3L)
     );
 

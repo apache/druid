@@ -167,7 +167,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(new HyperUniquesAggregatorFactory(
+    return Collections.singletonList(new HyperUniquesAggregatorFactory(
         fieldName,
         fieldName,
         isInputHyperUnique,

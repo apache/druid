@@ -84,7 +84,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
       if (whitelist == null || whitelist.contains(dataSegment.getDataSource())) {
         VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(dataSegment.getDataSource());
         if (timeline == null) {
-          timeline = new VersionedIntervalTimeline<String, DataSegment>(Ordering.<String>natural());
+          timeline = new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural());
           dataSources.put(dataSegment.getDataSource(), timeline);
         }
         timeline.add(

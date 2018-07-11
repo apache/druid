@@ -102,7 +102,7 @@ public class DoubleStorageTest
   {
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Collections.<String>emptyList())
+                    .columns(Collections.emptyList())
                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                     .limit(Integer.MAX_VALUE)
                     .legacy(false);
@@ -126,7 +126,7 @@ public class DoubleStorageTest
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME),
-              ImmutableList.<SpatialDimensionSchema>of()
+              ImmutableList.of()
           ),
           null,
           null
