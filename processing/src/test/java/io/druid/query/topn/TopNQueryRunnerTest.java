@@ -2415,10 +2415,10 @@ public class TopNQueryRunnerTest
     expectedResults = Collections.singletonList(
         TopNQueryRunnerTestHelper.createExpectedRows(
             "2011-01-12T00:00:00.000Z",
-            new String[] { QueryRunnerTestHelper.qualityDimension, "rows", "index", "addRowsIndexConstant" },
+            new String[] {QueryRunnerTestHelper.qualityDimension, "rows", "index", "addRowsIndexConstant"},
             Arrays.asList(
-                new Object[] { "n", 93L, -2786.4727909999997, -2692.4727909999997 },
-                new Object[] { "u", 186L, -3949.824348000002, -3762.824348000002 }
+                new Object[] {"n", 93L, -2786.4727909999997, -2692.4727909999997},
+                new Object[] {"u", 186L, -3949.824348000002, -3762.824348000002}
             )
         )
     );
