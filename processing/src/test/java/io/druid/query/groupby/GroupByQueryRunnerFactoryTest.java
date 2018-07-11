@@ -38,7 +38,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.segment.CloserRule;
 import io.druid.segment.IncrementalIndexSegment;

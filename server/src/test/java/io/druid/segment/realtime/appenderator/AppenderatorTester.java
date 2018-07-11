@@ -35,8 +35,6 @@ import io.druid.java.util.emitter.core.NoopEmitter;
 import io.druid.java.util.emitter.service.ServiceEmitter;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
-import io.druid.query.Query;
-import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;

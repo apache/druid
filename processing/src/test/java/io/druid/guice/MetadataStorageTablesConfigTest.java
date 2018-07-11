@@ -30,7 +30,6 @@ import io.druid.metadata.MetadataStorageTablesConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
 

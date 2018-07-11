@@ -29,7 +29,6 @@ import io.druid.query.DefaultQueryMetricsTest;
 import io.druid.query.DruidMetrics;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.SelectorDimFilter;

@@ -32,7 +32,6 @@ import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.ParseSpec;
-import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;

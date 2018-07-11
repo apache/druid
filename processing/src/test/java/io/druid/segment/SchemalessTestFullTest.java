@@ -40,7 +40,6 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;

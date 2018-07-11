@@ -34,7 +34,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 

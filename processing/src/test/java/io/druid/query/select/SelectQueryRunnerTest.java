@@ -48,7 +48,6 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;

@@ -27,7 +27,6 @@ import io.druid.java.util.common.granularity.Granularities;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;

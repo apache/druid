@@ -36,7 +36,6 @@ import io.druid.indexer.HadoopTuningConfig;
 import io.druid.indexer.HadoopyShardSpec;
 import io.druid.indexer.IndexGeneratorJob;
 import io.druid.indexer.JobHelper;
-import io.druid.indexer.Jobby;
 import io.druid.java.util.common.Intervals;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.granularity.Granularities;

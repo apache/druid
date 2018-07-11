@@ -59,7 +59,6 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;

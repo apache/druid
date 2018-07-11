@@ -38,7 +38,6 @@ import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.IntervalDropRule;
 import io.druid.server.coordinator.rules.IntervalLoadRule;
-import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -49,7 +48,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;

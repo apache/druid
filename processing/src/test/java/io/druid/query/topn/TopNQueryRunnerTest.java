@@ -55,7 +55,6 @@ import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.FloatMaxAggregatorFactory;
 import io.druid.query.aggregation.FloatMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.FloatFirstAggregatorFactory;

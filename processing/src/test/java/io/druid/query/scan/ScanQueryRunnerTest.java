@@ -40,7 +40,6 @@ import io.druid.query.TableDataSource;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;

@@ -35,7 +35,6 @@ import io.druid.query.Druids;
 import io.druid.query.QueryPlus;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;

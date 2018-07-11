@@ -29,7 +29,6 @@ import io.druid.indexer.TaskStatus;
 import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
@@ -54,7 +53,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;

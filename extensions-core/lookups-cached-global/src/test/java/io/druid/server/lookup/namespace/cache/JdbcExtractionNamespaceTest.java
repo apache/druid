@@ -33,7 +33,6 @@ import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.lookup.namespace.CacheGenerator;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.JdbcExtractionNamespace;
 import io.druid.server.lookup.namespace.JdbcCacheGenerator;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;

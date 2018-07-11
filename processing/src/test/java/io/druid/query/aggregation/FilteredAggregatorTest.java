@@ -27,7 +27,6 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.NotDimFilter;

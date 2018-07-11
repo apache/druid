@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.DoubleDimensionSchema;
 import io.druid.data.input.impl.FloatDimensionSchema;

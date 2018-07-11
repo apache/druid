@@ -27,7 +27,6 @@ import io.druid.java.util.common.Intervals;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.jclouds.io.Payload;
 import org.jclouds.openstack.swift.v1.features.ObjectApi;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
 import org.junit.Assert;

@@ -30,10 +30,8 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestIndex;
@@ -42,7 +40,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;

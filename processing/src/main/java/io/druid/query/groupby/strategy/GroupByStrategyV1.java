@@ -41,7 +41,6 @@ import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;

@@ -30,7 +30,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;

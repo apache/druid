@@ -26,7 +26,6 @@ import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 import io.druid.segment.realtime.firehose.IrcInputRowParser;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

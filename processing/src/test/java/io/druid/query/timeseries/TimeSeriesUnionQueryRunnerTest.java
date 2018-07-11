@@ -33,7 +33,6 @@ import io.druid.query.Result;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
 import io.druid.query.UnionQueryRunner;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.TestHelper;
 import org.junit.Test;

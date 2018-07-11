@@ -53,7 +53,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

@@ -21,7 +21,6 @@ package io.druid.sql.calcite.filtration;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import org.joda.time.Interval;
 
 public class MoveMarkerFiltersToIntervals implements Function<Filtration, Filtration>
 {

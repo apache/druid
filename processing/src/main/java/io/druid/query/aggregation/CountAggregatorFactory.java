@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;

@@ -31,7 +31,6 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexBuilder;

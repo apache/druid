@@ -37,7 +37,6 @@ import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
-import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;

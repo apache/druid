@@ -90,7 +90,6 @@ import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;

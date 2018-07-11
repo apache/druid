@@ -27,7 +27,6 @@ import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.granularity.PeriodGranularity;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.timeboundary.TimeBoundaryResultValue;
 import io.druid.query.timeseries.TimeseriesResultValue;
@@ -38,7 +37,6 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 

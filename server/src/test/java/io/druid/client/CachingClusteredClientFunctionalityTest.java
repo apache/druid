@@ -36,7 +36,6 @@ import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.server.coordination.ServerType;
 import io.druid.timeline.DataSegment;
@@ -50,7 +49,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;

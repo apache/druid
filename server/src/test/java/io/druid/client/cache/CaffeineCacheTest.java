@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;

@@ -30,7 +30,6 @@ import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.concurrent.Execs;
 import io.druid.java.util.common.lifecycle.Lifecycle;
 import io.druid.query.lookup.namespace.CacheGenerator;
-import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespace;
 import io.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import io.druid.server.lookup.namespace.NamespaceExtractionConfig;

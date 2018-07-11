@@ -34,10 +34,8 @@ import static io.druid.query.QueryRunnerTestHelper.fullOnInterval;
 import static io.druid.query.QueryRunnerTestHelper.indexMetric;
 import static io.druid.query.QueryRunnerTestHelper.marketDimension;
 import io.druid.query.TableDataSource;
-import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.expression.LookupEnabledTestExprMacroTable;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
@@ -48,7 +46,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 
 public class MaterializedViewQueryTest 

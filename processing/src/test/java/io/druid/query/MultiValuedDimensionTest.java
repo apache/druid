@@ -19,7 +19,6 @@
 
 package io.druid.query;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -37,7 +36,6 @@ import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.dimension.RegexFilteredDimensionSpec;
 import io.druid.query.filter.SelectorDimFilter;
@@ -56,7 +54,6 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
-import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;

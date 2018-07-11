@@ -60,7 +60,6 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

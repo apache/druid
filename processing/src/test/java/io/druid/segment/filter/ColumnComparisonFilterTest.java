@@ -31,7 +31,6 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.java.util.common.DateTimes;
 import io.druid.java.util.common.Pair;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.ColumnComparisonDimFilter;

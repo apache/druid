@@ -85,7 +85,6 @@ import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryPlus;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;

@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.java.util.common.Intervals;
 import io.druid.segment.IndexSpec;
-import io.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;

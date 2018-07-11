@@ -34,7 +34,6 @@ import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import io.druid.segment.realtime.firehose.SqlFirehoseFactory;
 import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

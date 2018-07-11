@@ -62,7 +62,6 @@ import io.druid.query.QueryWatcher;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
-import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.expression.TestExprMacroTable;
 import io.druid.query.extraction.TimeFormatExtractionFn;

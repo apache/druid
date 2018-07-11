@@ -54,7 +54,6 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
-import io.druid.segment.VirtualColumn;
 import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;

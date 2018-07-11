@@ -31,7 +31,6 @@ import io.druid.query.aggregation.datasketches.theta.SketchMergeComplexMetricSer
 import io.druid.query.aggregation.datasketches.theta.SketchModule;
 import io.druid.segment.serde.ComplexMetrics;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

@@ -27,7 +27,6 @@ import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
-import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.dimension.LegacyDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -38,7 +37,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 
 import static io.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;

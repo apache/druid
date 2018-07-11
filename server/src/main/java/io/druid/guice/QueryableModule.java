@@ -33,7 +33,6 @@ import io.druid.server.log.LoggingRequestLoggerProvider;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.log.RequestLoggerProvider;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

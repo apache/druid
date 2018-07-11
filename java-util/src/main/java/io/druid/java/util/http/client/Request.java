@@ -35,7 +35,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
