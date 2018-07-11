@@ -33,6 +33,7 @@ public class KafkaIOConfig implements IOConfig
   private static final boolean DEFAULT_USE_TRANSACTION = true;
   private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
 
+  private final int taskGroupId;
   private final String baseSequenceName;
   private final KafkaPartitions startPartitions;
   private final KafkaPartitions endPartitions;
@@ -44,6 +45,7 @@ public class KafkaIOConfig implements IOConfig
 
   @JsonCreator
   public KafkaIOConfig(
+      @JsonProperty("taskGroupId") Integer taskGroupId,
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") KafkaPartitions startPartitions,
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
@@ -54,6 +56,7 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
   )
   {
+    this.taskGroupId = Preconditions.checkNotNull(taskGroupId, "taskGroupId");
     this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
     this.startPartitions = Preconditions.checkNotNull(startPartitions, "startPartitions");
     this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
@@ -81,6 +84,12 @@ public class KafkaIOConfig implements IOConfig
           partition
       );
     }
+  }
+
+  @JsonProperty
+  public int getTaskGroupId()
+  {
+    return taskGroupId;
   }
 
   @JsonProperty
