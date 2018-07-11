@@ -423,7 +423,7 @@ public class IncrementalIndexTest
     final IncrementalIndex index = closer.closeLater(
         indexCreator.createIndex(
             ingestAggregatorFactories.toArray(
-                new AggregatorFactory[ingestAggregatorFactories.size()]
+                new AggregatorFactory[0]
             )
         )
     );
