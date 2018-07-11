@@ -98,7 +98,7 @@ public class S3DataSegmentMover implements DataSegmentMover
                         @Override
                         public boolean apply(String input)
                         {
-                          return !(input.equals("bucket") || input.equals("key"));
+                          return !("bucket".equals(input) || "key".equals(input));
                         }
                       }
                   )

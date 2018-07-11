@@ -331,11 +331,11 @@ public class InputRowSerde
 
           String t = aggFactory.getTypeName();
 
-          if (t.equals("float")) {
+          if ("float".equals(t)) {
             out.writeFloat(agg.getFloat());
-          } else if (t.equals("long")) {
+          } else if ("long".equals(t)) {
             WritableUtils.writeVLong(out, agg.getLong());
-          } else if (t.equals("double")) {
+          } else if ("double".equals(t)) {
             out.writeDouble(agg.getDouble());
           } else {
             //its a complex metric
@@ -450,11 +450,11 @@ public class InputRowSerde
       for (int i = 0; i < metricSize; i++) {
         String metric = readString(in);
         String type = getType(metric, aggs, i);
-        if (type.equals("float")) {
+        if ("float".equals(type)) {
           event.put(metric, in.readFloat());
-        } else if (type.equals("long")) {
+        } else if ("long".equals(type)) {
           event.put(metric, WritableUtils.readVLong(in));
-        } else if (type.equals("double")) {
+        } else if ("double".equals(type)) {
           event.put(metric, in.readDouble());
         } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);

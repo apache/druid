@@ -40,7 +40,7 @@ public class TimestampParser
       final String format
   )
   {
-    if (format.equalsIgnoreCase("auto")) {
+    if ("auto".equalsIgnoreCase(format)) {
       // Could be iso or millis
       final DateTimes.UtcFormatter parser = DateTimes.wrapFormatter(createAutoParser());
       return (String input) -> {
@@ -65,20 +65,20 @@ public class TimestampParser
 
         return DateTimes.utc(Long.parseLong(input));
       };
-    } else if (format.equalsIgnoreCase("iso")) {
+    } else if ("iso".equalsIgnoreCase(format)) {
       return input -> {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
         return DateTimes.of(ParserUtils.stripQuotes(input));
       };
-    } else if (format.equalsIgnoreCase("posix")
-        || format.equalsIgnoreCase("millis")
-        || format.equalsIgnoreCase("nano")) {
+    } else if ("posix".equalsIgnoreCase(format)
+        || "millis".equalsIgnoreCase(format)
+        || "nano".equalsIgnoreCase(format)) {
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
       return input -> {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
         return numericFun.apply(Long.parseLong(ParserUtils.stripQuotes(input)));
       };
-    } else if (format.equalsIgnoreCase("ruby")) {
+    } else if ("ruby".equalsIgnoreCase(format)) {
       // Numeric parser ignores millis for ruby.
       final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
       return input -> {
@@ -104,9 +104,9 @@ public class TimestampParser
   )
   {
     // Ignore millis for ruby
-    if (format.equalsIgnoreCase("posix") || format.equalsIgnoreCase("ruby")) {
+    if ("posix".equalsIgnoreCase(format) || "ruby".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.SECONDS.toMillis(input.longValue()));
-    } else if (format.equalsIgnoreCase("nano")) {
+    } else if ("nano".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(TimeUnit.NANOSECONDS.toMillis(input.longValue()));
     } else {
       return input -> DateTimes.utc(input.longValue());

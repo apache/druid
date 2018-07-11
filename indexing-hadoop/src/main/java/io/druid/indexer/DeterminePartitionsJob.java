@@ -622,7 +622,7 @@ public class DeterminePartitionsJob implements Jobby
       final DimValueCount firstDvc = iterator.next();
       final int totalRows = firstDvc.numRows;
 
-      if (!firstDvc.dim.equals("") || !firstDvc.value.equals("")) {
+      if (!"".equals(firstDvc.dim) || !"".equals(firstDvc.value)) {
         throw new IllegalStateException("WTF?! Expected total row indicator on first k/v pair!");
       }
 

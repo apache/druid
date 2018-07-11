@@ -1073,13 +1073,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
       String typeInfo = factory.getTypeName();
       this.capabilities = new ColumnCapabilitiesImpl();
-      if (typeInfo.equalsIgnoreCase("float")) {
+      if ("float".equalsIgnoreCase(typeInfo)) {
         capabilities.setType(ValueType.FLOAT);
         this.type = typeInfo;
-      } else if (typeInfo.equalsIgnoreCase("long")) {
+      } else if ("long".equalsIgnoreCase(typeInfo)) {
         capabilities.setType(ValueType.LONG);
         this.type = typeInfo;
-      } else if (typeInfo.equalsIgnoreCase("double")) {
+      } else if ("double".equalsIgnoreCase(typeInfo)) {
         capabilities.setType(ValueType.DOUBLE);
         this.type = typeInfo;
       } else {

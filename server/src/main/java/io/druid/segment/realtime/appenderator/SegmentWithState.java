@@ -53,9 +53,9 @@ public class SegmentWithState
     @JsonCreator
     public static SegmentState fromString(@JsonProperty String name)
     {
-      if (name.equalsIgnoreCase("ACTIVE")) {
+      if ("ACTIVE".equalsIgnoreCase(name)) {
         return APPENDING;
-      } else if (name.equalsIgnoreCase("INACTIVE")) {
+      } else if ("INACTIVE".equalsIgnoreCase(name)) {
         return APPEND_FINISHED;
       } else {
         return SegmentState.valueOf(name);

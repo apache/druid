@@ -107,7 +107,7 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getProperty(String prop)
       {
-        if (prop.equals("hadoopTestDir")) {
+        if ("hadoopTestDir".equals(prop)) {
           return hadoopDir;
         }
         throw new UnsupportedOperationException("DockerConfigProvider does not support property " + prop);

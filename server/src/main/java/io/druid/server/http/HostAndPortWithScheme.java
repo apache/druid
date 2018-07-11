@@ -58,7 +58,7 @@ public class HostAndPortWithScheme
   private static String checkAndGetScheme(String scheme)
   {
     String schemeLowerCase = StringUtils.toLowerCase(scheme);
-    Preconditions.checkState(schemeLowerCase.equals("http") || schemeLowerCase.equals("https"));
+    Preconditions.checkState("http".equals(schemeLowerCase) || "https".equals(schemeLowerCase));
     return schemeLowerCase;
   }
 
