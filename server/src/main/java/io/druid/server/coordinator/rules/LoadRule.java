@@ -247,7 +247,6 @@ public abstract class LoadRule implements Rule
           createLoadQueueSizeLimitingPredicate(params),
           segment
       );
-      log.info("Assigned %d replicas in tier [%s]", numAssigned, tier);
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
     }
   }
