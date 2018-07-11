@@ -960,7 +960,7 @@ public class CachingClusteredClientTest
                 .dimension("a")
                 .metric("b")
                 .threshold(3)
-                .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("b")))
+                .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("b")))
                 .build(),
             sequences
         )
@@ -1129,7 +1129,7 @@ public class CachingClusteredClientTest
                                                     .granularity(GRANULARITY)
                                                     .limit(1000)
                                                     .intervals(SEG_SPEC)
-                                                    .dimensions(Arrays.asList(TOP_DIM))
+                                                    .dimensions(Collections.singletonList(TOP_DIM))
                                                     .query("how")
                                                     .context(CONTEXT);
 
@@ -1199,7 +1199,7 @@ public class CachingClusteredClientTest
         .granularity(GRANULARITY)
         .limit(1000)
         .intervals(SEG_SPEC)
-        .dimensions(Arrays.asList(TOP_DIM))
+        .dimensions(Collections.singletonList(TOP_DIM))
         .query("how")
         .context(CONTEXT);
 
@@ -1293,8 +1293,8 @@ public class CachingClusteredClientTest
                                               .intervals(SEG_SPEC)
                                               .filters(DIM_FILTER)
                                               .granularity(GRANULARITY)
-                                              .dimensions(Arrays.asList("a"))
-                                              .metrics(Arrays.asList("rows"))
+                                              .dimensions(Collections.singletonList("a"))
+                                              .metrics(Collections.singletonList("rows"))
                                               .pagingSpec(new PagingSpec(null, 3))
                                               .context(CONTEXT);
 
@@ -1362,8 +1362,8 @@ public class CachingClusteredClientTest
         .intervals(SEG_SPEC)
         .filters(DIM_FILTER)
         .granularity(GRANULARITY)
-        .dimensions(Arrays.asList("a"))
-        .metrics(Arrays.asList("rows"))
+        .dimensions(Collections.singletonList("a"))
+        .metrics(Collections.singletonList("rows"))
         .pagingSpec(new PagingSpec(null, 3))
         .context(CONTEXT);
 
@@ -1464,7 +1464,7 @@ public class CachingClusteredClientTest
         .setQuerySegmentSpec(SEG_SPEC)
         .setDimFilter(DIM_FILTER)
         .setGranularity(GRANULARITY)
-        .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "a")))
+        .setDimensions(Collections.<DimensionSpec>singletonList(new DefaultDimensionSpec("a", "a")))
         .setAggregatorSpecs(aggsWithUniques)
         .setPostAggregatorSpecs(POST_AGGS)
         .setContext(CONTEXT);
@@ -2976,7 +2976,7 @@ public class CachingClusteredClientTest
         .setQuerySegmentSpec(SEG_SPEC)
         .setDimFilter(DIM_FILTER)
         .setGranularity(GRANULARITY)
-        .setDimensions(Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("a", "output")))
+        .setDimensions(Collections.<DimensionSpec>singletonList(new DefaultDimensionSpec("a", "output")))
         .setAggregatorSpecs(AGGS)
         .setContext(CONTEXT);
 

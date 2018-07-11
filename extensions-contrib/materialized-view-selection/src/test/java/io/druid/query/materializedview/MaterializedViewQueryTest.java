@@ -49,6 +49,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class MaterializedViewQueryTest 
 {
@@ -88,7 +89,7 @@ public class MaterializedViewQueryTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
     MaterializedViewQuery query = new MaterializedViewQuery(topNQuery, optimizer);
     String json = jsonMapper.writeValueAsString(query);

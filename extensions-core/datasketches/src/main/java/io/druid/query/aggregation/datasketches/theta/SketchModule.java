@@ -27,6 +27,7 @@ import io.druid.initialization.DruidModule;
 import io.druid.segment.serde.ComplexMetrics;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class SketchModule implements DruidModule
@@ -60,7 +61,7 @@ public class SketchModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("ThetaSketchModule")
             .registerSubtypes(
                 new NamedType(SketchMergeAggregatorFactory.class, THETA_SKETCH),

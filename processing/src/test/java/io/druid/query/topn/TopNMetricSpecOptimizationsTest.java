@@ -52,6 +52,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 
 import static io.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
 import static io.druid.query.QueryRunnerTestHelper.allGran;
@@ -87,7 +88,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -131,7 +132,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -176,7 +177,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -222,7 +223,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
     StorageAdapter adapter =
@@ -266,7 +267,7 @@ public class TopNMetricSpecOptimizationsTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
 

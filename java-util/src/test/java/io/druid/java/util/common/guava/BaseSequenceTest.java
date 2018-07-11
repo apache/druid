@@ -22,6 +22,7 @@ package io.druid.java.util.common.guava;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,7 +41,7 @@ public class BaseSequenceTest
   @Test
   public void testNothing() throws Exception
   {
-    final List<Integer> vals = Arrays.asList();
+    final List<Integer> vals = Collections.emptyList();
     SequenceTestHelper.testAll(Sequences.simple(vals), vals);
   }
 

@@ -34,6 +34,7 @@ import io.druid.server.log.RequestLogger;
 import io.druid.server.log.RequestLoggerProvider;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -54,7 +55,7 @@ public class QueryableModule implements DruidModule
   @Override
   public List<Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("QueryableModule")
             .registerSubtypes(
                 EmittingRequestLoggerProvider.class,

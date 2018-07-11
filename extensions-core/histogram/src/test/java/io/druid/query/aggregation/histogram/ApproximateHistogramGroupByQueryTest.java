@@ -154,7 +154,7 @@ public class ApproximateHistogramGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(
-            Arrays.<DimensionSpec>asList(
+            Collections.<DimensionSpec>singletonList(
                 new DefaultDimensionSpec(
                     QueryRunnerTestHelper.marketDimension,
                     "marketalias"
@@ -228,7 +228,7 @@ public class ApproximateHistogramGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(
-            Arrays.<DimensionSpec>asList(
+            Collections.<DimensionSpec>singletonList(
                 new DefaultDimensionSpec(
                     QueryRunnerTestHelper.marketDimension,
                     "marketalias"

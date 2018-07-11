@@ -326,11 +326,11 @@ public class GroupByMultiSegmentTest
             new DefaultDimensionSpec("dimA", null)
         ))
         .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metA", "metA"))
+            Collections.singletonList(new LongSumAggregatorFactory("metA", "metA"))
         )
         .setLimitSpec(
             new DefaultLimitSpec(
-                Arrays.asList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.ASCENDING)),
+                Collections.singletonList(new OrderByColumnSpec("dimA", OrderByColumnSpec.Direction.ASCENDING)),
                 1
             )
         )

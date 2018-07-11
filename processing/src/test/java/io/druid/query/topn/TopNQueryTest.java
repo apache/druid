@@ -39,6 +39,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 import static io.druid.query.QueryRunnerTestHelper.addRowsIndexConstant;
 import static io.druid.query.QueryRunnerTestHelper.allGran;
@@ -74,7 +75,7 @@ public class TopNQueryTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
     String json = jsonMapper.writeValueAsString(query);

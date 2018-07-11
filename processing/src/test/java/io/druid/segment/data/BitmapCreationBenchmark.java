@@ -35,6 +35,7 @@ import org.junit.runners.Parameterized;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -51,10 +52,10 @@ public class BitmapCreationBenchmark extends AbstractBenchmark
   public static List<Class<? extends BitmapSerdeFactory>[]> factoryClasses()
   {
     return Arrays.<Class<? extends BitmapSerdeFactory>[]>asList(
-        (Class<? extends BitmapSerdeFactory>[]) Arrays.<Class<? extends BitmapSerdeFactory>>asList(
+        (Class<? extends BitmapSerdeFactory>[]) Collections.<Class<? extends BitmapSerdeFactory>>singletonList(
             ConciseBitmapSerdeFactory.class
         ).toArray(),
-        (Class<? extends BitmapSerdeFactory>[]) Arrays.<Class<? extends BitmapSerdeFactory>>asList(
+        (Class<? extends BitmapSerdeFactory>[]) Collections.<Class<? extends BitmapSerdeFactory>>singletonList(
             RoaringBitmapSerdeFactory.class
         ).toArray()
     );

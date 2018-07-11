@@ -39,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 
@@ -117,7 +118,7 @@ public class TimewarpOperatorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("dummy")
               .intervals("2014-07-31/2014-08-05")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .build();
 
     Assert.assertEquals(
@@ -227,7 +228,7 @@ public class TimewarpOperatorTest
               .dataSource("dummy")
               .intervals("2014-07-31T-07/2014-08-05T-07")
               .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles")))
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .build();
 
     Assert.assertEquals(
@@ -287,7 +288,7 @@ public class TimewarpOperatorTest
               .dataSource("dummy")
               .intervals("2014-07-31T-07/2014-08-05T-07")
               .granularity(new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Phoenix")))
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .build();
 
     Assert.assertEquals(
@@ -343,7 +344,7 @@ public class TimewarpOperatorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("dummy")
               .intervals("2014-08-06/2014-08-08")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .build();
 
     Assert.assertEquals(

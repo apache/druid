@@ -34,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class WorkerBehaviorConfigTest
 {
@@ -57,7 +58,7 @@ public class WorkerBehaviorConfigTest
                     "instanceType",
                     3,
                     5,
-                    Arrays.asList("securityGroupIds"),
+                    Collections.singletonList("securityGroupIds"),
                     "keyNames",
                     "subnetId",
                     null,

@@ -44,6 +44,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -95,7 +96,7 @@ public class SQLMetadataRuleManagerTest
   @Test
   public void testRuleInsert()
   {
-    List<Rule> rules = Arrays.<Rule>asList(
+    List<Rule> rules = Collections.<Rule>singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
             DruidServer.DEFAULT_TIER,
@@ -119,7 +120,7 @@ public class SQLMetadataRuleManagerTest
   @Test
   public void testAuditEntryCreated() throws Exception
   {
-    List<Rule> rules = Arrays.<Rule>asList(
+    List<Rule> rules = Collections.<Rule>singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
             DruidServer.DEFAULT_TIER,
@@ -157,7 +158,7 @@ public class SQLMetadataRuleManagerTest
   @Test
   public void testFetchAuditEntriesForAllDataSources() throws Exception
   {
-    List<Rule> rules = Arrays.<Rule>asList(
+    List<Rule> rules = Collections.<Rule>singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.<String, Integer>of(
             DruidServer.DEFAULT_TIER,

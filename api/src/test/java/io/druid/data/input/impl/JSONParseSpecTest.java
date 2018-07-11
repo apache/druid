@@ -32,6 +32,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -98,7 +99,7 @@ public class JSONParseSpecTest
 
     final Map<String, Object> expected = new HashMap<>();
     expected.put("foo", new ArrayList());
-    expected.put("bar", Arrays.asList("test"));
+    expected.put("bar", Collections.singletonList("test"));
 
     final Parser<String, Object> parser = parseSpec.makeParser();
     final Map<String, Object> parsedRow = parser.parseToMap("{\"something_else\": {\"foo\": \"test\"}}");

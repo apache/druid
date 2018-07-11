@@ -52,9 +52,9 @@ public class LookupExtractorTest
       "value1",
       Arrays.asList("key1", "key-1"),
       "value2",
-      Arrays.asList("key2"),
+      Collections.singletonList("key2"),
       "emptyString",
-      Arrays.asList("")
+      Collections.singletonList("")
   );
   LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP, false);
 

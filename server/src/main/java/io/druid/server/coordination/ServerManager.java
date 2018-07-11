@@ -242,7 +242,8 @@ public class ServerManager implements QuerySegmentWalker
                 );
 
                 if (entry == null) {
-                  return Arrays.<QueryRunner<T>>asList(new ReportTimelineMissingSegmentQueryRunner<T>(input));
+                  return Collections.<QueryRunner<T>>singletonList(
+                      new ReportTimelineMissingSegmentQueryRunner<T>(input));
                 }
 
                 final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(input.getPartitionNumber());

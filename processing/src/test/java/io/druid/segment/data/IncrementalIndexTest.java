@@ -77,6 +77,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -310,13 +311,13 @@ public class IncrementalIndexTest
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("2"), row.getDimension("dim2"));
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("4"), row.getDimension("dim2"));
   }
 
   @Test
@@ -377,8 +378,8 @@ public class IncrementalIndexTest
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("2"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getMetric("count"));
     Assert.assertEquals(1L, row.getMetric("count_selector_filtered"));
@@ -388,8 +389,8 @@ public class IncrementalIndexTest
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
-    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
-    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Collections.singletonList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Collections.singletonList("4"), row.getDimension("dim2"));
     Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getMetric("count"));
     Assert.assertEquals(0L, row.getMetric("count_selector_filtered"));

@@ -34,6 +34,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -97,7 +98,7 @@ public class QueryHostFinderTest
     Server server = queryRunner.findServer(
         new TimeBoundaryQuery(
             new TableDataSource("test"),
-            new MultipleIntervalSegmentSpec(Arrays.<Interval>asList(Intervals.of("2011-08-31/2011-09-01"))),
+            new MultipleIntervalSegmentSpec(Collections.<Interval>singletonList(Intervals.of("2011-08-31/2011-09-01"))),
             null,
             null,
             null

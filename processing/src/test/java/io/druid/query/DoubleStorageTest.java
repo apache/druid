@@ -71,6 +71,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,7 +102,7 @@ public class DoubleStorageTest
   {
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Arrays.<String>asList())
+                    .columns(Collections.<String>emptyList())
                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                     .limit(Integer.MAX_VALUE)
                     .legacy(false);
@@ -273,7 +274,7 @@ public class DoubleStorageTest
                                                       .build();
     List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery), Maps.newHashMap()).toList();
 
-    Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis), results);
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
 
   }
 

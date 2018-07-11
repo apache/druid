@@ -49,6 +49,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -83,8 +84,8 @@ public class VarianceGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setAggregatorSpecs(Arrays.<AggregatorFactory>asList(VarianceTestHelper.indexVarianceAggr))
-        .setPostAggregatorSpecs(Arrays.<PostAggregator>asList(VarianceTestHelper.stddevOfIndexPostAggr))
+        .setAggregatorSpecs(Collections.<AggregatorFactory>singletonList(VarianceTestHelper.indexVarianceAggr))
+        .setPostAggregatorSpecs(Collections.<PostAggregator>singletonList(VarianceTestHelper.stddevOfIndexPostAggr))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
@@ -133,7 +134,7 @@ public class VarianceGroupByQueryTest
             )
         )
         .setPostAggregatorSpecs(
-            Arrays.<PostAggregator>asList(VarianceTestHelper.stddevOfIndexPostAggr)
+            Collections.<PostAggregator>singletonList(VarianceTestHelper.stddevOfIndexPostAggr)
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
@@ -208,7 +209,7 @@ public class VarianceGroupByQueryTest
 
     query = query.withLimitSpec(
         new DefaultLimitSpec(
-            Arrays.<OrderByColumnSpec>asList(
+            Collections.<OrderByColumnSpec>singletonList(
                 OrderByColumnSpec.asc(
                     VarianceTestHelper.stddevOfIndexMetric
                 )

@@ -78,6 +78,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -426,7 +427,7 @@ public class ServerManagerTest
   )
   {
     final Iterator<Pair<String, Interval>> expectedIter = expected.iterator();
-    final List<Interval> intervals = Arrays.asList(interval);
+    final List<Interval> intervals = Collections.singletonList(interval);
     final SearchQuery query = Druids.newSearchQueryBuilder()
                                     .dataSource(dataSource)
                                     .intervals(intervals)

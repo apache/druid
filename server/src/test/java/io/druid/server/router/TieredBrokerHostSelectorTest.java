@@ -53,6 +53,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -154,8 +155,9 @@ public class TieredBrokerHostSelectorTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity("all")
-                                  .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-                                  .intervals(Arrays.<Interval>asList(Intervals.of("2011-08-31/2011-09-01")))
+                                  .aggregators(
+                                      Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("rows")))
+                                  .intervals(Collections.<Interval>singletonList(Intervals.of("2011-08-31/2011-09-01")))
                                   .build();
 
     Pair<String, Server> p = brokerSelector.select(query);
@@ -179,8 +181,8 @@ public class TieredBrokerHostSelectorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .granularity("all")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-              .intervals(Arrays.<Interval>asList(Intervals.of("2013-08-31/2013-09-01")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("rows")))
+              .intervals(Collections.<Interval>singletonList(Intervals.of("2013-08-31/2013-09-01")))
               .build()
     );
 
@@ -195,8 +197,8 @@ public class TieredBrokerHostSelectorTest
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
               .granularity("all")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("rows")))
-              .intervals(Arrays.<Interval>asList(Intervals.of("2010-08-31/2010-09-01")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("rows")))
+              .intervals(Collections.<Interval>singletonList(Intervals.of("2010-08-31/2010-09-01")))
               .build()
     ).lhs;
 
@@ -209,7 +211,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
@@ -230,7 +232,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
@@ -251,7 +253,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(
@@ -274,7 +276,7 @@ public class TieredBrokerHostSelectorTest
     String brokerName = (String) brokerSelector.select(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("test")
-              .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("count")))
+              .aggregators(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("count")))
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       Arrays.<Interval>asList(

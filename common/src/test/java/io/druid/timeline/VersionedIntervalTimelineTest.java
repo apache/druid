@@ -1536,9 +1536,9 @@ public class VersionedIntervalTimelineTest
     assertValues(
         Sets.newHashSet(
             createExpected("2011-04-01/2011-04-02", "2",
-                           Arrays.<PartitionChunk<Integer>>asList(
-                               IntegerPartitionChunk.make(null, 1, 0, 99)
-                           )
+                Collections.<PartitionChunk<Integer>>singletonList(
+                    IntegerPartitionChunk.make(null, 1, 0, 99)
+                )
             )
         ),
         timeline.findOvershadowed()
@@ -1718,7 +1718,7 @@ public class VersionedIntervalTimelineTest
     return createExpected(
         intervalString,
         version,
-        Arrays.<PartitionChunk<Integer>>asList(makeSingle(value))
+        Collections.<PartitionChunk<Integer>>singletonList(makeSingle(value))
     );
   }
 

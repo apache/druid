@@ -66,6 +66,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -533,7 +534,7 @@ public class SpatialFilterTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -548,14 +549,14 @@ public class SpatialFilterTest
                                   )
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 3L)
-                            .put("val", 59L)
-                            .build()
+                    .put("rows", 3L)
+                    .put("val", 59L)
+                    .build()
             )
         )
     );
@@ -586,7 +587,7 @@ public class SpatialFilterTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "spatialIsRad",
@@ -601,14 +602,14 @@ public class SpatialFilterTest
                                   )
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("val", 13L)
-                            .build()
+                    .put("rows", 1L)
+                    .put("val", 13L)
+                    .build()
             )
         )
     );
@@ -638,7 +639,7 @@ public class SpatialFilterTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",

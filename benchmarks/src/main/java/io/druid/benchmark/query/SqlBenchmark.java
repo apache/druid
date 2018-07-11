@@ -65,6 +65,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -130,7 +131,7 @@ public class SqlBenchmark
                 new DefaultDimensionSpec("dimSequential", "d1")
             )
         )
-        .setAggregatorSpecs(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("c")))
+        .setAggregatorSpecs(Collections.<AggregatorFactory>singletonList(new CountAggregatorFactory("c")))
         .setGranularity(Granularities.ALL)
         .build();
 

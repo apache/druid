@@ -109,7 +109,7 @@ public class SchemalessTestFullTest
   final List<AggregatorFactory> commonAggregators = Arrays.asList(rowsCount, indexDoubleSum, uniques);
 
   final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Arrays.asList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+      Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
   public SchemalessTestFullTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
@@ -120,86 +120,86 @@ public class SchemalessTestFullTest
   @Test
   public void testCompleteIntersectingSchemas()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 200.0D)
-                            .put("addRowsIndexConstant", 203.0D)
-                            .put("uniques", UNIQUES_2)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 200.0D)
+                    .put("addRowsIndexConstant", 203.0D)
+                    .put("uniques", UNIQUES_2)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 102.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 102.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0D)
-                                .put("minIndex", 100.0D)
-                                .build()
+                        .put("market", "total_market")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0D)
+                        .put("minIndex", 100.0D)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -213,7 +213,7 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedFilteredSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -225,7 +225,7 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -255,115 +255,113 @@ public class SchemalessTestFullTest
   @Test
   public void testEmptyStrings()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 200.0D)
-                            .put("addRowsIndexConstant", 203.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 200.0D)
+                    .put("addRowsIndexConstant", 203.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 102.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 102.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "")
-                                .put("rows", 2L)
-                                .put("index", 200.0D)
-                                .put("addRowsIndexConstant", 203.0D)
-                                .put("uniques", 0.0)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "")
+                        .put("rows", 2L)
+                        .put("index", 200.0D)
+                        .put("addRowsIndexConstant", 203.0D)
+                        .put("uniques", 0.0)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0)
-                                .put("maxIndex", 100.0D)
-                                .put("minIndex", 100.0D)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0)
+                        .put("maxIndex", 100.0D)
+                        .put("minIndex", 100.0D)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
-                )
+                Collections.<SearchHit>emptyList()
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedFilteredSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
-                )
+                Collections.<SearchHit>emptyList()
             )
         )
     );
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -394,52 +392,52 @@ public class SchemalessTestFullTest
   @Test
   public void testNonIntersectingSchemas()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 103.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 103.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 0.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 102.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 102.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     QueryRunnerTestHelper.orderedMap(
                         "market", null,
                         "rows", 1L,
@@ -454,26 +452,26 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -485,18 +483,18 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedFilteredSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Collections.<SearchHit>singletonList(
                     new SearchHit(qualityDimension, "automotive")
                 )
             )
         )
     );
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -526,86 +524,86 @@ public class SchemalessTestFullTest
   @Test
   public void testPartialIntersectingSchemas()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 200.0D)
-                            .put("addRowsIndexConstant", 203.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 200.0D)
+                    .put("addRowsIndexConstant", 203.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 102.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 102.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "total_market")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -617,18 +615,18 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedFilteredSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Collections.<SearchHit>singletonList(
                     new SearchHit(qualityDimension, "automotive")
                 )
             )
         )
     );
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -658,38 +656,38 @@ public class SchemalessTestFullTest
   @Test
   public void testSupersetSchemas()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 200.0D)
-                            .put("addRowsIndexConstant", 203.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 200.0D)
+                    .put("addRowsIndexConstant", 203.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = expectedTimeseriesResults;
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 2L)
-                                .put("index", 200.0D)
-                                .put("addRowsIndexConstant", 203.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 2L)
+                        .put("index", 200.0D)
+                        .put("addRowsIndexConstant", 203.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
@@ -697,7 +695,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = expectedTopNResults;
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -711,7 +709,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = expectedSearchResults;
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -741,52 +739,52 @@ public class SchemalessTestFullTest
   @Test
   public void testValueAndEmptySchemas()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 2L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 103.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 2L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 103.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 0.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 102.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 102.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     QueryRunnerTestHelper.orderedMap(
                         "market", null,
                         "rows", 1L,
@@ -801,26 +799,26 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -834,7 +832,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = expectedSearchResults;
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -864,39 +862,39 @@ public class SchemalessTestFullTest
   @Test
   public void testEmptySchemas()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 0.0D)
-                            .put("addRowsIndexConstant", 2.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 0.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 0.0D)
+                    .put("addRowsIndexConstant", 2.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 0.0D)
+                    .put("minIndex", 0.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 0L)
-                            .put("index", 0.0D)
-                            .put("addRowsIndexConstant", 1.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", Double.NEGATIVE_INFINITY)
-                            .put("minIndex", Double.POSITIVE_INFINITY)
-                            .build()
+                    .put("rows", 0L)
+                    .put("index", 0.0D)
+                    .put("addRowsIndexConstant", 1.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", Double.NEGATIVE_INFINITY)
+                    .put("minIndex", Double.POSITIVE_INFINITY)
+                    .build()
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
@@ -914,7 +912,7 @@ public class SchemalessTestFullTest
             )
         )
     );
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
@@ -923,7 +921,7 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -933,7 +931,7 @@ public class SchemalessTestFullTest
     );
     List<Result<SearchResultValue>> expectedFilteredSearchResults = expectedSearchResults;
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -965,38 +963,38 @@ public class SchemalessTestFullTest
   @Test
   public void testExactSameSchemas()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 200.0D)
-                            .put("addRowsIndexConstant", 202.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 200.0D)
-                            .put("minIndex", 200.0D)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 200.0D)
+                    .put("addRowsIndexConstant", 202.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 200.0D)
+                    .put("minIndex", 200.0D)
+                    .build()
             )
         )
     );
 
     List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = expectedTimeseriesResults;
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 200.0D)
-                                .put("addRowsIndexConstant", 202.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 200.0)
-                                .put("minIndex", 200.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 200.0D)
+                        .put("addRowsIndexConstant", 202.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 200.0)
+                        .put("minIndex", 200.0)
+                        .build()
                 )
             )
         )
@@ -1004,7 +1002,7 @@ public class SchemalessTestFullTest
 
     List<Result<TopNResultValue>> expectedFilteredTopNResults = expectedTopNResults;
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -1018,7 +1016,7 @@ public class SchemalessTestFullTest
 
     List<Result<SearchResultValue>> expectedFilteredSearchResults = expectedSearchResults;
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -1050,39 +1048,39 @@ public class SchemalessTestFullTest
   @Test
   public void testMultiDimensionalValues()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 3L)
-                            .put("index", 300.0D)
-                            .put("addRowsIndexConstant", 304.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
+                    .put("rows", 3L)
+                    .put("index", 300.0D)
+                    .put("addRowsIndexConstant", 304.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 100.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("index", 100.0D)
-                            .put("addRowsIndexConstant", 102.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0)
-                            .put("minIndex", 100.0)
-                            .build()
+                    .put("rows", 1L)
+                    .put("index", 100.0D)
+                    .put("addRowsIndexConstant", 102.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0)
+                    .put("minIndex", 100.0)
+                    .build()
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
@@ -1097,60 +1095,60 @@ public class SchemalessTestFullTest
                         "minIndex", 100.0
                     ),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "spot")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList(
+                Collections.<SearchHit>singletonList(
                     new SearchHit(placementDimension, "mezzanine")
                 )
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedFilteredSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
-                Arrays.<SearchHit>asList()
+                Collections.<SearchHit>emptyList()
             )
         )
     );
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -1180,34 +1178,34 @@ public class SchemalessTestFullTest
   @Test
   public void testDifferentMetrics()
   {
-    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedTimeseriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 10L)
-                            .put("index", 900.0D)
-                            .put("addRowsIndexConstant", 911.0D)
-                            .put("uniques", UNIQUES_1)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 0.0D)
-                            .build()
+                    .put("rows", 10L)
+                    .put("index", 900.0D)
+                    .put("addRowsIndexConstant", 911.0D)
+                    .put("uniques", UNIQUES_1)
+                    .put("maxIndex", 100.0D)
+                    .put("minIndex", 0.0D)
+                    .build()
             )
         )
     );
 
-    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedFilteredTimeSeriesResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 4L)
-                            .put("index", 400.0D)
-                            .put("addRowsIndexConstant", 405.0D)
-                            .put("uniques", 0.0D)
-                            .put("maxIndex", 100.0)
-                            .put("minIndex", 100.0)
-                            .build()
+                    .put("rows", 4L)
+                    .put("index", 400.0D)
+                    .put("addRowsIndexConstant", 405.0D)
+                    .put("uniques", 0.0D)
+                    .put("maxIndex", 100.0)
+                    .put("minIndex", 100.0)
+                    .build()
             )
         )
     );
@@ -1250,72 +1248,72 @@ public class SchemalessTestFullTest
         )
     );
     */
-    List<Result<TopNResultValue>> expectedTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 4L)
-                                .put("index", 400.0D)
-                                .put("addRowsIndexConstant", 405.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("rows", 4L)
+                        .put("index", 400.0D)
+                        .put("addRowsIndexConstant", 405.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "")
-                                .put("rows", 3L)
-                                .put("index", 200.0D)
-                                .put("addRowsIndexConstant", 204.0D)
-                                .put("uniques", 0.0)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 0.0)
-                                .build(),
+                        .put("market", "")
+                        .put("rows", 3L)
+                        .put("index", 200.0D)
+                        .put("addRowsIndexConstant", 204.0D)
+                        .put("uniques", 0.0)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 0.0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("rows", 2L)
-                                .put("index", 200.0D)
-                                .put("addRowsIndexConstant", 203.0D)
-                                .put("uniques", UNIQUES_1)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "total_market")
+                        .put("rows", 2L)
+                        .put("index", 200.0D)
+                        .put("addRowsIndexConstant", 203.0D)
+                        .put("uniques", UNIQUES_1)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<TopNResultValue>> expectedFilteredTopNResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedFilteredTopNResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("rows", 4L)
-                                .put("index", 400.0D)
-                                .put("addRowsIndexConstant", 405.0D)
-                                .put("uniques", 0.0D)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("rows", 4L)
+                        .put("index", 400.0D)
+                        .put("addRowsIndexConstant", 405.0D)
+                        .put("uniques", 0.0D)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "")
-                                .put("rows", 1L)
-                                .put("index", 100.0D)
-                                .put("addRowsIndexConstant", 102.0D)
-                                .put("uniques", 0.0)
-                                .put("maxIndex", 100.0)
-                                .put("minIndex", 100.0)
-                                .build()
+                        .put("market", "")
+                        .put("rows", 1L)
+                        .put("index", 100.0D)
+                        .put("addRowsIndexConstant", 102.0D)
+                        .put("uniques", 0.0)
+                        .put("maxIndex", 100.0)
+                        .put("minIndex", 100.0)
+                        .build()
                 )
             )
         )
     );
 
-    List<Result<SearchResultValue>> expectedSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -1329,7 +1327,7 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<SearchResultValue>> expectedFilteredSearchResults = Arrays.asList(
+    List<Result<SearchResultValue>> expectedFilteredSearchResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
@@ -1341,7 +1339,7 @@ public class SchemalessTestFullTest
         )
     );
 
-    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Arrays.asList(
+    List<Result<TimeBoundaryResultValue>> expectedTimeBoundaryResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
@@ -1531,7 +1529,7 @@ public class SchemalessTestFullTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
     failMsg += " topN ";
@@ -1564,7 +1562,7 @@ public class SchemalessTestFullTest
                 )
             )
         )
-        .postAggregators(Arrays.<PostAggregator>asList(addRowsIndexConstant))
+        .postAggregators(Collections.<PostAggregator>singletonList(addRowsIndexConstant))
         .build();
 
     failMsg += " filtered topN ";

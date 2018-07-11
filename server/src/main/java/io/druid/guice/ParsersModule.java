@@ -27,6 +27,7 @@ import io.druid.initialization.DruidModule;
 import io.druid.segment.realtime.firehose.IrcInputRowParser;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -41,7 +42,7 @@ public class ParsersModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("ParsersModule")
             .registerSubtypes(
                 new NamedType(IrcInputRowParser.class, "irc")

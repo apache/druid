@@ -58,6 +58,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -70,7 +71,7 @@ public class SchemalessIndexTest
 
   private static final String testFile = "druid.sample.json";
   private static final String TIMESTAMP = "timestamp";
-  private static final List<String> METRICS = Arrays.asList("index");
+  private static final List<String> METRICS = Collections.singletonList("index");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory("index", "index"),
       new CountAggregatorFactory("count"),

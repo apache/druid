@@ -32,6 +32,7 @@ import io.druid.query.aggregation.datasketches.theta.SketchModule;
 import io.druid.segment.serde.ComplexMetrics;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class OldApiSketchModule implements DruidModule
@@ -72,7 +73,7 @@ public class OldApiSketchModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("OldThetaSketchModule")
             .registerSubtypes(
                 new NamedType(OldSketchBuildAggregatorFactory.class, SKETCH_BUILD),

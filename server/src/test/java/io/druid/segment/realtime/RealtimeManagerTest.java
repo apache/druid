@@ -231,7 +231,7 @@ public class RealtimeManagerTest
     ));
 
     realtimeManager = new RealtimeManager(
-        Arrays.<FireDepartment>asList(
+        Collections.<FireDepartment>singletonList(
             new FireDepartment(
                 schema,
                 ioConfig,
@@ -253,7 +253,7 @@ public class RealtimeManagerTest
     ));
 
     realtimeManager2 = new RealtimeManager(
-        Arrays.<FireDepartment>asList(
+        Collections.<FireDepartment>singletonList(
             new FireDepartment(
                 schema2,
                 ioConfig2,
@@ -797,7 +797,7 @@ public class RealtimeManagerTest
         @Override
         public List<String> getDimensions()
         {
-          return Arrays.asList("testDim");
+          return Collections.singletonList("testDim");
         }
 
         @Override

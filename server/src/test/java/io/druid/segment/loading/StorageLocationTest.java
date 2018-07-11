@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -109,8 +110,8 @@ public class StorageLocationTest
         Intervals.of(intervalString),
         "1",
         ImmutableMap.<String, Object>of(),
-        Arrays.asList("d"),
-        Arrays.asList("m"),
+        Collections.singletonList("d"),
+        Collections.singletonList("m"),
         null,
         null,
         size

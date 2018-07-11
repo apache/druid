@@ -58,6 +58,7 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -243,7 +244,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
-            Arrays.asList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
+            Collections.singletonList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -280,7 +281,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
-            Arrays.asList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
+            Collections.singletonList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -293,7 +294,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim0",
-            Arrays.asList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
+            Collections.singletonList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -327,7 +328,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim1",
-            Arrays.asList(Intervals.of("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.011Z")),
+            Collections.singletonList(Intervals.of("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.011Z")),
             null
         ),
         ImmutableList.<String>of("1", "2")
@@ -339,7 +340,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim0",
-            Arrays.asList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
+            Collections.singletonList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
         ImmutableList.<String>of("1", "2", "3", "4")

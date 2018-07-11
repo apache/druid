@@ -26,6 +26,7 @@ import org.junit.runners.Parameterized;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -42,10 +43,10 @@ public class WrappedRoaringBitmapTest
   public static List<RoaringBitmapFactory[]> factoryClasses()
   {
     return Arrays.asList(
-        (RoaringBitmapFactory[]) Arrays.asList(
+        (RoaringBitmapFactory[]) Collections.singletonList(
             new RoaringBitmapFactory(false)
         ).toArray(),
-        (RoaringBitmapFactory[]) Arrays.asList(
+        (RoaringBitmapFactory[]) Collections.singletonList(
             new RoaringBitmapFactory(true)
         ).toArray()
     );

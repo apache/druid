@@ -191,7 +191,7 @@ public class CombiningSequenceTest
   @Test
   public void testNothing() throws Exception
   {
-    testCombining(Arrays.<Pair<Integer, Integer>>asList(), Arrays.<Pair<Integer, Integer>>asList());
+    testCombining(Collections.<Pair<Integer, Integer>>emptyList(), Collections.<Pair<Integer, Integer>>emptyList());
   }
 
   private void testCombining(List<Pair<Integer, Integer>> pairs, List<Pair<Integer, Integer>> expected)

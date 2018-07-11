@@ -31,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -46,7 +47,7 @@ public class QueriesTest
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
 
-    List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
+    List<PostAggregator> postAggs = Collections.<PostAggregator>singletonList(
         new ArithmeticPostAggregator(
             "addStuff",
             "+",
@@ -78,7 +79,7 @@ public class QueriesTest
         new DoubleSumAggregatorFactory("rev", "revenue")
     );
 
-    List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
+    List<PostAggregator> postAggs = Collections.<PostAggregator>singletonList(
         new ArithmeticPostAggregator(
             "addStuff",
             "+",

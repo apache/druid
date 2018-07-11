@@ -43,6 +43,7 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class DistinctCountGroupByQueryTest
@@ -95,7 +96,7 @@ public class DistinctCountGroupByQueryTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(
-            Arrays.<DimensionSpec>asList(
+            Collections.<DimensionSpec>singletonList(
                 new DefaultDimensionSpec(
                     client_type,
                     client_type

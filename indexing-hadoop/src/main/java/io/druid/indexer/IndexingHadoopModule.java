@@ -26,6 +26,7 @@ import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -35,7 +36,7 @@ public class IndexingHadoopModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(
+    return Collections.<Module>singletonList(
         new SimpleModule("IndexingHadoopModule")
             .registerSubtypes(
                 new NamedType(HadoopyStringInputRowParser.class, "hadoopyString")

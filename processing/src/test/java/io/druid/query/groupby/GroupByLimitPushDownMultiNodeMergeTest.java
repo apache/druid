@@ -517,7 +517,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             new DefaultDimensionSpec("d2:v", "d2", ValueType.LONG)
         ))
         .setAggregatorSpecs(
-            Arrays.asList(new CountAggregatorFactory("a0"))
+            Collections.singletonList(new CountAggregatorFactory("a0"))
         )
         .setLimitSpec(
             ls2
@@ -634,7 +634,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
             )
         ))
         .setAggregatorSpecs(
-            Arrays.asList(new LongSumAggregatorFactory("metASum", "metA"))
+            Collections.singletonList(new LongSumAggregatorFactory("metASum", "metA"))
         )
         .setLimitSpec(
             new DefaultLimitSpec(

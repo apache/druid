@@ -39,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -62,7 +63,7 @@ public class TopNBinaryFnTest
       rowsCount,
       indexLongSum
   );
-  final List<PostAggregator> postAggregators = Arrays.<PostAggregator>asList(
+  final List<PostAggregator> postAggregators = Collections.<PostAggregator>singletonList(
       addrowsindexconstant
   );
   private final DateTime currTime = DateTimes.nowUtc();

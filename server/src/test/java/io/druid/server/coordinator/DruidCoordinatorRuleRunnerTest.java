@@ -1090,7 +1090,7 @@ public class DruidCoordinatorRuleRunnerTest
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withEmitter(emitter)
-            .withAvailableSegments(Arrays.asList(overFlowSegment))
+            .withAvailableSegments(Collections.singletonList(overFlowSegment))
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))

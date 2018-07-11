@@ -177,7 +177,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(
+    return Collections.<AggregatorFactory>singletonList(
         new ApproximateHistogramAggregatorFactory(
             fieldName,
             fieldName,

@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -71,7 +72,7 @@ public class CombiningFirehoseFactoryTest
       @Override
       public List<String> getDimensions()
       {
-        return Arrays.asList("testDim");
+        return Collections.singletonList("testDim");
       }
 
       @Override

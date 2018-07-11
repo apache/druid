@@ -33,6 +33,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -44,11 +45,11 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
   public static List<CostBalancerStrategy[]> factoryClasses()
   {
     return Arrays.asList(
-        (CostBalancerStrategy[]) Arrays.asList(
+        (CostBalancerStrategy[]) Collections.singletonList(
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
                 Executors.newFixedThreadPool(1)))
         ).toArray(),
-        (CostBalancerStrategy[]) Arrays.asList(
+        (CostBalancerStrategy[]) Collections.singletonList(
             new CostBalancerStrategy(MoreExecutors.listeningDecorator(
                 Executors.newFixedThreadPool(4)))
         ).toArray()

@@ -242,7 +242,7 @@ public class MultiValuedDimensionTest
         query
     );
 
-    List<Row> expectedResults = Arrays.asList(
+    List<Row> expectedResults = Collections.singletonList(
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L)
     );
 
@@ -281,11 +281,11 @@ public class MultiValuedDimensionTest
     );
     Map<String, Object> context = Maps.newHashMap();
     Sequence<Result<TopNResultValue>> result = runner.run(QueryPlus.wrap(query), context);
-    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<TopNResultValue>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
+                Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>of(
                         "tags", "t3",
                         "count", 2L

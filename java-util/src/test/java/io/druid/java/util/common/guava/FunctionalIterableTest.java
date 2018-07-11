@@ -27,6 +27,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -127,7 +128,7 @@ public class FunctionalIterableTest
             FunctionalIterable.create(Arrays.asList("1", "2", "3"))
                               .drop(2)
         ),
-        Arrays.asList("3")
+        Collections.singletonList("3")
     );
   }
 }

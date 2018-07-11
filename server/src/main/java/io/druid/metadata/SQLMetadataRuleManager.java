@@ -61,6 +61,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -101,7 +102,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 return null;
               }
 
-              final List<Rule> defaultRules = Arrays.<Rule>asList(
+              final List<Rule> defaultRules = Collections.<Rule>singletonList(
                   new ForeverLoadRule(
                       ImmutableMap.<String, Integer>of(
                           DruidServer.DEFAULT_TIER,

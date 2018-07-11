@@ -90,8 +90,9 @@ public class CachingClusteredClientFunctionalityTest
                                                         .dataSource("test")
                                                         .intervals("2015-01-02/2015-01-03")
                                                         .granularity("day")
-                                                        .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(
-                                                            "rows")))
+                                                        .aggregators(Collections.<AggregatorFactory>singletonList(
+                                                            new CountAggregatorFactory(
+                                                                "rows")))
                                                         .context(ImmutableMap.<String, Object>of(
                                                             "uncoveredIntervalsLimit",
                                                             3

@@ -120,8 +120,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         Lists.<Task>newArrayList()
     );
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.<ImmutableWorkerInfo>asList(
-        )
+        Collections.<ImmutableWorkerInfo>emptyList()
     );
     EasyMock.expect(runner.getConfig()).andReturn(new RemoteTaskRunnerConfig());
     EasyMock.expect(autoScaler.provision()).andReturn(
@@ -153,7 +152,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     );
     // 1 node already running, only provision 2 more.
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.asList(
+        Collections.singletonList(
             new TestZkWorker(testTask).toImmutable()
         )
     );
@@ -220,7 +219,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     );
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Arrays.<Task>asList(
+        Collections.<Task>singletonList(
             NoopTask.create()
         )
     ).times(2);
@@ -280,7 +279,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Arrays.<Task>asList(
+        Collections.<Task>singletonList(
             NoopTask.create()
         )
     ).times(2);
@@ -334,7 +333,7 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
-        Arrays.asList(
+        Collections.singletonList(
             new RemoteTaskRunnerWorkItem(
                 testTask.getId(),
                 testTask.getType(),
@@ -345,7 +344,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.asList(
+        Collections.singletonList(
             new TestZkWorker(testTask).toImmutable()
         )
     ).times(2);
@@ -379,7 +378,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.asList(
+        Collections.singletonList(
             new TestZkWorker(testTask).toImmutable()
         )
     ).times(2);
@@ -420,7 +419,7 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Arrays.asList(
+        Collections.singletonList(
             (Task) NoopTask.create()
         )
     ).times(1);
@@ -468,10 +467,10 @@ public class PendingTaskBasedProvisioningStrategyTest
     EasyMock.replay(autoScaler);
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Arrays.<Task>asList()
+        Collections.<Task>emptyList()
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.asList(
+        Collections.singletonList(
             new TestZkWorker(NoopTask.create(), "http", "h1", "i1", MIN_VERSION).toImmutable()
         )
     ).times(3);
@@ -526,12 +525,12 @@ public class PendingTaskBasedProvisioningStrategyTest
 
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTaskPayloads()).andReturn(
-        Arrays.<Task>asList(
+        Collections.<Task>singletonList(
             NoopTask.create()
         )
     ).times(1);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.asList(
+        Collections.singletonList(
             new TestZkWorker(null).toImmutable()
         )
     ).times(2);

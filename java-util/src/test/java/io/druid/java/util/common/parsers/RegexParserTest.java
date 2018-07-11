@@ -26,6 +26,7 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -215,7 +216,7 @@ public class RegexParserTest
   {
     final String pattern = "AAAAA";
 
-    final List<String> fieldNames = Arrays.asList(
+    final List<String> fieldNames = Collections.singletonList(
         "dummy"
     );
 

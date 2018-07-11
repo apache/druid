@@ -53,6 +53,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 public class TopNQueryQueryToolChestTest
@@ -206,7 +207,7 @@ public class TopNQueryQueryToolChestTest
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TopNResultValue(
-            Arrays.asList(
+            Collections.singletonList(
                 ImmutableMap.<String, Object>of(
                     "test", dimValue,
                     "metric1", 2
@@ -233,7 +234,7 @@ public class TopNQueryQueryToolChestTest
         // test timestamps that result in integer size millis
         DateTimes.utc(123L),
         new TopNResultValue(
-            Arrays.asList(
+            Collections.singletonList(
                 ImmutableMap.<String, Object>of(
                     "test", dimValue,
                     "metric1", 2,

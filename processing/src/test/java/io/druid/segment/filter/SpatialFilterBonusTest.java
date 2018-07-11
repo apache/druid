@@ -69,6 +69,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -124,7 +125,7 @@ public class SpatialFilterBonusTest
                     new DimensionsSpec(
                         null,
                         null,
-                        Arrays.asList(
+                        Collections.singletonList(
                             new SpatialDimensionSchema(
                                 "dim.geo",
                                 Lists.<String>newArrayList()
@@ -272,7 +273,7 @@ public class SpatialFilterBonusTest
                       new DimensionsSpec(
                           null,
                           null,
-                          Arrays.asList(
+                          Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
                                   Lists.<String>newArrayList()
@@ -296,7 +297,7 @@ public class SpatialFilterBonusTest
                       new DimensionsSpec(
                           null,
                           null,
-                          Arrays.asList(
+                          Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
                                   Lists.<String>newArrayList()
@@ -319,7 +320,7 @@ public class SpatialFilterBonusTest
                       new DimensionsSpec(
                           null,
                           null,
-                          Arrays.asList(
+                          Collections.singletonList(
                               new SpatialDimensionSchema(
                                   "dim.geo",
                                   Lists.<String>newArrayList()
@@ -477,7 +478,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -492,7 +493,7 @@ public class SpatialFilterBonusTest
                                   )
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<TimeseriesResultValue>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
@@ -529,7 +530,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
@@ -617,7 +618,7 @@ public class SpatialFilterBonusTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.DAY)
-                                  .intervals(Arrays.asList(Intervals.of("2013-01-01/2013-01-07")))
+                                  .intervals(Collections.singletonList(Intervals.of("2013-01-01/2013-01-07")))
                                   .aggregators(
                                       Arrays.asList(
                                           new CountAggregatorFactory("rows"),

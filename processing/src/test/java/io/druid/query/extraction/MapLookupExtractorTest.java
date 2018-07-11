@@ -37,7 +37,7 @@ public class MapLookupExtractorTest
   @Test
   public void testUnApply()
   {
-    Assert.assertEquals(Arrays.asList("foo"), fn.unapply("bar"));
+    Assert.assertEquals(Collections.singletonList("foo"), fn.unapply("bar"));
     Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(fn.unapply("")));
     Assert.assertEquals("Null value should be equal to empty string",
                         Sets.newHashSet("null", "empty String"),

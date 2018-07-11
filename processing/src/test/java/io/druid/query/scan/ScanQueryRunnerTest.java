@@ -141,7 +141,7 @@ public class ScanQueryRunnerTest
   {
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Arrays.<String>asList())
+                    .columns(Collections.<String>emptyList())
                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                     .limit(3)
                     .legacy(legacy);

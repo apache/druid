@@ -161,8 +161,8 @@ public class SelectBenchmark
       Druids.SelectQueryBuilder queryBuilderA =
           Druids.newSelectQueryBuilder()
                 .dataSource(new TableDataSource("blah"))
-                .dimensionSpecs(DefaultDimensionSpec.toSpec(Arrays.<String>asList()))
-                .metrics(Arrays.<String>asList())
+                .dimensionSpecs(DefaultDimensionSpec.toSpec(Collections.<String>emptyList()))
+                .metrics(Collections.<String>emptyList())
                 .intervals(intervalSpec)
                 .granularity(Granularities.ALL)
                 .descending(false);

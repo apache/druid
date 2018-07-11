@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  */
@@ -155,7 +156,7 @@ public class MergeSequenceTest
         )
     );
 
-    SequenceTestHelper.testAll(finalMerged, Arrays.asList(1));
+    SequenceTestHelper.testAll(finalMerged, Collections.singletonList(1));
   }
 
   @Test
@@ -169,7 +170,7 @@ public class MergeSequenceTest
     )
     );
 
-    SequenceTestHelper.testAll(mergeOne, Arrays.asList(1));
+    SequenceTestHelper.testAll(mergeOne, Collections.singletonList(1));
   }
 
 }
