@@ -21,9 +21,11 @@ package io.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.java.util.common.IAE;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class PlannerConfig
 {
@@ -54,6 +56,9 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean useFallback = false;
+
+  @JsonProperty
+  private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
 
   public Period getMetadataRefreshPeriod()
   {
@@ -95,6 +100,11 @@ public class PlannerConfig
     return useFallback;
   }
 
+  public DateTimeZone getSqlTimeZone()
+  {
+    return sqlTimeZone;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -122,6 +132,7 @@ public class PlannerConfig
         CTX_KEY_USE_FALLBACK,
         isUseFallback()
     );
+    newConfig.sqlTimeZone = getSqlTimeZone();
     return newConfig;
   }
 
@@ -152,47 +163,33 @@ public class PlannerConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     final PlannerConfig that = (PlannerConfig) o;
-
-    if (maxSemiJoinRowsInMemory != that.maxSemiJoinRowsInMemory) {
-      return false;
-    }
-    if (maxTopNLimit != that.maxTopNLimit) {
-      return false;
-    }
-    if (maxQueryCount != that.maxQueryCount) {
-      return false;
-    }
-    if (selectThreshold != that.selectThreshold) {
-      return false;
-    }
-    if (useApproximateCountDistinct != that.useApproximateCountDistinct) {
-      return false;
-    }
-    if (useApproximateTopN != that.useApproximateTopN) {
-      return false;
-    }
-    if (useFallback != that.useFallback) {
-      return false;
-    }
-    return metadataRefreshPeriod != null
-           ? metadataRefreshPeriod.equals(that.metadataRefreshPeriod)
-           : that.metadataRefreshPeriod == null;
+    return maxSemiJoinRowsInMemory == that.maxSemiJoinRowsInMemory &&
+           maxTopNLimit == that.maxTopNLimit &&
+           maxQueryCount == that.maxQueryCount &&
+           selectThreshold == that.selectThreshold &&
+           useApproximateCountDistinct == that.useApproximateCountDistinct &&
+           useApproximateTopN == that.useApproximateTopN &&
+           useFallback == that.useFallback &&
+           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
+           Objects.equals(sqlTimeZone, that.sqlTimeZone);
   }
 
   @Override
   public int hashCode()
   {
-    int result = metadataRefreshPeriod != null ? metadataRefreshPeriod.hashCode() : 0;
-    result = 31 * result + maxSemiJoinRowsInMemory;
-    result = 31 * result + maxTopNLimit;
-    result = 31 * result + maxQueryCount;
-    result = 31 * result + selectThreshold;
-    result = 31 * result + (useApproximateCountDistinct ? 1 : 0);
-    result = 31 * result + (useApproximateTopN ? 1 : 0);
-    result = 31 * result + (useFallback ? 1 : 0);
-    return result;
+
+    return Objects.hash(
+        metadataRefreshPeriod,
+        maxSemiJoinRowsInMemory,
+        maxTopNLimit,
+        maxQueryCount,
+        selectThreshold,
+        useApproximateCountDistinct,
+        useApproximateTopN,
+        useFallback,
+        sqlTimeZone
+    );
   }
 
   @Override
@@ -207,6 +204,7 @@ public class PlannerConfig
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
            ", useFallback=" + useFallback +
+           ", sqlTimeZone=" + sqlTimeZone +
            '}';
   }
 }
