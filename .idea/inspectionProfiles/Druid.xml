@@ -9,6 +9,7 @@
     <inspection_tool class="ArrayEquals" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ArrayHashCode" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ArrayObjectsEquals" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="ArraysAsListWithZeroOrOneArgument" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="AssertWithSideEffects" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastConflictsWithInstanceof" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="CastToIncompatibleInterface" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -141,6 +142,7 @@
     <inspection_tool class="SyntaxError" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TextLabelInSwitchStatement" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ThrowableNotThrown" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="ToArrayCallWithZeroLengthArrayArgument" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryEnumModifier" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="NonGeneratedFiles" level="ERROR" enabled="true">
