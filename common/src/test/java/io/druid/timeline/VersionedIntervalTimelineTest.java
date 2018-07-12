@@ -63,6 +63,7 @@ public class VersionedIntervalTimelineTest
     add("2011-04-01/2011-04-09", "2", 1);
     add("2011-04-06/2011-04-09", "3", 4);
     add("2011-04-01/2011-04-02", "3", 5);
+    add("2011-04-06/2011-04-09", "3", 100);
 
     add("2011-05-01/2011-05-02", "1", 6);
     add("2011-05-01/2011-05-05", "2", 7);
@@ -84,7 +85,7 @@ public class VersionedIntervalTimelineTest
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "3", 5),
             createExpected("2011-04-02/2011-04-06", "2", 1),
-            createExpected("2011-04-06/2011-04-09", "3", 4)
+            createExpected("2011-04-06/2011-04-09", "3", 100)
         ),
         timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))
     );
@@ -102,7 +103,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-04-01/2011-04-02", "3", 5),
             createExpected("2011-04-02/2011-04-03", "1", 2),
             createExpected("2011-04-03/2011-04-06", "1", 3),
-            createExpected("2011-04-06/2011-04-09", "3", 4)
+            createExpected("2011-04-06/2011-04-09", "3", 100)
         ),
         timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))
     );
@@ -123,7 +124,7 @@ public class VersionedIntervalTimelineTest
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "3", 5),
             createExpected("2011-04-03/2011-04-06", "1", 3),
-            createExpected("2011-04-06/2011-04-09", "3", 4)
+            createExpected("2011-04-06/2011-04-09", "3", 100)
         ),
         timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))
     );
@@ -443,7 +444,7 @@ public class VersionedIntervalTimelineTest
 
     assertValues(
         Collections.singletonList(
-            createExpected("2011-01-01/2011-01-10", "2", 2)
+            createExpected("2011-01-01/2011-01-10", "2", 3)
         ),
         timeline.lookup(Intervals.of("2011-01-01/2011-01-10"))
     );
@@ -560,8 +561,8 @@ public class VersionedIntervalTimelineTest
 
     assertValues(
         Arrays.asList(
-            createExpected("2011-01-01/2011-01-10", "2", 1),
-            createExpected("2011-01-10/2011-01-15", "1", 3)
+            createExpected("2011-01-01/2011-01-10", "2", 3),
+            createExpected("2011-01-10/2011-01-15", "1", 1)
         ),
         timeline.lookup(Intervals.of("2011-01-01/2011-01-15"))
     );
@@ -930,7 +931,7 @@ public class VersionedIntervalTimelineTest
             createExpected("2011-01-01/2011-01-03", "1", 1),
             createExpected("2011-01-03/2011-01-05", "2", 2),
             createExpected("2011-01-05/2011-01-13", "1", 1),
-            createExpected("2011-01-13/2011-01-20", "2", 2)
+            createExpected("2011-01-13/2011-01-20", "2", 3)
         ),
         timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
@@ -949,8 +950,8 @@ public class VersionedIntervalTimelineTest
 
     assertValues(
         Arrays.asList(
-            createExpected("2011-01-01/2011-01-15", "2", 2),
-            createExpected("2011-01-15/2011-01-20", "1", 1)
+            createExpected("2011-01-01/2011-01-15", "2", 1),
+            createExpected("2011-01-15/2011-01-20", "1", 3)
         ),
         timeline.lookup(Intervals.of("2011-01-01/2011-01-20"))
     );
@@ -1775,7 +1776,7 @@ public class VersionedIntervalTimelineTest
 
       Assert.assertEquals(pair.lhs, holder.getInterval());
       Assert.assertEquals(pair.rhs.lhs, holder.getVersion());
-      Assert.assertEquals(pair.rhs.rhs, holder.getObject());
+      Assert.assertEquals(pair.rhs.rhs.toString(), holder.getObject().toString());
     }
   }
 
