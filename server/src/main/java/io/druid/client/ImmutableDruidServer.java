@@ -142,11 +142,7 @@ public class ImmutableDruidServer
 
     ImmutableDruidServer that = (ImmutableDruidServer) o;
 
-    if (metadata.equals(that.metadata)) {
-      return false;
-    }
-
-    return true;
+    return metadata.equals(that.metadata);
   }
 
   @Override
