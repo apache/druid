@@ -57,6 +57,12 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public void add(PartitionChunk<T> chunk)
   {
+    // Treeset will ignore add if it already contains the chunk.
+    // Removing and readding will ensure that it adds the latest chunk
+    if (holderSet.contains(chunk)) {
+      holderSet.remove(chunk);
+    }
+
     holderSet.add(chunk);
   }
 
