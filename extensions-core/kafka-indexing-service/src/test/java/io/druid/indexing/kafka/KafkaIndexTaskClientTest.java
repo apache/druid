@@ -57,6 +57,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -135,7 +136,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testNoTaskLocation()
+  public void testNoTaskLocation() throws IOException
   {
     reset(taskInfoProvider);
     expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(TaskLocation.unknown()).anyTimes();

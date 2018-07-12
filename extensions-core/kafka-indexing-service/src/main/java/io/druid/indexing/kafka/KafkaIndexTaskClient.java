@@ -19,6 +19,7 @@
 
 package io.druid.indexing.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
@@ -283,7 +284,7 @@ public class KafkaIndexTaskClient extends IndexTaskClient
       final String id,
       final Map<Integer, Long> endOffsets,
       final boolean finalize
-  )
+  ) throws IOException
   {
     log.debug("SetEndOffsets task[%s] endOffsets[%s] finalize[%s]", id, endOffsets, finalize);
 
@@ -300,9 +301,6 @@ public class KafkaIndexTaskClient extends IndexTaskClient
     }
     catch (NoTaskLocationException e) {
       return false;
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
     }
   }
 
