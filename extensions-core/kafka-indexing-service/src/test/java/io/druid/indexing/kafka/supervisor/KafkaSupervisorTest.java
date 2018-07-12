@@ -2185,19 +2185,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    final String expectedStackTrace = "io.druid.java.util.common.ISE: WTH?! cannot find taskGroup [0] among all taskGroups [{}]\n"
-                                      + "\tat io.druid.indexing.kafka.supervisor.KafkaSupervisor$CheckpointNotice.isValidTaskGroup(KafkaSupervisor.java:706)\n"
-                                      + "\tat io.druid.indexing.kafka.supervisor.KafkaSupervisor$CheckpointNotice.handle(KafkaSupervisor.java:658)\n"
-                                      + "\tat io.druid.indexing.kafka.supervisor.KafkaSupervisor$2.run(KafkaSupervisor.java:367)\n"
-                                      + "\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n"
-                                      + "\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n"
-                                      + "\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n"
-                                      + "\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n"
-                                      + "\tat java.lang.Thread.run(Thread.java:748)\n"
-                                      + "";
-    final String expectedExceptionMessage = "WTH?! cannot find taskGroup [0] among all taskGroups [{}]";
-    Assert.assertEquals(expectedStackTrace, serviceEmitter.getStackTrace());
-    Assert.assertEquals(expectedExceptionMessage, serviceEmitter.getExceptionMessage());
+    Assert.assertNotNull(serviceEmitter.getStackTrace());
+    Assert.assertEquals(
+        "WTH?! cannot find taskGroup [0] among all taskGroups [{}]",
+        serviceEmitter.getExceptionMessage()
+    );
     Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
   }
 
